@@ -403,25 +403,7 @@ class ActionRun(object):
         if self.machine.check(target):
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
-            transition = self.machine.transition(target)
-            if self.eventbus_publish \
-                    and self.trigger_downstreams \
-                    and transition \
-                    and self.is_complete:
-                formatter = StringFormatter(self.context).format
-                if isinstance(self.trigger_downstreams, bool):
-                    shortdate = formatter("%(shortdate)s")
-                    triggers = [f"shortdate.{shortdate}"]
-                else:
-                    triggers = [
-                        f"{key}.{value}" for key, value
-                        in map(lambda k, v: (k, formatter(v)), triggers.items())
-                    ]
-                log.info(f"{self} publishing triggers: [{', '.join(triggers)}]")
-                for trigger in triggers:
-                    # self.id in here to make the log message above more concise
-                    self.eventbus_publish(f"{self.id}.{trigger}")
-            return transition
+            return self.machine.transition(target)
         else:
             log.debug(f"{self} failed transition {self.state} ->")
 
@@ -472,7 +454,24 @@ class ActionRun(object):
 
         return self._done('fail', exit_status)
 
+    def emit_triggers(self):
+        formatter = StringFormatter(self.context).format
+        if isinstance(self.trigger_downstreams, bool):
+            shortdate = formatter("%(shortdate)s")
+            triggers = [f"shortdate.{shortdate}"]
+        else:
+            triggers = [
+                f"{key}.{value}" for key, value
+                in map(lambda k, v: (k, formatter(v)), triggers.items())
+            ]
+        log.info(f"{self} publishing triggers: [{', '.join(triggers)}]")
+        for trigger in triggers:
+            # self.id in here to make the log message above more concise
+            self.eventbus_publish(f"{self.id}.{trigger}")
+
     def success(self):
+        if self.trigger_downstreams:
+            self.emit_triggers()
         return self._done('success')
 
     def fail_unknown(self):

@@ -527,6 +527,18 @@ class TestSSHActionRun(TestCase):
         assert self.action_run.is_succeeded
         assert_equal(self.action_run.exit_status, 0)
 
+    def test_handler_no_triggers(self):
+        self.action_run.build_action_command()
+        self.action_run.action_command.exit_status = 0
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+        assert self.action_run.handler(
+            self.action_run.action_command,
+            ActionCommand.EXITING,
+        )
+        assert self.action_run.is_succeeded
+        assert_equal(self.action_run.exit_status, 0)
+
     def test_handler_exiting_failunknown(self):
         self.action_run.action_command = mock.create_autospec(
             actioncommand.ActionCommand,
