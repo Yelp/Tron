@@ -115,7 +115,12 @@ class MasterControlProgram(object):
             output_stream_dir,
             master_config.time_zone,
             action_runner,
+            self.eventbus_publish,
         )
+
+    def eventbus_publish(self, message):
+        if self.eventbus:
+            self.eventbus.publish(message)
 
     def update_state_watcher_config(self, state_config):
         """Update the StateChangeWatcher, and save all state if the state config
