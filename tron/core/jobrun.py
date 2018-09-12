@@ -225,9 +225,6 @@ class JobRun(Observable, Observer):
         if not action_run.is_done:
             return
 
-        if not action_run.is_broken and action_run.trigger_downstreams:
-            self.notify(self.NOTIFY_TRIGGER_ACTIONRUN)
-
         if action_run.is_skipped and self.action_runs.is_scheduled:
             return
 
