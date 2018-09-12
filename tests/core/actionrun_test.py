@@ -293,6 +293,46 @@ class TestActionRun(TestCase):
         assert self.action_run.end_time
         assert_equal(self.action_run.exit_status, 0)
 
+    def test_success_emits_not(self):
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+        self.action_run.trigger_downstreams = None
+        self.action_run.emit_triggers = mock.Mock()
+        assert self.action_run.success()
+        assert self.action_run.emit_triggers.call_count == 0
+
+    def test_success_emits_on_true(self):
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+        self.action_run.trigger_downstreams = True
+        self.action_run.emit_triggers = mock.Mock()
+        assert self.action_run.success()
+        assert self.action_run.emit_triggers.call_count == 1
+
+    def test_success_emits_on_dict(self):
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+        self.action_run.trigger_downstreams = dict(foo="bar")
+        self.action_run.emit_triggers = mock.Mock()
+        assert self.action_run.success()
+        assert self.action_run.emit_triggers.call_count == 1
+
+    def test_emit_triggers(self):
+        prefix = f"{self.action_run.id}"
+        self.action_run.eventbus_publish = mock.Mock()
+        self.action_run.context = {'shortdate': 'foo'}
+
+        self.action_run.trigger_downstreams = True
+        self.action_run.emit_triggers()
+
+        self.action_run.trigger_downstreams = dict(foo="bar")
+        self.action_run.emit_triggers()
+
+        assert self.action_run.eventbus_publish.mock_calls == [
+            mock.call(f"{prefix}.shortdate.foo"),
+            mock.call(f"{prefix}.foo.bar"),
+        ]
+
     def test_success_bad_state(self):
         self.action_run.cancel()
         assert not self.action_run.success()
@@ -516,18 +556,6 @@ class TestSSHActionRun(TestCase):
         assert_equal(self.action_run.exit_status, -1)
 
     def test_handler_exiting_success(self):
-        self.action_run.build_action_command()
-        self.action_run.action_command.exit_status = 0
-        self.action_run.machine.transition('start')
-        self.action_run.machine.transition('started')
-        assert self.action_run.handler(
-            self.action_run.action_command,
-            ActionCommand.EXITING,
-        )
-        assert self.action_run.is_succeeded
-        assert_equal(self.action_run.exit_status, 0)
-
-    def test_handler_no_triggers(self):
         self.action_run.build_action_command()
         self.action_run.action_command.exit_status = 0
         self.action_run.machine.transition('start')

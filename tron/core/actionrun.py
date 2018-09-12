@@ -455,15 +455,18 @@ class ActionRun(object):
         return self._done('fail', exit_status)
 
     def emit_triggers(self):
-        formatter = StringFormatter(self.context).format
         if isinstance(self.trigger_downstreams, bool):
-            shortdate = formatter("%(shortdate)s")
+            shortdate = self.render_template("%(shortdate)s")
             triggers = [f"shortdate.{shortdate}"]
-        else:
-            triggers = [
-                f"{key}.{value}" for key, value
-                in map(lambda k, v: (k, formatter(v)), triggers.items())
+        elif isinstance(self.trigger_downstreams, dict):
+            rendered = [
+                (k, self.render_template(v))
+                for k, v in self.trigger_downstreams.items()
             ]
+            triggers = [f"{key}.{value}" for key, value in rendered]
+        else:
+            log.error(f"{self} trigger_downstreams must be true or dict")
+            return
         log.info(f"{self} publishing triggers: [{', '.join(triggers)}]")
         for trigger in triggers:
             # self.id in here to make the log message above more concise
@@ -527,13 +530,17 @@ class ActionRun(object):
             'on_upstream_rerun': self.on_upstream_rerun,
         }
 
-    def render_command(self):
+    def render_template(self, template):
         """Render our configured command using the command context."""
         try:
-            parse_str = self.bare_command % self.context
+            parse_str = template % self.context
             return StringFormatter(self.context).format(parse_str)
         except Exception:
-            return self.bare_command % self.context
+            return template % self.context
+
+    def render_command(self):
+        """Render our configured command using the command context."""
+        return self.render_template(self.bare_command)
 
     @property
     def command(self):
