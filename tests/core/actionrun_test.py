@@ -54,6 +54,7 @@ class TestActionRunFactory(TestCase):
             7,
             self.run_time,
             mock_node,
+            eventbus_publish=lambda: None,
             action_graph=self.action_graph,
         )
 

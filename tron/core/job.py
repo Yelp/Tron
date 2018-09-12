@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import datetime
 import logging
 
@@ -80,6 +77,7 @@ class Job(Observable, Observer):
         self,
         name,
         scheduler,
+        eventbus_publish,
         queueing=True,
         all_nodes=False,
         monitoring=None,
@@ -100,6 +98,7 @@ class Job(Observable, Observer):
         self.monitoring = monitoring
         self.action_graph = action_graph
         self.scheduler = scheduler
+        self.eventbus_publish = eventbus_publish
         self.runs = run_collection
         self.queueing = queueing
         self.all_nodes = all_nodes
@@ -123,13 +122,14 @@ class Job(Observable, Observer):
         parent_context,
         output_path,
         action_runner,
+        eventbus_publish,
     ):
         """Factory method to create a new Job instance from configuration."""
         action_graph = actiongraph.ActionGraph.from_config(
             job_config.actions,
             job_config.cleanup_action,
         )
-        runs = jobrun.JobRunCollection.from_config(job_config)
+        runs = jobrun.JobRunCollection.from_config(job_config, eventbus_publish)
         node_repo = node.NodePoolRepository.get_instance()
 
         return cls(
@@ -140,6 +140,7 @@ class Job(Observable, Observer):
             all_nodes=job_config.all_nodes,
             node_pool=node_repo.get_by_name(job_config.node),
             scheduler=scheduler,
+            eventbus_publish=eventbus_publish,
             enabled=job_config.enabled,
             run_collection=runs,
             action_graph=action_graph,
@@ -203,6 +204,7 @@ class Job(Observable, Observer):
             self.output_path.clone(),
             self.context,
             self.node_pool,
+            eventbus_publish=self.eventbus_publish,
         )
         return job_runs
 
@@ -435,11 +437,12 @@ class JobScheduler(Observer):
 class JobSchedulerFactory(object):
     """Construct JobScheduler instances from configuration."""
 
-    def __init__(self, context, output_stream_dir, time_zone, action_runner):
+    def __init__(self, context, output_stream_dir, time_zone, action_runner, eventbus_publish):
         self.context = context
         self.output_stream_dir = output_stream_dir
         self.time_zone = time_zone
         self.action_runner = action_runner
+        self.eventbus_publish = eventbus_publish
 
     def build(self, job_config):
         log.debug("Building new job %s", job_config.name)
@@ -452,6 +455,7 @@ class JobSchedulerFactory(object):
             self.context,
             output_path,
             self.action_runner,
+            eventbus_publish=self.eventbus_publish,
         )
         return JobScheduler(job)
 

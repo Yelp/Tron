@@ -49,6 +49,7 @@ def recover_action_run(action_run, action_runner):
         job_run_id=action_run.job_run_id,
         name="recovery-%s" % action_run.id,
         node=action_run.node,
+        eventbus_publish=action_run.eventbus_publish,
         bare_command=build_recovery_command(
             recovery_binary="%s/recover_batch.py" % (action_runner.exec_path),
             path="%s/%s/status" % (
