@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import datetime
 from unittest.mock import MagicMock
 
@@ -56,6 +53,7 @@ class TestJobRun(TestCase):
                 action_runs_with_cleanup=[],
                 get_startable_action_runs=lambda: [],
             ),
+            eventbus_publish=lambda: None,
         )
         autospec_method(self.job_run.watch)
         autospec_method(self.job_run.notify)
@@ -78,6 +76,7 @@ class TestJobRun(TestCase):
             self.run_time,
             mock_node,
             False,
+            eventbus_publish=lambda: None,
         )
 
         assert_equal(run.action_runs.action_graph, self.action_graph)
@@ -95,6 +94,7 @@ class TestJobRun(TestCase):
             self.run_time,
             mock_node,
             True,
+            eventbus_publish=lambda: None,
         )
         assert_equal(run.action_runs.action_graph, self.action_graph)
         assert run.manual
@@ -360,6 +360,7 @@ class TestJobRunFromState(TestCase):
             self.output_path,
             self.context,
             self.node_pool,
+            eventbus_publish=lambda: None,
         )
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, self.state_data['job_name'])
@@ -376,6 +377,7 @@ class TestJobRunFromState(TestCase):
             self.output_path,
             self.context,
             self.node_pool,
+            eventbus_publish=lambda: None,
         )
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, 'thejobname')
@@ -415,7 +417,7 @@ class TestJobRunCollection(TestCase):
 
     @setup
     def setup_runs(self):
-        self.run_collection = jobrun.JobRunCollection(5)
+        self.run_collection = jobrun.JobRunCollection(5, eventbus_publish=lambda: None)
         self.job_runs = [
             self._mock_run(state=actionrun.ActionRun.STATE_QUEUED, run_num=4),
             self._mock_run(state=actionrun.ActionRun.STATE_RUNNING, run_num=3),
@@ -433,7 +435,7 @@ class TestJobRunCollection(TestCase):
 
     def test_from_config(self):
         job_config = mock.Mock(run_limit=20)
-        runs = jobrun.JobRunCollection.from_config(job_config)
+        runs = jobrun.JobRunCollection.from_config(job_config, eventbus_publish=lambda: None,)
         assert_equal(runs.run_limit, 20)
 
     def test_job_runs_from_state(self):
@@ -458,6 +460,7 @@ class TestJobRunCollection(TestCase):
             output_path,
             context,
             node_pool,
+            eventbus_publish=lambda: None,
         )
         assert len(runs) == 4
         assert all([type(job) == jobrun.JobRun for job in runs])
@@ -568,7 +571,7 @@ class TestJobRunCollection(TestCase):
         assert_equal(newest_run, self.job_runs[1])
 
     def test_get_newest_no_runs(self):
-        run_collection = jobrun.JobRunCollection(5)
+        run_collection = jobrun.JobRunCollection(5, eventbus_publish=lambda: None,)
         assert_equal(run_collection.get_newest(), None)
 
     def test_pending(self):
@@ -651,7 +654,7 @@ class TestJobRunCollection(TestCase):
         assert_equal(self.run_collection.next_run_num(), 5)
 
     def test_get_next_run_num_first(self):
-        run_collection = jobrun.JobRunCollection(5)
+        run_collection = jobrun.JobRunCollection(5, eventbus_publish=lambda: None,)
         assert_equal(run_collection.next_run_num(), 0)
 
     def test_remove_old_runs(self):
@@ -669,7 +672,7 @@ class TestJobRunCollection(TestCase):
             assert_length(job_run.cancel.calls, 0)
 
     def test_remove_old_runs_no_runs(self):
-        run_collection = jobrun.JobRunCollection(4)
+        run_collection = jobrun.JobRunCollection(4, eventbus_publish=lambda: None,)
         run_collection.remove_old_runs()
 
     def test_state_data(self):
