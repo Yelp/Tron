@@ -138,7 +138,7 @@ class TestClient(TestCase):
     def test_config_get_default(self):
         self.client.config('config_name')
         self.client.request.assert_called_with(
-            '/api/config?name=config_name&no_header=0',
+            '/api/config?name=config_name',
         )
 
     def test_http_get(self):

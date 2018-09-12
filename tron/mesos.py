@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 
 
 def get_mesos_leader(master_address, mesos_master_port):
-    url = "http://%s:%s/redirect" % (master_address, mesos_master_port)
+    url = "%s:%s/redirect" % (master_address, mesos_master_port)
     response = requests.get(url)
     return '{}:{}'.format(urlparse(response.url).hostname, mesos_master_port)
 

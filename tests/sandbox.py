@@ -250,11 +250,8 @@ class TronSandbox(object):
         self,
         config_content=None,
         name=schema.MASTER_NAMESPACE,
-        no_header=False,
     ):
         args = ['--server', self.api_uri, name]
-        if no_header:
-            args += ['--no-header']
         args += ['-'] if config_content else ['-p']
         return self.run_command('tronfig', args, stdin_lines=config_content)
 
