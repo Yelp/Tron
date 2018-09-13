@@ -605,28 +605,29 @@ class TestJobSchedulerFactory(TestCase):
         self.action_runner = mock.create_autospec(
             actioncommand.SubprocessActionRunnerFactory,
         )
+        self.eventbus_publish = lambda: None
         self.factory = job.JobSchedulerFactory(
             self.context,
             self.output_stream_dir,
             self.time_zone,
             self.action_runner,
-            eventbus_publish=lambda: None,
+            self.eventbus_publish,
         )
 
     def test_build(self):
         config = mock.Mock()
         with mock.patch('tron.core.job.Job', autospec=True) as mock_job:
             job_scheduler = self.factory.build(config)
-            args, _ = mock_job.from_config.call_args
-            job_config, scheduler, context, output_path, action_runner = args
-            assert_equal(job_config, config)
+            _, kwargs = mock_job.from_config.call_args
+            assert_equal(kwargs['job_config'], config)
             assert_equal(
                 job_scheduler.get_job(),
                 mock_job.from_config.return_value,
             )
-            assert_equal(context, self.context)
-            assert_equal(output_path.base, self.output_stream_dir)
-            assert_equal(action_runner, self.action_runner)
+            assert_equal(kwargs['parent_context'], self.context)
+            assert_equal(kwargs['output_path'].base, self.output_stream_dir)
+            assert_equal(kwargs['action_runner'], self.action_runner)
+            assert_equal(kwargs['eventbus_publish'], self.eventbus_publish)
 
 
 class TestJobCollection(TestCase):
