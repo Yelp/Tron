@@ -68,7 +68,14 @@ def build_format_string_validator(context_object):
         )
 
         try:
-            StringFormatter(context).format(value)
+            valid_context_variable_expr(value, config_context)
+            if value.find("%%") > 0:
+                command_ptr = value % context
+                command_ptr = StringFormatter(context).format(command_ptr)
+                print("{}".format(command_ptr))
+            else:
+                command_ptr = StringFormatter(context).format(value)
+                print("{}".format(command_ptr))
             return value
         except (KeyError, ValueError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
