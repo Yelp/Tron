@@ -71,8 +71,9 @@ def build_format_string_validator(context_object):
         try:
             valid_context_variable_expr(value, config_context)
             try:
-                value % context
-                StringFormatter(context).format(value)
+                command_ptr = value % context
+                command_ptr = StringFormatter(context).format(command_ptr)
+                print("{}".format(command_ptr))
                 return value
             except Exception as e:
                 value % context
