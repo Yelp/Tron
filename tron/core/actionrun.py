@@ -349,9 +349,7 @@ class ActionRun(object):
     def start(self):
         """Start this ActionRun."""
         if self.in_delay is not None:
-            log.warning(
-                f"Start of suspended action run {self.id}, cancelling suspend timer"
-            )
+            log.warning(f"{self} cancelling suspend timer")
             self.in_delay.cancel()
             self.in_delay = None
 
@@ -359,24 +357,15 @@ class ActionRun(object):
             return False
 
         if len(self.exit_statuses) == 0:
-            log.info("Starting action run %s", self.id)
+            log.info(f"{self} starting")
         else:
-            log.info(
-                "Restarting action run {}, retry {}".format(
-                    self.id,
-                    len(self.exit_statuses),
-                )
-            )
+            log.info(f"{self} restarting, retry {len(self.exit_statuses)}")
 
         self.start_time = timeutils.current_time()
         self.machine.transition('start')
 
         if not self.is_valid_command:
-            log.error(
-                "Command for action run %s is invalid: %r",
-                self.id,
-                self.bare_command,
-            )
+            log.error(f"{self} invalid command: {self.bare_command}")
             self.fail(-1)
             return
 
@@ -392,12 +381,7 @@ class ActionRun(object):
         raise NotImplementedError()
 
     def _done(self, target, exit_status=0):
-        log.info(
-            "Action run %s completed with %s and exit status %r",
-            self.id,
-            target,
-            exit_status,
-        )
+        log.info(f"{self} completed with {target}, exit status: {exit_status}")
         # TODO: - state machine already does .check()
         #       - only set exit_status / end_time if transition succeeds?
         if self.machine.check(target):
@@ -417,11 +401,11 @@ class ActionRun(object):
         if self.is_done:
             return self.fail(self.exit_status)
         else:
-            log.info(f"Killing action run {self.id} for a retry")
+            log.info(f"{self} getting killed for a retry")
             return self.kill(final=False)
 
     def start_after_delay(self):
-        log.info(f"Resuming action run {self.id} after retry delay")
+        log.info(f"{self} resuming after retry delay")
         self.machine.reset()
         self.in_delay = None
         self.start()
@@ -432,9 +416,7 @@ class ActionRun(object):
             self.in_delay = reactor.callLater(
                 self.retries_delay.seconds, self.start_after_delay
             )
-            log.info(
-                f"Delaying action run {self.id} for a retry in {self.retries_delay}s"
-            )
+            log.info(f"{self} delaying for a retry in {self.retries_delay}s")
         else:
             self.machine.reset()
             return self.start()
@@ -446,11 +428,8 @@ class ActionRun(object):
                 self.exit_statuses.append(exit_status)
                 return self.restart()
             else:
-                log.info(
-                    "Reached maximum number of retries: {}".format(
-                        len(self.exit_statuses),
-                    )
-                )
+                retries = len(self.exit_statuses)
+                log.info(f"{self} reached maximum number of retries: {retries}")
 
         return self._done('fail', exit_status)
 
@@ -479,7 +458,7 @@ class ActionRun(object):
 
     def fail_unknown(self):
         """Failed with unknown reason."""
-        log.warning("Lost communication with action run %s", self.id)
+        log.warning(f"{self} lost communication")
         return self.machine.transition('fail_unknown')
 
     def cancel_delay(self):
@@ -494,12 +473,13 @@ class ActionRun(object):
         """This data is used to serialize the state of this action run."""
         rendered_command = self.rendered_command
 
-        action_runner = None if type(
-            self.action_runner
-        ) == NoActionRunnerFactory else {
-            'status_path': self.action_runner.status_path,
-            'exec_path': self.action_runner.exec_path,
-        }
+        if isinstance(self.action_runner, NoActionRunnerFactory):
+            action_runner = None
+        else:
+            action_runner = dict(
+                status_path=self.action_runner.status_path,
+                exec_path=self.action_runner.exec_path,
+            )
         # Freeze command after it's run
         command = rendered_command if rendered_command else self.bare_command
         return {
@@ -546,15 +526,10 @@ class ActionRun(object):
     def command(self):
         if self.rendered_command:
             return self.rendered_command
-
         try:
             self.rendered_command = self.render_command()
         except Exception as e:
-            log.error(
-                "Failed generating rendering command: %s: %s" %
-                (e.__class__.__name__, e)
-            )
-
+            log.error(f"{self} failed rendering command: {e}")
             # Return a command string that will always fail
             self.rendered_command = self.FAILED_RENDER
         return self.rendered_command
@@ -616,7 +591,7 @@ class SSHActionRun(ActionRun, Observer):
         try:
             self.node.submit_command(action_command)
         except node.Error as e:
-            log.warning("Failed to start %s: %r", self.id, e)
+            log.warning(f"{self} failed to start: {e!r}")
             self.fail(-2)
             return
         return True
@@ -660,7 +635,7 @@ class SSHActionRun(ActionRun, Observer):
 
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
-        log.debug("Action command state change: %s", action_command.state)
+        log.debug(f"{self} action_command state change: {action_command.state}")
 
         if event == ActionCommand.RUNNING:
             return self.machine.transition('started')
@@ -712,17 +687,17 @@ class MesosActionRun(ActionRun, Observer):
 
     def recover(self):
         if self.mesos_task_id is None:
-            log.error(f'No task ID, cannot recover {self}')
+            log.error(f'{self} no task ID, cannot recover')
             return
 
         if not self.machine.check('running'):
             log.error(
-                f'Unable to transition {self} from {self.machine.state}'
+                f'{self} unable to transition from {self.machine.state}'
                 'to running for recovery'
             )
             return
 
-        log.info(f'Recovering Mesos run {self}')
+        log.info(f'{self} recovering Mesos run')
 
         serializer = filehandler.OutputStreamSerializer(self.output_path)
         mesos_cluster = MesosClusterRepository.get_cluster()
@@ -741,7 +716,8 @@ class MesosActionRun(ActionRun, Observer):
         )
         if not task:
             log.warning(
-                f'Cannot recover {self}, Mesos is disabled or invalid task ID'
+                f'{self} cannot recover, Mesos is disabled or '
+                f'invalid task ID {self.mesos_task_id!r}'
             )
             self.fail_unknown()
             return
@@ -794,7 +770,7 @@ class MesosActionRun(ActionRun, Observer):
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
         # TODO: consolidate? Same as SSHActionRun for now
-        log.debug("Action command state change: %s", action_command.state)
+        log.debug(f"{self} action_command state change: {action_command.state}")
 
         if event == ActionCommand.RUNNING:
             return self.machine.transition('started')
