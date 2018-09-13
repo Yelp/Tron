@@ -405,7 +405,7 @@ class ActionRun(object):
             self.end_time = timeutils.current_time()
             return self.machine.transition(target)
         else:
-            log.debug(f"{self} failed transition {self.state} ->")
+            log.debug(f"{self} failed transition {self.state} -> {target}")
 
     def retry(self):
         """Invoked externally (via API) when action needs to be re-tried
@@ -456,7 +456,7 @@ class ActionRun(object):
 
     def emit_triggers(self):
         if isinstance(self.trigger_downstreams, bool):
-            shortdate = self.render_template("%(shortdate)s")
+            shortdate = self.render_template("{shortdate}")
             triggers = [f"shortdate.{shortdate}"]
         elif isinstance(self.trigger_downstreams, dict):
             rendered = [

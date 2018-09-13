@@ -444,11 +444,11 @@ class JobSchedulerFactory(object):
         time_zone = job_config.time_zone or self.time_zone
         scheduler = scheduler_from_config(job_config.schedule, time_zone)
         job = Job.from_config(
-            job_config,
-            scheduler,
-            self.context,
-            output_path,
-            self.action_runner,
+            job_config=job_config,
+            scheduler=scheduler,
+            parent_context=self.context,
+            output_path=output_path,
+            action_runner=self.action_runner,
             eventbus_publish=self.eventbus_publish,
         )
         return JobScheduler(job)
