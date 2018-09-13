@@ -875,17 +875,18 @@ class ActionRunCollection(object):
         required_actions = self.action_graph.get_required_actions(
             action_run.action_name,
         )
-        if not required_actions:
-            return False
 
-        required_runs = self.action_runs_for_actions(required_actions)
+        if required_actions:
+            required_runs = self.action_runs_for_actions(required_actions)
+            if any(not run.is_complete for run in required_runs):
+                return True
 
-        def is_required_run_blocking(required_run):
-            if required_run.is_complete:
-                return False
-            return True
+        return False
 
-        return any(is_required_run_blocking(run) for run in required_runs)
+        # external_deps = self.action_graph.get_required_triggers(
+        #     action_run.action_name
+        # )
+        # return any(external_deps)
 
     @property
     def is_done(self):
