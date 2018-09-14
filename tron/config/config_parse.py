@@ -360,12 +360,8 @@ def valid_mesos_action(action, config_context):
 
 
 def valid_trigger_downstreams(trigger_downstreams, config_context):
-    if trigger_downstreams is None:
-        return
-    if isinstance(trigger_downstreams, bool):
-        return
-    if isinstance(trigger_downstreams, dict):
-        return
+    if isinstance(trigger_downstreams, (type(None), bool, dict)):
+        return trigger_downstreams
     raise ConfigError('must be None, bool or dict')
 
 
