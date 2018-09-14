@@ -288,7 +288,7 @@ class TestActionRun(TestCase):
         assert not self.action_run.success()
 
     def test_failure(self):
-        self.action_run.fail(1)
+        self.action_run._exit_unsuccessful(1)
         assert not self.action_run.is_running
         assert self.action_run.is_done
         assert self.action_run.end_time
@@ -439,19 +439,44 @@ class TestSSHActionRun(TestCase):
         self.action_run.action_command.exit_status = -1
         self.action_run.machine.transition('start')
 
-        self.action_run.fail(-1)
+        self.action_run._exit_unsuccessful(-1)
         assert self.action_run.retries_remaining == 1
         assert not self.action_run.is_failed
 
-        self.action_run.fail(-1)
+        self.action_run._exit_unsuccessful(-1)
         assert self.action_run.retries_remaining == 0
         assert not self.action_run.is_failed
 
-        self.action_run.fail(-1)
+        self.action_run._exit_unsuccessful(-1)
         assert self.action_run.retries_remaining == 0
         assert self.action_run.is_failed
 
         assert_equal(self.action_run.exit_statuses, [-1, -1])
+
+    def test_no_auto_retry_on_fail_not_running(self):
+        self.action_run.retries_remaining = 2
+        self.action_run.exit_statuses = []
+        self.action_run.build_action_command()
+
+        self.action_run.fail()
+        assert self.action_run.retries_remaining == -1
+        assert self.action_run.is_failed
+
+        assert_equal(self.action_run.exit_statuses, [])
+        assert_equal(self.action_run.exit_status, None)
+
+    def test_no_auto_retry_on_fail_running(self):
+        self.action_run.retries_remaining = 2
+        self.action_run.exit_statuses = []
+        self.action_run.build_action_command()
+        self.action_run.machine.transition('start')
+
+        self.action_run.fail()
+        assert self.action_run.retries_remaining == -1
+        assert self.action_run.is_failed
+
+        assert_equal(self.action_run.exit_statuses, [])
+        assert_equal(self.action_run.exit_status, None)
 
     def test_manual_retry(self):
         self.action_run.retries_remaining = None
@@ -473,7 +498,7 @@ class TestSSHActionRun(TestCase):
         self.action_run.action_command.exit_status = -1
         self.action_run.machine.transition('start')
         callLater.return_value = "delayed call"
-        self.action_run.fail(-1)
+        self.action_run._exit_unsuccessful(-1)
         assert self.action_run.in_delay == "delayed call"
 
     def test_handler_running(self):
@@ -1050,21 +1075,10 @@ class TestMesosActionRun(TestCase):
         self.action_run.mesos_task_id = 'fake_task_id'
         self.action_run.machine.state = ActionRun.STATE_RUNNING
 
-        error_message = self.action_run.kill()
+        self.action_run.kill()
         mock_get_cluster.return_value.kill.assert_called_once_with(
             self.action_run.mesos_task_id
         )
-        assert_equal(
-            error_message,
-            "Warning: It might take up to docker_stop_timeout (current setting is 2 mins) for killing."
-        )
-
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_kill_task_not_running(self, mock_cluster_repo):
-        mock_get_cluster = mock_cluster_repo.get_cluster
-        self.action_run.machine.state = ActionRun.STATE_SUCCEEDED
-        assert 'not running' in self.action_run.kill()
-        assert mock_get_cluster.return_value.kill.call_count == 0
 
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_kill_task_no_task_id(self, mock_cluster_repo):
@@ -1084,13 +1098,6 @@ class TestMesosActionRun(TestCase):
         mock_get_cluster.return_value.kill.assert_called_once_with(
             self.action_run.mesos_task_id
         )
-
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_stop_task_not_running(self, mock_cluster_repo):
-        mock_get_cluster = mock_cluster_repo.get_cluster
-        self.action_run.machine.state = ActionRun.STATE_SUCCEEDED
-        assert 'not running' in self.action_run.stop()
-        assert mock_get_cluster.return_value.kill.call_count == 0
 
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_stop_task_no_task_id(self, mock_cluster_repo):
