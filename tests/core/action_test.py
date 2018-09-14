@@ -51,6 +51,8 @@ class TestAction(TestCase):
                     mode='RO',
                 ),
             ],
+            trigger_downstreams=True,
+            triggered_by=["foo.bar"],
         )
         new_action = action.Action.from_config(config)
         assert_equal(new_action.name, config.name)
@@ -78,6 +80,8 @@ class TestAction(TestCase):
                 'mode': 'RO'
             }],
         )
+        assert new_action.trigger_downstreams is True
+        assert new_action.triggered_by == ['foo.bar']
 
     def test_from_config_none_values(self):
         config = ConfigAction(

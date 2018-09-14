@@ -175,16 +175,17 @@ class EventBusTestCase(TestCase):
     def test_sync_publish_replace(self, reactor):
         evt1 = {'id': 'foo', 'bar': 'baz'}
         evt2 = {'id': 'foo', 'bar': 'quux'}
-        self.eventbus.event_log = {'foo': evt1}
+        self.eventbus.event_log = {}
         self.eventbus.log_save_updates = 0
+        self.eventbus.sync_publish(evt1)
         self.eventbus.sync_publish(evt2)
-        assert self.eventbus.log_updates is 1
-        assert reactor.callLater.call_count is 1
+        assert self.eventbus.log_updates is 2
+        assert reactor.callLater.call_count is 2
 
     @mock.patch('tron.eventbus.reactor', autospec=True)
     def test_sync_publish_duplicate(self, reactor):
         evt = {'id': 'foo', 'bar': 'baz'}
-        self.eventbus.event_log = {'foo': evt}
+        self.eventbus.event_log = {'foo': {'bar': 'baz'}}
         self.eventbus.log_save_updates = 0
         self.eventbus.sync_publish(evt)
         assert self.eventbus.log_updates is 0

@@ -935,7 +935,13 @@ class TestValidateJobs(TestCase):
                                     mode='RO'
                                 )
                             ],
-                        )
+                        ),
+                        dict(
+                            name="test_trigger_attrs",
+                            command="foo",
+                            triggered_by=["foo.bar"],
+                            trigger_downstreams=True,
+                        ),
                     ],
                     cleanup_action=dict(command="command")
                 )
@@ -989,6 +995,13 @@ class TestValidateJobs(TestCase):
                                     ),
                                 ),
                                 expected_runtime=datetime.timedelta(hours=24),
+                            ),
+                        'test_trigger_attrs':
+                            make_action(
+                                name="test_trigger_attrs",
+                                command="foo",
+                                triggered_by=("foo.bar",),
+                                trigger_downstreams=True,
                             ),
                     }),
                     expected_runtime=datetime.timedelta(0, 1200),

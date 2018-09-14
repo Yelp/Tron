@@ -61,8 +61,15 @@ class EventBus:
             log.info("shutdown completed")
 
     def publish(self, event):
-        self.publish_queue.append(event)
-        log.debug(f"publish of {event['id']} enqueued")
+        if isinstance(event, str):
+            event = {'id': event}
+        if isinstance(event, dict):
+            self.publish_queue.append(event)
+            log.debug(f"publish of {event['id']} enqueued")
+            return True
+        else:
+            log.error(f"eventbus can't publish {event!r}, must  be dict")
+            return False
 
     def subscribe(self, prefix, subscriber, callback):
         self.subscribe_queue.append((prefix, subscriber, callback))
@@ -92,9 +99,14 @@ class EventBus:
             )
             return False
 
+        # atomically replace `current` symlink
         tmplink = os.path.join(self.log_dir, "tmp")
+        try:
+            os.remove(tmplink)
+        except FileNotFoundError:
+            pass
         os.symlink(new_file, tmplink)
-        os.rename(tmplink, self.log_current)
+        os.replace(tmplink, self.log_current)
 
         duration = time.time() - started
         log.info(f"log dumped to disk because {reason}, took {duration:.4}s")
@@ -136,6 +148,7 @@ class EventBus:
     def sync_publish(self, event):
         event = pickle.loads(pickle.dumps(event))
         event_id = event['id']
+        del event['id']
         if event_id in self.event_log:
             if self.event_log[event_id] != event:
                 log.info(f"replacing event: {event_id}")
@@ -143,11 +156,11 @@ class EventBus:
                 log.debug(f"duplicate event: {event}")
                 return
 
-        self.event_log[event['id']] = event
+        self.event_log[event_id] = event
         self.log_updates += 1
         log.debug(f"event stored: {event}")
 
-        reactor.callLater(0, self.sync_notify, event['id'])
+        reactor.callLater(0, self.sync_notify, event_id)
 
     def sync_subscribe(self, prefix_subscriber_cb):
         prefix, subscriber, cb = prefix_subscriber_cb
