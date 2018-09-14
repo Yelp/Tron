@@ -4,8 +4,6 @@
 import logging
 from collections import deque
 
-from six.moves import filter
-
 from tron import command_context
 from tron import node
 from tron.core.actionrun import ActionRun
@@ -358,11 +356,6 @@ class JobRunCollection(object):
         for pending in list(self.get_pending()):
             pending.cleanup()
             self.runs.remove(pending)
-
-    def _get_runs_using(self, func, reverse=False):
-        """Filter runs using func()."""
-        job_runs = self.runs if not reverse else reversed(self.runs)
-        return filter(func, job_runs)
 
     def get_run_by_state(self, state):
         """Returns the most recent run which matches the state."""
