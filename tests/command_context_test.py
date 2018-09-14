@@ -144,6 +144,7 @@ class TestJobContext(TestCase):
             "jobname",
             mock_scheduler,
             run_collection=run_collection,
+            eventbus_publish=lambda: None,
         )
         self.context = command_context.JobContext(self.job)
 
