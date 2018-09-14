@@ -34,7 +34,6 @@ class ActionRunFactory(object):
     @classmethod
     def build_action_run_collection(cls, job_run, action_runner, eventbus_publish):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
-        action_map = six.iteritems(job_run.action_graph.get_action_map())
         action_run_map = {
             maybe_decode(name): cls.build_run_for_action(
                 job_run,
@@ -42,7 +41,7 @@ class ActionRunFactory(object):
                 action_runner,
                 eventbus_publish,
             )
-            for name, action_inst in action_map
+            for name, action_inst in job_run.action_graph.action_map.items()
         }
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
@@ -881,12 +880,10 @@ class ActionRunCollection(object):
             if any(not run.is_complete for run in required_runs):
                 return True
 
-        return False
-
-        # external_deps = self.action_graph.get_required_triggers(
-        #     action_run.action_name
-        # )
-        # return any(external_deps)
+        external_deps = self.action_graph.get_required_triggers(
+            action_run.action_name
+        )
+        return any(external_deps)
 
     @property
     def is_done(self):
