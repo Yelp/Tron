@@ -106,7 +106,7 @@ class JobContext(object):
         raise KeyError(item)
 
     def _get_date_spec_parts(self, name):
-        parts = name.rsplit(':', 1)
+        parts = name.rsplit('#', 1)
         if len(parts) != 2:
             return name, None
         return parts
