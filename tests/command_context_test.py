@@ -152,19 +152,19 @@ class TestJobContext(TestCase):
         assert_equal(self.context.name, self.job.name)
 
     def test__getitem__last_success(self):
-        item = self.context["last_success:day-1"]
+        item = self.context["last_success#day-1"]
         expected_date = self.last_success.run_time - datetime.timedelta(days=1)
         assert_equal(item, str(expected_date.day))
 
-        item = self.context["last_success:shortdate"]
+        item = self.context["last_success#shortdate"]
         assert_equal(item, "2012-03-14")
 
     def test__getitem__last_success_bad_date_spec(self):
-        name = "last_success:beers-3"
+        name = "last_success#beers-3"
         assert_raises(KeyError, lambda: self.context[name])
 
     def test__getitem__last_success_bad_date_name(self):
-        name = "first_success:shortdate-1"
+        name = "first_success#shortdate-1"
         assert_raises(KeyError, lambda: self.context[name])
 
     def test__getitem__last_success_no_date_spec(self):
@@ -227,7 +227,7 @@ class TestFiller(TestCase):
     def test_filler_with_job__getitem__(self):
         context = command_context.JobContext(self.filler)
         todays_date = datetime.date.today().strftime("%Y-%m-%d")
-        assert_equal(context['last_success:shortdate'], todays_date)
+        assert_equal(context['last_success#shortdate'], todays_date)
 
     def test_filler_with_job_run__getitem__(self):
         context = command_context.JobRunContext(self.filler)

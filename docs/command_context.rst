@@ -67,4 +67,4 @@ Context variables only available to Jobs
 **last_success**
     The last successful run date (defaults to current date if there was no
     previous successful run). Supports date arithmetic using the form
-    ``%(last_success:shortdate-1)s``.
+    ``%(last_success#shortdate-1)s``.
