@@ -307,7 +307,8 @@ class TestActionRun(TestCase):
         assert self.action_run.success()
         assert self.action_run.emit_triggers.call_count == 1
 
-    def test_emit_triggers(self):
+    @mock.patch('tron.core.actionrun.EventBus')
+    def test_emit_triggers(self, eventbus):
         prefix = f"{self.action_run.id}"
         self.action_run.context = {'shortdate': 'foo'}
 
@@ -317,7 +318,7 @@ class TestActionRun(TestCase):
         self.action_run.trigger_downstreams = dict(foo="bar")
         self.action_run.emit_triggers()
 
-        assert self.action_run.eventbus_publish.mock_calls == [
+        assert eventbus.publish.mock_calls == [
             mock.call(f"{prefix}.shortdate.foo"),
             mock.call(f"{prefix}.foo.bar"),
         ]

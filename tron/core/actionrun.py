@@ -14,6 +14,7 @@ from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
+from tron.eventbus import EventBus
 from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
 from tron.utils import iteration
@@ -447,7 +448,7 @@ class ActionRun:
         log.info(f"{self} publishing triggers: [{', '.join(triggers)}]")
         for trigger in triggers:
             # self.id in here to make the log message above more concise
-            self.eventbus_publish(f"{self.id}.{trigger}")
+            EventBus.publish(f"{self.id}.{trigger}")
 
     def success(self):
         if self.trigger_downstreams:
