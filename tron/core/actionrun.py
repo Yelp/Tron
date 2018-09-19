@@ -22,6 +22,7 @@ from tron.utils import proxy
 from tron.utils import state
 from tron.utils import timeutils
 from tron.utils.observer import Observer
+from tron.eventbus import EventBus
 
 log = logging.getLogger(__name__)
 
@@ -32,14 +33,13 @@ class ActionRunFactory(object):
     """
 
     @classmethod
-    def build_action_run_collection(cls, job_run, action_runner, eventbus_publish):
+    def build_action_run_collection(cls, job_run, action_runner):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
         action_run_map = {
             maybe_decode(name): cls.build_run_for_action(
                 job_run,
                 action_inst,
                 action_runner,
-                eventbus_publish,
             )
             for name, action_inst in job_run.action_graph.action_map.items()
         }
@@ -51,10 +51,9 @@ class ActionRunFactory(object):
         job_run,
         runs_state_data,
         cleanup_action_state_data,
-        eventbus_publish,
     ):
         action_runs = [
-            cls.action_run_from_state(job_run, state_data, eventbus_publish)
+            cls.action_run_from_state(job_run, state_data)
             for state_data in runs_state_data
         ]
         if cleanup_action_state_data:
@@ -62,7 +61,6 @@ class ActionRunFactory(object):
                 cls.action_run_from_state(
                     job_run,
                     cleanup_action_state_data,
-                    eventbus_publish,
                     cleanup=True,
                 ),
             )
@@ -74,7 +72,7 @@ class ActionRunFactory(object):
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
     @classmethod
-    def build_run_for_action(cls, job_run, action, action_runner, eventbus_publish):
+    def build_run_for_action(cls, job_run, action, action_runner):
         """Create an ActionRun for a JobRun and Action."""
         run_node = action.node_pool.next(
         ) if action.node_pool else job_run.node
@@ -83,7 +81,6 @@ class ActionRunFactory(object):
             'job_run_id': job_run.id,
             'name': action.name,
             'node': run_node,
-            'eventbus_publish': eventbus_publish,
             'bare_command': action.command,
             'parent_context': job_run.context,
             'output_path': job_run.output_path.clone(),
@@ -108,7 +105,7 @@ class ActionRunFactory(object):
         return SSHActionRun(**args)
 
     @classmethod
-    def action_run_from_state(cls, job_run, state_data, eventbus_publish, cleanup=False):
+    def action_run_from_state(cls, job_run, state_data, cleanup=False):
         """Restore an ActionRun for this JobRun from the state data."""
         args = {
             'state_data': state_data,
@@ -116,7 +113,6 @@ class ActionRunFactory(object):
             'output_path': job_run.output_path.clone(),
             'job_run_node': job_run.node,
             'cleanup': cleanup,
-            'eventbus_publish': eventbus_publish,
         }
 
         if state_data.get('executor') == ExecutorTypes.mesos:
@@ -124,7 +120,7 @@ class ActionRunFactory(object):
         return SSHActionRun.from_state(**args)
 
 
-class ActionRun(object):
+class ActionRun:
     """Base class for tracking the state of a single run of an Action.
 
     ActionRuns are observed by a parent JobRun.
@@ -186,7 +182,6 @@ class ActionRun(object):
         job_run_id,
         name,
         node,
-        eventbus_publish,
         bare_command=None,
         parent_context=None,
         output_path=None,
@@ -217,7 +212,6 @@ class ActionRun(object):
         self.job_run_id = maybe_decode(job_run_id)
         self.action_name = maybe_decode(name)
         self.node = node
-        self.eventbus_publish = eventbus_publish
         self.start_time = start_time
         self.end_time = end_time
         self.exit_status = exit_status
@@ -278,7 +272,6 @@ class ActionRun(object):
         parent_context,
         output_path,
         job_run_node,
-        eventbus_publish,
         cleanup=False,
     ):
         """Restore the state of this ActionRun from a serialized state."""
@@ -307,7 +300,6 @@ class ActionRun(object):
             job_run_id=job_run_id,
             name=action_name,
             node=job_run_node,
-            eventbus_publish=eventbus_publish,
             parent_context=parent_context,
             output_path=output_path,
             rendered_command=rendered_command,

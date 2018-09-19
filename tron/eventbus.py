@@ -10,24 +10,6 @@ from twisted.internet import reactor
 log = logging.getLogger(__name__)
 
 
-def make_eventbus(log_dir):
-    """Create log directory and link to current log if those don't
-    already exist"""
-    eb = EventBus(log_dir)
-
-    if not os.path.exists(eb.log_dir):
-        log.warning(f"creating {eb.log_dir}")
-        os.mkdir(eb.log_dir)
-
-    if not os.path.exists(eb.log_current) or not os.path.exists(
-        os.readlink(eb.log_current)
-    ):
-        log.warning(f"creating {eb.log_current}")
-        eb.sync_save_log("initial save")
-
-    return eb
-
-
 def consume_dequeue(queue, func):
     queue_length = len(queue)
     for _ in range(queue_length):
@@ -35,12 +17,74 @@ def consume_dequeue(queue, func):
 
 
 class EventBus:
+    instance = None
+
+    @staticmethod
+    def create(log_dir):
+        """Create log directory and link to current log if those don't
+        already exist"""
+        if EventBus.instance:
+            if EventBus.instance.log_dir == log_dir:
+                return
+            EventBus.instance.shutdown()
+
+        eb = EventBus(log_dir)
+
+        if not os.path.exists(eb.log_dir):
+            log.warning(f"creating {eb.log_dir}")
+            os.mkdir(eb.log_dir)
+
+        if not os.path.exists(eb.log_current) or not os.path.exists(
+            os.readlink(eb.log_current)
+        ):
+            log.warning(f"creating {eb.log_current}")
+            eb.sync_save_log("initial save")
+
+        EventBus.instance = eb
+
+    @staticmethod
+    def start():
+        if not EventBus.instance:
+            return
+        return EventBus.instance._start()
+
+    @staticmethod
+    def shutdown():
+        if not EventBus.instance:
+            return
+        return EventBus.instance._shutdown()
+
+    @staticmethod
+    def publish(message):
+        if not EventBus.instance:
+            return
+        return EventBus.instance._publish(message)
+
+    @staticmethod
+    def subscribe(prefix, subscriber, callback):
+        if not EventBus.instance:
+            return
+        return EventBus.instance._subscribe(prefix, subscriber, callback)
+
+    @staticmethod
+    def clear_subscriptions(subscriber):
+        if not EventBus.instance:
+            return
+        return EventBus.instance._clear_subscriptions(subscriber)
+
+    @staticmethod
+    def has_event(message):
+        if not EventBus.instance:
+            return
+        return EventBus.instance._has_event(message)
+
     def __init__(self, log_dir):
         self.enabled = False
         self.event_log = {}
         self.event_subscribers = {}
         self.publish_queue = deque()
         self.subscribe_queue = deque()
+        self.clear_subscription_queue = deque()
         self.log_dir = log_dir
         self.log_current = os.path.join(self.log_dir, "current")
         self.log_updates = 0
@@ -48,19 +92,19 @@ class EventBus:
         self.log_save_interval = 60   # save every minute
         self.log_save_updates = 100   # save every 100 updates
 
-    def start(self):
+    def _start(self):
         self.enabled = True
         log.info("starting")
         self.sync_load_log()
         reactor.callLater(0, self.sync_loop)
 
-    def shutdown(self):
+    def _shutdown(self):
         if self.enabled:
             self.enabled = False
             self.sync_save_log("shutdown")
             log.info("shutdown completed")
 
-    def publish(self, event):
+    def _publish(self, event):
         if isinstance(event, str):
             event = {'id': event}
         if isinstance(event, dict):
@@ -68,14 +112,18 @@ class EventBus:
             log.debug(f"publish of {event['id']} enqueued")
             return True
         else:
-            log.error(f"eventbus can't publish {event!r}, must  be dict")
+            log.error(f"can't publish {event!r}, must be dict")
             return False
 
-    def subscribe(self, prefix, subscriber, callback):
+    def _subscribe(self, prefix, subscriber, callback):
         self.subscribe_queue.append((prefix, subscriber, callback))
         log.debug(f"subscription ({prefix}, {subscriber}) enqueued")
 
-    def has_event(self, event_id):
+    def _clear_subscriptions(self, subscriber):
+        self.clear_subscription_queue.append(subscriber)
+        log.debug(f"clearing subscriptions for {subscriber}")
+
+    def _has_event(self, event_id):
         return event_id in self.event_log
 
     def sync_load_log(self):
@@ -143,7 +191,14 @@ class EventBus:
             self.log_updates = 0
 
         consume_dequeue(self.subscribe_queue, self.sync_subscribe)
+        consume_dequeue(self.clear_subscription_queue, self.sync_clear_subscriptions)
         consume_dequeue(self.publish_queue, self.sync_publish)
+
+        num_subs = 0
+        for _, subs in self.event_subscribers:
+            num_subs += len(subs)
+
+        log.debug(f"events: {len(self.event_log)}, subscriptions: {num_subs}")
 
     def sync_publish(self, event):
         event = pickle.loads(pickle.dumps(event))
@@ -158,7 +213,7 @@ class EventBus:
 
         self.event_log[event_id] = event
         self.log_updates += 1
-        log.debug(f"event stored: {event}")
+        log.debug(f"event stored: {event_id} {event}")
 
         reactor.callLater(0, self.sync_notify, event_id)
 
@@ -176,7 +231,7 @@ class EventBus:
         prefix, sub = prefix_sub
 
         if prefix not in self.event_subscribers:
-            log.debug(f"subscription  not found for prefix {prefix}")
+            log.debug(f"subscription not found for prefix {prefix}")
             return
 
         new_subs = [
@@ -189,10 +244,28 @@ class EventBus:
             del self.event_subscribers[prefix]
         log.debug(f"subscription removed: {prefix} / {sub}")
 
+    def sync_clear_subscriptions(self, subscriber):
+        new_subscriptions = {}
+        removed = 0
+        for prefix, subs in self.event_subscribers.items():
+            if prefix not in new_subscriptions:
+                new_subscriptions[prefix] = []
+            for (sub, cb) in subs:
+                if sub == subscriber:
+                    removed += 1
+                    continue
+                new_subscriptions[prefix].append((sub, cb))
+        self.event_subscribers = new_subscriptions
+
+        if removed > 0:
+            log.debug(f"subscriptions of {subscriber} removed: {removed}")
+
     def sync_notify(self, event_id):
         event = self.event_log[event_id]
+        log.debug(f"notifying subscribers about {event_id}")
         for prefix, subscribers in self.event_subscribers.items():
+            log.debug(f"check {prefix}: {event_id.startswith(prefix)}")
             if event_id.startswith(prefix):
                 for (sub, cb) in subscribers:
                     log.debug(f"notifying {sub} about {event_id}")
-                    reactor.callLater(0, cb, event)
+                    reactor.callLater(0, cb, dict(id=event_id, **event))

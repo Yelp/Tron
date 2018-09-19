@@ -45,7 +45,6 @@ class TestJob(TestCase):
             self.job = job.Job(
                 "jobname",
                 scheduler,
-                eventbus_publish=lambda: None,
                 run_collection=run_collection,
                 action_graph=action_graph,
                 node_pool=self.nodes,
@@ -85,7 +84,6 @@ class TestJob(TestCase):
         new_job = job.Job.from_config(
             job_config,
             scheduler,
-            eventbus_publish=lambda: None,
             parent_context=parent_context,
             output_path=output_path,
             action_runner=self.action_runner,
@@ -105,7 +103,6 @@ class TestJob(TestCase):
         other_job = job.Job(
             'otherjob',
             'scheduler',
-            eventbus_publish=lambda: None,
             action_runner=action_runner,
         )
         self.job.update_from_job(other_job)
@@ -219,26 +216,26 @@ class TestJob(TestCase):
         self.job.notify.assert_called_with(self.job.NOTIFY_RUN_DONE)
 
     def test__eq__(self):
-        other_job = job.Job("jobname", 'scheduler', eventbus_publish=lambda: None)
+        other_job = job.Job("jobname", 'scheduler')
         assert not self.job == other_job
         other_job.update_from_job(self.job)
         assert_equal(self.job, other_job)
 
     def test__ne__(self):
-        other_job = job.Job("jobname", 'scheduler', eventbus_publish=lambda: None)
+        other_job = job.Job("jobname", 'scheduler')
         assert self.job != other_job
         other_job.update_from_job(self.job)
         assert not self.job != other_job
 
     def test__eq__true(self):
         action_runner = mock.Mock()
-        first = job.Job("jobname", 'scheduler', eventbus_publish=lambda: None, action_runner=action_runner)
-        second = job.Job("jobname", 'scheduler', eventbus_publish=lambda: None, action_runner=action_runner)
+        first = job.Job("jobname", 'scheduler', action_runner=action_runner)
+        second = job.Job("jobname", 'scheduler', action_runner=action_runner)
         assert_equal(first, second)
 
     def test__eq__false(self):
-        first = job.Job("jobname", 'scheduler', eventbus_publish=lambda: None, action_runner=mock.Mock())
-        second = job.Job("jobname", 'scheduler', eventbus_publish=lambda: None, action_runner=mock.Mock())
+        first = job.Job("jobname", 'scheduler', action_runner=mock.Mock())
+        second = job.Job("jobname", 'scheduler', action_runner=mock.Mock())
         assert_not_equal(first, second)
 
 
@@ -374,7 +371,6 @@ class TestJobSchedulerGetRunsToSchedule(TestCase):
         self.job = job.Job(
             "jobname",
             self.scheduler,
-            eventbus_publish=lambda: None,
             run_collection=run_collection,
             node_pool=node_pool,
         )
@@ -438,7 +434,6 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
         self.job = job.Job(
             "jobname",
             self.scheduler,
-            eventbus_publish=lambda: None,
             run_collection=run_collection,
             node_pool=node_pool,
         )
@@ -496,7 +491,6 @@ class TestJobSchedulerSchedule(TestCase):
         self.job = job.Job(
             name="jobname",
             scheduler=self.scheduler,
-            eventbus_publish=lambda: None,
             run_collection=run_collection,
             node_pool=node_pool,
         )
@@ -504,11 +498,6 @@ class TestJobSchedulerSchedule(TestCase):
         self.original_build_new_runs = self.job.build_new_runs
         self.job.build_new_runs = mock.Mock(return_value=[mock_run])
 
-    @setup_teardown
-    def mock_eventloop(self):
-        patcher = mock.patch('tron.core.job.eventloop', autospec=True)
-        with patcher as self.eventloop:
-            yield
 
     def test_enable(self):
         self.job.enabled = False
@@ -605,13 +594,11 @@ class TestJobSchedulerFactory(TestCase):
         self.action_runner = mock.create_autospec(
             actioncommand.SubprocessActionRunnerFactory,
         )
-        self.eventbus_publish = lambda: None
         self.factory = job.JobSchedulerFactory(
             self.context,
             self.output_stream_dir,
             self.time_zone,
             self.action_runner,
-            self.eventbus_publish,
         )
 
     def test_build(self):
@@ -627,7 +614,6 @@ class TestJobSchedulerFactory(TestCase):
             assert_equal(kwargs['parent_context'], self.context)
             assert_equal(kwargs['output_path'].base, self.output_stream_dir)
             assert_equal(kwargs['action_runner'], self.action_runner)
-            assert_equal(kwargs['eventbus_publish'], self.eventbus_publish)
 
 
 class TestJobCollection(TestCase):

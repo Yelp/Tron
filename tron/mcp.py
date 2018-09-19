@@ -9,7 +9,7 @@ from tron import command_context
 from tron import node
 from tron.config import manager
 from tron.core import job
-from tron.eventbus import make_eventbus
+from tron.eventbus import EventBus
 from tron.mesos import MesosClusterRepository
 from tron.serialize.runstate import statemanager
 
@@ -115,12 +115,7 @@ class MasterControlProgram(object):
             output_stream_dir,
             master_config.time_zone,
             action_runner,
-            self.eventbus_publish,
         )
-
-    def eventbus_publish(self, message):
-        if self.eventbus:
-            self.eventbus.publish(message)
 
     def update_state_watcher_config(self, state_config):
         """Update the StateChangeWatcher, and save all state if the state config
@@ -135,10 +130,8 @@ class MasterControlProgram(object):
 
     def configure_eventbus(self, enabled):
         if enabled:
-            if self.eventbus:
-                return
-            self.eventbus = make_eventbus(f"{self.working_dir}/_events")
-            self.eventbus.start()
+            EventBus.create(f"{self.working_dir}/_events")
+            EventBus.start()
         else:
             if not self.eventbus:
                 return

@@ -41,7 +41,6 @@ class JobRun(Observable, Observer):
         run_num,
         run_time,
         node,
-        eventbus_publish,
         output_path=None,
         base_context=None,
         action_runs=None,
@@ -59,7 +58,6 @@ class JobRun(Observable, Observer):
         self._action_runs = None
         self.action_graph = action_graph
         self.manual = manual
-        self.eventbus_publish = eventbus_publish
 
         if action_runs:
             self.action_runs = action_runs
@@ -71,14 +69,13 @@ class JobRun(Observable, Observer):
         return '%s.%s' % (self.job_name, self.run_num)
 
     @classmethod
-    def for_job(cls, job, run_num, run_time, node, manual, eventbus_publish):
+    def for_job(cls, job, run_num, run_time, node, manual):
         """Create a JobRun for a job."""
         run = cls(
             job.get_name(),
             run_num,
             run_time,
             node,
-            eventbus_publish=eventbus_publish,
             output_path=job.output_path.clone(),
             base_context=job.context,
             action_graph=job.action_graph,
@@ -87,7 +84,6 @@ class JobRun(Observable, Observer):
         action_runs = ActionRunFactory.build_action_run_collection(
             run,
             job.action_runner,
-            eventbus_publish=eventbus_publish,
         )
         run.action_runs = action_runs
         return run
@@ -100,7 +96,6 @@ class JobRun(Observable, Observer):
         output_path,
         context,
         run_node,
-        eventbus_publish,
     ):
         """Restore a JobRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
@@ -116,13 +111,11 @@ class JobRun(Observable, Observer):
             manual=state_data.get('manual', False),
             output_path=output_path,
             base_context=context,
-            eventbus_publish=eventbus_publish,
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
             job_run,
             state_data['runs'],
             state_data['cleanup_run'],
-            eventbus_publish=eventbus_publish,
         )
         job_run.action_runs = action_runs
         return job_run
@@ -325,23 +318,22 @@ class JobRunCollection(object):
     Runs in a JobRunCollection should always remain sorted by their run_num.
     """
 
-    def __init__(self, run_limit, eventbus_publish):
+    def __init__(self, run_limit):
         self.run_limit = run_limit
         self.runs = deque()
-        self.eventbus_publish = eventbus_publish
 
     @classmethod
-    def from_config(cls, job_config, eventbus_publish):
+    def from_config(cls, job_config):
         """Factory method for creating a JobRunCollection from a config."""
-        return cls(job_config.run_limit, eventbus_publish)
+        return cls(job_config.run_limit)
 
     def build_new_run(self, job, run_time, node, manual=False):
         """Create a new run for the job, add it to the runs list,
         and return it.
         """
         run_num = self.next_run_num()
-        run = JobRun.for_job(job, run_num, run_time, node, manual, self.eventbus_publish)
-        log.info(f"Created {run} on {node.name} at {run_time}")
+        run = JobRun.for_job(job, run_num, run_time, node, manual)
+        log.info(f"{run} created on {node.name} at {run_time}")
         self.runs.appendleft(run)
         self.remove_old_runs()
         return run
@@ -460,7 +452,6 @@ def job_runs_from_state(
     output_path,
     context,
     node_pool,
-    eventbus_publish,
 ):
     return [
         JobRun.from_state(
@@ -469,6 +460,5 @@ def job_runs_from_state(
             output_path.clone(),
             context,
             node_pool.next(),
-            eventbus_publish,
         ) for run in runs
     ]

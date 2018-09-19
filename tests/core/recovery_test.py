@@ -33,21 +33,18 @@ class TestRecovery(TestCase):
                 job_run_id="test.unknown",
                 name="test.unknown",
                 node=Mock(),
-                eventbus_publish=lambda: None,
                 machine=mock_unknown_machine,
             ),
             SSHActionRun(
                 job_run_id="test.succeeded",
                 name="test.succeeded",
                 node=Mock(),
-                eventbus_publish=lambda: None,
                 machine=mock_ok_machine,
             ),
             MesosActionRun(
                 job_run_id="test.succeeded",
                 name="test.succeeded",
                 node=Mock(),
-                eventbus_publish=lambda: None,
                 machine=mock_ok_machine,
             ),
         ]
@@ -67,7 +64,6 @@ class TestRecovery(TestCase):
             job_run_id="test.succeeded",
             name="test.succeeded",
             node=Mock(),
-            eventbus_publish=lambda: None,
         )
         assert recover_action_run(
             no_action_runner, no_action_runner.action_runner
@@ -83,7 +79,6 @@ class TestRecovery(TestCase):
             job_run_id="test.succeeded",
             name="test.succeeded",
             node=mock_node,
-            eventbus_publish=lambda: None,
             action_runner=action_runner,
             end_time=timeutils.current_time(),
             exit_status=0
