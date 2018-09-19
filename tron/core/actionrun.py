@@ -440,14 +440,14 @@ class ActionRun:
             shortdate = self.render_template("{shortdate}")
             triggers = [f"shortdate.{shortdate}"]
         elif isinstance(self.trigger_downstreams, dict):
-            rendered = [
-                (k, self.render_template(v))
+            triggers = [
+                f"{k}.{self.render_template(v)}"
                 for k, v in self.trigger_downstreams.items()
             ]
-            triggers = [f"{key}.{value}" for key, value in rendered]
         else:
             log.error(f"{self} trigger_downstreams must be true or dict")
             return
+
         log.info(f"{self} publishing triggers: [{', '.join(triggers)}]")
         job_id = '.'.join(self.job_run_id.split('.')[:-1])
         for trigger in triggers:

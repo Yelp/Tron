@@ -7,7 +7,7 @@ from testifycompat import assert_equal
 from testifycompat import setup
 from testifycompat import teardown
 from testifycompat import TestCase
-from tron import eventbus
+from tron.eventbus import EventBus
 
 
 class MakeEventBusTestCase(TestCase):
@@ -17,6 +17,7 @@ class MakeEventBusTestCase(TestCase):
 
     @teardown
     def teardown(self):
+        EventBus.shutdown()
         self.logdir.cleanup()
 
     @mock.patch('tron.eventbus.time', autospec=True)
@@ -24,7 +25,7 @@ class MakeEventBusTestCase(TestCase):
         os.rmdir(self.logdir.name)
 
         time.time = mock.Mock(return_value=1.0)
-        eb = eventbus.make_eventbus(self.logdir.name)
+        eb = EventBus.create(self.logdir.name)
         assert os.path.exists(self.logdir.name)
         assert os.path.exists(os.path.join(self.logdir.name, "current"))
 
@@ -32,7 +33,7 @@ class MakeEventBusTestCase(TestCase):
         eb.event_log = {'foo': 'bar'}
         eb.sync_save_log("test")
 
-        new_eb = eventbus.make_eventbus(self.logdir.name)
+        new_eb = EventBus.create(self.logdir.name)
         new_eb.sync_load_log()
         assert new_eb.event_log == eb.event_log
 
@@ -41,11 +42,12 @@ class EventBusTestCase(TestCase):
     @setup
     def setup(self):
         self.log_dir = tempfile.TemporaryDirectory(prefix="tron_eventbus_test")
-        self.eventbus = eventbus.make_eventbus(self.log_dir.name)
+        self.eventbus = EventBus.create(self.log_dir.name)
         self.eventbus.enabled = True
 
     @teardown
     def teardown(self):
+        EventBus.shutdown()
         self.log_dir.cleanup()
 
     @mock.patch('tron.eventbus.reactor', autospec=True)

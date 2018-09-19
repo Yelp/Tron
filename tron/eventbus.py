@@ -23,11 +23,7 @@ class EventBus:
     def create(log_dir):
         """Create log directory and link to current log if those don't
         already exist"""
-        if EventBus.instance:
-            if EventBus.instance.log_dir == log_dir:
-                return
-            EventBus.instance.shutdown()
-
+        EventBus.shutdown()
         eb = EventBus(log_dir)
 
         if not os.path.exists(eb.log_dir):
@@ -41,6 +37,7 @@ class EventBus:
             eb.sync_save_log("initial save")
 
         EventBus.instance = eb
+        return eb
 
     @staticmethod
     def start():
