@@ -14,6 +14,7 @@ from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
+from tron.eventbus import EventBus
 from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
 from tron.utils import iteration
@@ -22,7 +23,6 @@ from tron.utils import proxy
 from tron.utils import state
 from tron.utils import timeutils
 from tron.utils.observer import Observer
-from tron.eventbus import EventBus
 
 log = logging.getLogger(__name__)
 
@@ -173,6 +173,7 @@ class ActionRun:
 
     # Failed render command is false to ensure that it will fail when run
     FAILED_RENDER = 'false # Command failed to render correctly. See the Tron error log.'
+    NOTIFY_TRIGGER_READY = 'trigger_ready'
 
     context_class = command_context.ActionRunContext
 
@@ -376,6 +377,8 @@ class ActionRun:
         # TODO: - state machine already does .check()
         #       - only set exit_status / end_time if transition succeeds?
         if self.machine.check(target):
+            if self.triggered_by:
+                EventBus.clear_subscriptions(self.__hash__())
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
             return self.machine.transition(target)
@@ -438,9 +441,17 @@ class ActionRun:
             log.error(f"{self} trigger_downstreams must be true or dict")
             return
         log.info(f"{self} publishing triggers: [{', '.join(triggers)}]")
+        job_id = '.'.join(self.job_run_id.split('.')[:-1])
         for trigger in triggers:
-            # self.id in here to make the log message above more concise
-            self.eventbus_publish(f"{self.id}.{trigger}")
+            EventBus.publish(f"{job_id}.{self.action_name}.{trigger}")
+
+    # TODO: subscribe for events and maintain a list of remaining triggers
+    def remaining_triggers(self):
+        return [
+            trigger
+            for trigger in map(self.render_template, self.triggered_by or [])
+            if not EventBus.has_event(trigger)
+        ]
 
     def success(self):
         if self.trigger_downstreams:
@@ -550,7 +561,19 @@ class ActionRun:
 
     def cleanup(self):
         self.machine.clear_observers()
+        if self.triggered_by:
+            EventBus.clear_subscriptions(self.__hash__())
         self.cancel()
+
+    def setup_subscriptions(self):
+        for trigger_pattern in self.triggered_by or []:
+            trigger = self.render_template(trigger_pattern)
+            EventBus.subscribe(trigger, self.__hash__(), self.trigger_notify)
+
+    def trigger_notify(self, *_):
+        remaining = self.remaining_triggers()
+        if not remaining:
+            self.machine.notify(ActionRun.NOTIFY_TRIGGER_READY)
 
     def __getattr__(self, name):
         """Support convenience properties for checking if this ActionRun is in
@@ -872,10 +895,12 @@ class ActionRunCollection(object):
             if any(not run.is_complete for run in required_runs):
                 return True
 
-        external_deps = self.action_graph.get_required_triggers(
-            action_run.action_name
-        )
-        return any(external_deps)
+        waiting_for = action_run.remaining_triggers()
+        if waiting_for:
+            log.debug(f"{action_run} waiting for: {waiting_for}")
+            return True
+
+        return False
 
     @property
     def is_done(self):

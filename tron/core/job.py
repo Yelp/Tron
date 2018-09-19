@@ -1,9 +1,9 @@
 import logging
-from twisted.internet import reactor
 
 import humanize
 import six
 from six.moves import filter
+from twisted.internet import reactor
 
 from tron import command_context
 from tron import node

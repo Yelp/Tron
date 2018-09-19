@@ -144,6 +144,7 @@ class JobRun(Observable, Observer):
         self._action_runs = run_collection
         for action_run in run_collection.action_runs_with_cleanup:
             self.watch(action_run)
+            action_run.setup_subscriptions()
 
         self.action_runs_proxy = proxy.AttributeProxy(
             self.action_runs,
@@ -211,8 +212,19 @@ class JobRun(Observable, Observer):
             if action_run.start()
         ]
 
-    def handle_action_run_state_change(self, action_run: ActionRun, _):
+    def handle_action_run_state_change(self, action_run: ActionRun, event):
         """Handle events triggered by JobRuns."""
+        log.info(f"{self} got an event: {event}")
+        if event == ActionRun.NOTIFY_TRIGGER_READY:
+            log.info(f"{action_run} is ready to run")
+            started = self._start_action_runs()
+            if any(started):
+                log.info(
+                    f"{self} action runs triggered: "
+                    f"{', '.join(str(s) for s in started)}"
+                )
+            return
+
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
 
