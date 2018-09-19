@@ -335,7 +335,7 @@ class ActionRun:
         if run.is_running:
             run._done('fail_unknown')
         if run.is_starting:
-            run.fail(None)
+            run._exit_unsuccessful(None)
         return run
 
     def start(self):
@@ -393,7 +393,7 @@ class ActionRun:
             self.retries_remaining = 1
 
         if self.is_done:
-            return self.fail(self.exit_status)
+            return self._exit_unsuccessful(self.exit_status)
         else:
             log.info(f"{self} getting killed for a retry")
             return self.kill(final=False)
@@ -415,17 +415,25 @@ class ActionRun:
             self.machine.reset()
             return self.start()
 
-    def fail(self, exit_status=0):
+    def fail(self, exit_status=None):
+        if self.retries_remaining:
+            self.retries_remaining = -1
+
+        return self._done('fail', exit_status)
+
+    def _exit_unsuccessful(self, exit_status=None):
         if self.retries_remaining is not None:
             if self.retries_remaining > 0:
                 self.retries_remaining -= 1
                 self.exit_statuses.append(exit_status)
                 return self.restart()
             else:
-                retries = len(self.exit_statuses)
-                log.info(f"{self} reached maximum number of retries: {retries}")
-
-        return self._done('fail', exit_status)
+                log.info(
+                    "Reached maximum number of retries: {}".format(
+                        len(self.exit_statuses),
+                    )
+                )
+        return self.fail(exit_status)
 
     def emit_triggers(self):
         if isinstance(self.trigger_downstreams, bool):
@@ -605,8 +613,8 @@ class SSHActionRun(ActionRun, Observer):
         try:
             self.node.submit_command(action_command)
         except node.Error as e:
-            log.warning(f"{self} failed to start: {e!r}")
-            self.fail(-2)
+            log.warning("Failed to start %s: %r", self.id, e)
+            self._exit_unsuccessful(-2)
             return
         return True
 
@@ -655,7 +663,7 @@ class SSHActionRun(ActionRun, Observer):
             return self.machine.transition('started')
 
         if event == ActionCommand.FAILSTART:
-            return self.fail(None)
+            return self._exit_unsuccessful(None)
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
@@ -664,7 +672,7 @@ class SSHActionRun(ActionRun, Observer):
             if not action_command.exit_status:
                 return self.success()
 
-            return self.fail(action_command.exit_status)
+            return self._exit_unsuccessful(action_command.exit_status)
 
     handler = handle_action_command_state_change
 
@@ -747,9 +755,6 @@ class MesosActionRun(ActionRun, Observer):
         return task
 
     def stop(self):
-        if not self.is_active:
-            return f'Action is {self.state}, not running.'
-
         if self.retries_remaining is not None:
             self.retries_remaining = -1
 
@@ -759,27 +764,31 @@ class MesosActionRun(ActionRun, Observer):
         return self._kill_mesos_task()
 
     def kill(self, final=True):
-        if not self.is_active:
-            return f'Action is {self.state}, not running.'
-
         if self.retries_remaining is not None and final:
             self.retries_remaining = -1
 
         if self.cancel_delay():
             return
 
-        error_message = self._kill_mesos_task()
-        if error_message is not None:
-            return error_message
-        return "Warning: It might take up to docker_stop_timeout (current setting is 2 mins) for killing."
+        return self._kill_mesos_task()
 
     def _kill_mesos_task(self):
+        msgs = []
+        if not self.is_active:
+            msgs.append(f'Action is {self.state}, not running. Continuing anyway.')
+
         mesos_cluster = MesosClusterRepository.get_cluster()
         if self.mesos_task_id is None:
-            return "Error: Can't find task id for the action."
-        succeeded = mesos_cluster.kill(self.mesos_task_id)
-        if not succeeded:
-            return "Error while killing task. Please try again."
+            msgs.append("Error: Can't find task id for the action.")
+        else:
+            msgs.append(f"Sending kill for {self.mesos_task_id}...")
+            succeeded = mesos_cluster.kill(self.mesos_task_id)
+            if succeeded:
+                msgs.append("Sent! It can take up to docker_stop_timeout (current setting is 2 mins) to stop.")
+            else:
+                msgs.append("Error while sending kill request. Please try again.")
+
+        return '\n'.join(msgs)
 
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
@@ -790,7 +799,7 @@ class MesosActionRun(ActionRun, Observer):
             return self.machine.transition('started')
 
         if event == ActionCommand.FAILSTART:
-            return self.fail(None)
+            return self._exit_unsuccessful(None)
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
@@ -799,7 +808,7 @@ class MesosActionRun(ActionRun, Observer):
             if not action_command.exit_status:
                 return self.success()
 
-            return self.fail(action_command.exit_status)
+            return self._exit_unsuccessful(action_command.exit_status)
 
     handler = handle_action_command_state_change
 
