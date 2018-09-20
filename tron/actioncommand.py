@@ -66,7 +66,7 @@ class ActionCommand(Observable):
 
     def transition_and_notify(self, target):
         if self.machine.transition(target):
-            self.notify(target)
+            self.notify(self.state)
             return True
 
     def started(self):

@@ -195,8 +195,6 @@ class EventBus:
         for _, subs in self.event_subscribers:
             num_subs += len(subs)
 
-        log.debug(f"events: {len(self.event_log)}, subscriptions: {num_subs}")
-
     def sync_publish(self, event):
         event = pickle.loads(pickle.dumps(event))
         event_id = event['id']

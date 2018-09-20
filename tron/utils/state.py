@@ -49,7 +49,9 @@ class Machine:
         """Check if the state can be transitioned via `transition`. Returns the
         destination state.
         """
-        return self.transitions[self.state].get(transition, None)
+        next_state = self.transitions[self.state].get(transition, None)
+        log.debug(f"checking {self.state} x {transition} = {next_state!r}")
+        return next_state
 
     def transition(self, transition):
         """Checks if machine can be transitioned from current state using
