@@ -211,9 +211,9 @@ def make_master_jobs():
                 expected_runtime=datetime.timedelta(1),
                 cleanup_action=None,
             ),
-        'MASTER.test_job3':
+        'MASTER.test_job_actions_dict':
             make_job(
-                name='MASTER.test_job3',
+                name='MASTER.test_job_actions_dict',
                 node='node1',
                 schedule=ConfigConstantScheduler(),
                 actions=FrozenDict({
@@ -347,19 +347,18 @@ class ConfigTestCase(TestCase):
                 actions=[dict(name="action2_0", command="test_command2.0")]
             ),
             dict(
-                name="test_job3",
+                name="test_job_actions_dict",
                 node='node1',
                 schedule="constant",
-                actions=[
-                    dict(name="action", command="command"),
-                    dict(name="action1", command="command"),
-                    dict(
-                        name="action2",
+                actions=dict(
+                    action=dict(command="command"),
+                    action1=dict(command="command"),
+                    action2=dict(
                         node='node0',
                         command="command",
                         requires=['action', 'action1']
                     )
-                ]
+                )
             ),
             dict(
                 name="test_job4",
@@ -408,7 +407,7 @@ class ConfigTestCase(TestCase):
         assert test_config.time_zone == expected.time_zone
         assert test_config.nodes == expected.nodes
         assert test_config.node_pools == expected.node_pools
-        for key in ['0', '1', '2', '3', '4', '_mesos']:
+        for key in ['0', '1', '2', '_actions_dict', '4', '_mesos']:
             job_name = f"MASTER.test_job{key}"
             assert job_name in test_config.jobs, f"{job_name} in test_config.jobs"
             assert job_name in expected.jobs, f"{job_name} in test_config.jobs"
@@ -1198,7 +1197,7 @@ class TestConfigContainer(TestCase):
         expected = [
             'test_job1',
             'test_job0',
-            'test_job3',
+            'test_job_actions_dict',
             'test_job2',
             'test_job4',
             'test_job_mesos',
@@ -1209,7 +1208,7 @@ class TestConfigContainer(TestCase):
         expected = [
             'test_job1',
             'test_job0',
-            'test_job3',
+            'test_job_actions_dict',
             'test_job2',
             'test_job4',
             'test_job_mesos',
