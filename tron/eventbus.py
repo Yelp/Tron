@@ -191,12 +191,6 @@ class EventBus:
         consume_dequeue(self.clear_subscription_queue, self.sync_clear_subscriptions)
         consume_dequeue(self.publish_queue, self.sync_publish)
 
-        num_subs = 0
-        for _, subs in self.event_subscribers:
-            num_subs += len(subs)
-
-        log.debug(f"events: {len(self.event_log)}, subscriptions: {num_subs}")
-
     def sync_publish(self, event):
         event = pickle.loads(pickle.dumps(event))
         event_id = event['id']
