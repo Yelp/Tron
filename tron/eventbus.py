@@ -3,6 +3,7 @@ import os
 import pickle
 import signal
 import time
+from collections import defaultdict
 from collections import deque
 
 from twisted.internet import reactor
@@ -78,7 +79,7 @@ class EventBus:
     def __init__(self, log_dir):
         self.enabled = False
         self.event_log = {}
-        self.event_subscribers = {}
+        self.event_subscribers = defaultdict(list)
         self.publish_queue = deque()
         self.subscribe_queue = deque()
         self.clear_subscription_queue = deque()
@@ -191,12 +192,6 @@ class EventBus:
         consume_dequeue(self.clear_subscription_queue, self.sync_clear_subscriptions)
         consume_dequeue(self.publish_queue, self.sync_publish)
 
-        num_subs = 0
-        for _, subs in self.event_subscribers:
-            num_subs += len(subs)
-
-        log.debug(f"events: {len(self.event_log)}, subscriptions: {num_subs}")
-
     def sync_publish(self, event):
         event = pickle.loads(pickle.dumps(event))
         event_id = event['id']
@@ -216,19 +211,14 @@ class EventBus:
 
     def sync_subscribe(self, prefix_subscriber_cb):
         prefix, subscriber, cb = prefix_subscriber_cb
-
-        if prefix in self.event_subscribers:
-            self.event_subscribers[prefix].append((subscriber, cb))
-        else:
-            self.event_subscribers[prefix] = [(subscriber, cb)]
-
+        self.event_subscribers[prefix].append((subscriber, cb))
         log.debug(f"subscriber registered: {prefix_subscriber_cb}")
 
     def sync_unsubscribe(self, prefix_sub):
         prefix, sub = prefix_sub
 
         if prefix not in self.event_subscribers:
-            log.debug(f"subscription not found for prefix {prefix}")
+            log.debug(f"can't unsubscribe, not found for prefix {prefix}")
             return
 
         new_subs = [
@@ -242,7 +232,7 @@ class EventBus:
         log.debug(f"subscription removed: {prefix} / {sub}")
 
     def sync_clear_subscriptions(self, subscriber):
-        new_subscriptions = {}
+        new_subscriptions = defaultdict(list)
         removed = 0
         for prefix, subs in self.event_subscribers.items():
             if prefix not in new_subscriptions:

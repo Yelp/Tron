@@ -1,5 +1,6 @@
 import os
 import tempfile
+from collections import defaultdict
 
 import mock
 
@@ -194,7 +195,7 @@ class EventBusTestCase(TestCase):
         assert reactor.callLater.call_count is 0
 
     def test_sync_subscribe(self):
-        self.eventbus.event_subscribers = {}
+        self.eventbus.event_subscribers = defaultdict(list)
         self.eventbus.sync_subscribe(('pre', 'sub', 'cb'))
         assert self.eventbus.event_subscribers == {'pre': [('sub', 'cb')]}
 
@@ -204,7 +205,7 @@ class EventBusTestCase(TestCase):
         }
 
     def test_sync_unsubscribe(self):
-        self.eventbus.event_subscribers = {}
+        self.eventbus.event_subscribers = defaultdict(list)
         self.eventbus.sync_subscribe(('pre', 'sub', 'cb'))
         self.eventbus.sync_subscribe(('pre', 'sub2', 'cb2'))
         assert self.eventbus.event_subscribers == {
