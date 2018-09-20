@@ -1108,11 +1108,11 @@ class TestBuildFormatStringValidator(TestCase):
         self.validator = build_format_string_validator(self.context)
 
     def test_validator_passes(self):
-        template = "The %(one)s thing I %(seven)s is %(stars)s"
+        template = "The {one} thing I {seven} is {stars}"
         assert self.validator(template, NullConfigContext)
 
     def test_validator_unknown_variable_error(self):
-        template = "The %(one)s thing I %(seven)s is %(unknown)s"
+        template = "The {one} thing I {seven} is {unknown}"
         exception = assert_raises(
             ConfigError,
             self.validator,
@@ -1121,34 +1121,8 @@ class TestBuildFormatStringValidator(TestCase):
         )
         assert_in("Unknown context variable", str(exception))
 
-    def test_validator_no_type_error(self):
-        templates = [
-            "The %(one) %(seven)s thing is %(stars)s",
-            "The %(one) %(seven) thing is %(stars)s",
-            "The %(one) something %(seven)s thing is %(stars)s",
-            "The %(one)s %(seven)s thing is %(stars)",
-        ]
-        for template in templates:
-            exception = assert_raises(
-                ConfigError,
-                self.validator,
-                template,
-                NullConfigContext,
-            )
-            assert_in("Context variable expression is invalid", str(exception))
-
-    def test_validator_wrong_type_error(self):
-        template = "The %(one)d %(seven)s thing is %(stars)s"
-        exception = assert_raises(
-            ConfigError,
-            self.validator,
-            template,
-            NullConfigContext,
-        )
-        assert_in("Context variable expression is invalid", str(exception))
-
     def test_validator_passes_with_context(self):
-        template = "The %(one)s thing I %(seven)s is %(mars)s"
+        template = "The {one} thing I {seven} is {mars}"
         context = config_utils.ConfigContext(
             None,
             None,
@@ -1157,18 +1131,8 @@ class TestBuildFormatStringValidator(TestCase):
         )
         assert self.validator(template, context)
 
-    def test_validator_valid_format_string(self):
-        template = "The {one} thing I {seven} is {mars}"
-        context = config_utils.ConfigContext(
-            path=None,
-            nodes=None,
-            command_context={'mars': 'ok'},
-            namespace=None,
-        )
-        assert self.validator(template, context)
-
-    def test_validator_valid_percent_string(self):
-        template = "The %(one)s %(seven)s thing is %(mars)s -config {'a': 1}"
+    def test_validator_valid_string_without_no_percent_escape(self):
+        template = "The {one} {seven} thing is {mars} --year %Y"
         context = config_utils.ConfigContext(
             path=None,
             nodes=None,
