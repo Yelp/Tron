@@ -196,7 +196,7 @@ class MesosTask(ActionCommand):
     def handle_event(self, event):
         event_id = getattr(event, 'task_id', None)
         if event_id != self.get_mesos_id():
-            self.log.warn(
+            self.log.warning(
                 'Event task id {} does not match, ignoring'.format(event_id),
             )
             return
@@ -211,7 +211,7 @@ class MesosTask(ActionCommand):
         try:
             self.log_event_info(event)
         except Exception as e:
-            self.log.warn('Exception while logging event: {}'.format(e))
+            self.log.warning('Exception while logging event: {}'.format(e))
 
         if mesos_type == 'staging':
             pass
@@ -224,7 +224,7 @@ class MesosTask(ActionCommand):
         elif mesos_type in self.ERROR_STATES:
             self.exited(1)
         else:
-            self.log.warn(
+            self.log.warning(
                 'Did not handle unknown type of event: {}'.format(event),
             )
 
@@ -299,7 +299,7 @@ class MesosCluster:
 
     def handle_next_event(self, deferred_result=None):
         if self.deferred and not self.deferred.called:
-            log.warn(
+            log.warning(
                 'Already have handlers waiting for next event in queue, '
                 'not adding more'
             )
@@ -453,25 +453,25 @@ class MesosCluster:
             message = getattr(event, 'message', None)
             if message == 'stop':
                 # Framework has been removed, stop it.
-                log.warn('Framework has been stopped: {}'.format(event.raw))
+                log.warning('Framework has been stopped: {}'.format(event.raw))
                 self.stop()
                 MesosClusterRepository.remove(self.mesos_address)
             elif message == 'unknown':
-                log.warn(
+                log.warning(
                     'Unknown error from Mesos master: {}'.format(event.raw)
                 )
             elif message == 'registered':
                 framework_id = event.raw['framework_id']['value']
                 MesosClusterRepository.save(self.mesos_address, framework_id)
             else:
-                log.warn('Unknown type of control event: {}'.format(event))
+                log.warning('Unknown type of control event: {}'.format(event))
 
         elif event.kind == 'task':
             if not hasattr(event, 'task_id'):
-                log.warn('Task event missing task_id: {}'.format(event))
+                log.warning('Task event missing task_id: {}'.format(event))
                 return
             if event.task_id not in self.tasks:
-                log.warn(
+                log.warning(
                     'Received event for unknown task {}: {}'.format(
                         event.task_id,
                         event,
@@ -483,7 +483,7 @@ class MesosCluster:
             if task.is_done:
                 del self.tasks[event.task_id]
         else:
-            log.warn('Unknown type of event: {}'.format(event))
+            log.warning('Unknown type of event: {}'.format(event))
 
     def stop(self):
         self.framework_id = None
