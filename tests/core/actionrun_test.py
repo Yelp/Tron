@@ -234,7 +234,7 @@ class TestActionRun(TestCase):
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.action_runner = actioncommand.NoActionRunnerFactory()
-        self.command = "do command %(actionname)s"
+        self.command = "do command {actionname}"
         self.rendered_command = "do command action_name"
         self.action_run = ActionRun(
             job_run_id="id",
@@ -265,7 +265,7 @@ class TestActionRun(TestCase):
 
     @mock.patch('tron.core.actionrun.log', autospec=True)
     def test_start_invalid_command(self, _log):
-        self.action_run.bare_command = "%(notfound)s"
+        self.action_run.bare_command = "{notfound}"
         self.action_run.machine.transition('ready')
         assert not self.action_run.start()
         assert self.action_run.is_failed
@@ -365,18 +365,8 @@ class TestActionRun(TestCase):
 
     def test_render_command(self):
         self.action_run.context = {'stars': 'bright'}
-        self.action_run.bare_command = "%(stars)s"
-        assert_equal(self.action_run.render_command(), 'bright')
-
-    def test_render_format_string_command(self):
-        self.action_run.context = {'stars': 'bright'}
         self.action_run.bare_command = "{stars}"
         assert_equal(self.action_run.render_command(), 'bright')
-
-    def test_render_valid_percent_invalid_format_string_command(self):
-        self.action_run.context = {'stars': 'bright'}
-        self.action_run.bare_command = "%(stars)s --config {'a': 1}"
-        assert_equal(self.action_run.render_command(), "bright --config {'a': 1}")
 
     def test_command_not_yet_rendered(self):
         assert_equal(self.action_run.command, self.rendered_command)
@@ -388,7 +378,7 @@ class TestActionRun(TestCase):
 
     @mock.patch('tron.core.actionrun.log', autospec=True)
     def test_command_failed_render(self, _log):
-        self.action_run.bare_command = "%(this_is_missing)s"
+        self.action_run.bare_command = "{this_is_missing}"
         assert_equal(self.action_run.command, ActionRun.FAILED_RENDER)
 
     def test_is_complete(self):
@@ -430,7 +420,7 @@ class TestSSHActionRun(TestCase):
         self.action_runner = mock.create_autospec(
             actioncommand.NoActionRunnerFactory,
         )
-        self.command = "do command %(actionname)s"
+        self.command = "do command {actionname}"
         self.action_run = SSHActionRun(
             job_run_id="id",
             name="action_name",
@@ -691,7 +681,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         )
 
     def test_from_state_before_rendered_command(self):
-        self.state_data['command'] = 'do things %(actionname)s'
+        self.state_data['command'] = 'do things {actionname}'
         self.state_data['rendered_command'] = None
         action_run = ActionRun.from_state(
             self.state_data,
@@ -704,7 +694,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         assert not action_run.rendered_command
 
     def test_from_state_old_state(self):
-        self.state_data['command'] = 'do things %(actionname)s'
+        self.state_data['command'] = 'do things {actionname}'
         action_run = ActionRun.from_state(
             self.state_data,
             self.parent_context,
