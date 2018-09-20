@@ -1,3 +1,13 @@
+tron (0.9.6.0) trusty; urgency=medium
+
+  * 0.9.6.0 tagged with 'make release'
+  * Remove percent string support
+  * Fix bug with fail and retries
+  * Remove headers from tronfig
+  * Emit triggers for cross-job dependencies
+
+ -- root <root@6267c3201084>  Thu, 20 Sep 2018 01:20:15 +0000
+
 tron (0.9.5.1) trusty; urgency=medium
 
   * 0.9.5.1 tagged with 'make release'
