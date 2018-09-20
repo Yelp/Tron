@@ -62,7 +62,7 @@ def dot_from_starting_state(starting_state):
 
 
 machines = {
-    'action': ActionRun.STATE_SCHEDULED,
+    'action': ActionRun.SCHEDULED,
 }
 
 if __name__ == "__main__":

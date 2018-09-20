@@ -116,7 +116,7 @@ class TestJob(TestCase):
 
     def test_status_enabled(self):
         def state_in(state):
-            return state in [ActionRun.STATE_SCHEDULED, ActionRun.STATE_QUEUED]
+            return state in [ActionRun.SCHEDULED, ActionRun.QUEUED]
 
         self.job.runs.get_run_by_state = state_in
         assert_equal(self.job.status, self.job.STATUS_ENABLED)
@@ -563,7 +563,7 @@ class TestJobSchedulerSchedule(TestCase):
         self.job_scheduler.run_job = mock.Mock()
 
         def get_queued(state):
-            if state == ActionRun.STATE_QUEUED:
+            if state == ActionRun.QUEUED:
                 return []
 
         self.job.runs.get_runs_by_state = get_queued

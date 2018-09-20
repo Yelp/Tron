@@ -197,11 +197,11 @@ class TableDisplay(object):
 
 
 def add_color_for_state(state):
-    if state == actionrun.ActionRun.STATE_FAILED.name:
+    if state == actionrun.ActionRun.FAILED:
         return Color.set('red', state)
     if state in {
-        actionrun.ActionRun.STATE_RUNNING.name,
-        actionrun.ActionRun.STATE_SUCCEEDED.name,
+        actionrun.ActionRun.RUNNING,
+        actionrun.ActionRun.SUCCEEDED,
         job.Job.STATUS_ENABLED,
     }:
         return Color.set('green', state)

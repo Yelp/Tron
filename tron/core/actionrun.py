@@ -20,9 +20,10 @@ from tron.serialize import filehandler
 from tron.utils import iteration
 from tron.utils import maybe_decode
 from tron.utils import proxy
-from tron.utils import state
 from tron.utils import timeutils
+from tron.utils.observer import Observable
 from tron.utils.observer import Observer
+from tron.utils.state import Machine
 
 log = logging.getLogger(__name__)
 
@@ -120,56 +121,49 @@ class ActionRunFactory(object):
         return SSHActionRun.from_state(**args)
 
 
-class ActionRun:
+class ActionRun(Observable):
     """Base class for tracking the state of a single run of an Action.
 
-    ActionRuns are observed by a parent JobRun.
+    ActionRun's state machine is observed by a parent JobRun.
     """
-    STATE_CANCELLED = state.NamedEventState('cancelled')
-    STATE_UNKNOWN = state.NamedEventState('unknown', short_name='UNKWN')
-    STATE_FAILED = state.NamedEventState('failed')
-    STATE_SUCCEEDED = state.NamedEventState('succeeded')
-    STATE_RUNNING = state.NamedEventState('running')
-    STATE_STARTING = state.NamedEventState('starting', short_chars=5)
-    STATE_QUEUED = state.NamedEventState('queued')
-    STATE_SCHEDULED = state.NamedEventState('scheduled')
-    STATE_SKIPPED = state.NamedEventState('skipped')
 
-    STATE_SCHEDULED['ready'] = STATE_QUEUED
-    STATE_SCHEDULED['queue'] = STATE_QUEUED
-    STATE_SCHEDULED['cancel'] = STATE_CANCELLED
-    STATE_SCHEDULED['start'] = STATE_STARTING
+    CANCELLED = 'cancelled'
+    FAILED = 'failed'
+    QUEUED = 'queued'
+    RUNNING = 'running'
+    SCHEDULED = 'scheduled'
+    SKIPPED = 'skipped'
+    STARTING = 'starting'
+    SUCCEEDED = 'succeeded'
+    UNKNOWN = 'unknown'
 
-    STATE_QUEUED['cancel'] = STATE_CANCELLED
-    STATE_QUEUED['start'] = STATE_STARTING
-    STATE_QUEUED['schedule'] = STATE_SCHEDULED
-
-    STATE_STARTING['started'] = STATE_RUNNING
-    STATE_STARTING['fail'] = STATE_FAILED
-
-    STATE_RUNNING['fail'] = STATE_FAILED
-    STATE_RUNNING['fail_unknown'] = STATE_UNKNOWN
-    STATE_RUNNING['success'] = STATE_SUCCEEDED
-
-    STATE_FAILED['skip'] = STATE_SKIPPED
-    STATE_CANCELLED['skip'] = STATE_SKIPPED
-
-    STATE_UNKNOWN['running'] = STATE_RUNNING
-
-    # We can force many states to be success or failure
-    for event_state in (STATE_UNKNOWN, STATE_QUEUED, STATE_SCHEDULED):
-        event_state['success'] = STATE_SUCCEEDED
-        event_state['fail'] = STATE_FAILED
+    default_transitions = dict(fail=FAILED, success=SUCCEEDED)
+    STATE_MACHINE = Machine(
+        'scheduled', **{
+            CANCELLED: dict(skip=SKIPPED),
+            FAILED: dict(skip=SKIPPED),
+            RUNNING: dict(fail_unknown=UNKNOWN, **default_transitions),
+            STARTING: dict(started=RUNNING, fail=FAILED),
+            UNKNOWN: dict(running=RUNNING, **default_transitions),
+            QUEUED: dict(
+                cancel=CANCELLED,
+                start=STARTING,
+                schedule=SCHEDULED,
+                **default_transitions,
+            ),
+            SCHEDULED: dict(
+                ready=QUEUED,
+                queue=QUEUED,
+                cancel=CANCELLED,
+                start=STARTING,
+                **default_transitions,
+            ),
+        }
+    )
 
     # The set of states that are considered end states. Technically some of
     # these states can be manually transitioned to other states.
-    END_STATES = {
-        STATE_FAILED,
-        STATE_SUCCEEDED,
-        STATE_CANCELLED,
-        STATE_SKIPPED,
-        STATE_UNKNOWN,
-    }
+    END_STATES = {FAILED, SUCCEEDED, CANCELLED, SKIPPED, UNKNOWN}
 
     # Failed render command is false to ensure that it will fail when run
     FAILED_RENDER = 'false # Command failed to render correctly. See the Tron error log.'
@@ -188,7 +182,7 @@ class ActionRun:
         cleanup=False,
         start_time=None,
         end_time=None,
-        run_state=STATE_SCHEDULED,
+        run_state=SCHEDULED,
         rendered_command=None,
         exit_status=None,
         action_runner=None,
@@ -209,6 +203,7 @@ class ActionRun:
         triggered_by=None,
         on_upstream_rerun=None,
     ):
+        super().__init__()
         self.job_run_id = maybe_decode(job_run_id)
         self.action_name = maybe_decode(name)
         self.node = node
@@ -218,10 +213,8 @@ class ActionRun:
         self.bare_command = maybe_decode(bare_command)
         self.rendered_command = rendered_command
         self.action_runner = action_runner or NoActionRunnerFactory()
-        self.machine = machine or state.StateMachine(
-            self.STATE_SCHEDULED,
-            delegate=self,
-            force_state=run_state,
+        self.machine = machine or Machine.from_machine(
+            ActionRun.STATE_MACHINE, None, run_state
         )
         self.is_cleanup = cleanup
         self.executor = executor
@@ -254,16 +247,8 @@ class ActionRun:
         return self.machine.state
 
     @property
-    def attach(self):
-        return self.machine.attach
-
-    @property
     def id(self):
-        return "%s.%s" % (self.job_run_id, self.action_name)
-
-    def check_state(self, state):
-        """Check if the state machine can be transitioned to state."""
-        return self.machine.check(state)
+        return f"{self.job_run_id}.{self.action_name}"
 
     @classmethod
     def from_state(
@@ -307,10 +292,7 @@ class ActionRun:
             cleanup=cleanup,
             start_time=state_data['start_time'],
             end_time=state_data['end_time'],
-            run_state=state.named_event_by_name(
-                ActionRun.STATE_SCHEDULED,
-                state_data['state'],
-            ),
+            run_state=state_data['state'],
             exit_status=state_data.get('exit_status'),
             retries_remaining=state_data.get('retries_remaining'),
             retries_delay=state_data.get('retries_delay'),
@@ -353,7 +335,7 @@ class ActionRun:
             log.info(f"{self} restarting, retry {len(self.exit_statuses)}")
 
         self.start_time = timeutils.current_time()
-        self.machine.transition('start')
+        self.transition_and_notify('start')
 
         if not self.is_valid_command:
             log.error(f"{self} invalid command: {self.bare_command}")
@@ -372,15 +354,16 @@ class ActionRun:
         raise NotImplementedError()
 
     def _done(self, target, exit_status=0):
-        log.info(f"{self} completed with {target}, exit status: {exit_status}")
-        # TODO: - state machine already does .check()
-        #       - only set exit_status / end_time if transition succeeds?
         if self.machine.check(target):
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
-            return self.machine.transition(target)
+            log.info(
+                f"{self} completed with {target}, transitioned to "
+                f"{self.state}, exit status: {exit_status}"
+            )
+            return self.transition_and_notify(target)
         else:
-            log.debug(f"{self} failed transition {self.state} -> {target}")
+            log.debug(f"{self} cannot transition from {self.state} via {target}")
 
     def retry(self):
         """Invoked externally (via API) when action needs to be re-tried
@@ -458,7 +441,7 @@ class ActionRun:
     def fail_unknown(self):
         """Failed with unknown reason."""
         log.warning(f"{self} lost communication")
-        return self.machine.transition('fail_unknown')
+        return self.transition_and_notify('fail_unknown')
 
     def cancel_delay(self):
         if self.in_delay is not None:
@@ -484,7 +467,7 @@ class ActionRun:
         return {
             'job_run_id': self.job_run_id,
             'action_name': self.action_name,
-            'state': self.state.name,
+            'state': self.state,
             'start_time': self.start_time,
             'end_time': self.end_time,
             'command': command,
@@ -557,25 +540,32 @@ class ActionRun:
         return self.is_starting or self.is_running
 
     def cleanup(self):
-        self.machine.clear_observers()
+        self.clear_observers()
         self.cancel()
 
-    def __getattr__(self, name):
+    def __getattr__(self, name: str):
         """Support convenience properties for checking if this ActionRun is in
         a specific state (Ex: self.is_running would check if self.state is
         STATE_RUNNING) or for transitioning to a new state (ex: ready).
         """
-        if name in self.machine.transitions:
-            return lambda: self.machine.transition(name)
+        if name in self.machine.transition_names:
+            return lambda: self.transition_and_notify(name)
 
-        state_name = name.replace('is_', 'state_').upper()
-        try:
-            return self.state == self.__getattribute__(state_name)
-        except AttributeError:
+        if name.startswith('is_'):
+            state_name = name.replace('is_', '')
+            if state_name not in self.machine.states:
+                raise AttributeError(f"{name} is not a state")
+            return self.state == state_name
+        else:
             raise AttributeError(name)
 
     def __str__(self):
-        return "ActionRun: %s" % self.id
+        return f"ActionRun: {self.id}"
+
+    def transition_and_notify(self, target):
+        if self.machine.transition(target):
+            self.notify(target)
+            return True
 
 
 class SSHActionRun(ActionRun, Observer):
@@ -637,7 +627,7 @@ class SSHActionRun(ActionRun, Observer):
         log.debug(f"{self} action_command state change: {action_command.state}")
 
         if event == ActionCommand.RUNNING:
-            return self.machine.transition('started')
+            return self.transition_and_notify('started')
 
         if event == ActionCommand.FAILSTART:
             return self._exit_unsuccessful(None)
@@ -727,7 +717,7 @@ class MesosActionRun(ActionRun, Observer):
         # Reset status
         self.exit_status = None
         self.end_time = None
-        self.machine.transition('running')
+        self.transition_and_notify('running')
 
         return task
 
@@ -773,7 +763,7 @@ class MesosActionRun(ActionRun, Observer):
         log.debug(f"{self} action_command state change: {action_command.state}")
 
         if event == ActionCommand.RUNNING:
-            return self.machine.transition('started')
+            return self.transition_and_notify('started')
 
         if event == ActionCommand.FAILSTART:
             return self._exit_unsuccessful(None)
@@ -792,10 +782,6 @@ class MesosActionRun(ActionRun, Observer):
 
 class ActionRunCollection(object):
     """A collection of ActionRuns used by a JobRun."""
-
-    # An ActionRunCollection is blocked when it has runs running which
-    # are required for other blocked runs to start.
-    STATE_BLOCKED = state.NamedEventState('blocked')
 
     def __init__(self, action_graph, run_map):
         self.action_graph = action_graph
@@ -858,7 +844,7 @@ class ActionRunCollection(object):
 
         return [
             r for r in self.action_runs
-            if r.check_state('start') and not self._is_run_blocked(r)
+            if r.machine.check('start') and not self._is_run_blocked(r)
         ]
 
     @property

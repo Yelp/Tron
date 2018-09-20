@@ -278,24 +278,24 @@ class JobRun(Observable, Observer):
         """
         if not self.action_runs:
             log.info(f"{self} has no action runs to determine state")
-            return ActionRun.STATE_UNKNOWN
+            return ActionRun.UNKNOWN
 
         if self.action_runs.is_complete:
-            return ActionRun.STATE_SUCCEEDED
+            return ActionRun.SUCCEEDED
         if self.action_runs.is_cancelled:
-            return ActionRun.STATE_CANCELLED
+            return ActionRun.CANCELLED
         if self.action_runs.is_running:
-            return ActionRun.STATE_RUNNING
+            return ActionRun.RUNNING
         if self.action_runs.is_starting:
-            return ActionRun.STATE_STARTING
+            return ActionRun.STARTING
         if self.action_runs.is_failed:
-            return ActionRun.STATE_FAILED
+            return ActionRun.FAILED
         if self.action_runs.is_scheduled:
-            return ActionRun.STATE_SCHEDULED
+            return ActionRun.SCHEDULED
         if self.action_runs.is_queued:
-            return ActionRun.STATE_QUEUED
+            return ActionRun.QUEUED
 
-        return ActionRun.STATE_UNKNOWN
+        return ActionRun.UNKNOWN
 
     def __getattr__(self, name):
         if self.action_runs_proxy:
@@ -365,10 +365,6 @@ class JobRunCollection(object):
         except IndexError:
             return None
 
-    def get_run_by_state_short_name(self, short_name):
-        """Returns the most recent run which matches the state short name."""
-        return next_or_none(r for r in self.runs if r.state.short_name == short_name)
-
     def get_newest(self, include_manual=True):
         """Returns the most recently created JobRun."""
         return next_or_none(r for r in self.runs if include_manual or not r.manual)
@@ -391,11 +387,11 @@ class JobRunCollection(object):
     def get_first_queued(self, node=None):
         return next_or_none(
             r for r in reversed(self.runs)
-            if (not node or r.node == node) and r.state == ActionRun.STATE_QUEUED
+            if (not node or r.node == node) and r.state == ActionRun.QUEUED
         )
 
     def get_scheduled(self):
-        return [r for r in self.runs if r.state == ActionRun.STATE_SCHEDULED]
+        return [r for r in self.runs if r.state == ActionRun.SCHEDULED]
 
     def get_next_to_finish(self, node=None):
         """Return the most recent run which is either running or scheduled. If
@@ -430,11 +426,11 @@ class JobRunCollection(object):
 
     @property
     def last_success(self):
-        return self.get_run_by_state(ActionRun.STATE_SUCCEEDED)
+        return self.get_run_by_state(ActionRun.SUCCEEDED)
 
     @property
     def next_run(self):
-        return self.get_run_by_state(ActionRun.STATE_SCHEDULED)
+        return self.get_run_by_state(ActionRun.SCHEDULED)
 
     def __iter__(self):
         return iter(self.runs)
