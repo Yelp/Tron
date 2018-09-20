@@ -537,11 +537,7 @@ class ActionRun(object):
 
     def render_template(self, template):
         """Render our configured command using the command context."""
-        try:
-            parse_str = template % self.context
-            return StringFormatter(self.context).format(parse_str)
-        except Exception:
-            return template % self.context
+        return StringFormatter(self.context).format(template)
 
     def render_command(self):
         """Render our configured command using the command context."""
