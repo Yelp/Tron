@@ -112,12 +112,12 @@ class ActionCommand(Observable):
     @property
     def is_complete(self):
         """Complete implies done and success."""
-        return self.machine.state == 'complete'
+        return self.machine.state == ActionCommand.COMPLETE
 
     @property
     def is_done(self):
         """Done implies no more work will be done, but might not be success."""
-        return self.machine.state in ('complete', 'failstart')
+        return self.machine.state in (ActionCommand.COMPLETE, ActionCommand.FAILSTART)
 
     def __repr__(self):
         return f"ActionCommand {self.id} {self.command}: {self.state}"
