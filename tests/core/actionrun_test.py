@@ -237,7 +237,7 @@ class TestActionRun(TestCase):
         self.command = "do command {actionname}"
         self.rendered_command = "do command action_name"
         self.action_run = ActionRun(
-            job_run_id="id",
+            job_run_id="ns.id.0",
             name="action_name",
             node=mock.create_autospec(node.Node),
             bare_command=self.command,
@@ -309,7 +309,6 @@ class TestActionRun(TestCase):
 
     @mock.patch('tron.core.actionrun.EventBus')
     def test_emit_triggers(self, eventbus):
-        prefix = f"{self.action_run.id}"
         self.action_run.context = {'shortdate': 'foo'}
 
         self.action_run.trigger_downstreams = True
@@ -319,8 +318,8 @@ class TestActionRun(TestCase):
         self.action_run.emit_triggers()
 
         assert eventbus.publish.mock_calls == [
-            mock.call(f"{prefix}.shortdate.foo"),
-            mock.call(f"{prefix}.foo.bar"),
+            mock.call(f"ns.id.action_name.shortdate.foo"),
+            mock.call(f"ns.id.action_name.foo.bar"),
         ]
 
     def test_success_bad_state(self):
