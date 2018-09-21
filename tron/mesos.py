@@ -138,6 +138,7 @@ class MesosTask(ActionCommand):
     def __init__(self, id, task_config, serializer=None):
         super(MesosTask, self).__init__(id, task_config.cmd, serializer)
         self.task_config = task_config
+
         self.log = self.get_event_logger()
         self.setup_output_logging()
 
@@ -150,9 +151,14 @@ class MesosTask(ActionCommand):
 
     def get_event_logger(self):
         log = logging.getLogger(__name__ + '.' + self.id)
-        handler = logging.StreamHandler(self.stderr)
-        handler.setFormatter(logging.Formatter(TASK_LOG_FORMAT))
-        log.addHandler(handler)
+        # Every time a task gets created, this function runs and will add
+        # more stderr handlers to the logger, which results in duplicate log
+        # output. We only want to add the stderr handler if the logger does not
+        # have a handler yet.
+        if not len(log.handlers):
+            handler = logging.StreamHandler(self.stderr)
+            handler.setFormatter(logging.Formatter(TASK_LOG_FORMAT))
+            log.addHandler(handler)
         return log
 
     def setup_output_logging(self):
