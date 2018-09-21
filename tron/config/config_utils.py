@@ -32,7 +32,7 @@ class StringFormatter(Formatter):
             except KeyError:
                 return self.context[key]
         else:
-            Formatter.get_value(key, args, kwds)
+            return Formatter.get_value(key, args, kwds)
 
 
 class UniqueNameDict(dict):

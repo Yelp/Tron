@@ -70,7 +70,8 @@ def build_format_string_validator(context_object):
 
         try:
             valid_context_variable_expr(value, config_context)
-            return StringFormatter(context).format(value)
+            StringFormatter(context).format(value)
+            return value
         except (KeyError, ValueError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
             raise ConfigError(error_msg % (e, config_context.path, value))
