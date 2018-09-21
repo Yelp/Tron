@@ -254,11 +254,11 @@ class TestMesosTask(TestCase):
         Ensures that only a single handler (for stderr) is added to the
         MesosTask event logger, to prevent duplicate log output.
         """
-        log1 = self.task.get_event_logger()
-        log2 = self.task.get_event_logger()
+        # Call 2 times to make sure 2nd call doesn't add another handler
+        logger = self.task.get_event_logger()
+        logger = self.task.get_event_logger()
 
-        assert len(log1.handlers) == len(log2.handlers)
-        assert len(log2.handlers) == 1
+        assert len(logger.handlers) == 1
 
 
 class TestMesosCluster(TestCase):
