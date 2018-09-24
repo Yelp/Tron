@@ -1,4 +1,5 @@
 import logging
+from collections import defaultdict
 
 log = logging.getLogger(__name__)
 
@@ -18,7 +19,7 @@ class Machine:
 
     def __init__(self, initial, **transitions):
         super().__init__()
-        self.transitions = transitions
+        self.transitions = defaultdict(dict, transitions)
         self.transition_names = set(
             transition_name
             for (_, transitions) in self.transitions.items()
@@ -29,9 +30,6 @@ class Machine:
             for (_, dst) in transitions.items()
             for (_, state) in (dst or {}).items()
         )
-        for state in self.states:
-            if not self.transitions.get(state):
-                self.transitions[state] = dict()
         if initial not in self.states:
             raise RuntimeError(f"invalid machine: {initial} not in {self.states}")
         self.state = initial
