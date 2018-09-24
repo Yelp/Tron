@@ -167,6 +167,7 @@ class ActionRun(Observable):
 
     # Failed render command is false to ensure that it will fail when run
     FAILED_RENDER = 'false # Command failed to render correctly. See the Tron error log.'
+    NOTIFY_TRIGGER_READY = 'trigger_ready'
 
     context_class = command_context.ActionRunContext
 
@@ -355,6 +356,8 @@ class ActionRun(Observable):
 
     def _done(self, target, exit_status=0):
         if self.machine.check(target):
+            if self.triggered_by:
+                EventBus.clear_subscriptions(self.__hash__())
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
             log.info(
@@ -420,18 +423,26 @@ class ActionRun(Observable):
             shortdate = self.render_template("{shortdate}")
             triggers = [f"shortdate.{shortdate}"]
         elif isinstance(self.trigger_downstreams, dict):
-            rendered = [
-                (k, self.render_template(v))
+            triggers = [
+                f"{k}.{self.render_template(v)}"
                 for k, v in self.trigger_downstreams.items()
             ]
-            triggers = [f"{key}.{value}" for key, value in rendered]
         else:
             log.error(f"{self} trigger_downstreams must be true or dict")
             return
+
         log.info(f"{self} publishing triggers: [{', '.join(triggers)}]")
+        job_id = '.'.join(self.job_run_id.split('.')[:-1])
         for trigger in triggers:
-            # self.id in here to make the log message above more concise
-            EventBus.publish(f"{self.id}.{trigger}")
+            EventBus.publish(f"{job_id}.{self.action_name}.{trigger}")
+
+    # TODO: subscribe for events and maintain a list of remaining triggers
+    def remaining_triggers(self):
+        return [
+            trigger
+            for trigger in map(self.render_template, self.triggered_by or [])
+            if not EventBus.has_event(trigger)
+        ]
 
     def success(self):
         if self.trigger_downstreams:
@@ -537,7 +548,19 @@ class ActionRun(Observable):
 
     def cleanup(self):
         self.clear_observers()
+        if self.triggered_by:
+            EventBus.clear_subscriptions(self.__hash__())
         self.cancel()
+
+    def setup_subscriptions(self):
+        for trigger_pattern in self.triggered_by or []:
+            trigger = self.render_template(trigger_pattern)
+            EventBus.subscribe(trigger, self.__hash__(), self.trigger_notify)
+
+    def trigger_notify(self, *_):
+        remaining = self.remaining_triggers()
+        if not remaining:
+            self.notify(ActionRun.NOTIFY_TRIGGER_READY)
 
     def __getattr__(self, name: str):
         """Support convenience properties for checking if this ActionRun is in
@@ -863,10 +886,12 @@ class ActionRunCollection(object):
             if any(not run.is_complete for run in required_runs):
                 return True
 
-        external_deps = self.action_graph.get_required_triggers(
-            action_run.action_name
-        )
-        return any(external_deps)
+        waiting_for = action_run.remaining_triggers()
+        if waiting_for:
+            log.debug(f"{action_run} waiting for: {waiting_for}")
+            return True
+
+        return False
 
     @property
     def is_done(self):

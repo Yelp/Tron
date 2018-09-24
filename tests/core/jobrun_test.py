@@ -23,7 +23,7 @@ from tron.serialize import filehandler
 
 def build_mock_job():
     action_graph = mock.create_autospec(actiongraph.ActionGraph)
-    action_graph.action_map = {'foo': mock.Mock()}
+    action_graph.action_map = {'foo': mock.Mock(triggered_by=[])}
     runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
     return mock.create_autospec(
         job.Job,
