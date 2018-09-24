@@ -161,10 +161,10 @@ class Job(Observable, Observer):
         """Current status."""
         if not self.enabled:
             return self.STATUS_DISABLED
-        if self.runs.get_run_by_state(ActionRun.STATE_RUNNING):
+        if self.runs.get_run_by_state(ActionRun.RUNNING):
             return self.STATUS_RUNNING
 
-        if self.runs.get_run_by_state(ActionRun.STATE_SCHEDULED):
+        if self.runs.get_run_by_state(ActionRun.SCHEDULED):
             return self.STATUS_ENABLED
 
         log.warning("%s in an unknown state: %s" % (self, self.runs))

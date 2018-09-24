@@ -268,14 +268,6 @@ class TestJobResource(WWWTestCase):
         assert_equal(job_run, self.job_runs.get_run_by_num.return_value)
         self.job_runs.get_run_by_num.assert_called_with(3)
 
-    def test_get_run_from_identifier_state_name(self):
-        job_run = self.resource.get_run_from_identifier('SUCC')
-        assert_equal(
-            job_run,
-            self.job_runs.get_run_by_state_short_name.return_value,
-        )
-        self.job_runs.get_run_by_state_short_name.assert_called_with('SUCC')
-
     def test_get_run_from_identifier_negative_index(self):
         job_run = self.resource.get_run_from_identifier('-2')
         assert_equal(job_run, self.job_runs.get_run_by_index.return_value)

@@ -250,7 +250,7 @@ class TestActionRun(TestCase):
         self.action_run.kill = mock.Mock()
 
     def test_init_state(self):
-        assert_equal(self.action_run.state, ActionRun.STATE_SCHEDULED)
+        assert_equal(self.action_run.state, ActionRun.SCHEDULED)
 
     def test_start(self):
         self.action_run.machine.transition('ready')
@@ -382,19 +382,19 @@ class TestActionRun(TestCase):
         assert_equal(self.action_run.command, ActionRun.FAILED_RENDER)
 
     def test_is_complete(self):
-        self.action_run.machine.state = ActionRun.STATE_SUCCEEDED
+        self.action_run.machine.state = ActionRun.SUCCEEDED
         assert self.action_run.is_complete
-        self.action_run.machine.state = ActionRun.STATE_SKIPPED
+        self.action_run.machine.state = ActionRun.SKIPPED
         assert self.action_run.is_complete
-        self.action_run.machine.state = ActionRun.STATE_RUNNING
+        self.action_run.machine.state = ActionRun.RUNNING
         assert not self.action_run.is_complete
 
     def test_is_broken(self):
-        self.action_run.machine.state = ActionRun.STATE_UNKNOWN
+        self.action_run.machine.state = ActionRun.UNKNOWN
         assert self.action_run.is_broken
-        self.action_run.machine.state = ActionRun.STATE_FAILED
+        self.action_run.machine.state = ActionRun.FAILED
         assert self.action_run.is_broken
-        self.action_run.machine.state = ActionRun.STATE_QUEUED
+        self.action_run.machine.state = ActionRun.QUEUED
         assert not self.action_run.is_broken
 
     def test__getattr__(self):
@@ -812,7 +812,7 @@ class TestActionRunCollection(TestCase):
 
     def test_is_complete_true(self):
         for action_run in self.collection.action_runs_with_cleanup:
-            action_run.machine.state = ActionRun.STATE_SKIPPED
+            action_run.machine.state = ActionRun.SKIPPED
         assert self.collection.is_complete
 
     def test_is_done_false(self):
@@ -820,12 +820,12 @@ class TestActionRunCollection(TestCase):
 
     def test_is_done_false_because_of_running(self):
         action_run = self.collection.run_map['action_name']
-        action_run.machine.state = ActionRun.STATE_RUNNING
+        action_run.machine.state = ActionRun.RUNNING
         assert not self.collection.is_done
 
     def test_is_done_true_because_blocked(self):
-        self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
-        self.run_map['second_name'].machine.state = ActionRun.STATE_QUEUED
+        self.run_map['action_name'].machine.state = ActionRun.FAILED
+        self.run_map['second_name'].machine.state = ActionRun.QUEUED
         autospec_method(self.collection._is_run_blocked)
 
         def blocked_second_action_run(ar, ):
@@ -837,21 +837,21 @@ class TestActionRunCollection(TestCase):
 
     def test_is_done_true(self):
         for action_run in self.collection.action_runs_with_cleanup:
-            action_run.machine.state = ActionRun.STATE_FAILED
+            action_run.machine.state = ActionRun.FAILED
         assert self.collection.is_done
 
     def test_is_failed_false_not_done(self):
-        self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
+        self.run_map['action_name'].machine.state = ActionRun.FAILED
         assert not self.collection.is_failed
 
     def test_is_failed_false_no_failed(self):
         for action_run in self.collection.action_runs_with_cleanup:
-            action_run.machine.state = ActionRun.STATE_SUCCEEDED
+            action_run.machine.state = ActionRun.SUCCEEDED
         assert not self.collection.is_failed
 
     def test_is_failed_true(self):
         for action_run in self.collection.action_runs_with_cleanup:
-            action_run.machine.state = ActionRun.STATE_FAILED
+            action_run.machine.state = ActionRun.FAILED
         assert self.collection.is_failed
 
     def test__getattr__(self):
@@ -873,17 +873,17 @@ class TestActionRunCollection(TestCase):
 
     def test_end_time(self):
         max_end_time = datetime.datetime(2013, 6, 15)
-        self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
+        self.run_map['action_name'].machine.state = ActionRun.FAILED
         self.run_map['action_name'].end_time = datetime.datetime(2013, 5, 12)
-        self.run_map['second_name'].machine.state = ActionRun.STATE_SUCCEEDED
+        self.run_map['second_name'].machine.state = ActionRun.SUCCEEDED
         self.run_map['second_name'].end_time = max_end_time
         assert_equal(self.collection.end_time, max_end_time)
 
     def test_end_time_not_done(self):
         self.run_map['action_name'].end_time = datetime.datetime(2013, 5, 12)
-        self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
+        self.run_map['action_name'].machine.state = ActionRun.FAILED
         self.run_map['second_name'].end_time = None
-        self.run_map['second_name'].machine.state = ActionRun.STATE_RUNNING
+        self.run_map['second_name'].machine.state = ActionRun.RUNNING
         assert_equal(self.collection.end_time, None)
 
     def test_end_time_not_started(self):
@@ -932,14 +932,14 @@ class TestActionRunCollectionIsRunBlocked(TestCase):
         assert not self.collection._is_run_blocked(self.run_map['action_name'])
 
     def test_is_run_blocked_completed_run(self):
-        self.run_map['second_name'].machine.state = ActionRun.STATE_FAILED
+        self.run_map['second_name'].machine.state = ActionRun.FAILED
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
-        self.run_map['second_name'].machine.state = ActionRun.STATE_RUNNING
+        self.run_map['second_name'].machine.state = ActionRun.RUNNING
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_completed(self):
-        self.run_map['action_name'].machine.state = ActionRun.STATE_SKIPPED
+        self.run_map['action_name'].machine.state = ActionRun.SKIPPED
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_blocked(self):
@@ -948,23 +948,23 @@ class TestActionRunCollectionIsRunBlocked(TestCase):
         self.action_graph.action_map['third_act'] = third_act
         self.run_map['third_act'] = self._build_run('third_act')
 
-        self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
+        self.run_map['action_name'].machine.state = ActionRun.FAILED
         assert self.collection._is_run_blocked(self.run_map['third_act'])
 
     def test_is_run_blocked_required_actions_scheduled(self):
-        self.run_map['action_name'].machine.state = ActionRun.STATE_SCHEDULED
+        self.run_map['action_name'].machine.state = ActionRun.SCHEDULED
         assert self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_starting(self):
-        self.run_map['action_name'].machine.state = ActionRun.STATE_STARTING
+        self.run_map['action_name'].machine.state = ActionRun.STARTING
         assert self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_queued(self):
-        self.run_map['action_name'].machine.state = ActionRun.STATE_QUEUED
+        self.run_map['action_name'].machine.state = ActionRun.QUEUED
         assert self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_failed(self):
-        self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
+        self.run_map['action_name'].machine.state = ActionRun.FAILED
         assert self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_missing(self):
@@ -1042,7 +1042,7 @@ class TestMesosActionRun(TestCase):
     @mock.patch('tron.core.actionrun.filehandler', autospec=True)
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_recover(self, mock_cluster_repo, mock_filehandler):
-        self.action_run.machine.state = ActionRun.STATE_UNKNOWN
+        self.action_run.machine.state = ActionRun.UNKNOWN
         self.action_run.mesos_task_id = 'my_mesos_id'
         serializer = mock_filehandler.OutputStreamSerializer.return_value
         with mock.patch.object(
@@ -1073,7 +1073,7 @@ class TestMesosActionRun(TestCase):
     @mock.patch('tron.core.actionrun.filehandler', autospec=True)
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_recover_done_no_change(self, mock_cluster_repo, mock_filehandler):
-        self.action_run.machine.state = ActionRun.STATE_SUCCEEDED
+        self.action_run.machine.state = ActionRun.SUCCEEDED
         self.action_run.mesos_task_id = 'my_mesos_id'
 
         self.action_run.recover()
@@ -1083,7 +1083,7 @@ class TestMesosActionRun(TestCase):
     @mock.patch('tron.core.actionrun.filehandler', autospec=True)
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_recover_no_mesos_task_id(self, mock_cluster_repo, mock_filehandler):
-        self.action_run.machine.state = ActionRun.STATE_UNKNOWN
+        self.action_run.machine.state = ActionRun.UNKNOWN
         self.action_run.mesos_task_id = None
 
         self.action_run.recover()
@@ -1095,7 +1095,7 @@ class TestMesosActionRun(TestCase):
     def test_recover_task_none(
         self, mock_cluster_repo, mock_filehandler
     ):
-        self.action_run.machine.state = ActionRun.STATE_UNKNOWN
+        self.action_run.machine.state = ActionRun.UNKNOWN
         self.action_run.mesos_task_id = 'my_mesos_id'
         # Task is None if Mesos is disabled
         mock_get_cluster = mock_cluster_repo.get_cluster
@@ -1110,7 +1110,7 @@ class TestMesosActionRun(TestCase):
     def test_kill_task(self, mock_cluster_repo):
         mock_get_cluster = mock_cluster_repo.get_cluster
         self.action_run.mesos_task_id = 'fake_task_id'
-        self.action_run.machine.state = ActionRun.STATE_RUNNING
+        self.action_run.machine.state = ActionRun.RUNNING
 
         self.action_run.kill()
         mock_get_cluster.return_value.kill.assert_called_once_with(
@@ -1119,7 +1119,7 @@ class TestMesosActionRun(TestCase):
 
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_kill_task_no_task_id(self, mock_cluster_repo):
-        self.action_run.machine.state = ActionRun.STATE_RUNNING
+        self.action_run.machine.state = ActionRun.RUNNING
         error_message = self.action_run.kill()
         assert_equal(
             error_message, "Error: Can't find task id for the action."
@@ -1129,7 +1129,7 @@ class TestMesosActionRun(TestCase):
     def test_stop_task(self, mock_cluster_repo):
         mock_get_cluster = mock_cluster_repo.get_cluster
         self.action_run.mesos_task_id = 'fake_task_id'
-        self.action_run.machine.state = ActionRun.STATE_RUNNING
+        self.action_run.machine.state = ActionRun.RUNNING
 
         self.action_run.stop()
         mock_get_cluster.return_value.kill.assert_called_once_with(
@@ -1138,7 +1138,7 @@ class TestMesosActionRun(TestCase):
 
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_stop_task_no_task_id(self, mock_cluster_repo):
-        self.action_run.machine.state = ActionRun.STATE_RUNNING
+        self.action_run.machine.state = ActionRun.RUNNING
         error_message = self.action_run.stop()
         assert_equal(
             error_message, "Error: Can't find task id for the action."

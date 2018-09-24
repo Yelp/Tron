@@ -170,7 +170,6 @@ class JobResource(resource.Resource):
             return job_runs.get_run_by_num(int(run_id))
         if is_negative_int(run_id):
             return job_runs.get_run_by_index(int(run_id))
-        return job_runs.get_run_by_state_short_name(run_id)
 
     def getChild(self, run_id, _):
         if not run_id:

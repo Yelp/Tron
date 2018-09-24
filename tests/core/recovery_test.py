@@ -26,8 +26,8 @@ class TestRecovery(TestCase):
         mock_unknown_machine = Mock(autospec=True)
         mock_ok_machine = Mock(autospec=True)
 
-        mock_unknown_machine.state = ActionRun.STATE_UNKNOWN
-        mock_ok_machine.state = ActionRun.STATE_SUCCEEDED
+        mock_unknown_machine.state = ActionRun.UNKNOWN
+        mock_ok_machine.state = ActionRun.SUCCEEDED
         self.action_runs = [
             SSHActionRun(
                 job_run_id="test.unknown",
@@ -83,10 +83,10 @@ class TestRecovery(TestCase):
             end_time=timeutils.current_time(),
             exit_status=0
         )
-        action_run.machine.state = action_run.STATE_UNKNOWN
+        action_run.machine.state = ActionRun.UNKNOWN
         recover_action_run(action_run, action_runner)
         mock_node.submit_command.assert_called_once()
-        assert action_run.machine.state == action_run.STATE_RUNNING
+        assert action_run.machine.state == ActionRun.RUNNING
         assert action_run.end_time is None
         assert action_run.exit_status is None
 
