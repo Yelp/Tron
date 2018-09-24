@@ -249,6 +249,17 @@ class TestMesosTask(TestCase):
             assert mock_log_event.called
         assert self.task.state == MesosTask.RUNNING
 
+    def test_get_event_logger_add_unique_handlers(self):
+        """
+        Ensures that only a single handler (for stderr) is added to the
+        MesosTask event logger, to prevent duplicate log output.
+        """
+        # Call 2 times to make sure 2nd call doesn't add another handler
+        logger = self.task.get_event_logger()
+        logger = self.task.get_event_logger()
+
+        assert len(logger.handlers) == 1
+
 
 class TestMesosCluster(TestCase):
     @setup_teardown

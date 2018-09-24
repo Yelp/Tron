@@ -1,3 +1,10 @@
+tron (0.9.6.1) trusty; urgency=medium
+
+  * 0.9.6.1 tagged with 'make release'
+    Commit: fix format string bugs (#538)  * fix format string bugs
+
+ -- root <root@3b2deac05b19>  Fri, 21 Sep 2018 23:46:13 +0000
+
 tron (0.9.6.0) trusty; urgency=medium
 
   * 0.9.6.0 tagged with 'make release'

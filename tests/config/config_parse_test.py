@@ -1129,7 +1129,7 @@ class TestBuildFormatStringValidator(TestCase):
             {'mars': 'ok'},
             None,
         )
-        assert self.validator(template, context)
+        assert self.validator(template, context) == template
 
     def test_validator_valid_string_without_no_percent_escape(self):
         template = "The {one} {seven} thing is {mars} --year %Y"

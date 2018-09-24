@@ -32,7 +32,7 @@ class StringFormatter(Formatter):
             except KeyError:
                 return self.context[key]
         else:
-            Formatter.get_value(key, args, kwds)
+            return Formatter.get_value(key, args, kwds)
 
 
 class UniqueNameDict(dict):
@@ -171,26 +171,6 @@ def valid_name_identifier(value, config_context):
     if config_context.partial:
         return value
     return '%s.%s' % (config_context.namespace, value)
-
-
-def valid_context_variable_expr(command, config_context):
-    """ This function verifies that all context variables have complete
-    string format specifiers.
-    """
-    prefix = command.find("%(")
-    while prefix >= 0:
-        postfix = command.find(")s", prefix)
-        if postfix < 0:
-            raise ConfigError(
-                "Context variable expression is invalid: %s at %s" %
-                (command, config_context.path)
-            )
-        prefix = command.find("%(", prefix + 1)
-        if prefix >= 0 and prefix < postfix:
-            raise ConfigError(
-                "Context variable expression is invalid: %s at %s" %
-                (command, config_context.path)
-            )
 
 
 def build_list_of_type_validator(item_validator, allow_empty=False):
