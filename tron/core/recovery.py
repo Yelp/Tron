@@ -14,7 +14,7 @@ log = logging.getLogger(__name__)
 def filter_action_runs_needing_recovery(action_runs):
     return [
         action_run for action_run in action_runs
-        if action_run.state == ActionRun.STATE_UNKNOWN
+        if action_run.state == ActionRun.UNKNOWN
     ]
 
 

@@ -78,7 +78,7 @@ class RunAdapter(ReprAdapter):
     """Base class for JobRun and ActionRun adapters."""
 
     def get_state(self):
-        return self._obj.state.name
+        return self._obj.state
 
     def get_node(self):
         return NodeAdapter(self._obj.node).get_repr()
@@ -201,7 +201,7 @@ class ActionRunGraphAdapter(object):
                 'name': action_run.action_name,
                 'command': action_run.rendered_command,
                 'raw_command': action_run.bare_command,
-                'state': action_run.state.name,
+                'state': action_run.state,
                 'start_time': action_run.start_time,
                 'end_time': action_run.end_time,
                 'dependent': [dep.name for dep in deps],

@@ -3,34 +3,20 @@ from __future__ import unicode_literals
 
 import logging
 import os
+from io import StringIO
 
 from six.moves import shlex_quote
 
 from tron.config import schema
 from tron.serialize import filehandler
-from tron.utils import state
 from tron.utils import timeutils
+from tron.utils.observer import Observable
+from tron.utils.state import Machine
 
 log = logging.getLogger(__name__)
 
 
-class ActionState(state.NamedEventState):
-    pass
-
-
-class CompletedActionCommand(object):
-    """This is a null object for ActionCommand."""
-    is_complete = True
-    is_done = True
-    is_failed = False
-    is_unknown = False
-
-    @staticmethod
-    def write_stderr(_):
-        pass
-
-
-class ActionCommand(object):
+class ActionCommand(Observable):
     """An ActionCommand encapsulates a runnable task that is passed to a node
     for execution.
 
@@ -41,48 +27,58 @@ class ActionCommand(object):
       done      (when the command is finished)
     """
 
-    COMPLETE = ActionState('complete')
-    FAILSTART = ActionState('failstart')
-    EXITING = ActionState('exiting', close=COMPLETE)
-    RUNNING = ActionState('running', exit=EXITING)
-    PENDING = ActionState('pending', start=RUNNING, exit=FAILSTART)
+    PENDING = 'pending'
+    RUNNING = 'running'
+    EXITING = 'exiting'
+    COMPLETE = 'complete'
+    FAILSTART = 'failstart'
+
+    STATE_MACHINE = Machine(
+        PENDING,
+        **{
+            PENDING: {'start': RUNNING, 'exit': FAILSTART},
+            RUNNING: {'exit': EXITING},
+            EXITING: {'close': COMPLETE},
+        }
+    )
 
     STDOUT = '.stdout'
     STDERR = '.stderr'
 
     def __init__(self, id, command, serializer=None):
+        super().__init__()
         self.id = id
         self.command = command
-        self.machine = state.StateMachine(self.PENDING, delegate=self)
+        self.machine = Machine.from_machine(ActionCommand.STATE_MACHINE)
         self.exit_status = None
         self.start_time = None
         self.end_time = None
-        self.stdout = filehandler.NullFileHandle
-        self.stderr = filehandler.NullFileHandle
         if serializer:
             self.stdout = serializer.open(self.STDOUT)
             self.stderr = serializer.open(self.STDERR)
+        else:
+            self.stdout = filehandler.NullFileHandle
+            self.stderr = filehandler.NullFileHandle
 
     @property
     def state(self):
         return self.machine.state
 
-    @property
-    def attach(self):
-        return self.machine.attach
+    def transition_and_notify(self, target):
+        if self.machine.transition(target):
+            self.notify(self.state)
+            return True
 
     def started(self):
-        if not self.machine.check('start'):
-            return False
-        self.start_time = timeutils.current_timestamp()
-        return self.machine.transition('start')
+        if self.machine.check('start'):
+            self.start_time = timeutils.current_timestamp()
+            return self.transition_and_notify('start')
 
     def exited(self, exit_status):
-        if not self.machine.check('exit'):
-            return False
-        self.end_time = timeutils.current_timestamp()
-        self.exit_status = exit_status
-        return self.machine.transition('exit')
+        if self.machine.check('exit'):
+            self.end_time = timeutils.current_timestamp()
+            self.exit_status = exit_status
+            return self.transition_and_notify('exit')
 
     def write_stderr(self, value):
         self.stderr.write(value)
@@ -91,23 +87,17 @@ class ActionCommand(object):
         self.stdout.write(value)
 
     def done(self):
-        if not self.machine.check('close'):
-            return False
-        self.stdout.close()
-        self.stderr.close()
-        return self.machine.transition('close')
+        if self.machine.check('close'):
+            self.stdout.close()
+            self.stderr.close()
+            return self.transition_and_notify('close')
 
     def handle_errback(self, result):
-        """Handle an unexpected error while being run.  This will likely be
+        """Handle an unexpected error while being run. This will likely be
         an interval error. Cleanup the state of this ActionCommand and log
         something useful for debugging.
         """
-        log.error(
-            "Unknown failure for ActionCommand run %s: %s\n%s",
-            self.id,
-            self.command,
-            str(result),
-        )
+        log.error(f"Unknown failure for {self}, {str(result)}")
         self.exited(result)
         self.done()
 
@@ -122,31 +112,15 @@ class ActionCommand(object):
     @property
     def is_complete(self):
         """Complete implies done and success."""
-        return self.machine.state == self.COMPLETE
+        return self.machine.state == ActionCommand.COMPLETE
 
     @property
     def is_done(self):
         """Done implies no more work will be done, but might not be success."""
-        return self.machine.state in (self.COMPLETE, self.FAILSTART)
+        return self.machine.state in (ActionCommand.COMPLETE, ActionCommand.FAILSTART)
 
     def __repr__(self):
-        return "ActionCommand %s %s: %s" % (self.id, self.command, self.state)
-
-
-class StringBuffer(object):
-    """An object which stores strings."""
-
-    def __init__(self):
-        self.buffer = []
-
-    def write(self, msg):
-        self.buffer.append(msg)
-
-    def get_value(self):
-        return ''.join(self.buffer).rstrip()
-
-    def close(self):
-        pass
+        return f"ActionCommand {self.id} {self.command}: {self.state}"
 
 
 class StringBufferStore(object):
@@ -158,10 +132,7 @@ class StringBufferStore(object):
         self.buffers = {}
 
     def open(self, name):
-        return self.buffers.setdefault(name, StringBuffer())
-
-    def get_stream(self, name):
-        return self.buffers[name].get_value()
+        return self.buffers.setdefault(name, StringIO())
 
     def clear(self):
         self.buffers.clear()
@@ -229,14 +200,9 @@ def create_action_runner_factory_from_config(config):
     create ActionCommand objects. The factory definition should match the
     constructor for ActionCommand.
     """
-    if not config:
+    if not config or config.runner_type == schema.ActionRunnerTypes.none:
         return NoActionRunnerFactory()
-
-    if config.runner_type not in schema.ActionRunnerTypes:
-        raise ValueError("Unknown runner type: %s", config.runner_type)
-
-    if config.runner_type == schema.ActionRunnerTypes.none:
-        return NoActionRunnerFactory()
-
-    if config.runner_type == schema.ActionRunnerTypes.subprocess:
+    elif config.runner_type == schema.ActionRunnerTypes.subprocess:
         return SubprocessActionRunnerFactory.from_config(config)
+    else:
+        raise ValueError("Unknown runner type: %s", config.runner_type)
