@@ -44,13 +44,19 @@ def remove_escape(command):
     return new_command
 
 
+def rollback(command):
+    new_command = command.replace("%", "%%")
+    return new_command
+
+
 def translate_file(input_filepath, output_filepath):
     with open(input_filepath, "r") as f:
         with open(output_filepath, 'w') as outf:
             line = f.readline()
             while line:
                 # newline = translate_command(line)
-                newline = remove_escape(line)
+                # newline = remove_escape(line)
+                newline = rollback(line)
                 outf.write(newline)
                 line = f.readline()
 
