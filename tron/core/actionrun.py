@@ -547,7 +547,7 @@ class ActionRun(Observable):
         return self.is_starting or self.is_running
 
     def cleanup(self):
-        self.machine.clear_observers()
+        self.clear_observers()
         if self.triggered_by:
             EventBus.clear_subscriptions(self.__hash__())
         self.cancel()
@@ -560,7 +560,7 @@ class ActionRun(Observable):
     def trigger_notify(self, *_):
         remaining = self.remaining_triggers()
         if not remaining:
-            self.machine.notify(ActionRun.NOTIFY_TRIGGER_READY)
+            self.notify(ActionRun.NOTIFY_TRIGGER_READY)
 
     def __getattr__(self, name: str):
         """Support convenience properties for checking if this ActionRun is in
