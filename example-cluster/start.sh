@@ -26,8 +26,4 @@ echo Starting Tron
 rm -f /nail/tron/tron.pid
 FAKETIME_X=${FAKETIME_X:-10}
 exec faketime -f "+0.0y x$FAKETIME_X" \
-  trond \
-    -l logging.conf \
-    --working-dir=/nail/tron \
-    -v \
-    --host 0.0.0.0
+  trond -l logging.conf -w /nail/tron -v --debug -H 0.0.0.0

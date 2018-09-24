@@ -54,7 +54,6 @@ class TestActionRunFactory(TestCase):
             7,
             self.run_time,
             mock_node,
-            eventbus_publish=lambda: None,
             action_graph=self.action_graph,
         )
 
@@ -76,7 +75,6 @@ class TestActionRunFactory(TestCase):
         collection = ActionRunFactory.build_action_run_collection(
             self.job_run,
             self.action_runner,
-            eventbus_publish=lambda: None,
         )
         assert_equal(collection.action_graph, self.action_graph)
         assert_in('act1', collection.run_map)
@@ -104,7 +102,6 @@ class TestActionRunFactory(TestCase):
             self.job_run,
             state_data,
             cleanup_action_state_data,
-            eventbus_publish=lambda: None,
         )
 
         assert_equal(collection.action_graph, self.action_graph)
@@ -123,7 +120,6 @@ class TestActionRunFactory(TestCase):
             self.job_run,
             action,
             self.action_runner,
-            eventbus_publish=lambda: None,
         )
 
         assert_equal(action_run.job_run_id, self.job_run.id)
@@ -139,7 +135,6 @@ class TestActionRunFactory(TestCase):
             self.job_run,
             action,
             self.action_runner,
-            eventbus_publish=lambda: None,
         )
 
         assert_equal(action_run.job_run_id, self.job_run.id)
@@ -158,7 +153,6 @@ class TestActionRunFactory(TestCase):
             self.job_run,
             action,
             self.action_runner,
-            eventbus_publish=lambda: None,
         )
         assert_equal(action_run.__class__, SSHActionRun)
 
@@ -184,7 +178,6 @@ class TestActionRunFactory(TestCase):
             self.job_run,
             action,
             self.action_runner,
-            eventbus_publish=lambda: None,
         )
         assert_equal(action_run.__class__, MesosActionRun)
         assert_equal(action_run.cpus, action.cpus)
@@ -200,7 +193,6 @@ class TestActionRunFactory(TestCase):
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
-            eventbus_publish=lambda: None,
         )
 
         assert_equal(action_run.job_run_id, state_data['job_run_id'])
@@ -220,7 +212,6 @@ class TestActionRunFactory(TestCase):
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
-            eventbus_publish=lambda: None,
         )
 
         assert_equal(action_run.job_run_id, state_data['job_run_id'])
@@ -249,7 +240,6 @@ class TestActionRun(TestCase):
             job_run_id="id",
             name="action_name",
             node=mock.create_autospec(node.Node),
-            eventbus_publish=lambda: None,
             bare_command=self.command,
             output_path=self.output_path,
             action_runner=self.action_runner,
@@ -317,9 +307,9 @@ class TestActionRun(TestCase):
         assert self.action_run.success()
         assert self.action_run.emit_triggers.call_count == 1
 
-    def test_emit_triggers(self):
+    @mock.patch('tron.core.actionrun.EventBus')
+    def test_emit_triggers(self, eventbus):
         prefix = f"{self.action_run.id}"
-        self.action_run.eventbus_publish = mock.Mock()
         self.action_run.context = {'shortdate': 'foo'}
 
         self.action_run.trigger_downstreams = True
@@ -328,7 +318,7 @@ class TestActionRun(TestCase):
         self.action_run.trigger_downstreams = dict(foo="bar")
         self.action_run.emit_triggers()
 
-        assert self.action_run.eventbus_publish.mock_calls == [
+        assert eventbus.publish.mock_calls == [
             mock.call(f"{prefix}.shortdate.foo"),
             mock.call(f"{prefix}.foo.bar"),
         ]
@@ -436,7 +426,6 @@ class TestSSHActionRun(TestCase):
             name="action_name",
             node=mock.create_autospec(node.Node),
             bare_command=self.command,
-            eventbus_publish=lambda: None,
             output_path=self.output_path,
             action_runner=self.action_runner,
         )
@@ -631,7 +620,6 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             self.parent_context,
             list(self.output_path),
             self.run_node,
-            eventbus_publish=lambda: None,
         )
 
         for key, value in six.iteritems(self.state_data):
@@ -1004,7 +992,6 @@ class TestMesosActionRun(TestCase):
             job_run_id="job_run_id",
             name="action_name",
             node=mock.create_autospec(node.Node),
-            eventbus_publish=lambda: None,
             rendered_command=self.command,
             output_path=self.output_path,
             executor=ExecutorTypes.mesos,

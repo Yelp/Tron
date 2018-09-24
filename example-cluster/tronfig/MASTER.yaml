@@ -18,18 +18,24 @@ action_runner:
 nodes:
   - hostname: localhost
     username: root
-  # Note: the action runner is not available on batch1.
-  # Comment out the action_runner config if you want to schedule things remotely
-  #  - hostname: batch1
-  #    username: tron
 
 time_zone: US/Eastern
 
 jobs:
-  - name: "test"
+  - name: "one"
     node: localhost
     schedule: "cron * * * * *"
     time_zone: "US/Pacific"
     actions:
       - name: "first"
-        command: "sleep 5m"
+        command: "sleep 10s"
+        trigger_downstreams: true
+  # - name: "two"
+  #   node: localhost
+  #   schedule: "cron * * * * *"
+  #   time_zone: "US/Pacific"
+  #   actions:
+      - name: "second"
+        command: "sleep 10s"
+        requires: [first]
+        triggered_by: ["MASTER.one.first.shortdate.%(shortdate)s"]

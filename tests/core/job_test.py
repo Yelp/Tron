@@ -45,7 +45,6 @@ class TestJob(TestCase):
             self.job = job.Job(
                 "jobname",
                 scheduler,
-                eventbus_publish=lambda: None,
                 run_collection=run_collection,
                 action_graph=action_graph,
                 node_pool=self.nodes,
@@ -85,7 +84,6 @@ class TestJob(TestCase):
         new_job = job.Job.from_config(
             job_config,
             scheduler,
-            eventbus_publish=lambda: None,
             parent_context=parent_context,
             output_path=output_path,
             action_runner=self.action_runner,
@@ -105,7 +103,6 @@ class TestJob(TestCase):
         other_job = job.Job(
             'otherjob',
             'scheduler',
-            eventbus_publish=lambda: None,
             action_runner=action_runner,
         )
         self.job.update_from_job(other_job)
@@ -219,26 +216,26 @@ class TestJob(TestCase):
         self.job.notify.assert_called_with(self.job.NOTIFY_RUN_DONE)
 
     def test__eq__(self):
-        other_job = job.Job("jobname", 'scheduler', eventbus_publish=lambda: None)
+        other_job = job.Job("jobname", 'scheduler')
         assert not self.job == other_job
         other_job.update_from_job(self.job)
         assert_equal(self.job, other_job)
 
     def test__ne__(self):
-        other_job = job.Job("jobname", 'scheduler', eventbus_publish=lambda: None)
+        other_job = job.Job("jobname", 'scheduler')
         assert self.job != other_job
         other_job.update_from_job(self.job)
         assert not self.job != other_job
 
     def test__eq__true(self):
         action_runner = mock.Mock()
-        first = job.Job("jobname", 'scheduler', eventbus_publish=lambda: None, action_runner=action_runner)
-        second = job.Job("jobname", 'scheduler', eventbus_publish=lambda: None, action_runner=action_runner)
+        first = job.Job("jobname", 'scheduler', action_runner=action_runner)
+        second = job.Job("jobname", 'scheduler', action_runner=action_runner)
         assert_equal(first, second)
 
     def test__eq__false(self):
-        first = job.Job("jobname", 'scheduler', eventbus_publish=lambda: None, action_runner=mock.Mock())
-        second = job.Job("jobname", 'scheduler', eventbus_publish=lambda: None, action_runner=mock.Mock())
+        first = job.Job("jobname", 'scheduler', action_runner=mock.Mock())
+        second = job.Job("jobname", 'scheduler', action_runner=mock.Mock())
         assert_not_equal(first, second)
 
 
@@ -374,7 +371,6 @@ class TestJobSchedulerGetRunsToSchedule(TestCase):
         self.job = job.Job(
             "jobname",
             self.scheduler,
-            eventbus_publish=lambda: None,
             run_collection=run_collection,
             node_pool=node_pool,
         )
@@ -438,7 +434,6 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
         self.job = job.Job(
             "jobname",
             self.scheduler,
-            eventbus_publish=lambda: None,
             run_collection=run_collection,
             node_pool=node_pool,
         )
@@ -496,7 +491,6 @@ class TestJobSchedulerSchedule(TestCase):
         self.job = job.Job(
             name="jobname",
             scheduler=self.scheduler,
-            eventbus_publish=lambda: None,
             run_collection=run_collection,
             node_pool=node_pool,
         )
@@ -504,31 +498,28 @@ class TestJobSchedulerSchedule(TestCase):
         self.original_build_new_runs = self.job.build_new_runs
         self.job.build_new_runs = mock.Mock(return_value=[mock_run])
 
-    @setup_teardown
-    def mock_eventloop(self):
-        patcher = mock.patch('tron.core.job.eventloop', autospec=True)
-        with patcher as self.eventloop:
-            yield
-
-    def test_enable(self):
+    @mock.patch('tron.core.job.reactor', autospec=True)
+    def test_enable(self, reactor):
         self.job.enabled = False
         self.job_scheduler.enable()
         assert self.job.enabled
-        assert_length(self.eventloop.call_later.mock_calls, 1)
+        assert_length(reactor.callLater.mock_calls, 1)
 
-    def test_enable_noop(self):
+    @mock.patch('tron.core.job.reactor', autospec=True)
+    def test_enable_noop(self, reactor):
         self.job.enabled = True
         self.job_scheduler.enable()
         assert self.job.enabled
-        assert_length(self.eventloop.call_later.mock_calls, 0)
+        assert_length(reactor.callLater.mock_calls, 0)
 
-    def test_schedule(self):
+    @mock.patch('tron.core.job.reactor', autospec=True)
+    def test_schedule(self, reactor):
         self.job.build_new_runs = self.original_build_new_runs
         self.job_scheduler.schedule()
-        assert_length(self.eventloop.call_later.mock_calls, 1)
+        assert reactor.callLater.call_count == 1
 
         # Args passed to callLater
-        call_args = self.eventloop.call_later.mock_calls[0][1]
+        call_args = reactor.callLater.mock_calls[0][1]
         assert_equal(call_args[1], self.job_scheduler.run_job)
         secs = call_args[0]
         run = call_args[2]
@@ -537,18 +528,20 @@ class TestJobSchedulerSchedule(TestCase):
         # Assert that we use the seconds we get from the run to schedule
         assert_equal(run.seconds_until_run_time.return_value, secs)
 
-    def test_schedule_disabled_job(self):
+    @mock.patch('tron.core.job.reactor', autospec=True)
+    def test_schedule_disabled_job(self, reactor):
         self.job.enabled = False
         self.job_scheduler.schedule()
-        assert_length(self.eventloop.call_later.mock_calls, 0)
+        assert reactor.callLater.call_count == 0
 
-    def test_handle_job_events_no_schedule_on_complete(self):
+    @mock.patch('tron.core.job.reactor', autospec=True)
+    def test_handle_job_events_no_schedule_on_complete(self, reactor):
         self.job_scheduler.run_job = mock.Mock()
         self.job.scheduler.schedule_on_complete = False
         queued_job_run = mock.Mock()
         self.job.runs.get_first_queued = lambda: queued_job_run
         self.job_scheduler.handle_job_events(self.job, job.Job.NOTIFY_RUN_DONE)
-        self.eventloop.call_later.assert_any_call(
+        reactor.callLater.assert_any_call(
             0,
             self.job_scheduler.run_job,
             queued_job_run,
@@ -577,7 +570,8 @@ class TestJobSchedulerSchedule(TestCase):
         self.job_scheduler.handler(self.job, job.Job.NOTIFY_RUN_DONE)
         self.job_scheduler.run_job.assert_not_called()
 
-    def test_run_queue_schedule(self):
+    @mock.patch('tron.core.job.reactor', autospec=True)
+    def test_run_queue_schedule(self, reactor):
         with mock.patch.object(
             self.job_scheduler,
             'schedule',
@@ -587,7 +581,7 @@ class TestJobSchedulerSchedule(TestCase):
             queued_job_run = mock.Mock()
             self.job.runs.get_first_queued = lambda: queued_job_run
             self.job_scheduler.run_queue_schedule()
-            self.eventloop.call_later.assert_called_once_with(
+            reactor.callLater.assert_called_once_with(
                 0,
                 self.job_scheduler.run_job,
                 queued_job_run,
@@ -605,13 +599,11 @@ class TestJobSchedulerFactory(TestCase):
         self.action_runner = mock.create_autospec(
             actioncommand.SubprocessActionRunnerFactory,
         )
-        self.eventbus_publish = lambda: None
         self.factory = job.JobSchedulerFactory(
             self.context,
             self.output_stream_dir,
             self.time_zone,
             self.action_runner,
-            self.eventbus_publish,
         )
 
     def test_build(self):
@@ -627,7 +619,6 @@ class TestJobSchedulerFactory(TestCase):
             assert_equal(kwargs['parent_context'], self.context)
             assert_equal(kwargs['output_path'].base, self.output_stream_dir)
             assert_equal(kwargs['action_runner'], self.action_runner)
-            assert_equal(kwargs['eventbus_publish'], self.eventbus_publish)
 
 
 class TestJobCollection(TestCase):

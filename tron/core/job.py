@@ -3,9 +3,9 @@ import logging
 import humanize
 import six
 from six.moves import filter
+from twisted.internet import reactor
 
 from tron import command_context
-from tron import eventloop
 from tron import node
 from tron.core import actiongraph
 from tron.core import jobrun
@@ -76,7 +76,6 @@ class Job(Observable, Observer):
         self,
         name,
         scheduler,
-        eventbus_publish,
         queueing=True,
         all_nodes=False,
         monitoring=None,
@@ -97,7 +96,6 @@ class Job(Observable, Observer):
         self.monitoring = monitoring
         self.action_graph = action_graph
         self.scheduler = scheduler
-        self.eventbus_publish = eventbus_publish
         self.runs = run_collection
         self.queueing = queueing
         self.all_nodes = all_nodes
@@ -121,14 +119,13 @@ class Job(Observable, Observer):
         parent_context,
         output_path,
         action_runner,
-        eventbus_publish,
     ):
         """Factory method to create a new Job instance from configuration."""
         action_graph = actiongraph.ActionGraph.from_config(
             job_config.actions,
             job_config.cleanup_action,
         )
-        runs = jobrun.JobRunCollection.from_config(job_config, eventbus_publish)
+        runs = jobrun.JobRunCollection.from_config(job_config)
         node_repo = node.NodePoolRepository.get_instance()
 
         return cls(
@@ -139,7 +136,6 @@ class Job(Observable, Observer):
             all_nodes=job_config.all_nodes,
             node_pool=node_repo.get_by_name(job_config.node),
             scheduler=scheduler,
-            eventbus_publish=eventbus_publish,
             enabled=job_config.enabled,
             run_collection=runs,
             action_graph=action_graph,
@@ -203,7 +199,6 @@ class Job(Observable, Observer):
             self.output_path.clone(),
             self.context,
             self.node_pool,
-            eventbus_publish=self.eventbus_publish,
         )
         return job_runs
 
@@ -324,7 +319,7 @@ class JobScheduler(Observer):
         seconds = job_run.seconds_until_run_time()
         human_time = humanize.naturaltime(seconds, future=True)
         log.info(f"Scheduling {job_run} {human_time} ({seconds} seconds)")
-        eventloop.call_later(seconds, self.run_job, job_run)
+        reactor.callLater(seconds, self.run_job, job_run)
 
     # TODO: new class for this method
     def run_job(self, job_run, run_queued=False):
@@ -362,7 +357,7 @@ class JobScheduler(Observer):
     def schedule_termination(self, job_run):
         if self.job.max_runtime:
             seconds = timeutils.delta_total_seconds(self.job.max_runtime)
-            eventloop.call_later(seconds, job_run.stop)
+            reactor.callLater(seconds, job_run.stop)
 
     def _queue_or_cancel_active(self, job_run):
         if self.job.queueing:
@@ -386,7 +381,7 @@ class JobScheduler(Observer):
         # all_nodes job, but that is currently not possible
         queued_run = self.job.runs.get_first_queued()
         if queued_run:
-            eventloop.call_later(0, self.run_job, queued_run, run_queued=True)
+            reactor.callLater(0, self.run_job, queued_run, run_queued=True)
 
         # Attempt to schedule a new run.  This will only schedule a run if the
         # previous run was cancelled from a scheduled state, or if the job
@@ -431,12 +426,11 @@ class JobScheduler(Observer):
 class JobSchedulerFactory(object):
     """Construct JobScheduler instances from configuration."""
 
-    def __init__(self, context, output_stream_dir, time_zone, action_runner, eventbus_publish):
+    def __init__(self, context, output_stream_dir, time_zone, action_runner):
         self.context = context
         self.output_stream_dir = output_stream_dir
         self.time_zone = time_zone
         self.action_runner = action_runner
-        self.eventbus_publish = eventbus_publish
 
     def build(self, job_config):
         log.debug(f"Building new job {job_config.name}")
@@ -449,7 +443,6 @@ class JobSchedulerFactory(object):
             parent_context=self.context,
             output_path=output_path,
             action_runner=self.action_runner,
-            eventbus_publish=self.eventbus_publish,
         )
         return JobScheduler(job)
 

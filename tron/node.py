@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import itertools
 import logging
 import random
@@ -13,7 +10,6 @@ from twisted.internet import reactor
 from twisted.python import failure
 from twisted.python.filepath import FilePath
 
-from tron import eventloop
 from tron import ssh
 from tron.utils import collections
 from tron.utils import twistedutils
@@ -245,7 +241,7 @@ class Node(object):
         # Map of run id to instance of RunState
         self.run_states = {}
 
-        self.idle_timer = eventloop.NullCallback
+        self.idle_timer = None
         self.disabled = False
         self.pub_key = pub_key
 
@@ -318,7 +314,7 @@ class Node(object):
                 self.run_states[run.id],
             )
 
-        if self.idle_timer.active():
+        if self.idle_timer and self.idle_timer.active():
             self.idle_timer.cancel()
 
         self.run_states[run.id] = RunState(run)
@@ -336,7 +332,7 @@ class Node(object):
                 run.id,
                 fudge_factor,
             )
-            eventloop.call_later(fudge_factor, self._do_run, run)
+            reactor.callLater(fudge_factor, self._do_run, run)
 
         # We return the deferred here, but really we're trying to keep the rest
         # of the world from getting too involved with twisted.
@@ -366,7 +362,7 @@ class Node(object):
         del self.run_states[run.id]
 
         if not self.run_states:
-            self.idle_timer = eventloop.call_later(
+            self.idle_timer = reactor.callLater(
                 self.node_settings.idle_connection_timeout,
                 self._connection_idle_timeout,
             )
