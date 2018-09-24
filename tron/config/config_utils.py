@@ -191,10 +191,13 @@ def build_list_of_type_validator(item_validator, allow_empty=False):
 
 
 def build_dict_name_validator(item_validator, allow_empty=False):
-    """Build a validator which validates a list, and returns a dict."""
+    """Build a validator which validates a list or dict, and returns a dict."""
     valid = build_list_of_type_validator(item_validator, allow_empty)
 
     def validator(value, config_context):
+        if isinstance(value, dict):
+            value = [{'name': name, **config} for name, config in value.items()]
+
         msg = "Duplicate name %%s at %s" % config_context.path
         name_dict = UniqueNameDict(msg)
         for item in valid(value, config_context):
