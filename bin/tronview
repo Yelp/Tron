@@ -12,6 +12,7 @@ from tron.commands import cmd_utils
 from tron.commands import display
 from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
+from tron.commands.client import RequestError
 from tron.commands.client import TronObjectType
 from tron.commands.cmd_utils import ExitCode
 from tron.commands.cmd_utils import suggest_possibilities
@@ -95,16 +96,26 @@ def view_job(args, job_id, client):
 
 
 def view_job_run(args, job_run_id, client):
-    actions = client.job_runs(job_run_id.url)
+    try:
+        actions = client.job_runs(job_run_id.url)
+    except RequestError as e:
+        response = e.args[1]
+        raise SystemExit(f"Error: {response.content}")
+
     display_action = display.DisplayActionRuns()
     return display_action.format(actions)
 
 
 def view_action_run(args, act_run_id, client):
-    content = client.action_runs(
-        act_run_id.url,
-        num_lines=args.num_displays,
-    )
+    try:
+        content = client.action_runs(
+            act_run_id.url,
+            num_lines=args.num_displays,
+        )
+    except RequestError as e:
+        response = e.args[1]
+        raise SystemExit(f"Error: {response.content}")
+
     return display.format_action_run_details(content)
 
 

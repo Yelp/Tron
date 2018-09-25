@@ -187,11 +187,13 @@ def save_config(options):
 
 def setup_logging(options):
     if options.verbose is None:
-        level = logging.WARNING
+        level = logging.CRITICAL
     elif options.verbose == 1:
+        level = logging.WARNING
+    elif options.verbose == 2:
         level = logging.INFO
     else:
-        level = logging.DEBUG
+        level = logging.NOTSET
 
     logging.basicConfig(
         level=level,
