@@ -5,8 +5,6 @@ from __future__ import unicode_literals
 
 import datetime
 import re
-import time
-from calendar import timegm
 
 
 def current_time(tz=None):
@@ -16,15 +14,7 @@ def current_time(tz=None):
 
 def current_timestamp():
     """Return the current time as a timestamp."""
-    return to_timestamp(current_time())
-
-
-def to_timestamp(time_val):
-    """Generate a unix timestamp for the given datetime instance"""
-    # TODO: replace with datetime.timestamp() after python3.6
-    if time_val.tzinfo:
-        return timegm(time_val.utctimetuple())
-    return time.mktime(time_val.utctimetuple())
+    return current_time().timestamp()
 
 
 def delta_total_seconds(td):
@@ -110,7 +100,7 @@ class DateArithmetic(object):
             return dt.strftime(cls.DATE_FORMATS[attr])
 
         if attr == 'unixtime':
-            return int(to_timestamp(dt)) + delta
+            return int(dt.timestamp()) + delta
 
         if attr == 'daynumber':
             return dt.toordinal() + delta

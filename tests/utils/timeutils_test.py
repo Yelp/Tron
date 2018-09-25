@@ -15,29 +15,6 @@ from tron.utils.timeutils import duration
 from tron.utils.timeutils import macro_timedelta
 
 
-class TestToTimestamp(TestCase):
-    def test_normal_time_with_timezone(self):
-        # 62 minutes after the epoch
-        start_date = pytz.utc.localize(datetime.datetime(1970, 1, 1, 1, 2))
-        assert_equal(timeutils.to_timestamp(start_date), 62 * 60)
-
-    def test_ambiguous_times(self):
-        pacific_tz = pytz.timezone("US/Pacific")
-        before_fall_back = timeutils.to_timestamp(
-            pacific_tz.localize(
-                datetime.datetime(2017, 11, 5, 1, 23),
-                is_dst=True,
-            ),
-        )
-        after_fall_back = timeutils.to_timestamp(
-            pacific_tz.localize(
-                datetime.datetime(2017, 11, 5, 1, 23),
-                is_dst=False,
-            ),
-        )
-        assert_equal(after_fall_back - before_fall_back, 60 * 60)
-
-
 class TestTimeDelta(TestCase):
     @setup
     def make_dates(self):
@@ -269,15 +246,15 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
             self._cmp_year('year-%s' % i, dt)
 
     def test_unixtime(self):
-        timestamp = int(timeutils.to_timestamp(self.now))
+        timestamp = int(self.now.timestamp())
         assert_equal(DateArithmetic.parse('unixtime'), timestamp)
 
     def test_unixtime_plus(self):
-        timestamp = int(timeutils.to_timestamp(self.now)) + 100
+        timestamp = int(self.now.timestamp()) + 100
         assert_equal(DateArithmetic.parse('unixtime+100'), timestamp)
 
     def test_unixtime_minus(self):
-        timestamp = int(timeutils.to_timestamp(self.now)) - 99
+        timestamp = int(self.now.timestamp()) - 99
         assert_equal(DateArithmetic.parse('unixtime-99'), timestamp)
 
     def test_daynumber(self):
