@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import mock
 
 from testifycompat import assert_equal
@@ -16,15 +13,16 @@ from tron.api.controller import UnknownCommandError
 from tron.config import ConfigError
 from tron.config import manager
 from tron.core import actionrun
-from tron.core import job
 from tron.core import jobrun
+from tron.core.job_collection import JobCollection
+from tron.core.job_scheduler import JobScheduler
 
 
 class TestJobCollectionController(TestCase):
     @setup
     def setup_controller(self):
         self.collection = mock.create_autospec(
-            job.JobCollection,
+            JobCollection,
             enable=mock.Mock(),
             disable=mock.Mock(),
         )
@@ -92,7 +90,7 @@ class TestJobRunController(TestCase):
             run_time=mock.Mock(),
             cancel=mock.Mock(),
         )
-        self.job_scheduler = mock.create_autospec(job.JobScheduler)
+        self.job_scheduler = mock.create_autospec(JobScheduler)
         self.controller = controller.JobRunController(
             self.job_run,
             self.job_scheduler,
@@ -119,7 +117,7 @@ class TestJobRunController(TestCase):
 class TestJobController(TestCase):
     @setup
     def setup_controller(self):
-        self.job_scheduler = mock.create_autospec(job.JobScheduler)
+        self.job_scheduler = mock.create_autospec(JobScheduler)
         self.controller = controller.JobController(self.job_scheduler)
 
     def test_handle_command_enable(self):

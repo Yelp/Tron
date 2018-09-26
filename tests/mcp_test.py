@@ -15,7 +15,7 @@ from tests.testingutils import autospec_method
 from tron import mcp
 from tron.config import config_parse
 from tron.config import manager
-from tron.core import job
+from tron.core.job_collection import JobCollection
 from tron.serialize.runstate import statemanager
 
 
@@ -81,7 +81,7 @@ class TestMasterControlProgram(TestCase):
 
     def test_update_state_watcher_config_changed(self):
         self.mcp.state_watcher.update_from_config.return_value = True
-        self.mcp.jobs = mock.create_autospec(job.JobCollection)
+        self.mcp.jobs = mock.create_autospec(JobCollection)
         self.mcp.jobs.__iter__.return_values = {
             'a': mock.Mock(),
             'b': mock.Mock(),
@@ -113,7 +113,7 @@ class TestMasterControlProgramRestoreState(TestCase):
             self.working_dir,
             self.config_path,
         )
-        self.mcp.jobs = mock.create_autospec(job.JobCollection)
+        self.mcp.jobs = mock.create_autospec(JobCollection)
         self.mcp.state_watcher = mock.create_autospec(
             statemanager.StateChangeWatcher,
         )

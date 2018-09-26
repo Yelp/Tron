@@ -1,9 +1,6 @@
 """
 Test cases for the web services interface to tron
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 from unittest.mock import MagicMock
 
 import mock
@@ -19,7 +16,6 @@ from testifycompat import run
 from testifycompat import setup
 from testifycompat import setup_teardown
 from testifycompat import TestCase
-from tests import mocks
 from tests.assertions import assert_call
 from tests.testingutils import autospec_method
 from tron import mcp
@@ -27,6 +23,8 @@ from tron import node
 from tron.api import controller
 from tron.core import job
 from tron.core import jobrun
+from tron.core.job_collection import JobCollection
+from tron.core.job_scheduler import JobScheduler
 
 with mock.patch(
     'tron.api.async_resource.AsyncResource.bounded',
@@ -199,15 +197,7 @@ class TestActionRunHistoryResource(WWWTestCase):
 
 @pytest.fixture(scope="module")
 def resource_fixture():
-    job = mock.Mock(
-        repr_data=lambda: {'name': 'testname'},
-        name="testname",
-        last_success=None,
-        runs=mock.Mock(),
-        scheduler_str="testsched",
-        node_pool=mocks.MockNodePool(),
-    )
-    job_collection = mock.create_autospec(job.JobCollection)
+    job_collection = mock.create_autospec(JobCollection)
     resource = www.JobCollectionResource(job_collection)
     return resource
 
@@ -234,7 +224,7 @@ class TestJobCollectionResource(WWWTestCase):
 class TestJobResource(WWWTestCase):
     @setup
     def setup_resource(self):
-        self.job_scheduler = mock.create_autospec(job.JobScheduler)
+        self.job_scheduler = mock.create_autospec(JobScheduler)
         self.job_runs = mock.create_autospec(jobrun.JobRunCollection)
         self.job = mock.create_autospec(
             job.Job,
