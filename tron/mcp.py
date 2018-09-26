@@ -1,14 +1,12 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from __future__ import with_statement
-
 import logging
 
 from tron import actioncommand
 from tron import command_context
 from tron import node
 from tron.config import manager
-from tron.core import job
+from tron.core.job import Job
+from tron.core.job_collection import JobCollection
+from tron.core.job_scheduler import JobSchedulerFactory
 from tron.eventbus import EventBus
 from tron.mesos import MesosClusterRepository
 from tron.serialize.runstate import statemanager
@@ -30,7 +28,7 @@ class MasterControlProgram(object):
 
     def __init__(self, working_dir, config_path):
         super(MasterControlProgram, self).__init__()
-        self.jobs = job.JobCollection()
+        self.jobs = JobCollection()
         self.working_dir = working_dir
         self.config = manager.ConfigManager(config_path)
         self.context = command_context.CommandContext()
@@ -96,7 +94,7 @@ class MasterControlProgram(object):
         self.apply_collection_config(
             config_container.get_jobs(),
             self.jobs,
-            job.Job.NOTIFY_STATE_CHANGE,
+            Job.NOTIFY_STATE_CHANGE,
             factory,
             reconfigure,
         )
@@ -110,7 +108,7 @@ class MasterControlProgram(object):
         action_runner = actioncommand.create_action_runner_factory_from_config(
             master_config.action_runner,
         )
-        return job.JobSchedulerFactory(
+        return JobSchedulerFactory(
             self.context,
             output_stream_dir,
             master_config.time_zone,
