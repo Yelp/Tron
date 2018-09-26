@@ -911,7 +911,7 @@ class TestActionRunCollectionIsRunBlocked(TestCase):
             action_graph.append(m)
 
         self.second_act = second_act = action_graph.pop(1)
-        second_act.required_actions.append(action_graph[0])
+        second_act.required_actions.append(action_graph[0].name)
         action_map = {a.name: a for a in action_graph}
         action_map['second_name'] = second_act
         self.action_graph = actiongraph.ActionGraph(action_graph, action_map)
@@ -942,7 +942,7 @@ class TestActionRunCollectionIsRunBlocked(TestCase):
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_blocked(self):
-        third_act = MagicMock(required_actions=[self.second_act], )
+        third_act = MagicMock(required_actions=[self.second_act.name], )
         third_act.name = 'third_act'
         self.action_graph.action_map['third_act'] = third_act
         self.run_map['third_act'] = self._build_run('third_act')

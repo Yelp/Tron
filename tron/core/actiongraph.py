@@ -42,8 +42,8 @@ class ActionGraph(object):
 
             for dependency in dependencies:
                 dependency_action = actions[dependency]
-                a.required_actions.append(dependency_action)
-                dependency_action.dependent_actions.append(a)
+                a.required_actions.add(dependency_action.name)
+                dependency_action.dependent_actions.add(a.name)
         return base
 
     @classmethod
@@ -61,10 +61,20 @@ class ActionGraph(object):
         """
         if name not in self.action_map:
             return []
-        return self.action_map[name].required_actions
+
+        return (
+            self.action_map[action]
+            for action in self.action_map[name].required_actions
+        )
 
     def get_dependent_actions(self, name):
-        return self.action_map[name].dependent_actions
+        if name not in self.action_map:
+            return []
+
+        return (
+            self.action_map[action]
+            for action in self.action_map[name].dependent_actions
+        )
 
     def get_actions(self):
         return iter(val for _, val in self.action_map.items())

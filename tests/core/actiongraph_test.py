@@ -52,12 +52,12 @@ class TestActionGraph(TestCase):
         assert_equal(graph_base_names, {'base_one', 'base_two'})
         assert_equal(
             set(am['dep_multi'].required_actions),
-            {am['dep_one_one'], am['base_two']},
+            {'dep_one_one', 'base_two'},
         )
 
         assert_equal(set(am.keys()), set(self.action_names))
-        assert_equal(am['base_one'].dependent_actions, [am['dep_one']])
-        assert_equal(am['dep_one'].dependent_actions, [am['dep_one_one']])
+        assert_equal(am['base_one'].dependent_actions, {'dep_one'})
+        assert_equal(am['dep_one'].dependent_actions, {'dep_one_one'})
 
     def test_actions_for_names(self):
         actions = list(

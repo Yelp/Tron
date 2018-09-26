@@ -58,28 +58,15 @@ class TestAction(TestCase):
         assert_equal(new_action.name, config.name)
         assert_equal(new_action.command, config.command)
         assert_equal(new_action.node_pool, None)
-        assert_equal(new_action.required_actions, [])
+        assert_equal(new_action.required_actions, set())
         assert_equal(new_action.executor, config.executor)
         assert_equal(new_action.cpus, config.cpus)
         assert_equal(new_action.mem, config.mem)
-        assert_equal(new_action.constraints, [['pool', 'LIKE', 'default']])
+        assert_equal(new_action.constraints, {('pool', 'LIKE', 'default')})
         assert_equal(new_action.docker_image, config.docker_image)
-        assert_equal(
-            new_action.docker_parameters,
-            [{
-                'key': 'test',
-                'value': 123
-            }],
-        )
+        assert_equal(new_action.docker_parameters, {('test', 123)})
         assert_equal(new_action.env, config.env)
-        assert_equal(
-            new_action.extra_volumes,
-            [{
-                'container_path': '/nail/tmp',
-                'host_path': '/tmp',
-                'mode': 'RO'
-            }],
-        )
+        assert_equal(new_action.extra_volumes, {('/nail/tmp', '/tmp', 'RO')})
         assert new_action.trigger_downstreams is True
         assert new_action.triggered_by == ['foo.bar']
 
@@ -93,13 +80,13 @@ class TestAction(TestCase):
         new_action = action.Action.from_config(config)
         assert_equal(new_action.name, config.name)
         assert_equal(new_action.command, config.command)
-        assert_equal(new_action.required_actions, [])
+        assert_equal(new_action.required_actions, set())
         assert_equal(new_action.executor, config.executor)
-        assert_equal(new_action.constraints, [])
+        assert_equal(new_action.constraints, set())
         assert_equal(new_action.docker_image, None)
-        assert_equal(new_action.docker_parameters, [])
+        assert_equal(new_action.docker_parameters, set())
         assert_equal(new_action.env, {})
-        assert_equal(new_action.extra_volumes, [])
+        assert_equal(new_action.extra_volumes, set())
 
     def test__eq__(self):
         new_action = action.Action(
