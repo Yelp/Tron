@@ -33,12 +33,10 @@ class MasterControlProgram(object):
         self.config = manager.ConfigManager(config_path)
         self.context = command_context.CommandContext()
         self.state_watcher = statemanager.StateChangeWatcher()
-        self.eventbus = None
         log.info('initialized')
 
     def shutdown(self):
-        if self.eventbus:
-            self.eventbus.shutdown()
+        EventBus.shutdown()
         self.state_watcher.shutdown()
 
     def reconfigure(self):
@@ -128,13 +126,11 @@ class MasterControlProgram(object):
 
     def configure_eventbus(self, enabled):
         if enabled:
-            EventBus.create(f"{self.working_dir}/_events")
-            EventBus.start()
+            if not EventBus.instance:
+                EventBus.create(f"{self.working_dir}/_events")
+                EventBus.start()
         else:
-            if not self.eventbus:
-                return
-            self.eventbus.shutdown()
-            self.eventbus = None
+            EventBus.shutdown()
 
     def get_job_collection(self):
         return self.jobs

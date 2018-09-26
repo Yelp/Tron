@@ -50,7 +50,8 @@ class EventBus:
     def shutdown():
         if not EventBus.instance:
             return
-        return EventBus.instance._shutdown()
+        EventBus.instance._shutdown()
+        EventBus.instance = None
 
     @staticmethod
     def publish(message):
