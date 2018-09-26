@@ -29,7 +29,7 @@ class Action(object):
         'env',
         'extra_volumes',
         'retries_delay',
-        'trigger_downstreamss',
+        'trigger_downstreams',
         'triggered_by',
         'on_upstream_rerun',
     ]
