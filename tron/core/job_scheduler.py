@@ -85,6 +85,19 @@ class JobScheduler(Observer):
             return
         self.create_and_schedule_runs()
 
+    def update_from_job_scheduler(self, job_scheduler):
+        old_job = self.get_job()
+        new_job = job_scheduler.get_job()
+
+        old_job.update_from_job(new_job)
+
+        if old_job.enabled and not new_job.enabled:
+            log.info(f'{old_job} disabled during reconfiguration')
+            self.disable()
+        elif not old_job.enabled and new_job.enabled:
+            log.info(f'{new_job} re-enabled during reconfiguration')
+            self.enable()
+
     def _set_callback(self, job_run):
         """Set a callback for JobRun to fire at the appropriate time."""
         seconds = job_run.seconds_until_run_time()

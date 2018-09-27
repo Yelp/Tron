@@ -47,7 +47,7 @@ class JobCollection:
     def update(self, new_job_scheduler):
         log.info(f"Updating {new_job_scheduler}")
         job_scheduler = self.get_by_name(new_job_scheduler.get_name())
-        job_scheduler.get_job().update_from_job(new_job_scheduler.get_job())
+        job_scheduler.update_from_job_scheduler(new_job_scheduler)
         job_scheduler.schedule_reconfigured()
         return True
 

@@ -46,7 +46,7 @@ class TestJobCollection(TestCase):
         self.collection.get_by_name.assert_called_with(
             mock_scheduler.get_name(),
         )
-        existing_scheduler.get_job().update_from_job.assert_called_with(
-            mock_scheduler.get_job.return_value,
+        existing_scheduler.update_from_job_scheduler.assert_called_with(
+            mock_scheduler
         )
         existing_scheduler.schedule_reconfigured.assert_called_with()
