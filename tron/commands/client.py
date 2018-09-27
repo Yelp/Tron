@@ -179,11 +179,12 @@ class Client(object):
         return self.request(build_get_url(url, data))
 
     def request(self, url, data=None):
-        log.info("Request: %s, %s, %s", self.url_base, url, data)
+        log.info(f'Request: {self.url_base}, {url}, {data}')
         uri = urllib.parse.urljoin(self.url_base, url)
         response = request(uri, data)
         if response.error:
-            raise RequestError("%s: %s" % (uri, response), response)
+            print('in here', response.content)
+            raise RequestError(f'{response.content}')
         return response.content
 
 

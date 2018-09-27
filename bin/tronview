@@ -99,8 +99,7 @@ def view_job_run(args, job_run_id, client):
     try:
         actions = client.job_runs(job_run_id.url)
     except RequestError as e:
-        response = e.args[1]
-        raise SystemExit(f"Error: {response.content}")
+        raise SystemExit(f"Error: {e}")
 
     display_action = display.DisplayActionRuns()
     return display_action.format(actions)
@@ -113,8 +112,7 @@ def view_action_run(args, act_run_id, client):
             num_lines=args.num_displays,
         )
     except RequestError as e:
-        response = e.args[1]
-        raise SystemExit(f"Error: {response.content}")
+        raise SystemExit(f"Error: {e}")
 
     return display.format_action_run_details(content)
 

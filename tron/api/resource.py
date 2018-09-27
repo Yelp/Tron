@@ -155,8 +155,8 @@ class JobRunResource(resource.Resource):
             action_run = self.job_run.action_runs[action_name]
             return ActionRunResource(action_run, self.job_run)
 
-        msg = "Cannot find action '%s' for '%s'"
-        return ErrorResource(msg % (action_name, self.job_run))
+        return ErrorResource(f"Cannot find action '{action_name}' for "
+                             f"'{self.job_run}'")
 
     @AsyncResource.bounded
     def render_GET(self, request):
@@ -207,8 +207,7 @@ class JobResource(resource.Resource):
             action_runs = job.runs.get_action_runs(run_id)
             return ActionRunHistoryResource(action_runs)
 
-        msg = "Cannot find job run '%s' for '%s'"
-        return ErrorResource(msg % (run_id, job))
+        return ErrorResource(f"Cannot find job run '{run_id}' for '{job}'")
 
     @AsyncResource.bounded
     def render_GET(self, request):
