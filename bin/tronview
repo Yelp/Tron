@@ -96,24 +96,16 @@ def view_job(args, job_id, client):
 
 
 def view_job_run(args, job_run_id, client):
-    try:
-        actions = client.job_runs(job_run_id.url)
-    except RequestError as e:
-        raise SystemExit(f"Error: {e}")
-
+    actions = client.job_runs(job_run_id.url)
     display_action = display.DisplayActionRuns()
     return display_action.format(actions)
 
 
 def view_action_run(args, act_run_id, client):
-    try:
-        content = client.action_runs(
-            act_run_id.url,
-            num_lines=args.num_displays,
-        )
-    except RequestError as e:
-        raise SystemExit(f"Error: {e}")
-
+    content = client.action_runs(
+        act_run_id.url,
+        num_lines=args.num_displays,
+    )
     return display.format_action_run_details(content)
 
 
@@ -137,7 +129,11 @@ def get_view_output(name, args, client):
 
     if tron_id.type not in obj_type_to_view_map:
         return
-    return obj_type_to_view_map[tron_id.type](args, tron_id, client)
+
+    try:
+        return obj_type_to_view_map[tron_id.type](args, tron_id, client)
+    except RequestError as e:
+        raise SystemExit(f"Error: {e}")
 
 
 def main():

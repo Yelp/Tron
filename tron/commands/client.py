@@ -183,7 +183,6 @@ class Client(object):
         uri = urllib.parse.urljoin(self.url_base, url)
         response = request(uri, data)
         if response.error:
-            print('in here', response.content)
             raise RequestError(f'{response.content}')
         return response.content
 
