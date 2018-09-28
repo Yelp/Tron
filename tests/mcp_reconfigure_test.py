@@ -236,10 +236,7 @@ class TestMCPReconfigure(TestCase):
         self.reconfigure()
         assert job_sched is self.mcp.jobs.get_by_name('MASTER.test_unchanged')
         assert job_sched.job is orig_job
-        # Job is now reenabled because a job's enabled state is applied
-        # during reconfiguration. Each test job's enabled state is the default:
-        # True.
-        assert job_sched.job.enabled
+        assert not job_sched.job.enabled
 
     @suite('integration')
     def test_job_removed(self):
@@ -295,10 +292,7 @@ class TestMCPReconfigure(TestCase):
 
         self.reconfigure()
         new_job_sched = self.mcp.jobs.get_by_name('MASTER.test_change')
-        # Job is now reenabled because a job's enabled state is applied
-        # during reconfiguration. Each test job's enabled state is the default:
-        # True.
-        assert new_job_sched.job.enabled
+        assert not new_job_sched.job.enabled
 
     @suite('integration')
     def test_job_new(self):

@@ -70,6 +70,7 @@ class Job(Observable, Observer):
         monitoring=None,
         node_pool=None,
         enabled=True,
+        config_enabled=None,
         action_graph=None,
         run_collection=None,
         parent_context=None,
@@ -89,6 +90,9 @@ class Job(Observable, Observer):
         self.queueing = queueing
         self.all_nodes = all_nodes
         self.enabled = enabled
+        # config_enabled is equivalent to the setting in file, whereas enabled
+        # is the current enable setting
+        self.config_enabled = enabled if config_enabled is None else config_enabled
         self.node_pool = node_pool
         self.allow_overlap = allow_overlap
         self.action_runner = action_runner
@@ -176,12 +180,22 @@ class Job(Observable, Observer):
         """This data is used to serialize the state of this job."""
         return {
             'runs': self.runs.state_data,
-            'enabled': self.enabled,
+            'enabled': {
+                'current': self.enabled,
+                'config': self.config_enabled,
+            }
         }
 
     def get_job_runs_from_state(self, state_data):
         """Apply a previous state to this Job."""
-        self.enabled = state_data['enabled']
+        if self.config_enabled is not state_data['enabled']['config']:
+            # If the config file changed between saving and restoring from
+            # state, then we enter this branch. We assume that the current
+            # config_enabled is correct (its newer than state) and load it
+            self.enabled = self.config_enabled
+        else:
+            self.enabled = state_data['enabled']['current']
+
         job_runs = jobrun.job_runs_from_state(
             state_data['runs'],
             self.action_graph,

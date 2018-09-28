@@ -128,7 +128,7 @@ class TestJob(TestCase):
         assert_equal(state_data['runs'], self.job.runs.state_data)
         assert state_data['enabled']
 
-    def test_get_job_runs_from_state(self):
+    def test_get_job_runs_from_state_config_changed(self):
         job_runs = [
             dict(
                 run_num=i,
@@ -140,8 +140,41 @@ class TestJob(TestCase):
                 runs=[],
             ) for i in range(0, 3)
         ]
-        state_data = {'enabled': False, 'runs': job_runs}
+        state_data = {
+            'enabled': {
+                'current': True,
+                'config': True,
+            },
+            'runs': job_runs
+        }
+        self.job.config_enabled = False
+
         self.job.get_job_runs_from_state(state_data)
+
+        assert not self.job.enabled
+
+    def test_get_job_runs_from_state_config_unchanged(self):
+        job_runs = [
+            dict(
+                run_num=i,
+                job_name="thename",
+                run_time="sometime",
+                start_time="start_time",
+                end_time="sometime",
+                cleanup_run=None,
+                runs=[],
+            ) for i in range(0, 3)
+        ]
+        state_data = {
+            'enabled': {
+                'current': False,
+                'config': True,
+            },
+            'runs': job_runs
+        }
+
+        self.job.get_job_runs_from_state(state_data)
+
         assert not self.job.enabled
 
     def test_build_new_runs(self):
