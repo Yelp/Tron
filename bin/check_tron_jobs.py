@@ -320,7 +320,7 @@ def compute_check_result_for_job(client, job):
         tron_id = get_object_type_from_identifier(url_index, job["name"])
         job_content = client.job(
             tron_id.url,
-            count=10,
+            count=20,
             include_action_runs=True,
         )
         results = compute_check_result_for_job_runs(
