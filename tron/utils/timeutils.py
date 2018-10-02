@@ -77,9 +77,9 @@ class DateArithmetic(object):
         'day': '%d',
         'hour': '%H',
         'shortdate': '%Y-%m-%d',
-        'ymd': '%Y%m%d',
-        'ymdh': '%Y%m%d%H',
-        'ymdhm': '%Y%m%d%H%M',
+        'ymd': '%Y-%m-%d',
+        'ymdh': '%Y-%m-%dT%H',
+        'ymdhm': '%Y-%m-%dT%H:%M',
     }
 
     @classmethod

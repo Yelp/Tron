@@ -289,38 +289,38 @@ class DateArithmeticYMDHTest(TestCase):
     def test_ymd_plus(self):
         def parse(*ymd):
             return DateArithmetic.parse('ymd+1', datetime.datetime(*ymd))
-        assert_equal(parse(2018, 1, 1), '20180102')
-        assert_equal(parse(2018, 1, 31), '20180201')
+        assert_equal(parse(2018, 1, 1), '2018-01-02')
+        assert_equal(parse(2018, 1, 31), '2018-02-01')
 
     def test_ymd_minus(self):
         def parse(*ymd):
             return DateArithmetic.parse('ymd-1', datetime.datetime(*ymd))
-        assert_equal(parse(2018, 1, 1), '20171231')
-        assert_equal(parse(2018, 1, 2), '20180101')
+        assert_equal(parse(2018, 1, 1), '2017-12-31')
+        assert_equal(parse(2018, 1, 2), '2018-01-01')
 
     def test_ymdh_plus(self):
         def parse(*ymdh):
             return DateArithmetic.parse('ymdh+1', datetime.datetime(*ymdh))
-        assert_equal(parse(2018, 1, 1, 1), '2018010102')
-        assert_equal(parse(2018, 1, 31, 23), '2018020100')
+        assert_equal(parse(2018, 1, 1, 1), '2018-01-01T02')
+        assert_equal(parse(2018, 1, 31, 23), '2018-02-01T00')
 
     def test_ymdh_minus(self):
         def parse(*ymdh):
             return DateArithmetic.parse('ymdh-1', datetime.datetime(*ymdh))
-        assert_equal(parse(2018, 1, 1, 1), '2018010100')
-        assert_equal(parse(2018, 1, 1, 0), '2017123123')
+        assert_equal(parse(2018, 1, 1, 1), '2018-01-01T00')
+        assert_equal(parse(2018, 1, 1, 0), '2017-12-31T23')
 
     def test_ymdhm_plus(self):
         def parse(*ymdhm):
             return DateArithmetic.parse('ymdhm+1', datetime.datetime(*ymdhm))
-        assert_equal(parse(2018, 1, 1, 1, 1), '201801010102')
-        assert_equal(parse(2018, 1, 31, 23, 59), '201802010000')
+        assert_equal(parse(2018, 1, 1, 1, 1), '2018-01-01T01:02')
+        assert_equal(parse(2018, 1, 31, 23, 59), '2018-02-01T00:00')
 
     def test_ymdhm_minus(self):
         def parse(*ymdhm):
             return DateArithmetic.parse('ymdhm-1', datetime.datetime(*ymdhm))
-        assert_equal(parse(2018, 1, 1, 1, 2), '201801010101')
-        assert_equal(parse(2018, 1, 1, 0, 0), '201712312359')
+        assert_equal(parse(2018, 1, 1, 1, 2), '2018-01-01T01:01')
+        assert_equal(parse(2018, 1, 1, 0, 0), '2017-12-31T23:59')
 
 
 class TestDateArithmeticWithTimezone(DateArithmeticTestCase):
