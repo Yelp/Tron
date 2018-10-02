@@ -15,6 +15,7 @@ from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
 from tron.commands import client
 from tron.commands.client import get_object_type_from_identifier
+from tron.commands.client import Response
 from tron.commands.client import TronObjectType
 
 
@@ -103,12 +104,19 @@ class TestClientRequest(TestCase):
             yield
 
     def test_request_error(self):
+        error_response = Response(
+            error='404',
+            msg='Not Found',
+            content='big kahuna error'
+        )
+        client.request = mock.Mock(return_value=error_response)
         exception = assert_raises(
             client.RequestError,
             self.client.request,
             '/jobs',
         )
-        assert_in(self.url, str(exception))
+
+        assert str(exception) == error_response.content
 
     def test_request_success(self):
         ok_response = {'ok': 'ok'}
