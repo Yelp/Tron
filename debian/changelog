@@ -1,3 +1,11 @@
+tron (0.9.6.2) trusty; urgency=medium
+
+  * 0.9.6.2 tagged with 'make release'
+    Commit: Merge pull request #548 from Yelp/skip-docs-diagram  Skip
+    state diagram in docs
+
+ -- root <root@ee50de3acebd>  Tue, 02 Oct 2018 12:23:05 +0000
+
 tron (0.9.6.1) trusty; urgency=medium
 
   * 0.9.6.1 tagged with 'make release'
