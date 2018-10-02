@@ -116,6 +116,7 @@ class ActionRunAdapter(RunAdapter):
         'run_num',
         'retries_delay',
         'in_delay',
+        'triggered_by',
     ]
 
     def __init__(
@@ -170,6 +171,14 @@ class ActionRunAdapter(RunAdapter):
     def get_in_delay(self):
         if self._obj.in_delay is not None:
             return self._obj.in_delay.getTime() - time.time()
+
+    def get_triggered_by(self):
+        all_triggers = self._obj.rendered_triggers
+        remaining = self._obj.remaining_triggers
+        return {
+            'all': all_triggers,
+            'remaining': remaining,
+        }
 
 
 class ActionGraphAdapter(object):

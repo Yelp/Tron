@@ -243,6 +243,8 @@ class ActionRun(Observable):
         self.action_command = None
         self.in_delay = None
 
+        self._rendered_triggers = None
+
     @property
     def state(self):
         return self.machine.state
@@ -436,12 +438,18 @@ class ActionRun(Observable):
         for trigger in triggers:
             EventBus.publish(f"{job_id}.{self.action_name}.{trigger}")
 
+    # TODO: cache if safe
+    @property
+    def rendered_triggers(self):
+        return [
+            self.render_template(trig) for trig in self.triggered_by or []
+        ]
+
     # TODO: subscribe for events and maintain a list of remaining triggers
+    @property
     def remaining_triggers(self):
         return [
-            trigger
-            for trigger in map(self.render_template, self.triggered_by or [])
-            if not EventBus.has_event(trigger)
+            trig for trig in self.rendered_triggers if not EventBus.has_event(trig)
         ]
 
     def success(self):
@@ -558,8 +566,7 @@ class ActionRun(Observable):
             EventBus.subscribe(trigger, self.__hash__(), self.trigger_notify)
 
     def trigger_notify(self, *_):
-        remaining = self.remaining_triggers()
-        if not remaining:
+        if not self.remaining_triggers:
             self.notify(ActionRun.NOTIFY_TRIGGER_READY)
 
     def __getattr__(self, name: str):
@@ -886,7 +893,7 @@ class ActionRunCollection(object):
             if any(not run.is_complete for run in required_runs):
                 return True
 
-        waiting_for = action_run.remaining_triggers()
+        waiting_for = action_run.remaining_triggers
         if waiting_for:
             log.debug(f"{action_run} waiting for: {waiting_for}")
             return True
