@@ -297,8 +297,8 @@ class TestJobSchedulerOther(TestCase):
         assert self.job_scheduler.enable.call_count == 1
 
     def test_update_from_job_scheduler_no_config_change(self):
-        new_job, new_job_scheduler = self._make_job_scheduler('jobname', False)
-        new_job.config_enabled = True  # same as self.job
+        new_job, new_job_scheduler = self._make_job_scheduler('jobname', True)
+        self.job.enabled = False
         self.job.update_from_job = mock.Mock()
         self.job_scheduler.enable = mock.Mock()
         self.job_scheduler.disable = mock.Mock()
@@ -311,6 +311,7 @@ class TestJobSchedulerOther(TestCase):
         assert self.job_scheduler.enable.call_count == 0
         assert self.job_scheduler.disable.call_count == 0
         assert self.job.config_enabled == new_job.config_enabled
+        assert not self.job.enabled
 
 
 class TestJobSchedulerFactory(TestCase):

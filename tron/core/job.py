@@ -70,7 +70,6 @@ class Job(Observable, Observer):
         monitoring=None,
         node_pool=None,
         enabled=True,
-        config_enabled=None,
         action_graph=None,
         run_collection=None,
         parent_context=None,
@@ -89,10 +88,8 @@ class Job(Observable, Observer):
         self.runs = run_collection
         self.queueing = queueing
         self.all_nodes = all_nodes
-        self.enabled = enabled
-        # config_enabled is equivalent to the setting in file, whereas enabled
-        # is the current enable setting
-        self.config_enabled = enabled if config_enabled is None else config_enabled
+        self.enabled = enabled         # current enabled setting
+        self.config_enabled = enabled  # enabled attribute from file
         self.node_pool = node_pool
         self.allow_overlap = allow_overlap
         self.action_runner = action_runner
