@@ -21,6 +21,7 @@ from tests.assertions import assert_length
 from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron import node
+from tron.config.schema import ConfigConstraint
 from tron.config.schema import ExecutorTypes
 from tron.core import actiongraph
 from tron.core import jobrun
@@ -980,7 +981,7 @@ class TestMesosActionRun(TestCase):
             'cpus': 1,
             'mem': 50,
             'docker_image': 'container:v2',
-            'constraints': [],
+            'constraints': [ConfigConstraint('an attr', 'an op', 'a val')],
             'env': {
                 'TESTING': 'true'
             },
@@ -1010,6 +1011,7 @@ class TestMesosActionRun(TestCase):
 
             mock_get_cluster = mock_cluster_repo.get_cluster
             mock_get_cluster.assert_called_once_with()
+            self.other_task_kwargs['constraints'] = [['an attr', 'an op', 'a val']]
             mock_get_cluster.return_value.create_task.assert_called_once_with(
                 action_run_id=self.action_run.id,
                 command=self.command,
