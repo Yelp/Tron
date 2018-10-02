@@ -4,12 +4,12 @@ from __future__ import unicode_literals
 import signal
 import tempfile
 
-import action_status
 import mock
 import yaml
 
 from testifycompat import setup_teardown
 from testifycompat import TestCase
+from tron.bin import action_status
 
 
 class TestActionStatus(TestCase):
@@ -27,8 +27,8 @@ class TestActionStatus(TestCase):
         yield
         self.status_file.close()
 
-    @mock.patch('action_status.os.killpg', autospec=True)
-    @mock.patch('action_status.os.getpgid', autospec=True, return_value=42)
+    @mock.patch('tron.bin.action_status.os.killpg', autospec=True)
+    @mock.patch('tron.bin.action_status.os.getpgid', autospec=True, return_value=42)
     def test_send_signal(self, mock_getpgid, mock_kill):
         action_status.send_signal(signal.SIGKILL, self.status_file)
         mock_getpgid.assert_called_with(self.status_content['pid'])

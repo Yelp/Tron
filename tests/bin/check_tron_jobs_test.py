@@ -3,20 +3,20 @@ from __future__ import unicode_literals
 
 import time
 
-import check_tron_jobs
-from check_tron_jobs import State
 from mock import patch
 from mock import PropertyMock
 
 from testifycompat import assert_equal
 from testifycompat import TestCase
+from tron.bin import check_tron_jobs
+from tron.bin.check_tron_jobs import State
 
 
 class TestCheckJobs(TestCase):
-    @patch('check_tron_jobs.check_job_result', autospec=True)
-    @patch('check_tron_jobs.Client', autospec=True)
-    @patch('check_tron_jobs.cmd_utils', autospec=True)
-    @patch('check_tron_jobs.parse_cli', autospec=True)
+    @patch('tron.bin.check_tron_jobs.check_job_result', autospec=True)
+    @patch('tron.bin.check_tron_jobs.Client', autospec=True)
+    @patch('tron.bin.check_tron_jobs.cmd_utils', autospec=True)
+    @patch('tron.bin.check_tron_jobs.parse_cli', autospec=True)
     def test_check_job_result_exception(
         self,
         mock_args,
