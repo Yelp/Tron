@@ -56,25 +56,10 @@ class Action:
             trigger_downstreams=config.trigger_downstreams,
             triggered_by=config.triggered_by,
             on_upstream_rerun=config.on_upstream_rerun,
+            constraints=set(config.constraints or []),
+            docker_parameters=set(config.docker_parameters or []),
+            extra_volumes=set(config.extra_volumes or []),
+            env=config.env or {},
         )
-
-        # Only convert config values if they are not None.
-        constraints = config.constraints
-        if constraints:
-            constraints = set((c.attribute, c.operator, c.value) for c in constraints)
-            kwargs['constraints'] = constraints
-
-        docker_parameters = config.docker_parameters
-        if docker_parameters:
-            docker_parameters = set((c.key, c.value) for c in docker_parameters)
-            kwargs['docker_parameters'] = docker_parameters
-
-        extra_volumes = config.extra_volumes
-        if extra_volumes:
-            extra_volumes = set((c.container_path, c.host_path, c.mode) for c in extra_volumes)
-            kwargs['extra_volumes'] = extra_volumes
-
-        if config.env:
-            kwargs['env'] = config.env
 
         return cls(**kwargs)
