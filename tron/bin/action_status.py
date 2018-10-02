@@ -1,7 +1,9 @@
+#!/usr/bin/env python3.6
 import argparse
 import logging
 import os
 import signal
+import sys
 
 from tron import yaml
 
@@ -74,4 +76,4 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    sys.exit(main())

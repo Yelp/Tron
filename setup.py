@@ -54,7 +54,7 @@ setup(
         'dataclasses>=0.6',
     ],
     packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
-    scripts=glob.glob('bin/*'),
+    scripts=[*glob.glob('bin/*'), *glob.glob('tron/bin/*.py')],
     include_package_data=True,
     long_description="""
 Tron is a centralized system for managing periodic batch processes across a
