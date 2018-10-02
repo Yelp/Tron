@@ -675,11 +675,11 @@ class MesosActionRun(ActionRun, Observer):
             command=self.command,
             cpus=self.cpus,
             mem=self.mem,
-            constraints=self.constraints,
+            constraints=[e._asdict() for e in self.constraints],
             docker_image=self.docker_image,
-            docker_parameters=self.docker_parameters,
+            docker_parameters=[e._asdict() for e in self.docker_parameters],
             env=self.env,
-            extra_volumes=self.extra_volumes,
+            extra_volumes=[e._asdict() for e in self.extra_volumes],
             serializer=serializer,
         )
         if not task:  # Mesos is disabled

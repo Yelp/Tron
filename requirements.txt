@@ -1,5 +1,6 @@
 bsddb3
 cryptography>=2.1.4
+dataclasses>=0.6
 docutils>=0.8.1
 ipdb
 ipython

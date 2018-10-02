@@ -50,7 +50,8 @@ setup(
         'ipdb',
         'task_processing[mesos_executor]>=0.1.2',
         'requests',
-        'psutil'
+        'psutil',
+        'dataclasses>=0.6',
     ],
     packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
     scripts=glob.glob('bin/*'),
