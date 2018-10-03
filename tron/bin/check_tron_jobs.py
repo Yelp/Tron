@@ -1,10 +1,14 @@
 #!/usr/bin/env python3.6
 import logging
+import pprint
 import sys
 import time
+from collections import defaultdict
 from enum import Enum
 
 import pytimeparse
+from pyrsistent import m
+from pyrsistent import pmap
 from pysensu_yelp import send_event
 
 from tron.commands import cmd_utils
@@ -55,6 +59,13 @@ def parse_cli():
 
 def _timestamp_to_timeobj(timestamp):
     return time.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
+
+
+def _are_runs_precious(monitoring_conf):
+    """ Checks if runs are 'precious', that is, we want to ensure there is a
+    successful run per day """
+    precious_jobs_attr = 'check_that_every_day_has_a_successful_run'
+    return monitoring_conf.get(precious_jobs_attr, False)
 
 
 def compute_check_result_for_job_runs(client, job, job_content):
@@ -115,23 +126,20 @@ def compute_check_result_for_job_runs(client, job, job_content):
         prefix = "UNKNOWN: The job is in a state that check_tron_jobs doesn't understand"
         status = 3
 
+    precious_runs_note = ''
+    if _are_runs_precious(job['monitoring']):
+        precious_runs_note = f"Note: Job {job_content['name']} is precious. Owners will be alerted if a day's, instead of the overall job's, latest run failed.\n"
+
     kwargs["output"] = (
-        "{}\n"
-        "{}'s last relevant run (run {}) {}.\n\n"
-        "Here is the last action:"
-        "{}\n\n"
+        f"{prefix}\n"
+        f"{job['name']}'s last relevant run (run {relevant_job_run['id']}) {relevant_job_run['state']}.\n"
+        f"{precious_runs_note}"
+        "\nHere is the last action:\n"
+        f"{pretty_print_actions(action_run_details)}\n\n"
         "And the job run view:\n"
-        "{}\n\n"
+        f"{pretty_print_job_run(relevant_job_run)}\n\n"
         "Here is the whole job view for context:\n"
-        "{}"
-    ).format(
-        prefix,
-        job['name'],
-        relevant_job_run['id'],
-        relevant_job_run['state'],
-        pretty_print_actions(action_run_details),
-        pretty_print_job_run(relevant_job_run),
-        pretty_print_job(job_content),
+        f"{pretty_print_job(job_content)}"
     )
     kwargs["status"] = status
     return kwargs
@@ -164,7 +172,8 @@ def get_relevant_run_and_state(job_content):
     if len(job_runs) == 0:
         return None, State.NO_RUN_YET
     run = is_job_scheduled(job_runs)
-    if run is None:
+    # If runs are precious, then we do not care if there is a scheduled job
+    if run is None and not _are_runs_precious(job_content['monitoring']):
         return job_runs[0], State.NOT_SCHEDULED
     job_expected_runtime = job_content.get('expected_runtime', None)
     actions_expected_runtime = job_content.get('actions_expected_runtime', {})
@@ -293,41 +302,110 @@ def guess_realert_every(job):
     return realert_every
 
 
-def compute_check_result_for_job(client, job):
-    kwargs = {
-        "name": "check_tron_job.{}".format(job['name']),
-        "source": "tron",
-    }
-    kwargs.update(job['monitoring'])
-    if 'realert_every' not in kwargs:
-        kwargs['realert_every'] = guess_realert_every(job)
-    kwargs['check_every'] = "{}s".format(_run_interval)
+def filter_monitoring_config(config):
+    """ Filters out non-Sensu arguments from a job's monitoring config """
+    sensu_args = set([
+        'name',
+        'runbook',
+        'status',
+        'output',
+        'team',
+        'page',
+        'tip',
+        'notification_email',
+        'check_every',
+        'realert_every',
+        'alert_after',
+        'dependencies',
+        'irc_channels',
+        'slack_channels',
+        'ticket',
+        'project',
+        'source',
+        'tags',
+        'ttl',
+        'sensu_host',
+        'component',
+        'description',
+    ])
 
-    status = job["status"]
-    if status == "disabled":
-        kwargs["output"] = "OK: {} is disabled and won't be checked.".format(
+    include, exclude = {}, {}
+    for k, v in config.items():
+        (include if k in sensu_args else exclude)[k] = v
+    return include, exclude
+
+
+def sort_runs_by_interval(job_content, interval='day'):
+    """ Sorts a job's runs by a time interval (year, month, day, hour, minute,
+    or second), according to a job run's run time.
+    """
+    interval_formats = {
+        'year': '%Y',
+        'month': '%Y.%m',
+        'day': '%Y.%m.%d',
+        'hour': '%Y.%m.%d-%H',
+        'minute': '%Y.%m.%d-%H.%M',
+        'second': '%Y.%m.%d-%H.%M.%S',
+    }
+
+    run_buckets = defaultdict(list)
+    if job_content is not None:
+        # Sort runs by shortdate
+        for run in job_content['runs']:
+            # If interval is invalid, will raise a KeyError
+            shortdate = time.strftime(
+                interval_formats[interval],
+                _timestamp_to_timeobj(run['run_time']),
+            )
+            run_buckets[shortdate].append(run)
+    return dict(run_buckets)
+
+
+def compute_check_result_for_job(client, job):
+    kwargs = m(
+        name="check_tron_job.{}".format(job['name']),
+        source="tron",
+    )
+    if 'realert_every' not in kwargs:
+        kwargs = kwargs.set('realert_every', guess_realert_every(job))
+    kwargs = kwargs.set('check_every', "{}s".format(_run_interval))
+    sensu_kwargs, nonsensu_kwargs = filter_monitoring_config(job['monitoring'])
+    kwargs = kwargs.update(sensu_kwargs)
+
+    kwargs_list = []
+    if job["status"] == "disabled":
+        kwargs = kwargs.set('output', "OK: {} is disabled and won't be checked.".format(
             job['name'],
-        )
-        kwargs["status"] = 0
-        log.info(kwargs["output"])
-        return kwargs
+        ))
+        kwargs = kwargs.set('status', 0)
+        kwargs_list.append(kwargs)
     else:
         # The job is not disabled, therefore we have to look at its run history
         url_index = client.index()
         tron_id = get_object_type_from_identifier(url_index, job["name"])
-        job_content = client.job(
+        job_content = pmap(client.job(
             tron_id.url,
             count=20,
             include_action_runs=True,
-        )
-        results = compute_check_result_for_job_runs(
-            job=job,
-            job_content=job_content,
-            client=client,
-        )
-        kwargs.update(results)
-        log.info(kwargs["output"].split("\n")[0])
-        return kwargs
+        ))
+
+        if _are_runs_precious(nonsensu_kwargs):
+            dated_runs = sort_runs_by_interval(job_content, interval='day')
+        else:
+            dated_runs = {'': job_content['runs']}
+
+        for date, runs in dated_runs.items():
+            results = compute_check_result_for_job_runs(
+                job=job,
+                job_content=job_content.set('runs', runs),
+                client=client,
+            )
+            dated_kwargs = kwargs.update(results)
+            if date:  # if empty date, leave job name alone
+                dated_kwargs = dated_kwargs.set('name', f"{kwargs['name']}-{date}")
+            kwargs_list.append(dated_kwargs)
+
+    return [dict(kws) for kws in kwargs_list]
 
 
 def check_job(job, client):
@@ -346,19 +424,21 @@ def check_job(job, client):
 
 
 def check_job_result(job, client, dry_run):
-    result = check_job(job, client)
-    if result is None:
+    results = check_job(job, client)
+    if not results:  # result is None or result == []
         return
-    if dry_run:
-        log.info("Would have sent this event to sensu: ")
-        log.info(result)
-    else:
-        log.debug("Sending event: {}".format(result))
-        if 'runbook' not in result:
-            result[
-                'runbook'
-            ] = "No runbook specified. Please specify a runbook in the monitoring section of the job definition."
-        send_event(**result)
+
+    for result in results:
+        if dry_run:
+            log.info("Would have sent this event to sensu: ")
+            log.info(pprint.pformat(result))
+        else:
+            log.debug("Sending event: {}".format(pprint.pformat(result)))
+            if 'runbook' not in result:
+                result[
+                    'runbook'
+                ] = "No runbook specified. Please specify a runbook in the monitoring section of the job definition.",
+            send_event(**result)
 
 
 def main():
