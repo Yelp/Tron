@@ -177,22 +177,12 @@ class Job(Observable, Observer):
         """This data is used to serialize the state of this job."""
         return {
             'runs': self.runs.state_data,
-            'enabled': {
-                'current': self.enabled,
-                'config': self.config_enabled,
-            }
+            'enabled': self.enabled,
         }
 
     def get_job_runs_from_state(self, state_data):
         """Apply a previous state to this Job."""
-        if self.config_enabled is not state_data['enabled']['config']:
-            # If the config file changed between saving and restoring from
-            # state, then we enter this branch. We assume that the current
-            # config_enabled is correct (its newer than state) and load it
-            self.enabled = self.config_enabled
-        else:
-            self.enabled = state_data['enabled']['current']
-
+        self.enabled = state_data['enabled']
         job_runs = jobrun.job_runs_from_state(
             state_data['runs'],
             self.action_graph,

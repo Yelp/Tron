@@ -92,7 +92,7 @@ class JobScheduler(Observer):
 
         curr_job.update_from_job(new_job)
 
-        # Since job upadting only copies equality attributes (defined in the Job
+        # Since job updating only copies equality attributes (defined in the Job
         # class), we need to now enable or disable the job depending on if the
         # new job says so.
         if (curr_job.enabled is not new_job.enabled and
