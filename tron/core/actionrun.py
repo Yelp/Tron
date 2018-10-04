@@ -243,8 +243,6 @@ class ActionRun(Observable):
         self.action_command = None
         self.in_delay = None
 
-        self._rendered_triggers = None
-
     @property
     def state(self):
         return self.machine.state
