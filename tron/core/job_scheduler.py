@@ -85,6 +85,26 @@ class JobScheduler(Observer):
             return
         self.create_and_schedule_runs()
 
+    def update_from_job_scheduler(self, job_scheduler):
+        """ Update a job scheduler by copying another. """
+        curr_job = self.get_job()
+        new_job = job_scheduler.get_job()
+
+        curr_job.update_from_job(new_job)
+
+        # Since job updating only copies equality attributes (defined in the Job
+        # class), we need to now enable or disable the job depending on if the
+        # new job says so.
+        if (curr_job.enabled is not new_job.enabled and
+                curr_job.config_enabled is not new_job.config_enabled):
+            if new_job.config_enabled:
+                log.info(f'{curr_job} re-enabled during reconfiguration')
+                self.enable()
+            else:
+                log.info(f'{curr_job} disabled during reconfiguration')
+                self.disable()
+        curr_job.config_enabled = new_job.config_enabled
+
     def _set_callback(self, job_run):
         """Set a callback for JobRun to fire at the appropriate time."""
         seconds = job_run.seconds_until_run_time()
