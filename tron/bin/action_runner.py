@@ -158,7 +158,8 @@ def main():
 
     for t in threads:
         t.join()
-    sys.exit(returncode)
+
+    return returncode
 
 
 if __name__ == "__main__":
