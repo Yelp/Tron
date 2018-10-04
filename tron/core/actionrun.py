@@ -675,7 +675,8 @@ class MesosActionRun(ActionRun, Observer):
             command=self.command,
             cpus=self.cpus,
             mem=self.mem,
-            constraints=[e._asdict() for e in self.constraints],
+            constraints=[[c.attribute, c.operator, c.value]
+                         for c in self.constraints],
             docker_image=self.docker_image,
             docker_parameters=[e._asdict() for e in self.docker_parameters],
             env=self.env,
