@@ -77,14 +77,14 @@ class TestHandleCommand(TestCase):
         command = 'the command'
         request = build_request(command=command)
         mock_controller, obj = mock.Mock(), mock.Mock()
-        error = controller.UnknownCommandError("No")
+        error = controller.UnknownCommandError()
         mock_controller.handle_command.side_effect = error
         response = www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
         assert_equal(response, self.respond.return_value)
         self.respond.assert_called_with(
             request,
-            {'error': str(error)},
+            {'error': f"Unknown command '{command}' for '{obj}'"},
             code=http.NOT_IMPLEMENTED,
         )
 

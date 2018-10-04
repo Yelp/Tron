@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
+#!/usr/bin/env python3.6
 import argparse
 import logging
 import signal

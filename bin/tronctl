@@ -83,7 +83,7 @@ def parse_cli():
     )
     parser.add_argument(
         'id',
-        nargs='*',
+        nargs='+',
         help='job name, job run id, or action id',
     ).completer = cmd_utils.tron_jobs_completer
 
@@ -102,7 +102,7 @@ def edit(args, uri):
     response = client.request(uri, data=data)
 
     if response.error:
-        log.error(response.content)
+        print(f'Error: {response.content}')
         return
 
     print(response.content['result'])
@@ -163,11 +163,6 @@ def main():
 
     if args.command == "backfill":
         sys.exit(backfill(args))
-    elif not args.id:
-        # our only non-object commands are for enabling and disabling jobs, so
-        # just direct those commands here
-        if not edit(args, client.get_job_url('')):
-            sys.exit(ExitCode.fail)
     else:
         if not all(control_objects(args)):
             sys.exit(ExitCode.fail)

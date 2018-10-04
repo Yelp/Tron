@@ -12,6 +12,7 @@ from tron.commands import cmd_utils
 from tron.commands import display
 from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
+from tron.commands.client import RequestError
 from tron.commands.client import TronObjectType
 from tron.commands.cmd_utils import ExitCode
 from tron.commands.cmd_utils import suggest_possibilities
@@ -128,7 +129,11 @@ def get_view_output(name, args, client):
 
     if tron_id.type not in obj_type_to_view_map:
         return
-    return obj_type_to_view_map[tron_id.type](args, tron_id, client)
+
+    try:
+        return obj_type_to_view_map[tron_id.type](args, tron_id, client)
+    except RequestError as e:
+        raise SystemExit(f"Error: {e}")
 
 
 def main():
