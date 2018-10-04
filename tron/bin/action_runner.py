@@ -2,9 +2,6 @@
 """
 Write pid and stdout/stderr to a standard location before execing a command.
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import argparse
 import contextlib
 import logging
@@ -141,7 +138,7 @@ def configure_logging(run_id, output_dir):
     )
 
 
-if __name__ == "__main__":
+def main():
     args = parse_args()
     validate_output_dir(args.output_dir)
     configure_logging(run_id=args.run_id, output_dir=args.output_dir)
@@ -161,4 +158,9 @@ if __name__ == "__main__":
 
     for t in threads:
         t.join()
-    sys.exit(returncode)
+
+    return returncode
+
+
+if __name__ == "__main__":
+    sys.exit(main())

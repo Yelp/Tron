@@ -1,11 +1,4 @@
-#!/usr/bin/env python
-"""
-Read values from a status file created by action_runner.py
-"""
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
+#!/usr/bin/env python3.6
 import argparse
 import logging
 import os
@@ -74,8 +67,12 @@ def run_command(command, status_file):
     commands[command](status_file)
 
 
-if __name__ == "__main__":
+def main():
     logging.basicConfig()
     args = parse_args()
     with open(os.path.join(args.output_dir, STATUS_FILE)) as f:
         run_command(args.command, f)
+
+
+if __name__ == "__main__":
+    main()

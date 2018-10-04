@@ -3,7 +3,6 @@ from __future__ import unicode_literals
 
 import tempfile
 
-import action_runner
 import mock
 import pytest
 
@@ -11,6 +10,7 @@ from testifycompat import assert_equal
 from testifycompat import setup
 from testifycompat import setup_teardown
 from testifycompat import TestCase
+from tron.bin import action_runner
 
 
 class TestStatusFile(TestCase):
@@ -21,8 +21,8 @@ class TestStatusFile(TestCase):
 
     def test_get_content(self):
         command, proc, run_id = 'do this', mock.Mock(), 'Job.test.1'
-        with mock.patch('action_runner.time.time', autospec=True) as faketime, \
-                mock.patch('action_runner.os.getpid', autospec=True) as fakepid:
+        with mock.patch('tron.bin.action_runner.time.time', autospec=True) as faketime, \
+                mock.patch('tron.bin.action_runner.os.getpid', autospec=True) as fakepid:
             faketime.return_value = 0
             fakepid.return_value = 2
             content = self.status_file.get_content(
@@ -47,10 +47,10 @@ class TestRegister(TestCase):
 
     @setup_teardown
     def patch_sys(self):
-        with mock.patch('action_runner.os.path.isdir', autospec=True) as self.mock_isdir, \
-                mock.patch('action_runner.os.makedirs', autospec=True) as self.mock_makedirs, \
-                mock.patch('action_runner.os.access', autospec=True) as self.mock_access, \
-                mock.patch('action_runner.StatusFile', autospec=True) as self.mock_status_file:
+        with mock.patch('tron.bin.action_runner.os.path.isdir', autospec=True) as self.mock_isdir, \
+                mock.patch('tron.bin.action_runner.os.makedirs', autospec=True) as self.mock_makedirs, \
+                mock.patch('tron.bin.action_runner.os.access', autospec=True) as self.mock_access, \
+                mock.patch('tron.bin.action_runner.StatusFile', autospec=True) as self.mock_status_file:
             self.output_path = '/bogus/path/does/not/exist'
             self.command = 'command'
             self.run_id = 'Job.test.1'
