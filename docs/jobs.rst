@@ -152,9 +152,9 @@ Example Actions
             start_time: 04:00:00
           actions:
             - name: verify_logs_present
-              command: "ls /var/log/app/log_%(shortdate-1).txt"
+              command: "ls /var/log/app/log_{shortdate-1}.txt"
             - name: convert_logs
-              command: "convert_logs /var/log/app/log_%(shortdate-1).txt /var/log/app_converted/log_%(shortdate-1).txt"
+              command: "convert_logs /var/log/app/log_{shortdate-1}.txt /var/log/app_converted/log_{shortdate-1}.txt"
               requires: [verify_logs_present]
 
 .. _job_scheduling:

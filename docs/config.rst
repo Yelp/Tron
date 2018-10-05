@@ -57,7 +57,7 @@ example::
             - name: "print_run_id"
               # prints 'command_context_demo.1' on the first run,
               # 'command_context_demo.2' on the second, etc.
-              command: "echo %(runid)"
+              command: "echo {runid}"
 
 SSH
 ---
