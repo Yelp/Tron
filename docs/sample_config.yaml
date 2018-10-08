@@ -34,15 +34,15 @@ jobs:
     actions:
       - name: verify_logs_present
         command: >
-            ls /var/log/app/log_%(shortdate-1).txt
+            ls /var/log/app/log_{shortdate-1}.txt
       - name: convert_logs
         command: >
-            convert_logs /var/log/app/log_%(shortdate-1).txt \
-                /var/log/app_converted/log_%(shortdate-1).txt
+            convert_logs /var/log/app/log_{shortdate-1}.txt \
+                /var/log/app_converted/log_{shortdate-1}.txt
         requires: [verify_logs_present]
     # this will run when the job succeeds or fails
     cleanup_action:
-        command: "rm /%(TMPDIR)s/random_temp_file"
+        command: "rm /{TMPDIR}/random_temp_file"
 
   - name: "job1"
     node: node
