@@ -169,7 +169,7 @@ class TronDaemon(object):
 
     def _run_manhole(self):
         self.manhole = make_manhole(dict(trond=self, mcp=self.mcp))
-        reactor.listenUNIX(self.manhole_sock, self.manhole)
+        reactor.listenUNIX(self.manhole_sock, self.manhole, wantPID=1)
         log.info(f"manhole started on {self.manhole_sock}")
 
     def _run_www_api(self):
