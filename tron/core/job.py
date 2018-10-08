@@ -88,7 +88,8 @@ class Job(Observable, Observer):
         self.runs = run_collection
         self.queueing = queueing
         self.all_nodes = all_nodes
-        self.enabled = enabled
+        self.enabled = enabled         # current enabled setting
+        self.config_enabled = enabled  # enabled attribute from file
         self.node_pool = node_pool
         self.allow_overlap = allow_overlap
         self.action_runner = action_runner

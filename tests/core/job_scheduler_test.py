@@ -242,6 +242,78 @@ class TestJobSchedulerSchedule(TestCase):
             mock_schedule.assert_called_once_with()
 
 
+class TestJobSchedulerOther(TestCase):
+    """ Test other JobScheduler functions """
+
+    def _make_job_scheduler(self, job_name, enabled=True):
+        scheduler = mock.Mock()
+        run_collection = mock.Mock()
+        node_pool = mock.Mock()
+        new_job = job.Job(
+            job_name,
+            scheduler,
+            run_collection=run_collection,
+            node_pool=node_pool,
+            enabled=enabled,
+        )
+        return new_job, JobScheduler(new_job)
+
+    @setup
+    def setup_job(self):
+        self.job, self.job_scheduler = self._make_job_scheduler('jobname', True)
+
+    def test_disable(self):
+        self.job.runs.cancel_pending = mock.Mock()
+
+        self.job_scheduler.disable()
+
+        assert not self.job.enabled
+        assert self.job.runs.cancel_pending.call_count == 1
+
+    def test_update_from_job_scheduler_disable(self):
+        new_job, new_job_scheduler = self._make_job_scheduler('jobname', False)
+        self.job.update_from_job = mock.Mock()
+        self.job_scheduler.disable = mock.Mock()
+
+        self.job_scheduler.update_from_job_scheduler(new_job_scheduler)
+
+        assert self.job.update_from_job.call_args == mock.call(
+            new_job_scheduler.get_job()
+        )
+        assert self.job_scheduler.disable.call_count == 1
+
+    def test_update_from_job_scheduler_enable(self):
+        new_job, new_job_scheduler = self._make_job_scheduler('jobname', True)
+        self.job.update_from_job = mock.Mock()
+        self.job.enabled = False
+        self.job.config_enabled = False
+        self.job_scheduler.enable = mock.Mock()
+
+        self.job_scheduler.update_from_job_scheduler(new_job_scheduler)
+
+        assert self.job.update_from_job.call_args == mock.call(
+            new_job_scheduler.get_job()
+        )
+        assert self.job_scheduler.enable.call_count == 1
+
+    def test_update_from_job_scheduler_no_config_change(self):
+        new_job, new_job_scheduler = self._make_job_scheduler('jobname', True)
+        self.job.enabled = False
+        self.job.update_from_job = mock.Mock()
+        self.job_scheduler.enable = mock.Mock()
+        self.job_scheduler.disable = mock.Mock()
+
+        self.job_scheduler.update_from_job_scheduler(new_job_scheduler)
+
+        assert self.job.update_from_job.call_args == mock.call(
+            new_job_scheduler.get_job()
+        )
+        assert self.job_scheduler.enable.call_count == 0
+        assert self.job_scheduler.disable.call_count == 0
+        assert self.job.config_enabled == new_job.config_enabled
+        assert not self.job.enabled
+
+
 class TestJobSchedulerFactory(TestCase):
     @setup
     def setup_factory(self):
