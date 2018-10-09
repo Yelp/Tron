@@ -186,18 +186,17 @@ class MesosTask(ActionCommand):
             agent = get_deep(event.raw, 'offer.agent_id.value')
             hostname = get_deep(event.raw, 'offer.hostname')
             self.log.info(
-                'Staging task on agent {agent} (hostname {hostname})'.format(
-                    agent=agent,
-                    hostname=hostname,
-                ),
+                f'Staging task on agent {agent} (hostname {hostname})'
             )
         elif mesos_type == 'running':
             agent = get_deep(event.raw, 'agent_id.value')
-            self.log.info('Running on agent {agent}'.format(agent=agent))
+            self.log.info(f'Running on agent {agent}')
         elif mesos_type == 'finished':
             pass
         elif mesos_type in self.ERROR_STATES:
-            self.log.error('Error from Mesos: {}'.format(event.raw))
+            self.log.error(f'Error from Mesos: {event.raw}')
+        elif mesos_type is None:
+            self.log.info(f'Non-Mesos event: {event.raw}')
 
     def handle_event(self, event):
         event_id = getattr(event, 'task_id', None)
@@ -229,8 +228,10 @@ class MesosTask(ActionCommand):
             self.exited(None)
         elif mesos_type in self.ERROR_STATES:
             self.exited(1)
+        elif mesos_type is None:
+            pass
         else:
-            self.log.warning(
+            self.log.info(
                 'Did not handle unknown type of event: {}'.format(event),
             )
 
@@ -241,7 +242,7 @@ class MesosTask(ActionCommand):
             # Returns False if we've already exited normally above
             unexpected_error = self.exited(exit_code)
             if unexpected_error:
-                self.log.error('Unknown failure, exiting')
+                self.log.error('Unexpected failure, exiting')
 
             self.done()
 
