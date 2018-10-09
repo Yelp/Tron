@@ -324,7 +324,15 @@ class JobCollectionResource(resource.Resource):
 
     @AsyncResource.exclusive
     def render_POST(self, request):
-        return handle_command(request, self.controller, self.job_collection)
+        old_name = requestargs.get_string(request, 'old_name')
+        new_name = requestargs.get_string(request, 'new_name')
+        return handle_command(
+            request = request,
+            api_controller = self.controller,
+            obj = self.job_collection,
+            old_name=old_name,
+            new_name=new_name,
+        )
 
 
 class ConfigResource(resource.Resource):

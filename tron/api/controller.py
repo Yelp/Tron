@@ -16,8 +16,10 @@ class JobCollectionController(object):
     def __init__(self, job_collection):
         self.job_collection = job_collection
 
-    def handle_command(self, command):
-        # No commands to handle, enableall/disableall have been deprecated
+    def handle_command(self, command, old_name=None, new_name=None):
+        if command == 'move':
+            return self.job_collection.move(old_name, new_name)
+
         raise UnknownCommandError("Unknown command %s" % command)
 
 

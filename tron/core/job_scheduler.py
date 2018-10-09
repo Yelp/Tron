@@ -195,6 +195,12 @@ class JobScheduler(Observer):
         next_run_time = self.job.scheduler.next_run_time(last_run_time)
         return self.job.build_new_runs(next_run_time)
 
+    def update_name(self, name):
+        self.job.name = name
+        self.job.update_from_job(self.get_job())
+        self.job.runs.remove_pending()
+        self.create_and_schedule_runs(ignore_last_run_time=False)
+
     def __str__(self):
         return f"{self.__class__.__name__}({self.job})"
 
