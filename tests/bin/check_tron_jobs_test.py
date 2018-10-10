@@ -10,8 +10,6 @@ from testifycompat import TestCase
 from tron.bin import check_tron_jobs
 from tron.bin.check_tron_jobs import State
 
-_PRECIOUS_RUNS_ATTR = 'check_that_every_day_has_a_successful_run'
-
 
 class TestCheckJobs(TestCase):
     @patch('tron.bin.check_tron_jobs.check_job_result', autospec=True)
@@ -1296,7 +1294,7 @@ class TestCheckPreciousJobs(TestCase):
         self.monitoring = {
             'team': 'fake_team',
             'notification_email': 'fake_email',
-            _PRECIOUS_RUNS_ATTR: True,
+            check_tron_jobs.PRECIOUS_JOB_ATTR: True,
         }
         self.runs = [
             {
@@ -1362,19 +1360,8 @@ class TestCheckPreciousJobs(TestCase):
             'runs': self.runs,
         }
 
-    def test_are_runs_precious_default(self):
-        del self.monitoring[_PRECIOUS_RUNS_ATTR]
-        is_precious = check_tron_jobs._are_runs_precious(self.monitoring)
-        assert not is_precious
-
-    def test_are_runs_precious_config(self):
-        for b in [True, False]:
-            self.monitoring[_PRECIOUS_RUNS_ATTR] = b
-            is_precious = check_tron_jobs._are_runs_precious(self.monitoring)
-            assert is_precious == b
-
     def test_get_relevant_run_and_state_not_scheduled(self):
-        self.job['monitoring'][_PRECIOUS_RUNS_ATTR] = False
+        self.job['monitoring'][check_tron_jobs.PRECIOUS_JOB_ATTR] = False
 
         latest_run, state = check_tron_jobs.get_relevant_run_and_state(self.job)
 
@@ -1387,13 +1374,6 @@ class TestCheckPreciousJobs(TestCase):
         assert latest_run['run_num'] == 5
         assert state == check_tron_jobs.State.SUCCEEDED
 
-    def test_filter_monitoring_config(self):
-        sensu_kwargs, nonsensu_kwargs = \
-            check_tron_jobs.filter_monitoring_config(self.job['monitoring'])
-
-        assert set(sensu_kwargs.keys()) == set(['team', 'notification_email'])
-        assert set(nonsensu_kwargs.keys()) == set([_PRECIOUS_RUNS_ATTR])
-
     def test_sort_runs_by_interval_day(self):
         run_buckets = check_tron_jobs.sort_runs_by_interval(self.job, 'day')
 
@@ -1403,6 +1383,24 @@ class TestCheckPreciousJobs(TestCase):
         assert len(run_buckets['2018.10.11']) == 2
         assert len(run_buckets['2018.10.12']) == 1
         assert len(run_buckets['2018.10.13']) == 1
+
+    @patch('time.time', mock.Mock(return_value=1539633600.0), autospec=None)
+    def test_sort_runs_by_interval_day_empty_buckets(self):
+        self.job['runs'].append({
+            'id': f"{self.job_name}.6",
+            'job_name': self.job_name,
+            'run_num': 5,
+            'run_time': '2018-10-15 12:00:00',
+            'start_time': '2018-10-15 12:00:00',
+            'end_time': '2018-10-15 12:30:00',
+            'state': 'succeeded',
+            'exit_status': 0,
+        })
+
+        run_buckets = check_tron_jobs.sort_runs_by_interval(self.job, 'day')
+
+        assert '2018.10.14' in run_buckets
+        assert run_buckets['2018.10.14'] == []
 
     @patch('check_tron_jobs.Client', autospec=True)
     def test_compute_check_result_for_job_disabled(self, mock_client):

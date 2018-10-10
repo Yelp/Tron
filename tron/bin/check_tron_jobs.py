@@ -1,4 +1,5 @@
 #!/usr/bin/env python3.6
+import datetime
 import logging
 import pprint
 import sys
@@ -16,6 +17,8 @@ from tron.commands import display
 from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
 
+PRECIOUS_JOB_ATTR = 'check_that_every_day_has_a_successful_run'
+
 log = logging.getLogger('check_tron_jobs')
 
 _run_interval = None
@@ -29,6 +32,8 @@ class State(Enum):
     NOT_SCHEDULED = "not_scheduled"
     WAITING_FOR_FIRST_RUN = "waiting_for_first_run"
     UNKNOWN = "unknown"
+    CANCELLED = "cancelled"
+    SKIPPED = "skipped"
 
 
 def parse_cli():
@@ -61,11 +66,11 @@ def _timestamp_to_timeobj(timestamp):
     return time.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
 
 
-def _are_runs_precious(monitoring_conf):
-    """ Checks if runs are 'precious', that is, we want to ensure there is a
-    successful run per day """
-    precious_jobs_attr = 'check_that_every_day_has_a_successful_run'
-    return monitoring_conf.get(precious_jobs_attr, False)
+def _timestamp_to_shortdate(timestamp, separator='.'):
+    return time.strftime(
+        '%Y{0}%m{0}%d'.format(separator),
+        _timestamp_to_timeobj(timestamp),
+    )
 
 
 def compute_check_result_for_job_runs(client, job, job_content):
@@ -84,6 +89,8 @@ def compute_check_result_for_job_runs(client, job, job_content):
             f"run yet.\n{pretty_print_job(job_content)}"
         kwargs["status"] = 2
         return kwargs
+    else:  # if no run scheduled, no run_time available
+        relevant_job_run_date = _timestamp_to_shortdate(relevant_job_run['run_time'])
 
     # A job_run is like MASTER.foo.1
     job_run_id = get_object_type_from_identifier(
@@ -110,8 +117,14 @@ def compute_check_result_for_job_runs(client, job, job_content):
     elif last_state == State.WAITING_FOR_FIRST_RUN:
         prefix = "OK: The job is 'new' and waiting for the first run"
         status = 0
+    elif last_state == State.SKIPPED:
+        prefix = "OK: The last job run was skipped"
+        status = 0
     elif last_state == State.STUCK:
         prefix = "WARN: Job exceeded expected runtime or still running when next job is scheduled"
+        status = 1
+    elif last_state == State.CANCELLED:
+        prefix = "WARN: The last job run was cancelled when the job was disabled, but not rerun when reenabled"
         status = 1
     elif last_state == State.FAILED:
         prefix = "CRIT: The last job run failed!"
@@ -127,12 +140,12 @@ def compute_check_result_for_job_runs(client, job, job_content):
         status = 3
 
     precious_runs_note = ''
-    if _are_runs_precious(job['monitoring']):
-        precious_runs_note = f"Note: Job {job_content['name']} is precious. Owners will be alerted if a day's, instead of the overall job's, latest run failed.\n"
+    if job['monitoring'].get(PRECIOUS_JOB_ATTR, False) and status != 0:
+        precious_runs_note = f"Note: This alert is the run for {relevant_job_run_date}. A resolve event will not occur until a job run for this date succeeds.\n"
 
     kwargs["output"] = (
         f"{prefix}\n"
-        f"{job['name']}'s last relevant run (run {relevant_job_run['id']}) {relevant_job_run['state']}.\n"
+        f"{job['name']}'s latest run for {relevant_job_run_date} ({relevant_job_run['id']}) {relevant_job_run['state']}\n"
         f"{precious_runs_note}"
         "\nHere is the last action:\n"
         f"{pretty_print_actions(action_run_details)}\n\n"
@@ -172,8 +185,10 @@ def get_relevant_run_and_state(job_content):
     if len(job_runs) == 0:
         return None, State.NO_RUN_YET
     run = is_job_scheduled(job_runs)
-    # If runs are precious, then we do not care if there is a scheduled job
-    if run is None and not _are_runs_precious(job_content['monitoring']):
+    # If runs are precious, then it is possible for a day to have no scheduled
+    # run if it already had a successful one. Thus, we do not want to return a
+    # NOT_SCHEDULED state, but a SUCCEEDED.
+    if run is None and not job_content['monitoring'].get(PRECIOUS_JOB_ATTR, False):
         return job_runs[0], State.NOT_SCHEDULED
     job_expected_runtime = job_content.get('expected_runtime', None)
     actions_expected_runtime = job_content.get('actions_expected_runtime', {})
@@ -186,9 +201,9 @@ def get_relevant_run_and_state(job_content):
         return run, State.STUCK
     for run in job_runs:
         state = run.get('state', 'unknown')
-        if state in ["failed", "succeeded", "unknown"]:
+        if state in ["failed", "succeeded", "unknown", "cancelled", "skipped"]:
             return run, State(state)
-        if state in ["running"]:
+        elif state in ["running"]:
             action_state = is_action_failed_or_unknown(run)
             if action_state != State.SUCCEEDED:
                 return run, action_state
@@ -302,46 +317,11 @@ def guess_realert_every(job):
     return realert_every
 
 
-def filter_monitoring_config(config):
-    """ Filters out non-Sensu arguments from a job's monitoring config """
-    sensu_args = set([
-        'name',
-        'runbook',
-        'status',
-        'output',
-        'team',
-        'page',
-        'tip',
-        'notification_email',
-        'check_every',
-        'realert_every',
-        'alert_after',
-        'dependencies',
-        'irc_channels',
-        'slack_channels',
-        'ticket',
-        'project',
-        'source',
-        'tags',
-        'ttl',
-        'sensu_host',
-        'component',
-        'description',
-    ])
-
-    include, exclude = {}, {}
-    for k, v in config.items():
-        (include if k in sensu_args else exclude)[k] = v
-    return include, exclude
-
-
-def sort_runs_by_interval(job_content, interval='day'):
-    """ Sorts a job's runs by a time interval (year, month, day, hour, minute,
-    or second), according to a job run's run time.
+def sort_runs_by_interval(job_content, interval='day', until=None):
+    """ Sorts a job's runs by a time interval (day, hour, minute, or second),
+    according to a job run's run time.
     """
     interval_formats = {
-        'year': '%Y',
-        'month': '%Y.%m',
         'day': '%Y.%m.%d',
         'hour': '%Y.%m.%d-%H',
         'minute': '%Y.%m.%d-%H.%M',
@@ -350,14 +330,33 @@ def sort_runs_by_interval(job_content, interval='day'):
 
     run_buckets = defaultdict(list)
     if job_content is not None:
-        # Sort runs by shortdate
+        if not until:
+            until = time.time()  # can't set in default arg
+        if job_content['runs']:
+            earliest_run_time = min([
+                time.mktime(_timestamp_to_timeobj(run['run_time']))
+                for run in job_content['runs']
+            ])
+        else:
+            earliest_run_time = until
+
+        # We add all dates by interval between our earliest run_time and now,
+        # allowing functions downstream to see if some dates had no runs
+        start = datetime.datetime.fromtimestamp(earliest_run_time)
+        end = datetime.datetime.fromtimestamp(until)
+        step = datetime.timedelta(**{f'{interval}s': 1})
+        while start <= end:
+            run_buckets[start.strftime(interval_formats[interval])] = []
+            start += step
+
+        # Bucket runs by interval
         for run in job_content['runs']:
             # If interval is invalid, will raise a KeyError
-            shortdate = time.strftime(
+            run_time = time.strftime(
                 interval_formats[interval],
                 _timestamp_to_timeobj(run['run_time']),
             )
-            run_buckets[shortdate].append(run)
+            run_buckets[run_time].append(run)
     return dict(run_buckets)
 
 
@@ -369,7 +368,8 @@ def compute_check_result_for_job(client, job):
     if 'realert_every' not in kwargs:
         kwargs = kwargs.set('realert_every', guess_realert_every(job))
     kwargs = kwargs.set('check_every', "{}s".format(_run_interval))
-    sensu_kwargs, nonsensu_kwargs = filter_monitoring_config(job['monitoring'])
+
+    sensu_kwargs = pmap(job['monitoring']).remove(PRECIOUS_JOB_ATTR)
     kwargs = kwargs.update(sensu_kwargs)
 
     kwargs_list = []
@@ -389,7 +389,7 @@ def compute_check_result_for_job(client, job):
             include_action_runs=True,
         ))
 
-        if _are_runs_precious(nonsensu_kwargs):
+        if job['monitoring'].get(PRECIOUS_JOB_ATTR, False):
             dated_runs = sort_runs_by_interval(job_content, interval='day')
         else:
             dated_runs = {'': job_content['runs']}
@@ -425,7 +425,7 @@ def check_job(job, client):
 
 def check_job_result(job, client, dry_run):
     results = check_job(job, client)
-    if not results:  # result is None or result == []
+    if not results:
         return
 
     for result in results:
