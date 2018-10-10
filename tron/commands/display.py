@@ -352,7 +352,8 @@ class DisplayActionRuns(TableDisplay):
         ('End time', 'end_time'),
         ('Final exit status', 'exit_status'),
         ('Retry exit statuses', 'exit_statuses'),
-        ('Triggered by', 'triggered_by'),
+        ('Waits for triggers', 'triggered_by'),
+        ('Publishes triggers', 'trigger_downstreams'),
     ]
 
     colors = {

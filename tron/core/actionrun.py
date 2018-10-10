@@ -2,8 +2,8 @@
  tron.core.actionrun
 """
 import logging
+from typing import List
 
-import six
 from twisted.internet import reactor
 
 from tron import command_context
@@ -418,17 +418,22 @@ class ActionRun(Observable):
                 )
         return self.fail(exit_status)
 
-    def emit_triggers(self):
+    def triggers_to_emit(self) -> List[str]:
+        if not self.trigger_downstreams:
+            return []
+
         if isinstance(self.trigger_downstreams, bool):
-            shortdate = self.render_template("{shortdate}")
-            triggers = [f"shortdate.{shortdate}"]
+            templates = ["shortdate.{shortdate}"]
         elif isinstance(self.trigger_downstreams, dict):
-            triggers = [
-                f"{k}.{self.render_template(v)}"
-                for k, v in self.trigger_downstreams.items()
-            ]
+            templates = [f"{k}.{v}" for k, v in self.trigger_downstreams.items()]
         else:
             log.error(f"{self} trigger_downstreams must be true or dict")
+
+        return [self.render_template(trig) for trig in templates]
+
+    def emit_triggers(self):
+        triggers = self.triggers_to_emit()
+        if not triggers:
             return
 
         log.info(f"{self} publishing triggers: [{', '.join(triggers)}]")
@@ -438,7 +443,7 @@ class ActionRun(Observable):
 
     # TODO: cache if safe
     @property
-    def rendered_triggers(self):
+    def rendered_triggers(self) -> List[str]:
         return [
             self.render_template(trig) for trig in self.triggered_by or []
         ]
@@ -840,14 +845,12 @@ class ActionRunCollection(object):
         )
 
     def get_action_runs_with_cleanup(self):
-        return six.itervalues(self.run_map)
+        return self.run_map.values()
 
     action_runs_with_cleanup = property(get_action_runs_with_cleanup)
 
     def get_action_runs(self):
-        return (
-            run for run in six.itervalues(self.run_map) if not run.is_cleanup
-        )
+        return (run for run in self.run_map.values() if not run.is_cleanup)
 
     action_runs = property(get_action_runs)
 
@@ -941,13 +944,10 @@ class ActionRunCollection(object):
             return ":blocked" if self._is_run_blocked(action_run) else ""
 
         run_states = ', '.join(
-            "%s(%s%s)" % (
-                a.action_name,
-                a.state,
-                blocked_state(a),
-            ) for a in six.itervalues(self.run_map)
+            f"{a.action_name}({a.state}{blocked_state(a)})"
+            for a in self.run_map.values()
         )
-        return "%s[%s]" % (self.__class__.__name__, run_states)
+        return f"{self.__class__.__name__}[{run_states}]"
 
     def __getattr__(self, name):
         return self.proxy_action_runs_with_cleanup.perform(name)
@@ -959,7 +959,7 @@ class ActionRunCollection(object):
         return name in self.run_map
 
     def __iter__(self):
-        return six.itervalues(self.run_map)
+        return iter(self.run_map.values())
 
     def get(self, name):
         return self.run_map.get(name)
