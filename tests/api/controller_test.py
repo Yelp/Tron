@@ -33,6 +33,9 @@ class TestJobCollectionController(TestCase):
             self.controller.handle_command('enableall')
             self.controller.handle_command('disableall')
 
+    def test_handle_command_move(self):
+        self.controller.handle_command('move', old_name='old.test', new_name='new.test')
+
 
 class TestActionRunController(TestCase):
     @setup
