@@ -1,0 +1,10 @@
+[Unit]
+Description=trond
+After=network.target
+
+[Service]
+EnvironmentFile=/etc/default/tron
+ExecStart=/usr/bin/trond $DAEMON_OPTS
+
+[Install]
+WantedBy=multi-user.target
