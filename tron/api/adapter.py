@@ -172,8 +172,6 @@ class ActionRunAdapter(RunAdapter):
             return self._obj.in_delay.getTime() - time.time()
 
     def get_triggered_by(self) -> str:
-        """ Returns a list of tuples: [(rendered_trigger, was_published), ...]
-        """
         remaining = set(self._obj.remaining_triggers)
         all_triggers = sorted(self._obj.rendered_triggers)
         return ', '.join(
