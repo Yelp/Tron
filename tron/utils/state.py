@@ -48,7 +48,6 @@ class Machine:
         destination state.
         """
         next_state = self.transitions[self.state].get(transition, None)
-        log.debug(f"checking {self.state} x {transition} = {next_state!r}")
         return next_state
 
     def transition(self, transition):
