@@ -7,6 +7,7 @@ from task_processing.runners.subscription import Subscription
 from task_processing.task_processor import TaskProcessor
 from twisted.internet.defer import logError
 
+import tron.metrics as metrics
 from tron.actioncommand import ActionCommand
 from tron.utils.dicts import get_deep
 from tron.utils.queue import PyDeferredQueue
@@ -178,6 +179,12 @@ class MesosTask(ActionCommand):
     def get_config(self):
         return self.task_config
 
+    def report_resources(self, decrement=False):
+        multiplier = -1 if decrement else 1
+        metrics.count(f'tron.mesos.cpus', self.task_config.cpus * multiplier)
+        metrics.count(f'tron.mesos.mem', self.task_config.mem * multiplier)
+        metrics.count(f'tron.mesos.disk', self.task_config.disk * multiplier)
+
     def log_event_info(self, event):
         # Separate out so task still transitions even if this nice-to-have logging fails.
         mesos_type = getattr(event, 'platform_type', None)
@@ -237,6 +244,7 @@ class MesosTask(ActionCommand):
 
         if event.terminal:
             self.log.info('Event was terminal, closing task')
+            self.report_resources(decrement=True)
 
             exit_code = int(not getattr(event, 'success', False))
             # Returns False if we've already exited normally above
@@ -326,7 +334,7 @@ class MesosCluster:
             # Just in case callbacks are missing, re-add.
             self.handle_next_event()
 
-    def submit(self, task, recover=False):
+    def submit(self, task):
         if not task:
             return
 
@@ -345,6 +353,7 @@ class MesosCluster:
                 self.mesos_address,
             ),
         )
+        task.report_resources()
 
     def recover(self, task):
         if not task:
@@ -361,6 +370,7 @@ class MesosCluster:
         task.log.info('Reconciling state for this task from Mesos')
         task.started()
         self.runner.reconcile(task.get_config())
+        task.report_resources()
 
     def create_task(
         self,

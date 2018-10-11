@@ -52,6 +52,7 @@ setup(
         'requests',
         'psutil',
         'dataclasses>=0.6',
+        'pyformance',
     ],
     packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
     scripts=glob.glob('bin/*') + glob.glob('tron/bin/*.py'),
