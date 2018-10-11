@@ -33,6 +33,16 @@ class TestJobCollectionController(TestCase):
             self.controller.handle_command('enableall')
             self.controller.handle_command('disableall')
 
+    def test_handle_command_move_non_exiting_job(self):
+        self.collection.get_names.return_value = []
+        result = self.controller.handle_command('move', old_name='old.test', new_name='new.test')
+        assert "doesn't exist" in result
+
+    def test_handle_command_move_to_exiting_job(self):
+        self.collection.get_names.return_value = ['old.test', 'new.test']
+        result = self.controller.handle_command('move', old_name='old.test', new_name='new.test')
+        assert "has existed already" in result
+
     def test_handle_command_move(self):
         self.controller.handle_command('move', old_name='old.test', new_name='new.test')
 

@@ -34,7 +34,7 @@ COMMAND_HELP = (
     ('skip', 'Skip a failed action, runs dependent actions.'),
     ('stop', 'Stop the action run (SIGTERM)'),
     ('kill', 'Force kill the action run (SIGKILL)'),
-    ('move', 'Move a job to the new namespace'),
+    ('move', 'Rename a job'),
 )
 
 log = logging.getLogger('tronctl')

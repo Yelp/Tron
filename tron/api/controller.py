@@ -18,6 +18,10 @@ class JobCollectionController(object):
 
     def handle_command(self, command, old_name=None, new_name=None):
         if command == 'move':
+            if old_name not in self.job_collection.get_names():
+                return f"Error: {old_name} doesn't exist"
+            if new_name in self.job_collection.get_names():
+                return f"Error: {new_name} has existed already"
             return self.job_collection.move(old_name, new_name)
 
         raise UnknownCommandError("Unknown command %s" % command)
