@@ -1,11 +1,3 @@
-tron (--distribution) UNRELEASED; urgency=medium
-
-  * trusty  tagged with 'make release'
-    Commit: Merge pull request #555 from Yelp/u/chl/TRON-
-    442_create_migrate_job_tool  add tronctl move command
-
- -- root <root@c8c2fc2e624a>  Fri, 12 Oct 2018 18:14:23 +0000
-
 tron (0.9.6.2) trusty; urgency=medium
 
   * 0.9.6.2 tagged with 'make release'
