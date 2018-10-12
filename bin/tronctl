@@ -34,6 +34,7 @@ COMMAND_HELP = (
     ('skip', 'Skip a failed action, runs dependent actions.'),
     ('stop', 'Stop the action run (SIGTERM)'),
     ('kill', 'Force kill the action run (SIGKILL)'),
+    ('move', 'Rename a job'),
 )
 
 log = logging.getLogger('tronctl')
@@ -97,6 +98,9 @@ def edit(args, uri):
     data = {'command': args.command}
     if args.command == "start" and args.run_date:
         data['run_time'] = str(args.run_date)
+    elif args.command == "move":
+        data['old_name'] = args.id[0]
+        data['new_name'] = args.id[1]
 
     uri = urljoin(args.server, uri)
     response = client.request(uri, data=data)
@@ -127,6 +131,24 @@ def control_objects(args):
             )
             raise SystemExit(f"Error: {e}{suggestions}")
         yield edit(args, tron_id.url)
+
+
+def move(args):
+    try:
+        old_name = args.id[0]
+        new_name = args.id[1]
+    except IndexError as e:
+        raise SystemExit(f"Error: Move command needs two arguments.\n{e}")
+
+    tron_client = client.Client(args.server)
+    url_index = tron_client.index()
+    job_index = url_index['jobs']
+    if old_name not in job_index.keys():
+        raise SystemExit(f"Error: {old_name} doesn't exist")
+    if new_name in job_index.keys():
+        raise SystemExit(f"Error: {new_name} exists already")
+
+    return edit(args, '/api/jobs')
 
 
 def backfill(args):
@@ -163,6 +185,8 @@ def main():
 
     if args.command == "backfill":
         sys.exit(backfill(args))
+    elif args.command == "move":
+        sys.exit(move(args))
     else:
         if not all(control_objects(args)):
             sys.exit(ExitCode.fail)

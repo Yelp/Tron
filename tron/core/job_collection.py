@@ -3,6 +3,7 @@ import logging
 import six
 from six.moves import filter
 
+from tron.core.job import Job
 from tron.utils import collections
 from tron.utils import iteration
 from tron.utils import proxy
@@ -43,6 +44,19 @@ class JobCollection:
 
     def add(self, job_scheduler):
         return self.jobs.add(job_scheduler, self.update)
+
+    def move(self, old_name, new_name):
+        job_scheduler = self.get_by_name(old_name)
+
+        # check if job is running
+        if job_scheduler.get_job().status == Job.STATUS_RUNNING:
+            return f"Moving {old_name} to {new_name} failed. Job is still running."
+
+        log.info(f"Moving {old_name} to {new_name}")
+        job_scheduler.update_name(new_name)
+        self.add(self.jobs.pop(old_name))
+
+        return f"Moving {old_name} to {new_name} succeeded."
 
     def update(self, new_job_scheduler):
         log.info(f"Updating {new_job_scheduler}")

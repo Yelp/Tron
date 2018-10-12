@@ -33,6 +33,21 @@ class TestJobCollectionController(TestCase):
             self.controller.handle_command('enableall')
             self.controller.handle_command('disableall')
 
+    def test_handle_command_move_non_existing_job(self):
+        self.collection.get_names.return_value = []
+        result = self.controller.handle_command('move', old_name='old.test', new_name='new.test')
+        assert "doesn't exist" in result
+
+    def test_handle_command_move_to_existing_job(self):
+        self.collection.get_names.return_value = ['old.test', 'new.test']
+        result = self.controller.handle_command('move', old_name='old.test', new_name='new.test')
+        assert "exists already" in result
+
+    def test_handle_command_move(self):
+        self.collection.get_names.return_value = ['old.test']
+        result = self.controller.handle_command('move', old_name='old.test', new_name='new.test')
+        assert "Error" not in result
+
 
 class TestActionRunController(TestCase):
     @setup

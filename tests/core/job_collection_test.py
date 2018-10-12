@@ -6,6 +6,7 @@ from testifycompat import TestCase
 from tests.assertions import assert_length
 from tests.assertions import assert_mock_calls
 from tests.testingutils import autospec_method
+from tron.core.job import Job
 from tron.core.job_collection import JobCollection
 from tron.core.job_scheduler import JobScheduler
 from tron.core.job_scheduler import JobSchedulerFactory
@@ -34,6 +35,20 @@ class TestJobCollection(TestCase):
         for job_scheduler in job_schedulers:
             job_scheduler.schedule.assert_called_with()
             job_scheduler.get_job.assert_called_with()
+
+    def test_move_running_job(self):
+        with mock.patch('tron.core.job_collection.JobCollection.get_by_name', autospec=None) as mock_scheduler:
+            mock_scheduler.return_value.get_job.return_value.status = Job.STATUS_RUNNING
+            result = self.collection.move('old.test', 'new.test')
+            assert 'Job is still running.' in result
+
+    def test_move(self):
+        with mock.patch('tron.core.job_collection.JobCollection.get_by_name', autospec=None) as mock_scheduler:
+            mock_scheduler.return_value.get_job.return_value.status = Job.STATUS_ENABLED
+            mock_scheduler.get_name.return_value = 'old.test'
+            self.collection.add(mock_scheduler)
+            result = self.collection.move('old.test', 'new.test')
+            assert 'succeeded' in result
 
     def test_update(self):
         mock_scheduler = mock.create_autospec(JobScheduler)
