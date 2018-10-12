@@ -146,7 +146,7 @@ def move(args):
     if old_name not in job_index.keys():
         raise SystemExit(f"Error: {old_name} doesn't exist")
     if new_name in job_index.keys():
-        raise SystemExit(f"Error: {new_name} has existed already")
+        raise SystemExit(f"Error: {new_name} exists already")
 
     return edit(args, '/api/jobs')
 

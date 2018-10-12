@@ -327,9 +327,9 @@ class JobCollectionResource(resource.Resource):
         old_name = requestargs.get_string(request, 'old_name')
         new_name = requestargs.get_string(request, 'new_name')
         return handle_command(
-            request = request,
-            api_controller = self.controller,
-            obj = self.job_collection,
+            request=request,
+            api_controller=self.controller,
+            obj=self.job_collection,
             old_name=old_name,
             new_name=new_name,
         )
