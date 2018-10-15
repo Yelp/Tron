@@ -78,3 +78,30 @@ class TronDaemonTestCase(TestCase):
     @teardown
     def teardown(self):
         self.tmpdir.cleanup()
+
+    def test_make_sigint_handler_keyboardinterrupt(self):
+        daemon = TronDaemon.__new__(TronDaemon)  # skip __init__
+        daemon._handle_shutdown = mock.Mock()
+
+        def prev_handler(signum, frame):
+            raise KeyboardInterrupt
+
+        handler = daemon._make_sigint_handler(prev_handler)
+        handler('fake_signum', 'fake_frame')
+
+        daemon._handle_shutdown.call_args == mock.call(
+            'fake_signum',
+            'fake_frame',
+        )
+
+    def test_make_sigint_handler_exception(self):
+        daemon = TronDaemon.__new__(TronDaemon)  # skip __init__
+        daemon._handle_shutdown = mock.Mock()
+
+        def prev_handler(signum, frame):
+            raise Exception
+
+        handler = daemon._make_sigint_handler(prev_handler)
+        handler('fake_signum', 'fake_frame')
+
+        daemon._handle_shutdown.call_count == 0

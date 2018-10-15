@@ -9,7 +9,6 @@ import logging
 import logging.config
 import os
 import signal
-import threading
 import time
 
 import ipdb
@@ -126,6 +125,9 @@ class NoDaemonContext(object):
         self.pidfile = kwargs.pop('pidfile', None)
         self.working_dir = kwargs.pop('working_directory', '.')
 
+        self.signal_map = kwargs.pop('signal_map', {})
+        self._set_signal_handlers(self.signal_map)
+
     def __enter__(self):
         os.chdir(self.working_dir)
         if self.pidfile:
@@ -135,6 +137,11 @@ class NoDaemonContext(object):
         log.info("NoDaemonContext exit")
         if self.pidfile:
             self.pidfile.__exit__(exc_type, exc_val, exc_tb)
+
+    def _set_signal_handlers(self, signal_map):
+        """ Sets signal handlers for the current thread using a signal map """
+        for signum, handler in signal_map.items():
+            signal.signal(signum, handler)
 
     def terminate(self, signal_number, *_):
         raise SystemExit(f"Terminating on signal {signal_number!r}")
@@ -149,13 +156,48 @@ class TronDaemon(object):
         self.context = self._build_context(options)
         self.manhole_sock = f"{self.options.working_dir}/manhole.sock"
 
+    def _make_sigint_handler(self, prev_handler=None):
+        """ Creates a SIGINT handler that takes into account a previous
+        handler to differentiate between a user request to shutdown, versus
+        another source we want to prevent from interrupting the reactor.
+
+        :type prev_handler: function
+        :param prev_handler: The previous SIGINT handler, set by another source.
+                             We use it to verify whether or not a SIGINT we
+                             received is a genuine shutdown request.
+        """
+        def handler(signum, frame):
+            try:
+                if prev_handler is not None:
+                    prev_handler(signum, frame)
+            except KeyboardInterrupt:
+                # Previous signal handler didn't raise another exception,
+                # so must be user requesting shutdown.
+                pass
+            except Exception as e:
+                # We received a SIGINT, but was caused by another thread
+                # aborting due to its own error. In this case, we don't want to
+                # stop running.
+                log.info(f"Non-reactor thread raised: {e}")
+                return
+            self._handle_shutdown(signum, frame)
+        return handler
+
     def _build_context(self, options):
         pidfile = PIDFile(options.pid_file)
         return NoDaemonContext(
             working_directory=options.working_dir,
             umask=0o022,
             pidfile=pidfile,
-            signal_map={},
+            signal_map={
+                signal.SIGHUP: self._handle_reconfigure,
+                signal.SIGINT: self._make_sigint_handler(
+                    signal.getsignal(signal.SIGINT)
+                ),
+                signal.SIGTERM: self._handle_shutdown,
+                signal.SIGQUIT: self._handle_shutdown,
+                signal.SIGUSR1: self._handle_debug,
+            },
             files_preserve=[pidfile.lock.file],
         )
 
@@ -195,24 +237,7 @@ class TronDaemon(object):
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        threading.Thread(
-            target=reactor.run,
-            daemon=True,
-            kwargs=dict(installSignalHandlers=0)
-        ).start()
-        signal_map = {
-            signal.SIGHUP: self._handle_reconfigure,
-            signal.SIGINT: self._handle_shutdown,
-            signal.SIGTERM: self._handle_shutdown,
-            signal.SIGQUIT: self._handle_shutdown,
-            signal.SIGUSR1: self._handle_debug,
-        }
-        while True:
-            signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
-            signum = signal.sigwait(set(signal_map.keys()))
-            logging.info("Got signal %s" % signum)
-            if signum in signal_map:
-                signal_map[signum](signum, None)
+        reactor.run()
 
     def _handle_shutdown(self, sig_num, stack_frame):
         log.info("Shutdown requested via %s" % sig_num)
