@@ -1374,6 +1374,7 @@ class TestCheckPreciousJobs(TestCase):
         assert latest_run['run_num'] == 5
         assert state == check_tron_jobs.State.SUCCEEDED
 
+    @patch('time.time', mock.Mock(return_value=1539460800.0), autospec=None)
     def test_sort_runs_by_interval_day(self):
         run_buckets = check_tron_jobs.sort_runs_by_interval(self.job, 'day')
 
@@ -1415,9 +1416,11 @@ class TestCheckPreciousJobs(TestCase):
         assert results[0]['output'] == \
             "OK: fake_job is disabled and won't be checked."
 
+    @patch('time.time', mock.Mock(return_value=1539460800.0), autospec=None)
     @patch('check_tron_jobs.Client', autospec=True)
     def test_compute_check_result_for_job_enabled(self, mock_client):
         client = mock_client('fake_server')
+        self.job['monitoring']['check_every'] = 500
         check_tron_jobs.guess_realert_every = mock.Mock(return_value=1)
         check_tron_jobs.get_object_type_from_identifier = \
             mock.Mock(return_value=mock.Mock())
@@ -1435,3 +1438,6 @@ class TestCheckPreciousJobs(TestCase):
             'check_tron_job.fake_job-2018.10.12',
             'check_tron_job.fake_job-2018.10.13',
         ])
+        for res in results:
+            assert res['check_every'] == '300s'
+            assert check_tron_jobs.PRECIOUS_JOB_ATTR not in res

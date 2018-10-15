@@ -120,11 +120,11 @@ def compute_check_result_for_job_runs(client, job, job_content):
     elif last_state == State.SKIPPED:
         prefix = "OK: The last job run was skipped"
         status = 0
+    elif last_state == State.CANCELLED:
+        prefix = "OK: The last job run was cancelled"
+        status = 0
     elif last_state == State.STUCK:
         prefix = "WARN: Job exceeded expected runtime or still running when next job is scheduled"
-        status = 1
-    elif last_state == State.CANCELLED:
-        prefix = "WARN: The last job run was cancelled when the job was disabled, but not rerun when reenabled"
         status = 1
     elif last_state == State.FAILED:
         prefix = "CRIT: The last job run failed!"
@@ -367,9 +367,13 @@ def compute_check_result_for_job(client, job):
     )
     if 'realert_every' not in kwargs:
         kwargs = kwargs.set('realert_every', guess_realert_every(job))
-    kwargs = kwargs.set('check_every', "{}s".format(_run_interval))
+    kwargs = kwargs.set('check_every', f"{_run_interval}s")
 
-    sensu_kwargs = pmap(job['monitoring']).remove(PRECIOUS_JOB_ATTR)
+    # We want to prevent a monitoring config from setting the check_every
+    # attribute, since one config should not dictate how often this script runs
+    sensu_kwargs = (pmap(job['monitoring'])
+                    .remove(PRECIOUS_JOB_ATTR)
+                    .discard('check_every'))
     kwargs = kwargs.update(sensu_kwargs)
 
     kwargs_list = []
