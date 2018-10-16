@@ -13,9 +13,6 @@ from twisted.web import http
 
 from testifycompat import assert_equal
 from testifycompat import run
-from testifycompat import setup
-from testifycompat import setup_teardown
-from testifycompat import TestCase
 from tests.assertions import assert_call
 from tests.testingutils import autospec_method
 from tron import mcp
@@ -47,33 +44,36 @@ def build_request(**kwargs):
     return mock.create_autospec(twisted.web.server.Request, args=args)
 
 
-class WWWTestCase(TestCase):
+@pytest.fixture
+def mock_respond():
+    with mock.patch(
+        'tron.api.resource.respond',
+        autospec=True,
+    ) as mock_respond:
+        mock_respond.side_effect = lambda _req, output, code=None: output
+        yield mock_respond
+
+
+@pytest.fixture
+def request():
+    return build_request()
+
+
+@pytest.mark.usefixtures("mock_respond")
+class WWWTestCase:
     """Patch www.response to not json encode."""
-
-    @setup_teardown
-    def mock_respond(self):
-        with mock.patch(
-            'tron.api.resource.respond',
-            autospec=True,
-        ) as self.respond:
-            self.respond.side_effect = lambda _req, output, code=None: output
-            yield
-
-    @setup
-    def setup_request(self):
-        self.request = build_request()
+    pass
 
 
-class TestHandleCommand(TestCase):
-    @setup_teardown
-    def mock_respond(self):
-        with mock.patch(
-            'tron.api.resource.respond',
-            autospec=True,
-        ) as self.respond:
-            yield
+class TestHandleCommand:
 
-    def test_handle_command_unknown(self):
+    @pytest.fixture
+    def mock_respond(self, mock_respond):
+        # in this test case, we don't want a side effect
+        mock_respond.side_effect = None
+        return mock_respond
+
+    def test_handle_command_unknown(self, mock_respond):
         command = 'the command'
         request = build_request(command=command)
         mock_controller, obj = mock.Mock(), mock.Mock()
@@ -81,26 +81,26 @@ class TestHandleCommand(TestCase):
         mock_controller.handle_command.side_effect = error
         response = www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
-        assert_equal(response, self.respond.return_value)
-        self.respond.assert_called_with(
+        assert_equal(response, mock_respond.return_value)
+        mock_respond.assert_called_with(
             request,
             {'error': f"Unknown command '{command}' for '{obj}'"},
             code=http.NOT_IMPLEMENTED,
         )
 
-    def test_handle_command(self):
+    def test_handle_command(self, mock_respond):
         command = 'the command'
         request = build_request(command=command)
         mock_controller, obj = mock.Mock(), mock.Mock()
         response = www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
-        assert_equal(response, self.respond.return_value)
-        self.respond.assert_called_with(
+        assert_equal(response, mock_respond.return_value)
+        mock_respond.assert_called_with(
             request,
             {'result': mock_controller.handle_command.return_value},
         )
 
-    def test_handle_command_error(self):
+    def test_handle_command_error(self, mock_respond):
         command = 'the command'
         request = build_request(command=command)
         mock_controller, obj = mock.Mock(), mock.Mock()
@@ -108,8 +108,8 @@ class TestHandleCommand(TestCase):
         mock_controller.handle_command.side_effect = error
         response = www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
-        assert_equal(response, self.respond.return_value)
-        self.respond.assert_called_with(
+        assert_equal(response, mock_respond.return_value)
+        mock_respond.assert_called_with(
             request,
             {'error': mock.ANY},
             code=http.INTERNAL_SERVER_ERROR,
@@ -117,7 +117,8 @@ class TestHandleCommand(TestCase):
 
 
 class TestActionRunResource(WWWTestCase):
-    @setup
+
+    @pytest.fixture(autouse=True)
     def setup_resource(self):
         self.job_run = mock.MagicMock()
         self.action_run = mock.MagicMock(output_path=['one'])
@@ -130,20 +131,22 @@ class TestActionRunResource(WWWTestCase):
 
 
 class TestJobrunResource(WWWTestCase):
-    @setup
+
+    @pytest.fixture(autouse=True)
     def setup_resource(self):
         self.job_run = mock.MagicMock()
         self.job_scheduler = mock.Mock()
         self.resource = www.JobRunResource(self.job_run, self.job_scheduler)
 
-    def test_render_GET(self):
-        response = self.resource.render_GET(self.request)
+    def test_render_GET(self, request):
+        response = self.resource.render_GET(request)
         assert_equal(response['id'], self.job_run.id)
 
 
 class TestApiRootResource(WWWTestCase):
-    @setup
-    def build_resource(self):
+
+    @pytest.fixture(autouse=True)
+    def setup_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
         self.resource = www.ApiRootResource(self.mcp)
 
@@ -167,8 +170,9 @@ class TestApiRootResource(WWWTestCase):
 
 
 class TestRootResource(WWWTestCase):
-    @setup
-    def build_resource(self):
+
+    @pytest.fixture(autouse=True)
+    def setup_resource(self):
         self.web_path = '/bogus/path'
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
         self.resource = www.RootResource(self.mcp, self.web_path)
@@ -185,44 +189,43 @@ class TestRootResource(WWWTestCase):
 
 
 class TestActionRunHistoryResource(WWWTestCase):
-    @setup
+
+    @pytest.fixture(autouse=True)
     def setup_resource(self):
         self.action_runs = [mock.MagicMock(), mock.MagicMock()]
         self.resource = www.ActionRunHistoryResource(self.action_runs)
 
-    def test_render_GET(self):
-        response = self.resource.render_GET(self.request)
+    def test_render_GET(self, request):
+        response = self.resource.render_GET(request)
         assert_equal(len(response), len(self.action_runs))
 
 
-@pytest.fixture(scope="module")
-def resource_fixture():
-    job_collection = mock.create_autospec(JobCollection)
-    resource = www.JobCollectionResource(job_collection)
-    return resource
-
-
 class TestJobCollectionResource(WWWTestCase):
+
+    @pytest.fixture(autouse=True)
+    def setup_resource(self):
+        job_collection = mock.create_autospec(JobCollection)
+        job_collection.get_by_name = lambda name: name if name == 'testname' else None
+        self.resource = www.JobCollectionResource(job_collection)
+
     def test_render_GET(self):
-        resource = resource_fixture()
-        resource.get_data = MagicMock()
-        result = resource.render_GET(REQUEST)
-        assert_call(resource.get_data, 0, False, False, True, True)
+        self.resource.get_data = MagicMock()
+        result = self.resource.render_GET(REQUEST)
+        assert_call(self.resource.get_data, 0, False, False, True, True)
         assert 'jobs' in result
 
-    @pytest.mark.skip(reason="currently this fixture doesn't work")
-    def test_getChild(self, resource):
-        child = resource.getChild(b"testname", mock.Mock())
+    def test_getChild(self):
+        child = self.resource.getChild(b"testname", mock.Mock())
         assert isinstance(child, www.JobResource)
 
-    @pytest.mark.skip(reason="currently this fixture doesn't work")
-    def test_getChild_missing_job(self, resource):
-        child = resource.getChild(b"bar", mock.Mock())
-        assert isinstance(child, twisted.web.resource.NoResource)
+    def test_getChild_missing_job(self):
+        child = self.resource.getChild(b"bar", mock.Mock())
+        assert isinstance(child, www.ErrorResource)
 
 
 class TestJobResource(WWWTestCase):
-    @setup
+
+    @pytest.fixture(autouse=True)
     def setup_resource(self):
         self.job_scheduler = mock.create_autospec(JobScheduler)
         self.job_runs = mock.create_autospec(jobrun.JobRunCollection)
@@ -243,8 +246,8 @@ class TestJobResource(WWWTestCase):
         self.job_scheduler.get_job_runs.return_value = self.job_runs
         self.resource = www.JobResource(self.job_scheduler)
 
-    def test_render_GET(self):
-        result = self.resource.render_GET(self.request)
+    def test_render_GET(self, request):
+        result = self.resource.render_GET(request)
         assert_equal(result['name'], self.job_scheduler.get_job().get_name())
 
     def test_get_run_from_identifier_HEAD(self):
@@ -286,31 +289,27 @@ class TestJobResource(WWWTestCase):
         assert_equal(resource.action_runs, action_runs)
 
 
-class TestConfigResource(TestCase):
-    @setup_teardown
-    def setup_resource(self):
+class TestConfigResource:
+
+    @pytest.fixture(autouse=True)
+    def resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
         self.resource = www.ConfigResource(self.mcp)
         self.controller = self.resource.controller = mock.create_autospec(
             controller.ConfigController,
         )
-        with mock.patch(
-            'tron.api.resource.respond',
-            autospec=True,
-        ) as self.respond:
-            yield
 
-    def test_render_GET(self):
+    def test_render_GET(self, mock_respond):
         name = 'the_name'
         request = build_request(name=name)
         self.resource.render_GET(request)
         self.controller.read_config.assert_called_with(name)
-        self.respond.assert_called_with(
+        mock_respond.assert_called_with(
             request,
             self.resource.controller.read_config.return_value,
         )
 
-    def test_render_POST_update(self):
+    def test_render_POST_update(self, mock_respond):
         name, config, hash = 'the_name', 'config', 'hash'
         request = build_request(name=name, config=config, hash=hash)
         self.resource.render_POST(request)
@@ -319,9 +318,9 @@ class TestConfigResource(TestCase):
             'status': 'Active',
             'error': self.controller.update_config.return_value,
         }
-        self.respond.assert_called_with(request, response_content)
+        mock_respond.assert_called_with(request, response_content)
 
-    def test_render_POST_delete(self):
+    def test_render_POST_delete(self, mock_respond):
         name, config, hash = 'the_name', '', ''
         request = build_request(name=name, config=config, hash=hash)
         self.resource.render_POST(request)
@@ -330,7 +329,7 @@ class TestConfigResource(TestCase):
             'status': 'Active',
             'error': self.controller.delete_config.return_value,
         }
-        self.respond.assert_called_with(request, response_content)
+        mock_respond.assert_called_with(request, response_content)
 
 
 if __name__ == '__main__':
