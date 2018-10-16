@@ -1,3 +1,11 @@
+tron (0.9.6.5) trusty; urgency=medium
+
+  * 0.9.6.5 tagged with 'make release'
+    Commit: Merge pull request #561 from Yelp/fix-dependent  Fix
+    actiongraph adapter failing to render dependent actions
+
+ -- root <root@473767c09859>  Tue, 16 Oct 2018 17:37:45 +0000
+
 tron (0.9.6.4) trusty; urgency=medium
 
   * 0.9.6.4 tagged with 'make release'
