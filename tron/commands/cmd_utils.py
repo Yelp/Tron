@@ -187,11 +187,13 @@ def save_config(options):
 
 def setup_logging(options):
     if options.verbose is None:
-        level = logging.WARNING
+        level = logging.CRITICAL
     elif options.verbose == 1:
+        level = logging.WARNING
+    elif options.verbose == 2:
         level = logging.INFO
     else:
-        level = logging.DEBUG
+        level = logging.NOTSET
 
     logging.basicConfig(
         level=level,
@@ -201,7 +203,9 @@ def setup_logging(options):
 
 
 def suggest_possibilities(word, possibilities, max_suggestions=6):
-    suggestions = difflib.get_close_matches(word=word, possibilities=possibilities, n=max_suggestions)
+    suggestions = difflib.get_close_matches(
+        word=word, possibilities=possibilities, n=max_suggestions
+    )
     if len(suggestions) == 1:
         return f"\nDid you mean: {suggestions[0]}?"
     elif len(suggestions) >= 1:

@@ -1,9 +1,6 @@
 """
 Test cases for the web services interface to tron
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 from unittest.mock import MagicMock
 
 import mock
@@ -19,7 +16,6 @@ from testifycompat import run
 from testifycompat import setup
 from testifycompat import setup_teardown
 from testifycompat import TestCase
-from tests import mocks
 from tests.assertions import assert_call
 from tests.testingutils import autospec_method
 from tron import mcp
@@ -27,6 +23,8 @@ from tron import node
 from tron.api import controller
 from tron.core import job
 from tron.core import jobrun
+from tron.core.job_collection import JobCollection
+from tron.core.job_scheduler import JobScheduler
 
 with mock.patch(
     'tron.api.async_resource.AsyncResource.bounded',
@@ -79,14 +77,14 @@ class TestHandleCommand(TestCase):
         command = 'the command'
         request = build_request(command=command)
         mock_controller, obj = mock.Mock(), mock.Mock()
-        error = controller.UnknownCommandError("No")
+        error = controller.UnknownCommandError()
         mock_controller.handle_command.side_effect = error
         response = www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
         assert_equal(response, self.respond.return_value)
         self.respond.assert_called_with(
             request,
-            {'error': str(error)},
+            {'error': f"Unknown command '{command}' for '{obj}'"},
             code=http.NOT_IMPLEMENTED,
         )
 
@@ -199,15 +197,7 @@ class TestActionRunHistoryResource(WWWTestCase):
 
 @pytest.fixture(scope="module")
 def resource_fixture():
-    job = mock.Mock(
-        repr_data=lambda: {'name': 'testname'},
-        name="testname",
-        last_success=None,
-        runs=mock.Mock(),
-        scheduler_str="testsched",
-        node_pool=mocks.MockNodePool(),
-    )
-    job_collection = mock.create_autospec(job.JobCollection)
+    job_collection = mock.create_autospec(JobCollection)
     resource = www.JobCollectionResource(job_collection)
     return resource
 
@@ -234,7 +224,7 @@ class TestJobCollectionResource(WWWTestCase):
 class TestJobResource(WWWTestCase):
     @setup
     def setup_resource(self):
-        self.job_scheduler = mock.create_autospec(job.JobScheduler)
+        self.job_scheduler = mock.create_autospec(JobScheduler)
         self.job_runs = mock.create_autospec(jobrun.JobRunCollection)
         self.job = mock.create_autospec(
             job.Job,
@@ -267,14 +257,6 @@ class TestJobResource(WWWTestCase):
         self.job_scheduler.get_job_runs.assert_called_with()
         assert_equal(job_run, self.job_runs.get_run_by_num.return_value)
         self.job_runs.get_run_by_num.assert_called_with(3)
-
-    def test_get_run_from_identifier_state_name(self):
-        job_run = self.resource.get_run_from_identifier('SUCC')
-        assert_equal(
-            job_run,
-            self.job_runs.get_run_by_state_short_name.return_value,
-        )
-        self.job_runs.get_run_by_state_short_name.assert_called_with('SUCC')
 
     def test_get_run_from_identifier_negative_index(self):
         job_run = self.resource.get_run_from_identifier('-2')
@@ -319,10 +301,10 @@ class TestConfigResource(TestCase):
             yield
 
     def test_render_GET(self):
-        name = 'the_nane'
-        request = build_request(name=name, no_header='1')
+        name = 'the_name'
+        request = build_request(name=name)
         self.resource.render_GET(request)
-        self.controller.read_config.assert_called_with(name, add_header=False)
+        self.controller.read_config.assert_called_with(name)
         self.respond.assert_called_with(
             request,
             self.resource.controller.read_config.return_value,

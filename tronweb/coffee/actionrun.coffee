@@ -198,8 +198,11 @@ class module.ActionRunView extends Backbone.View
                     <tr><td>End time</td>
                         <td><%= dateFromNow(end_time, 'Unknown') %></td></tr>
                     <tr><td>Duration</td>
-                        <td><%= formatDuration(duration) %>
-                        </td></tr>
+                        <td><%= formatDuration(duration) %></td></tr>
+                    <tr><td>Waits for triggers</td>
+                        <td><%= triggered_by %></td></tr>
+                    <tr><td>Publishes triggers</td>
+                        <td><%= trigger_downstreams %></td></tr>
                     </tbody>
                 </table>
                 </div>

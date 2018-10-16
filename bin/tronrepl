@@ -53,7 +53,7 @@ def parse_cli():
         "--nodaemon",
         action="store_true",
         default=False,
-        help="Disable daemonizing, default %(default)s",
+        help="[DEPRECATED] Disable daemonizing, default %(default)s",
     )
 
     parser.add_argument(
@@ -131,9 +131,6 @@ def parse_cli():
         args.working_dir,
         args.config_path,
     )
-
-    if args.debug:
-        args.nodaemon = True
 
     return args
 

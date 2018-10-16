@@ -1,10 +1,6 @@
 docutils>=0.8.1
 Jinja2>=2.6
-psutil
+mock
 Pygments>=1.4
-pytimeparse
-pytz>=2011n
-PyYAML>=3.0
-requests
 Sphinx-PyPI-upload>=0.2.1
 Sphinx>=1.1.2

@@ -91,7 +91,7 @@ class TestRunAdapter(TestCase):
         self.adapter = RunAdapter(self.original)
 
     def test_get_state(self):
-        assert_equal(self.adapter.get_state(), self.original.state.name)
+        assert_equal(self.adapter.get_state(), self.original.state)
 
     @mock.patch('tron.api.adapter.NodeAdapter', autospec=True)
     def test_get_node(self, mock_node_adapter):

@@ -12,3 +12,10 @@ def maybe_encode(maybe_bytes):
     if type(maybe_bytes) is not bytes:
         return maybe_bytes.encode()
     return maybe_bytes
+
+
+def next_or_none(iterable):
+    try:
+        return next(iterable)
+    except StopIteration:
+        pass

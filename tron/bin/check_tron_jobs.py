@@ -1,7 +1,4 @@
-#!/usr/bin/env python
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
+#!/usr/bin/env python3.6
 import logging
 import sys
 import time
@@ -244,7 +241,9 @@ def is_action_run_exceeding_expected_runtime(
         if action_name in actions_expected_runtime and actions_expected_runtime[
             action_name
         ] is not None:
-            duration_seconds = pytimeparse.parse(action_run.get('duration', ''))
+            duration_seconds = pytimeparse.parse(
+                action_run.get('duration', '')
+            )
             if duration_seconds > actions_expected_runtime[action_name]:
                 return True
     return False
@@ -318,7 +317,7 @@ def compute_check_result_for_job(client, job):
         tron_id = get_object_type_from_identifier(url_index, job["name"])
         job_content = client.job(
             tron_id.url,
-            count=10,
+            count=20,
             include_action_runs=True,
         )
         results = compute_check_result_for_job_runs(

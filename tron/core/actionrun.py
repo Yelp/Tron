@@ -2,9 +2,8 @@
  tron.core.actionrun
 """
 import logging
+from typing import List
 
-import six
-from six.moves import filter
 from twisted.internet import reactor
 
 from tron import command_context
@@ -12,16 +11,19 @@ from tron import node
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
+from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
+from tron.eventbus import EventBus
 from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
 from tron.utils import iteration
 from tron.utils import maybe_decode
 from tron.utils import proxy
-from tron.utils import state
 from tron.utils import timeutils
+from tron.utils.observer import Observable
 from tron.utils.observer import Observer
+from tron.utils.state import Machine
 
 log = logging.getLogger(__name__)
 
@@ -34,14 +36,13 @@ class ActionRunFactory(object):
     @classmethod
     def build_action_run_collection(cls, job_run, action_runner):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
-        action_map = six.iteritems(job_run.action_graph.get_action_map())
         action_run_map = {
             maybe_decode(name): cls.build_run_for_action(
                 job_run,
                 action_inst,
                 action_runner,
             )
-            for name, action_inst in action_map
+            for name, action_inst in job_run.action_graph.action_map.items()
         }
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
@@ -96,6 +97,9 @@ class ActionRunFactory(object):
             'docker_parameters': action.docker_parameters,
             'env': action.env,
             'extra_volumes': action.extra_volumes,
+            'trigger_downstreams': action.trigger_downstreams,
+            'triggered_by': action.triggered_by,
+            'on_upstream_rerun': action.on_upstream_rerun,
         }
         if action.executor == ExecutorTypes.mesos:
             return MesosActionRun(**args)
@@ -117,59 +121,53 @@ class ActionRunFactory(object):
         return SSHActionRun.from_state(**args)
 
 
-class ActionRun(object):
+class ActionRun(Observable):
     """Base class for tracking the state of a single run of an Action.
 
-    ActionRuns are observed by a parent JobRun.
+    ActionRun's state machine is observed by a parent JobRun.
     """
-    STATE_CANCELLED = state.NamedEventState('cancelled')
-    STATE_UNKNOWN = state.NamedEventState('unknown', short_name='UNKWN')
-    STATE_FAILED = state.NamedEventState('failed')
-    STATE_SUCCEEDED = state.NamedEventState('succeeded')
-    STATE_RUNNING = state.NamedEventState('running')
-    STATE_STARTING = state.NamedEventState('starting', short_chars=5)
-    STATE_QUEUED = state.NamedEventState('queued')
-    STATE_SCHEDULED = state.NamedEventState('scheduled')
-    STATE_SKIPPED = state.NamedEventState('skipped')
 
-    STATE_SCHEDULED['ready'] = STATE_QUEUED
-    STATE_SCHEDULED['queue'] = STATE_QUEUED
-    STATE_SCHEDULED['cancel'] = STATE_CANCELLED
-    STATE_SCHEDULED['start'] = STATE_STARTING
+    CANCELLED = 'cancelled'
+    FAILED = 'failed'
+    QUEUED = 'queued'
+    RUNNING = 'running'
+    SCHEDULED = 'scheduled'
+    SKIPPED = 'skipped'
+    STARTING = 'starting'
+    SUCCEEDED = 'succeeded'
+    UNKNOWN = 'unknown'
 
-    STATE_QUEUED['cancel'] = STATE_CANCELLED
-    STATE_QUEUED['start'] = STATE_STARTING
-    STATE_QUEUED['schedule'] = STATE_SCHEDULED
-
-    STATE_STARTING['started'] = STATE_RUNNING
-    STATE_STARTING['fail'] = STATE_FAILED
-
-    STATE_RUNNING['fail'] = STATE_FAILED
-    STATE_RUNNING['fail_unknown'] = STATE_UNKNOWN
-    STATE_RUNNING['success'] = STATE_SUCCEEDED
-
-    STATE_FAILED['skip'] = STATE_SKIPPED
-    STATE_CANCELLED['skip'] = STATE_SKIPPED
-
-    STATE_UNKNOWN['running'] = STATE_RUNNING
-
-    # We can force many states to be success or failure
-    for event_state in (STATE_UNKNOWN, STATE_QUEUED, STATE_SCHEDULED):
-        event_state['success'] = STATE_SUCCEEDED
-        event_state['fail'] = STATE_FAILED
+    default_transitions = dict(fail=FAILED, success=SUCCEEDED)
+    STATE_MACHINE = Machine(
+        'scheduled', **{
+            CANCELLED: dict(skip=SKIPPED),
+            FAILED: dict(skip=SKIPPED),
+            RUNNING: dict(fail_unknown=UNKNOWN, **default_transitions),
+            STARTING: dict(started=RUNNING, fail=FAILED),
+            UNKNOWN: dict(running=RUNNING, **default_transitions),
+            QUEUED: dict(
+                cancel=CANCELLED,
+                start=STARTING,
+                schedule=SCHEDULED,
+                **default_transitions,
+            ),
+            SCHEDULED: dict(
+                ready=QUEUED,
+                queue=QUEUED,
+                cancel=CANCELLED,
+                start=STARTING,
+                **default_transitions,
+            ),
+        }
+    )
 
     # The set of states that are considered end states. Technically some of
     # these states can be manually transitioned to other states.
-    END_STATES = {
-        STATE_FAILED,
-        STATE_SUCCEEDED,
-        STATE_CANCELLED,
-        STATE_SKIPPED,
-        STATE_UNKNOWN,
-    }
+    END_STATES = {FAILED, SUCCEEDED, CANCELLED, SKIPPED, UNKNOWN}
 
     # Failed render command is false to ensure that it will fail when run
     FAILED_RENDER = 'false # Command failed to render correctly. See the Tron error log.'
+    NOTIFY_TRIGGER_READY = 'trigger_ready'
 
     context_class = command_context.ActionRunContext
 
@@ -185,7 +183,7 @@ class ActionRun(object):
         cleanup=False,
         start_time=None,
         end_time=None,
-        run_state=STATE_SCHEDULED,
+        run_state=SCHEDULED,
         rendered_command=None,
         exit_status=None,
         action_runner=None,
@@ -202,7 +200,11 @@ class ActionRun(object):
         env=None,
         extra_volumes=None,
         mesos_task_id=None,
+        trigger_downstreams=None,
+        triggered_by=None,
+        on_upstream_rerun=None,
     ):
+        super().__init__()
         self.job_run_id = maybe_decode(job_run_id)
         self.action_name = maybe_decode(name)
         self.node = node
@@ -212,10 +214,8 @@ class ActionRun(object):
         self.bare_command = maybe_decode(bare_command)
         self.rendered_command = rendered_command
         self.action_runner = action_runner or NoActionRunnerFactory()
-        self.machine = machine or state.StateMachine(
-            self.STATE_SCHEDULED,
-            delegate=self,
-            force_state=run_state,
+        self.machine = machine or Machine.from_machine(
+            ActionRun.STATE_MACHINE, None, run_state
         )
         self.is_cleanup = cleanup
         self.executor = executor
@@ -233,6 +233,10 @@ class ActionRun(object):
         self.retries_remaining = retries_remaining
         self.retries_delay = retries_delay
         self.exit_statuses = exit_statuses
+        self.trigger_downstreams = trigger_downstreams
+        self.triggered_by = triggered_by
+        self.on_upstream_rerun = on_upstream_rerun
+
         if self.exit_statuses is None:
             self.exit_statuses = []
 
@@ -244,16 +248,8 @@ class ActionRun(object):
         return self.machine.state
 
     @property
-    def attach(self):
-        return self.machine.attach
-
-    @property
     def id(self):
-        return "%s.%s" % (self.job_run_id, self.action_name)
-
-    def check_state(self, state):
-        """Check if the state machine can be transitioned to state."""
-        return self.machine.check(state)
+        return f"{self.job_run_id}.{self.action_name}"
 
     @classmethod
     def from_state(
@@ -287,9 +283,9 @@ class ActionRun(object):
 
         rendered_command = state_data.get('rendered_command')
         run = cls(
-            job_run_id,
-            action_name,
-            job_run_node,
+            job_run_id=job_run_id,
+            name=action_name,
+            node=job_run_node,
             parent_context=parent_context,
             output_path=output_path,
             rendered_command=rendered_command,
@@ -297,10 +293,7 @@ class ActionRun(object):
             cleanup=cleanup,
             start_time=state_data['start_time'],
             end_time=state_data['end_time'],
-            run_state=state.named_event_by_name(
-                cls.STATE_SCHEDULED,
-                state_data['state'],
-            ),
+            run_state=state_data['state'],
             exit_status=state_data.get('exit_status'),
             retries_remaining=state_data.get('retries_remaining'),
             retries_delay=state_data.get('retries_delay'),
@@ -315,21 +308,22 @@ class ActionRun(object):
             env=state_data.get('env'),
             extra_volumes=state_data.get('extra_volumes'),
             mesos_task_id=state_data.get('mesos_task_id'),
+            trigger_downstreams=state_data.get('trigger_downstreams'),
+            triggered_by=state_data.get('triggered_by'),
+            on_upstream_rerun=state_data.get('on_upstream_rerun'),
         )
 
         # Transition running to fail unknown because exit status was missed
         if run.is_running:
             run._done('fail_unknown')
         if run.is_starting:
-            run.fail(None)
+            run._exit_unsuccessful(None)
         return run
 
     def start(self):
         """Start this ActionRun."""
         if self.in_delay is not None:
-            log.warning(
-                f"Start of suspended action run {self.id}, cancelling suspend timer"
-            )
+            log.warning(f"{self} cancelling suspend timer")
             self.in_delay.cancel()
             self.in_delay = None
 
@@ -337,24 +331,15 @@ class ActionRun(object):
             return False
 
         if len(self.exit_statuses) == 0:
-            log.info("Starting action run %s", self.id)
+            log.info(f"{self} starting")
         else:
-            log.info(
-                "Restarting action run {}, retry {}".format(
-                    self.id,
-                    len(self.exit_statuses),
-                )
-            )
+            log.info(f"{self} restarting, retry {len(self.exit_statuses)}")
 
         self.start_time = timeutils.current_time()
-        self.machine.transition('start')
+        self.transition_and_notify('start')
 
         if not self.is_valid_command:
-            log.error(
-                "Command for action run %s is invalid: %r",
-                self.id,
-                self.bare_command,
-            )
+            log.error(f"{self} invalid command: {self.bare_command}")
             self.fail(-1)
             return
 
@@ -370,16 +355,18 @@ class ActionRun(object):
         raise NotImplementedError()
 
     def _done(self, target, exit_status=0):
-        log.info(
-            "Action run %s completed with %s and exit status %r",
-            self.id,
-            target,
-            exit_status,
-        )
         if self.machine.check(target):
+            if self.triggered_by:
+                EventBus.clear_subscriptions(self.__hash__())
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
-            return self.machine.transition(target)
+            log.info(
+                f"{self} completed with {target}, transitioned to "
+                f"{self.state}, exit status: {exit_status}"
+            )
+            return self.transition_and_notify(target)
+        else:
+            log.debug(f"{self} cannot transition from {self.state} via {target}")
 
     def retry(self):
         """Invoked externally (via API) when action needs to be re-tried
@@ -389,13 +376,13 @@ class ActionRun(object):
             self.retries_remaining = 1
 
         if self.is_done:
-            return self.fail(self.exit_status)
+            return self._exit_unsuccessful(self.exit_status)
         else:
-            log.info(f"Killing action run {self.id} for a retry")
+            log.info(f"{self} getting killed for a retry")
             return self.kill(final=False)
 
     def start_after_delay(self):
-        log.info(f"Resuming action run {self.id} after retry delay")
+        log.info(f"{self} resuming after retry delay")
         self.machine.reset()
         self.in_delay = None
         self.start()
@@ -406,14 +393,18 @@ class ActionRun(object):
             self.in_delay = reactor.callLater(
                 self.retries_delay.seconds, self.start_after_delay
             )
-            log.info(
-                f"Delaying action run {self.id} for a retry in {self.retries_delay}s"
-            )
+            log.info(f"{self} delaying for a retry in {self.retries_delay}s")
         else:
             self.machine.reset()
             return self.start()
 
-    def fail(self, exit_status=0):
+    def fail(self, exit_status=None):
+        if self.retries_remaining:
+            self.retries_remaining = -1
+
+        return self._done('fail', exit_status)
+
+    def _exit_unsuccessful(self, exit_status=None):
         if self.retries_remaining is not None:
             if self.retries_remaining > 0:
                 self.retries_remaining -= 1
@@ -425,16 +416,54 @@ class ActionRun(object):
                         len(self.exit_statuses),
                     )
                 )
+        return self.fail(exit_status)
 
-        return self._done('fail', exit_status)
+    def triggers_to_emit(self) -> List[str]:
+        if not self.trigger_downstreams:
+            return []
+
+        if isinstance(self.trigger_downstreams, bool):
+            templates = ["shortdate.{shortdate}"]
+        elif isinstance(self.trigger_downstreams, dict):
+            templates = [f"{k}.{v}" for k, v in self.trigger_downstreams.items()]
+        else:
+            log.error(f"{self} trigger_downstreams must be true or dict")
+
+        return [self.render_template(trig) for trig in templates]
+
+    def emit_triggers(self):
+        triggers = self.triggers_to_emit()
+        if not triggers:
+            return
+
+        log.info(f"{self} publishing triggers: [{', '.join(triggers)}]")
+        job_id = '.'.join(self.job_run_id.split('.')[:-1])
+        for trigger in triggers:
+            EventBus.publish(f"{job_id}.{self.action_name}.{trigger}")
+
+    # TODO: cache if safe
+    @property
+    def rendered_triggers(self) -> List[str]:
+        return [
+            self.render_template(trig) for trig in self.triggered_by or []
+        ]
+
+    # TODO: subscribe for events and maintain a list of remaining triggers
+    @property
+    def remaining_triggers(self):
+        return [
+            trig for trig in self.rendered_triggers if not EventBus.has_event(trig)
+        ]
 
     def success(self):
+        if self.trigger_downstreams:
+            self.emit_triggers()
         return self._done('success')
 
     def fail_unknown(self):
         """Failed with unknown reason."""
-        log.warning("Lost communication with action run %s", self.id)
-        return self.machine.transition('fail_unknown')
+        log.warning(f"{self} lost communication")
+        return self.transition_and_notify('fail_unknown')
 
     def cancel_delay(self):
         if self.in_delay is not None:
@@ -448,18 +477,19 @@ class ActionRun(object):
         """This data is used to serialize the state of this action run."""
         rendered_command = self.rendered_command
 
-        action_runner = None if type(
-            self.action_runner
-        ) == NoActionRunnerFactory else {
-            'status_path': self.action_runner.status_path,
-            'exec_path': self.action_runner.exec_path,
-        }
+        if isinstance(self.action_runner, NoActionRunnerFactory):
+            action_runner = None
+        else:
+            action_runner = dict(
+                status_path=self.action_runner.status_path,
+                exec_path=self.action_runner.exec_path,
+            )
         # Freeze command after it's run
         command = rendered_command if rendered_command else self.bare_command
         return {
             'job_run_id': self.job_run_id,
             'action_name': self.action_name,
-            'state': self.state.name,
+            'state': self.state,
             'start_time': self.start_time,
             'end_time': self.end_time,
             'command': command,
@@ -479,25 +509,27 @@ class ActionRun(object):
             'env': self.env,
             'extra_volumes': self.extra_volumes,
             'mesos_task_id': self.mesos_task_id,
+            'trigger_downstreams': self.trigger_downstreams,
+            'triggered_by': self.triggered_by,
+            'on_upstream_rerun': self.on_upstream_rerun,
         }
+
+    def render_template(self, template):
+        """Render our configured command using the command context."""
+        return StringFormatter(self.context).format(template)
 
     def render_command(self):
         """Render our configured command using the command context."""
-        return self.bare_command % self.context
+        return self.render_template(self.bare_command)
 
     @property
     def command(self):
         if self.rendered_command:
             return self.rendered_command
-
         try:
             self.rendered_command = self.render_command()
         except Exception as e:
-            log.error(
-                "Failed generating rendering command: %s: %s" %
-                (e.__class__.__name__, e)
-            )
-
+            log.error(f"{self} failed rendering command: {e}")
             # Return a command string that will always fail
             self.rendered_command = self.FAILED_RENDER
         return self.rendered_command
@@ -526,25 +558,43 @@ class ActionRun(object):
         return self.is_starting or self.is_running
 
     def cleanup(self):
-        self.machine.clear_observers()
+        self.clear_observers()
+        if self.triggered_by:
+            EventBus.clear_subscriptions(self.__hash__())
         self.cancel()
 
-    def __getattr__(self, name):
+    def setup_subscriptions(self):
+        for trigger_pattern in self.triggered_by or []:
+            trigger = self.render_template(trigger_pattern)
+            EventBus.subscribe(trigger, self.__hash__(), self.trigger_notify)
+
+    def trigger_notify(self, *_):
+        if not self.remaining_triggers:
+            self.notify(ActionRun.NOTIFY_TRIGGER_READY)
+
+    def __getattr__(self, name: str):
         """Support convenience properties for checking if this ActionRun is in
         a specific state (Ex: self.is_running would check if self.state is
         STATE_RUNNING) or for transitioning to a new state (ex: ready).
         """
-        if name in self.machine.transitions:
-            return lambda: self.machine.transition(name)
+        if name in self.machine.transition_names:
+            return lambda: self.transition_and_notify(name)
 
-        state_name = name.replace('is_', 'state_').upper()
-        try:
-            return self.state == self.__getattribute__(state_name)
-        except AttributeError:
+        if name.startswith('is_'):
+            state_name = name.replace('is_', '')
+            if state_name not in self.machine.states:
+                raise AttributeError(f"{name} is not a state")
+            return self.state == state_name
+        else:
             raise AttributeError(name)
 
     def __str__(self):
-        return "ActionRun: %s" % self.id
+        return f"ActionRun: {self.id}"
+
+    def transition_and_notify(self, target):
+        if self.machine.transition(target):
+            self.notify(self.state)
+            return True
 
 
 class SSHActionRun(ActionRun, Observer):
@@ -560,7 +610,7 @@ class SSHActionRun(ActionRun, Observer):
             self.node.submit_command(action_command)
         except node.Error as e:
             log.warning("Failed to start %s: %r", self.id, e)
-            self.fail(-2)
+            self._exit_unsuccessful(-2)
             return
         return True
 
@@ -603,13 +653,13 @@ class SSHActionRun(ActionRun, Observer):
 
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
-        log.debug("Action command state change: %s", action_command.state)
+        log.debug(f"{self} action_command state change: {action_command.state}")
 
         if event == ActionCommand.RUNNING:
-            return self.machine.transition('started')
+            return self.transition_and_notify('started')
 
         if event == ActionCommand.FAILSTART:
-            return self.fail(None)
+            return self._exit_unsuccessful(None)
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
@@ -618,7 +668,7 @@ class SSHActionRun(ActionRun, Observer):
             if not action_command.exit_status:
                 return self.success()
 
-            return self.fail(action_command.exit_status)
+            return self._exit_unsuccessful(action_command.exit_status)
 
     handler = handle_action_command_state_change
 
@@ -635,11 +685,12 @@ class MesosActionRun(ActionRun, Observer):
             command=self.command,
             cpus=self.cpus,
             mem=self.mem,
-            constraints=self.constraints,
+            constraints=[[c.attribute, c.operator, c.value]
+                         for c in self.constraints],
             docker_image=self.docker_image,
-            docker_parameters=self.docker_parameters,
+            docker_parameters=[e._asdict() for e in self.docker_parameters],
             env=self.env,
-            extra_volumes=self.extra_volumes,
+            extra_volumes=[e._asdict() for e in self.extra_volumes],
             serializer=serializer,
         )
         if not task:  # Mesos is disabled
@@ -651,6 +702,53 @@ class MesosActionRun(ActionRun, Observer):
         # Watch before submitting, in case submit causes a transition
         self.watch(task)
         mesos_cluster.submit(task)
+        return task
+
+    def recover(self):
+        if self.mesos_task_id is None:
+            log.error(f'{self} no task ID, cannot recover')
+            return
+
+        if not self.machine.check('running'):
+            log.error(
+                f'{self} unable to transition from {self.machine.state}'
+                'to running for recovery'
+            )
+            return
+
+        log.info(f'{self} recovering Mesos run')
+
+        serializer = filehandler.OutputStreamSerializer(self.output_path)
+        mesos_cluster = MesosClusterRepository.get_cluster()
+        task = mesos_cluster.create_task(
+            action_run_id=self.id,
+            command=self.command,
+            cpus=self.cpus,
+            mem=self.mem,
+            constraints=self.constraints,
+            docker_image=self.docker_image,
+            docker_parameters=self.docker_parameters,
+            env=self.env,
+            extra_volumes=self.extra_volumes,
+            serializer=serializer,
+            task_id=self.mesos_task_id,
+        )
+        if not task:
+            log.warning(
+                f'{self} cannot recover, Mesos is disabled or '
+                f'invalid task ID {self.mesos_task_id!r}'
+            )
+            self.fail_unknown()
+            return
+
+        self.watch(task)
+        mesos_cluster.recover(task)
+
+        # Reset status
+        self.exit_status = None
+        self.end_time = None
+        self.transition_and_notify('running')
+
         return task
 
     def stop(self):
@@ -669,29 +767,36 @@ class MesosActionRun(ActionRun, Observer):
         if self.cancel_delay():
             return
 
-        error_message = self._kill_mesos_task()
-        if error_message is not None:
-            return error_message
-        return "Warning: It might take up to docker_stop_timeout (current setting is 2 mins) for killing."
+        return self._kill_mesos_task()
 
     def _kill_mesos_task(self):
+        msgs = []
+        if not self.is_active:
+            msgs.append(f'Action is {self.state}, not running. Continuing anyway.')
+
         mesos_cluster = MesosClusterRepository.get_cluster()
         if self.mesos_task_id is None:
-            return "Error: Can't find task id for the action."
-        succeeded = mesos_cluster.kill(self.mesos_task_id)
-        if not succeeded:
-            return "Error while killing task. Please try again."
+            msgs.append("Error: Can't find task id for the action.")
+        else:
+            msgs.append(f"Sending kill for {self.mesos_task_id}...")
+            succeeded = mesos_cluster.kill(self.mesos_task_id)
+            if succeeded:
+                msgs.append("Sent! It can take up to docker_stop_timeout (current setting is 2 mins) to stop.")
+            else:
+                msgs.append("Error while sending kill request. Please try again.")
+
+        return '\n'.join(msgs)
 
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
         # TODO: consolidate? Same as SSHActionRun for now
-        log.debug("Action command state change: %s", action_command.state)
+        log.debug(f"{self} action_command state change: {action_command.state}")
 
         if event == ActionCommand.RUNNING:
-            return self.machine.transition('started')
+            return self.transition_and_notify('started')
 
         if event == ActionCommand.FAILSTART:
-            return self.fail(None)
+            return self._exit_unsuccessful(None)
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
@@ -700,17 +805,13 @@ class MesosActionRun(ActionRun, Observer):
             if not action_command.exit_status:
                 return self.success()
 
-            return self.fail(action_command.exit_status)
+            return self._exit_unsuccessful(action_command.exit_status)
 
     handler = handle_action_command_state_change
 
 
 class ActionRunCollection(object):
     """A collection of ActionRuns used by a JobRun."""
-
-    # An ActionRunCollection is blocked when it has runs running which
-    # are required for other blocked runs to start.
-    STATE_BLOCKED = state.NamedEventState('blocked')
 
     def __init__(self, action_graph, run_map):
         self.action_graph = action_graph
@@ -744,19 +845,17 @@ class ActionRunCollection(object):
         )
 
     def get_action_runs_with_cleanup(self):
-        return six.itervalues(self.run_map)
+        return self.run_map.values()
 
     action_runs_with_cleanup = property(get_action_runs_with_cleanup)
 
     def get_action_runs(self):
-        return (
-            run for run in six.itervalues(self.run_map) if not run.is_cleanup
-        )
+        return (run for run in self.run_map.values() if not run.is_cleanup)
 
     action_runs = property(get_action_runs)
 
     @property
-    def cleanup_action_run(self):
+    def cleanup_action_run(self) -> ActionRun:
         return self.run_map.get(action.CLEANUP_ACTION_NAME)
 
     @property
@@ -768,27 +867,13 @@ class ActionRunCollection(object):
         if self.cleanup_action_run:
             return self.cleanup_action_run.state_data
 
-    def _get_runs_using(self, func, include_cleanup=False):
-        """Return an iterator of all the ActionRuns which cause func to return
-        True. func should be a callable that takes a single ActionRun and
-        returns True or False.
-        """
-        if include_cleanup:
-            action_runs = self.action_runs_with_cleanup
-        else:
-            action_runs = self.action_runs
-        return filter(func, action_runs)
-
     def get_startable_action_runs(self):
         """Returns any actions that are scheduled or queued that can be run."""
 
-        def startable(action_run):
-            return (
-                action_run.check_state('start') and
-                not self._is_run_blocked(action_run)
-            )
-
-        return self._get_runs_using(startable)
+        return [
+            r for r in self.action_runs
+            if r.machine.check('start') and not self._is_run_blocked(r)
+        ]
 
     @property
     def has_startable_action_runs(self):
@@ -804,17 +889,18 @@ class ActionRunCollection(object):
         required_actions = self.action_graph.get_required_actions(
             action_run.action_name,
         )
-        if not required_actions:
-            return False
 
-        required_runs = self.action_runs_for_actions(required_actions)
+        if required_actions:
+            required_runs = self.action_runs_for_actions(required_actions)
+            if any(not run.is_complete for run in required_runs):
+                return True
 
-        def is_required_run_blocking(required_run):
-            if required_run.is_complete:
-                return False
+        waiting_for = action_run.remaining_triggers
+        if waiting_for:
+            log.debug(f"{action_run} waiting for: {waiting_for}")
             return True
 
-        return any(is_required_run_blocking(run) for run in required_runs)
+        return False
 
     @property
     def is_done(self):
@@ -858,13 +944,10 @@ class ActionRunCollection(object):
             return ":blocked" if self._is_run_blocked(action_run) else ""
 
         run_states = ', '.join(
-            "%s(%s%s)" % (
-                a.action_name,
-                a.state,
-                blocked_state(a),
-            ) for a in six.itervalues(self.run_map)
+            f"{a.action_name}({a.state}{blocked_state(a)})"
+            for a in self.run_map.values()
         )
-        return "%s[%s]" % (self.__class__.__name__, run_states)
+        return f"{self.__class__.__name__}[{run_states}]"
 
     def __getattr__(self, name):
         return self.proxy_action_runs_with_cleanup.perform(name)
@@ -876,7 +959,7 @@ class ActionRunCollection(object):
         return name in self.run_map
 
     def __iter__(self):
-        return six.itervalues(self.run_map)
+        return iter(self.run_map.values())
 
     def get(self, name):
         return self.run_map.get(name)

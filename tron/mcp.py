@@ -1,14 +1,13 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-from __future__ import with_statement
-
 import logging
 
 from tron import actioncommand
 from tron import command_context
 from tron import node
 from tron.config import manager
-from tron.core import job
+from tron.core.job import Job
+from tron.core.job_collection import JobCollection
+from tron.core.job_scheduler import JobSchedulerFactory
+from tron.eventbus import EventBus
 from tron.mesos import MesosClusterRepository
 from tron.serialize.runstate import statemanager
 
@@ -29,7 +28,7 @@ class MasterControlProgram(object):
 
     def __init__(self, working_dir, config_path):
         super(MasterControlProgram, self).__init__()
-        self.jobs = job.JobCollection()
+        self.jobs = JobCollection()
         self.working_dir = working_dir
         self.config = manager.ConfigManager(config_path)
         self.context = command_context.CommandContext()
@@ -37,6 +36,7 @@ class MasterControlProgram(object):
         log.info('initialized')
 
     def shutdown(self):
+        EventBus.shutdown()
         self.state_watcher.shutdown()
 
     def reconfigure(self):
@@ -46,9 +46,9 @@ class MasterControlProgram(object):
             self._load_config(reconfigure=True)
         except Exception as e:
             log.exception(
-                "reconfigure failure: %s: %s" % (e.__class__.__name__, e)
+                f"reconfigure failure: {e.__class__.__name__}: {e}"
             )
-            raise
+            raise e
 
     def _load_config(self, reconfigure=False):
         """Read config data and apply it."""
@@ -78,7 +78,9 @@ class MasterControlProgram(object):
                 'nodes',
                 'node_pools',
                 'ssh_options',
-            ), (MesosClusterRepository.configure, 'mesos_options')
+            ),
+            (MesosClusterRepository.configure, 'mesos_options'),
+            (self.configure_eventbus, 'eventbus_enabled'),
         ]
         master_config = config_container.get_master()
         apply_master_configuration(master_config_directives, master_config)
@@ -90,7 +92,7 @@ class MasterControlProgram(object):
         self.apply_collection_config(
             config_container.get_jobs(),
             self.jobs,
-            job.Job.NOTIFY_STATE_CHANGE,
+            Job.NOTIFY_STATE_CHANGE,
             factory,
             reconfigure,
         )
@@ -104,7 +106,7 @@ class MasterControlProgram(object):
         action_runner = actioncommand.create_action_runner_factory_from_config(
             master_config.action_runner,
         )
-        return job.JobSchedulerFactory(
+        return JobSchedulerFactory(
             self.context,
             output_stream_dir,
             master_config.time_zone,
@@ -121,6 +123,14 @@ class MasterControlProgram(object):
 
     def set_context_base(self, command_context):
         self.context.base = command_context
+
+    def configure_eventbus(self, enabled):
+        if enabled:
+            if not EventBus.instance:
+                EventBus.create(f"{self.working_dir}/_events")
+                EventBus.start()
+        else:
+            EventBus.shutdown()
 
     def get_job_collection(self):
         return self.jobs

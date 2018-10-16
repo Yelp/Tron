@@ -48,12 +48,13 @@ setup(
         'bsddb3',
         'ipython',
         'ipdb',
-        'task_processing[mesos_executor]>=0.0.17',
+        'task_processing[mesos_executor]>=0.1.2',
         'requests',
-        'psutil'
+        'psutil',
+        'dataclasses>=0.6',
     ],
     packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb', 'tronweb2'],
-    scripts=glob.glob('bin/*'),
+    scripts=glob.glob('bin/*') + glob.glob('tron/bin/*.py'),
     include_package_data=True,
     long_description="""
 Tron is a centralized system for managing periodic batch processes across a

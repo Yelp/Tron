@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import datetime
 from unittest.mock import MagicMock
 
@@ -26,6 +23,7 @@ from tron.serialize import filehandler
 
 def build_mock_job():
     action_graph = mock.create_autospec(actiongraph.ActionGraph)
+    action_graph.action_map = {'foo': mock.Mock(triggered_by=[])}
     runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
     return mock.create_autospec(
         job.Job,
@@ -287,11 +285,11 @@ class TestJobRun(TestCase):
         assert not self.job_run._start_action_runs.mock_calls
 
     def test_state(self):
-        assert_equal(self.job_run.state, actionrun.ActionRun.STATE_SUCCEEDED)
+        assert_equal(self.job_run.state, actionrun.ActionRun.SUCCEEDED)
 
     def test_state_with_no_action_runs(self):
         self.job_run._action_runs = None
-        assert_equal(self.job_run.state, actionrun.ActionRun.STATE_UNKNOWN)
+        assert_equal(self.job_run.state, actionrun.ActionRun.UNKNOWN)
 
     def test_finalize(self):
         self.job_run.action_runs.is_failed = False
@@ -391,19 +389,19 @@ class MockJobRun(MagicMock):
 
     @property
     def is_scheduled(self):
-        return self.state == actionrun.ActionRun.STATE_SCHEDULED
+        return self.state == actionrun.ActionRun.SCHEDULED
 
     @property
     def is_queued(self):
-        return self.state == actionrun.ActionRun.STATE_QUEUED
+        return self.state == actionrun.ActionRun.QUEUED
 
     @property
     def is_running(self):
-        return self.state == actionrun.ActionRun.STATE_RUNNING
+        return self.state == actionrun.ActionRun.RUNNING
 
     @property
     def is_starting(self):
-        return self.state == actionrun.ActionRun.STATE_STARTING
+        return self.state == actionrun.ActionRun.STARTING
 
     def __repr__(self):
         return str(self.__dict__)
@@ -417,11 +415,11 @@ class TestJobRunCollection(TestCase):
     def setup_runs(self):
         self.run_collection = jobrun.JobRunCollection(5)
         self.job_runs = [
-            self._mock_run(state=actionrun.ActionRun.STATE_QUEUED, run_num=4),
-            self._mock_run(state=actionrun.ActionRun.STATE_RUNNING, run_num=3),
+            self._mock_run(state=actionrun.ActionRun.QUEUED, run_num=4),
+            self._mock_run(state=actionrun.ActionRun.RUNNING, run_num=3),
         ] + [
             self._mock_run(
-                state=actionrun.ActionRun.STATE_SUCCEEDED,
+                state=actionrun.ActionRun.SUCCEEDED,
                 run_num=i,
             ) for i in range(2, 0, -1)
         ]
@@ -512,12 +510,12 @@ class TestJobRunCollection(TestCase):
         assert_call(self.job_runs[0].cleanup, 0)
 
     def test_get_run_by_state(self):
-        state = actionrun.ActionRun.STATE_SUCCEEDED
+        state = actionrun.ActionRun.SUCCEEDED
         run = self.run_collection.get_run_by_state(state)
         assert_equal(run, self.job_runs[2])
 
     def test_get_run_by_state_no_match(self):
-        state = actionrun.ActionRun.STATE_UNKNOWN
+        state = actionrun.ActionRun.UNKNOWN
         run = self.run_collection.get_run_by_state(state)
         assert_equal(run, None)
 
@@ -545,21 +543,13 @@ class TestJobRunCollection(TestCase):
         run = self.run_collection.get_run_by_index(4)
         assert_equal(run, None)
 
-    def test_get_run_by_state_short_name(self):
-        run = self.run_collection.get_run_by_state_short_name("RUNN")
-        assert_equal(run, self.job_runs[1])
-
-    def test_get_run_by_state_short_name_no_match(self):
-        run = self.run_collection.get_run_by_state_short_name("FAIL")
-        assert_equal(run, None)
-
     def test_get_newest(self):
         run = self.run_collection.get_newest()
         assert_equal(run, self.job_runs[0])
 
     def test_get_newest_exclude_manual(self):
         run = self._mock_run(
-            state=actionrun.ActionRun.STATE_RUNNING,
+            state=actionrun.ActionRun.RUNNING,
             run_num=5,
             manual=True,
         )
@@ -575,7 +565,7 @@ class TestJobRunCollection(TestCase):
         run_num = self.run_collection.next_run_num()
         scheduled_run = self._mock_run(
             run_num=run_num,
-            state=actionrun.ActionRun.STATE_SCHEDULED,
+            state=actionrun.ActionRun.SCHEDULED,
         )
         self.run_collection.runs.appendleft(scheduled_run)
         pending = list(self.run_collection.get_pending())
@@ -585,7 +575,7 @@ class TestJobRunCollection(TestCase):
     def test_get_active(self):
         starting_run = self._mock_run(
             run_num=self.run_collection.next_run_num(),
-            state=actionrun.ActionRun.STATE_STARTING,
+            state=actionrun.ActionRun.STARTING,
         )
         self.run_collection.runs.appendleft(starting_run)
         active = list(self.run_collection.get_active())
@@ -595,7 +585,7 @@ class TestJobRunCollection(TestCase):
     def test_get_active_with_node(self):
         starting_run = self._mock_run(
             run_num=self.run_collection.next_run_num(),
-            state=actionrun.ActionRun.STATE_STARTING,
+            state=actionrun.ActionRun.STARTING,
         )
         starting_run.node = 'differentnode'
         self.run_collection.runs.appendleft(starting_run)
@@ -611,7 +601,7 @@ class TestJobRunCollection(TestCase):
         run_num = self.run_collection.next_run_num()
         second_queued = self._mock_run(
             run_num=run_num,
-            state=actionrun.ActionRun.STATE_QUEUED,
+            state=actionrun.ActionRun.QUEUED,
         )
         self.run_collection.runs.appendleft(second_queued)
 
@@ -619,7 +609,7 @@ class TestJobRunCollection(TestCase):
         assert_equal(first_queued, self.job_runs[0])
 
     def test_get_first_queued_no_match(self):
-        self.job_runs[0].state = actionrun.ActionRun.STATE_CANCELLED
+        self.job_runs[0].state = actionrun.ActionRun.CANCELLED
         first_queued = self.run_collection.get_first_queued()
         assert not first_queued
 
@@ -631,7 +621,7 @@ class TestJobRunCollection(TestCase):
         self.job_runs[1].node = "seven"
         scheduled_run = self._mock_run(
             run_num=self.run_collection.next_run_num(),
-            state=actionrun.ActionRun.STATE_SCHEDULED,
+            state=actionrun.ActionRun.SCHEDULED,
             node="nine",
         )
         self.run_collection.runs.appendleft(scheduled_run)

@@ -1,3 +1,5 @@
+eventbus_enabled: true
+
 state_persistence:
   name: "/nail/tron/tron_state"
   store_type: "shelve"
@@ -11,23 +13,30 @@ ssh_options:
 action_runner:
   runner_type: "subprocess"
   remote_status_path: "/tmp/tron"
-  remote_exec_path: "/work/bin/"
+  remote_exec_path: "/work/tron/bin/"
 
 nodes:
   - hostname: localhost
     username: root
-  # Note: the action runner is not available on batch1.
-  # Comment out the action_runner config if you want to schedule things remotely
-  #  - hostname: batch1
-  #    username: tron
 
 time_zone: US/Eastern
 
 jobs:
-  - name: "test"
+  - name: "one"
     node: localhost
     schedule: "cron * * * * *"
     time_zone: "US/Pacific"
     actions:
-      - name: "first"
-        command: "sleep 5m"
+      - name: "one"
+        command: "exit $((RANDOM % 2))"
+        trigger_downstreams:
+          ymdhm: "{ymdhm}"
+        retries: 3
+  - name: "two"
+    node: localhost
+    schedule: "cron * * * * *"
+    time_zone: "US/Pacific"
+    actions:
+      - name: "two"
+        command: "exit $((RANDOM % 2))"
+        triggered_by: ["MASTER.one.one.ymdhm.{ymdhm}"]

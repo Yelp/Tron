@@ -7,6 +7,7 @@ import shutil
 import tempfile
 
 import mock
+import pytest
 import pytz
 
 from testifycompat import assert_equal
@@ -210,9 +211,9 @@ def make_master_jobs():
                 expected_runtime=datetime.timedelta(1),
                 cleanup_action=None,
             ),
-        'MASTER.test_job3':
+        'MASTER.test_job_actions_dict':
             make_job(
-                name='MASTER.test_job3',
+                name='MASTER.test_job_actions_dict',
                 node='node1',
                 schedule=ConfigConstantScheduler(),
                 actions=FrozenDict({
@@ -346,19 +347,18 @@ class ConfigTestCase(TestCase):
                 actions=[dict(name="action2_0", command="test_command2.0")]
             ),
             dict(
-                name="test_job3",
+                name="test_job_actions_dict",
                 node='node1',
                 schedule="constant",
-                actions=[
-                    dict(name="action", command="command"),
-                    dict(name="action1", command="command"),
-                    dict(
-                        name="action2",
+                actions=dict(
+                    action=dict(command="command"),
+                    action1=dict(command="command"),
+                    action2=dict(
                         node='node0',
                         command="command",
                         requires=['action', 'action1']
                     )
-                ]
+                )
             ),
             dict(
                 name="test_job4",
@@ -407,7 +407,7 @@ class ConfigTestCase(TestCase):
         assert test_config.time_zone == expected.time_zone
         assert test_config.nodes == expected.nodes
         assert test_config.node_pools == expected.node_pools
-        for key in ['0', '1', '2', '3', '4', '_mesos']:
+        for key in ['0', '1', '2', '_actions_dict', '4', '_mesos']:
             job_name = f"MASTER.test_job{key}"
             assert job_name in test_config.jobs, f"{job_name} in test_config.jobs"
             assert job_name in expected.jobs, f"{job_name} in test_config.jobs"
@@ -470,18 +470,14 @@ class TestNamedConfig(TestCase):
             })
         )
         master_config = dict(
-            nodes=[
-                dict(
-                    name="node0",
-                    hostname="node0",
-                )
-            ],
-            node_pools=[
-                dict(
-                    name="nodepool0",
-                    nodes=["node0"],
-                )
-            ]
+            nodes=[dict(
+                name="node0",
+                hostname="node0",
+            )],
+            node_pools=[dict(
+                name="nodepool0",
+                nodes=["node0"],
+            )]
         )
         test_config = validate_fragment(
             'test_namespace',
@@ -503,12 +499,10 @@ class TestNamedConfig(TestCase):
 
     def test_invalid_job_node_with_master_context(self):
         master_config = dict(
-            nodes=[
-                dict(
-                    name="node0",
-                    hostname="node0",
-                )
-            ],
+            nodes=[dict(
+                name="node0",
+                hostname="node0",
+            )],
         )
         test_config = dict(
             jobs=[
@@ -534,18 +528,14 @@ class TestNamedConfig(TestCase):
 
     def test_invalid_action_node_with_master_context(self):
         master_config = dict(
-            nodes=[
-                dict(
-                    name="node0",
-                    hostname="node0",
-                )
-            ],
-            node_pools=[
-                dict(
-                    name="nodepool0",
-                    nodes=["node0"],
-                )
-            ]
+            nodes=[dict(
+                name="node0",
+                hostname="node0",
+            )],
+            node_pools=[dict(
+                name="nodepool0",
+                nodes=["node0"],
+            )]
         )
         test_config = dict(
             jobs=[
@@ -554,7 +544,8 @@ class TestNamedConfig(TestCase):
                     namespace='test_namespace',
                     node="node0",
                     schedule="interval 20s",
-                    actions=[dict(name="action", node="nodepool1", command="command")],
+                    actions=
+                    [dict(name="action", node="nodepool1", command="command")],
                     cleanup_action=dict(command="command"),
                 )
             ]
@@ -943,7 +934,13 @@ class TestValidateJobs(TestCase):
                                     mode='RO'
                                 )
                             ],
-                        )
+                        ),
+                        dict(
+                            name="test_trigger_attrs",
+                            command="foo",
+                            triggered_by=["foo.bar"],
+                            trigger_downstreams=True,
+                        ),
                     ],
                     cleanup_action=dict(command="command")
                 )
@@ -997,6 +994,13 @@ class TestValidateJobs(TestCase):
                                     ),
                                 ),
                                 expected_runtime=datetime.timedelta(hours=24),
+                            ),
+                        'test_trigger_attrs':
+                            make_action(
+                                name="test_trigger_attrs",
+                                command="foo",
+                                triggered_by=("foo.bar",),
+                                trigger_downstreams=True,
                             ),
                     }),
                     expected_runtime=datetime.timedelta(0, 1200),
@@ -1103,11 +1107,11 @@ class TestBuildFormatStringValidator(TestCase):
         self.validator = build_format_string_validator(self.context)
 
     def test_validator_passes(self):
-        template = "The %(one)s thing I %(seven)s is %(stars)s"
+        template = "The {one} thing I {seven} is {stars}"
         assert self.validator(template, NullConfigContext)
 
     def test_validator_unknown_variable_error(self):
-        template = "The %(one)s thing I %(seven)s is %(unknown)s"
+        template = "The {one} thing I {seven} is {unknown}"
         exception = assert_raises(
             ConfigError,
             self.validator,
@@ -1116,39 +1120,23 @@ class TestBuildFormatStringValidator(TestCase):
         )
         assert_in("Unknown context variable", str(exception))
 
-    def test_validator_no_type_error(self):
-        templates = [
-            "The %(one) %(seven)s thing is %(stars)s",
-            "The %(one) %(seven) thing is %(stars)s",
-            "The %(one) something %(seven)s thing is %(stars)s",
-            "The %(one)s %(seven)s thing is %(stars)",
-        ]
-        for template in templates:
-            exception = assert_raises(
-                ConfigError,
-                self.validator,
-                template,
-                NullConfigContext,
-            )
-            assert_in("Context variable expression is invalid", str(exception))
-
-    def test_validator_wrong_type_error(self):
-        template = "The %(one)d %(seven)s thing is %(stars)s"
-        exception = assert_raises(
-            ConfigError,
-            self.validator,
-            template,
-            NullConfigContext,
-        )
-        assert_in("Context variable expression is invalid", str(exception))
-
     def test_validator_passes_with_context(self):
-        template = "The %(one)s thing I %(seven)s is %(mars)s"
+        template = "The {one} thing I {seven} is {mars}"
         context = config_utils.ConfigContext(
             None,
             None,
             {'mars': 'ok'},
             None,
+        )
+        assert self.validator(template, context) == template
+
+    def test_validator_valid_string_without_no_percent_escape(self):
+        template = "The {one} {seven} thing is {mars} --year %Y"
+        context = config_utils.ConfigContext(
+            path=None,
+            nodes=None,
+            command_context={'mars': 'ok'},
+            namespace=None,
         )
         assert self.validator(template, context)
 
@@ -1209,7 +1197,7 @@ class TestConfigContainer(TestCase):
         expected = [
             'test_job1',
             'test_job0',
-            'test_job3',
+            'test_job_actions_dict',
             'test_job2',
             'test_job4',
             'test_job_mesos',
@@ -1220,7 +1208,7 @@ class TestConfigContainer(TestCase):
         expected = [
             'test_job1',
             'test_job0',
-            'test_job3',
+            'test_job_actions_dict',
             'test_job2',
             'test_job4',
             'test_job_mesos',
@@ -1415,6 +1403,35 @@ class TestValidateVolume(TestCase):
             mesos_options,
             self.context,
         )
+
+
+class TestValidMasterAddress:
+
+    @pytest.fixture
+    def context(self):
+        return config_utils.NullConfigContext
+
+    @pytest.mark.parametrize('url', [
+        'http://blah.com',
+        'http://blah.com/',
+        'blah.com',
+        'blah.com/',
+    ])
+    def test_valid(self, url, context):
+        normalized = 'http://blah.com'
+        result = config_parse.valid_master_address(url, context)
+        assert result == normalized
+
+    @pytest.mark.parametrize('url', [
+        'https://blah.com',
+        'http://blah.com/something',
+        'blah.com/other',
+        'http://',
+        'blah.com?a=1',
+    ])
+    def test_invalid(self, url, context):
+        with pytest.raises(ConfigError):
+            config_parse.valid_master_address(url, context)
 
 
 if __name__ == '__main__':

@@ -29,7 +29,7 @@ export TRON_WORKDIR=/nail/tron
 mkdir -p $TRON_WORKDIR
 export TRON_START_TIME=$(date +%s)
 
-trond --nodaemon --working-dir=$TRON_WORKDIR &
+trond --working-dir=$TRON_WORKDIR &
 TRON_PID=$!
 
 for i in {1..5}; do
@@ -53,7 +53,7 @@ tronfig /work/example-cluster/tronfig/MASTER.yaml
 cat /work/example-cluster/tronfig/MASTER.yaml | tronfig -n MASTER -
 
 kill -SIGTERM $TRON_PID
-wait $TRON_PID
+wait $TRON_PID || true
 
 /opt/venvs/tron/bin/python - <<EOF
 import os

@@ -15,7 +15,7 @@ from tests.testingutils import autospec_method
 from tron import mcp
 from tron.config import config_parse
 from tron.config import manager
-from tron.core import job
+from tron.core.job_collection import JobCollection
 from tron.serialize.runstate import statemanager
 
 
@@ -81,7 +81,7 @@ class TestMasterControlProgram(TestCase):
 
     def test_update_state_watcher_config_changed(self):
         self.mcp.state_watcher.update_from_config.return_value = True
-        self.mcp.jobs = mock.create_autospec(job.JobCollection)
+        self.mcp.jobs = mock.create_autospec(JobCollection)
         self.mcp.jobs.__iter__.return_values = {
             'a': mock.Mock(),
             'b': mock.Mock(),
@@ -113,7 +113,7 @@ class TestMasterControlProgramRestoreState(TestCase):
             self.working_dir,
             self.config_path,
         )
-        self.mcp.jobs = mock.create_autospec(job.JobCollection)
+        self.mcp.jobs = mock.create_autospec(JobCollection)
         self.mcp.state_watcher = mock.create_autospec(
             statemanager.StateChangeWatcher,
         )
@@ -127,13 +127,14 @@ class TestMasterControlProgramRestoreState(TestCase):
     def test_restore_state(self, mock_cluster_repo):
         job_state_data = {'1': 'things', '2': 'things'}
         mesos_state_data = {'3': 'things', '4': 'things'}
-        state_data = {'mesos_state': mesos_state_data, 'job_state': job_state_data}
+        state_data = {
+            'mesos_state': mesos_state_data,
+            'job_state': job_state_data
+        }
         self.mcp.state_watcher.restore.return_value = state_data
         action_runner = mock.Mock()
         self.mcp.restore_state(action_runner)
-        mock_cluster_repo.restore_state.assert_called_with(
-            mesos_state_data,
-        )
+        mock_cluster_repo.restore_state.assert_called_with(mesos_state_data, )
         self.mcp.jobs.restore_state.assert_called_with(
             job_state_data, action_runner
         )

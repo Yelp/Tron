@@ -71,9 +71,10 @@ def handle_command(request, api_controller, obj, **kwargs):
     try:
         response = api_controller.handle_command(command, **kwargs)
         return respond(request, {'result': response})
-    except controller.UnknownCommandError as e:
-        log.warning("Unknown command %s for %s", command, obj)
-        return respond(request, {'error': str(e)}, code=http.NOT_IMPLEMENTED)
+    except controller.UnknownCommandError:
+        error_msg = f"Unknown command '{command}' for '{obj}'"
+        log.warning(error_msg)
+        return respond(request, {'error': error_msg}, code=http.NOT_IMPLEMENTED)
     except Exception as e:
         log.exception('%r while executing command %s for %s', e, command, obj)
         trace = traceback.format_exc()
@@ -82,13 +83,34 @@ def handle_command(request, api_controller, obj, **kwargs):
         )
 
 
+class ErrorResource(resource.Resource):
+    """ Equivalent to resource.NoResource, except error message is returned
+    as JSON, not HTML """
+    def __init__(self, error='No Such Resource', code=http.NOT_FOUND):
+        resource.Resource.__init__(self)
+        self.code = code
+        self.error = error
+
+    @AsyncResource.bounded
+    def render_GET(self, request):
+        return respond(request, {'error': self.error}, code=self.code)
+
+    @AsyncResource.exclusive
+    def render_POST(self, request):
+        return respond(request, {'error': self.error}, code=self.code)
+
+    def getChild(self, chnam, request):
+        """ Overrided getChild to ensure a NoResource is not returned """
+        return self
+
+
 def resource_from_collection(collection, name, child_resource):
     """Return a child resource from a collection by name.  If no item is found,
-    return NoResource.
+    return ErrorResource.
     """
     item = collection.get_by_name(name)
     if item is None:
-        return resource.NoResource("Cannot find child %s" % name)
+        return ErrorResource("Cannot find child '%s'" % name)
     return child_resource(item)
 
 
@@ -134,8 +156,8 @@ class JobRunResource(resource.Resource):
             action_run = self.job_run.action_runs[action_name]
             return ActionRunResource(action_run, self.job_run)
 
-        msg = "Cannot find action %s for %s"
-        return resource.NoResource(msg % (action_name, self.job_run))
+        return ErrorResource(f"Cannot find action '{action_name}' for "
+                             f"'{self.job_run}'")
 
     @AsyncResource.bounded
     def render_GET(self, request):
@@ -171,7 +193,6 @@ class JobResource(resource.Resource):
             return job_runs.get_run_by_num(int(run_id))
         if is_negative_int(run_id):
             return job_runs.get_run_by_index(int(run_id))
-        return job_runs.get_run_by_state_short_name(run_id)
 
     def getChild(self, run_id, _):
         if not run_id:
@@ -186,8 +207,8 @@ class JobResource(resource.Resource):
         if run_id in job.action_graph.names:
             action_runs = job.runs.get_action_runs(run_id)
             return ActionRunHistoryResource(action_runs)
-        msg = "Cannot find job run %s for %s"
-        return resource.NoResource(msg % (run_id, job))
+
+        return ErrorResource(f"Cannot find job run '{run_id}' for '{job}'")
 
     @AsyncResource.bounded
     def render_GET(self, request):
@@ -304,7 +325,15 @@ class JobCollectionResource(resource.Resource):
 
     @AsyncResource.exclusive
     def render_POST(self, request):
-        return handle_command(request, self.controller, self.job_collection)
+        old_name = requestargs.get_string(request, 'old_name')
+        new_name = requestargs.get_string(request, 'new_name')
+        return handle_command(
+            request=request,
+            api_controller=self.controller,
+            obj=self.job_collection,
+            old_name=old_name,
+            new_name=new_name,
+        )
 
 
 class ConfigResource(resource.Resource):
@@ -322,17 +351,13 @@ class ConfigResource(resource.Resource):
     @AsyncResource.bounded
     def render_GET(self, request):
         config_name = requestargs.get_string(request, 'name')
-        no_header = requestargs.get_bool(request, 'no_header')
         if not config_name:
             return respond(
                 request,
                 {'error': "'name' for config is required."},
                 code=http.BAD_REQUEST,
             )
-        response = self.controller.read_config(
-            config_name,
-            add_header=not no_header,
-        )
+        response = self.controller.read_config(config_name)
         return respond(request, response)
 
     @AsyncResource.exclusive

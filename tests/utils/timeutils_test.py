@@ -15,29 +15,6 @@ from tron.utils.timeutils import duration
 from tron.utils.timeutils import macro_timedelta
 
 
-class TestToTimestamp(TestCase):
-    def test_normal_time_with_timezone(self):
-        # 62 minutes after the epoch
-        start_date = pytz.utc.localize(datetime.datetime(1970, 1, 1, 1, 2))
-        assert_equal(timeutils.to_timestamp(start_date), 62 * 60)
-
-    def test_ambiguous_times(self):
-        pacific_tz = pytz.timezone("US/Pacific")
-        before_fall_back = timeutils.to_timestamp(
-            pacific_tz.localize(
-                datetime.datetime(2017, 11, 5, 1, 23),
-                is_dst=True,
-            ),
-        )
-        after_fall_back = timeutils.to_timestamp(
-            pacific_tz.localize(
-                datetime.datetime(2017, 11, 5, 1, 23),
-                is_dst=False,
-            ),
-        )
-        assert_equal(after_fall_back - before_fall_back, 60 * 60)
-
-
 class TestTimeDelta(TestCase):
     @setup
     def make_dates(self):
@@ -269,15 +246,15 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
             self._cmp_year('year-%s' % i, dt)
 
     def test_unixtime(self):
-        timestamp = int(timeutils.to_timestamp(self.now))
+        timestamp = int(self.now.timestamp())
         assert_equal(DateArithmetic.parse('unixtime'), timestamp)
 
     def test_unixtime_plus(self):
-        timestamp = int(timeutils.to_timestamp(self.now)) + 100
+        timestamp = int(self.now.timestamp()) + 100
         assert_equal(DateArithmetic.parse('unixtime+100'), timestamp)
 
     def test_unixtime_minus(self):
-        timestamp = int(timeutils.to_timestamp(self.now)) - 99
+        timestamp = int(self.now.timestamp()) - 99
         assert_equal(DateArithmetic.parse('unixtime-99'), timestamp)
 
     def test_daynumber(self):
@@ -306,6 +283,44 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
 
     def test_bad_date_format(self):
         assert DateArithmetic.parse('~~') is None
+
+
+class DateArithmeticYMDHTest(TestCase):
+    def test_ymd_plus(self):
+        def parse(*ymd):
+            return DateArithmetic.parse('ymd+1', datetime.datetime(*ymd))
+        assert_equal(parse(2018, 1, 1), '2018-01-02')
+        assert_equal(parse(2018, 1, 31), '2018-02-01')
+
+    def test_ymd_minus(self):
+        def parse(*ymd):
+            return DateArithmetic.parse('ymd-1', datetime.datetime(*ymd))
+        assert_equal(parse(2018, 1, 1), '2017-12-31')
+        assert_equal(parse(2018, 1, 2), '2018-01-01')
+
+    def test_ymdh_plus(self):
+        def parse(*ymdh):
+            return DateArithmetic.parse('ymdh+1', datetime.datetime(*ymdh))
+        assert_equal(parse(2018, 1, 1, 1), '2018-01-01T02')
+        assert_equal(parse(2018, 1, 31, 23), '2018-02-01T00')
+
+    def test_ymdh_minus(self):
+        def parse(*ymdh):
+            return DateArithmetic.parse('ymdh-1', datetime.datetime(*ymdh))
+        assert_equal(parse(2018, 1, 1, 1), '2018-01-01T00')
+        assert_equal(parse(2018, 1, 1, 0), '2017-12-31T23')
+
+    def test_ymdhm_plus(self):
+        def parse(*ymdhm):
+            return DateArithmetic.parse('ymdhm+1', datetime.datetime(*ymdhm))
+        assert_equal(parse(2018, 1, 1, 1, 1), '2018-01-01T01:02')
+        assert_equal(parse(2018, 1, 31, 23, 59), '2018-02-01T00:00')
+
+    def test_ymdhm_minus(self):
+        def parse(*ymdhm):
+            return DateArithmetic.parse('ymdhm-1', datetime.datetime(*ymdhm))
+        assert_equal(parse(2018, 1, 1, 1, 2), '2018-01-01T01:01')
+        assert_equal(parse(2018, 1, 1, 0, 0), '2017-12-31T23:59')
 
 
 class TestDateArithmeticWithTimezone(DateArithmeticTestCase):

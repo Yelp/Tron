@@ -1,17 +1,9 @@
 """
 Web Controllers for the API.
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
 
-import pkg_resources
-import six
-
-import tron
 from tron import yaml
-from tron.config import schema
 
 log = logging.getLogger(__name__)
 
@@ -24,14 +16,13 @@ class JobCollectionController(object):
     def __init__(self, job_collection):
         self.job_collection = job_collection
 
-    def handle_command(self, command):
-        if command == 'disableall':
-            self.job_collection.disable()
-            return "Disabled all jobs."
-
-        if command == 'enableall':
-            self.job_collection.enable()
-            return "Enabled all jobs."
+    def handle_command(self, command, old_name=None, new_name=None):
+        if command == 'move':
+            if old_name not in self.job_collection.get_names():
+                return f"Error: {old_name} doesn't exist"
+            if new_name in self.job_collection.get_names():
+                return f"Error: {new_name} exists already"
+            return self.job_collection.move(old_name, new_name)
 
         raise UnknownCommandError("Unknown command %s" % command)
 
@@ -145,28 +136,10 @@ class JobController(object):
         raise UnknownCommandError("Unknown command %s" % command)
 
 
-def format_seq(seq):
-    return "\n# ".join(sorted(seq))
-
-
-def format_mapping(mapping):
-    seq = ("%-30s: %s" % (k, v) for k, v in sorted(six.iteritems(mapping)))
-    return format_seq(seq)
-
-
 class ConfigController(object):
     """Control config. Return config contents and accept updated configuration
     from the API.
     """
-
-    TEMPLATE_FILE = 'named_config_template.yaml'
-
-    TEMPLATE = pkg_resources.resource_string(
-        tron.__name__,
-        TEMPLATE_FILE,
-    ).decode('utf-8')
-
-    HEADER_END = "{}\n".format(TEMPLATE.split('\n')[-2])
 
     DEFAULT_NAMED_CONFIG = "\njobs:\n"
 
@@ -174,44 +147,20 @@ class ConfigController(object):
         self.mcp = mcp
         self.config_manager = mcp.get_config_manager()
 
-    def render_template(self, config_content):
-        container = self.config_manager.load()
-        command_context = container.get_master().command_context or {}
-        context = {
-            'node_names': format_seq(container.get_node_names()),
-            'command_context': format_mapping(command_context),
-        }
-        header_content = self.TEMPLATE % context
-        return header_content + config_content
-
-    def strip_header(self, name, content):
-        if name == schema.MASTER_NAMESPACE:
-            return content
-
-        header_end_index = content.find(self.HEADER_END)
-        if header_end_index > -1:
-            return content[header_end_index + len(self.HEADER_END):]
-        return content
-
     def _get_config_content(self, name):
         if name not in self.config_manager:
             return self.DEFAULT_NAMED_CONFIG
         return self.config_manager.read_raw_config(name)
 
-    def read_config(self, name, add_header=True):
+    def read_config(self, name):
         config_content = self._get_config_content(name)
         config_hash = self.config_manager.get_hash(name)
-
-        if name != schema.MASTER_NAMESPACE and add_header:
-            config_content = self.render_template(config_content)
         return dict(config=config_content, hash=config_hash)
 
     def check_config(self, name, content, config_hash):
         """Update a configuration fragment and reload the MCP."""
         if self.config_manager.get_hash(name) != config_hash:
             return "Configuration update will fail: config is stale, try again"
-
-        content = self.strip_header(name, content)
 
         try:
             content = yaml.load(content)
@@ -223,7 +172,7 @@ class ConfigController(object):
         """Update a configuration fragment and reload the MCP."""
         if self.config_manager.get_hash(name) != config_hash:
             return "Configuration has changed. Please try again."
-        content = self.strip_header(name, content)
+
         try:
             self.config_manager.write_config(name, content)
             self.mcp.reconfigure()

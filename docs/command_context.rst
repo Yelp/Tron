@@ -10,37 +10,37 @@ command configuration.
 
 **shortdate**
     Run date in ``YYYY-MM-DD`` format. Supports simple arithmetic of the
-    form ``%(shortdate+6)s`` which returns a date 6 days in the future,
-    ``%(shortdate-2)s`` which returns a date 2 days before the run date.
+    form ``{shortdate+6}`` which returns a date 6 days in the future,
+    ``{shortdate-2}`` which returns a date 2 days before the run date.
 
 **year**
     Current year in ``YYYY`` format. Supports the same arithmetic operations
-    as `shortdate`. For example, ``%(year-1)s`` would return the year previous
+    as `shortdate`. For example, ``{year-1}`` would return the year previous
     to the run date.
 
 **month**
     Current month in `MM` format. Supports the same arithmetic operations
-    as `shortdate`. For example, ``%(month+2)s`` would return 2 months in the
+    as `shortdate`. For example, ``{month+2}`` would return 2 months in the
     future.
 
 **day**
     Current day in `DD` format. Supports the same arithmetic operations
-    as `shortdate`. For example, ``%(day+1)s`` would return the day after the
+    as `shortdate`. For example, ``{day+1}`` would return the day after the
     run date.
 
 **hour**
     Current hour in `HH` (0-23) format. Supports the same arithmetic operations
-    as `shortdate`. For example, ``%(hour+1)s`` would return the hour after the
+    as `shortdate`. For example, ``{hour+1}`` would return the hour after the
     run hour (mod 24).
 
 **unixtime**
     Current timestamp. Supports addition and subtraction of seconds. For
-    example ``%(unixtime+20)s`` would return the timestamp 20 seconds after
+    example ``{unixtime+20}`` would return the timestamp 20 seconds after
     the jobs runtime.
 
 **daynumber**
     Current day number as an ordinal (datetime.toordinal()). Supports addition
-    and subtraction of days. For example ``%(daynumber-3)s`` would be 3 days
+    and subtraction of days. For example ``{daynumber-3}`` would be 3 days
     before the run date.
 
 **name**
@@ -67,4 +67,4 @@ Context variables only available to Jobs
 **last_success**
     The last successful run date (defaults to current date if there was no
     previous successful run). Supports date arithmetic using the form
-    ``%(last_success:shortdate-1)s``.
+    ``{last_success#shortdate-1}``.

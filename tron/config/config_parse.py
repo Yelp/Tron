@@ -10,6 +10,7 @@ import getpass
 import itertools
 import logging
 import os
+from urllib.parse import urlparse
 
 import pytz
 import six
@@ -24,8 +25,8 @@ from tron.config.config_utils import build_dict_name_validator
 from tron.config.config_utils import build_list_of_type_validator
 from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import PartialConfigContext
+from tron.config.config_utils import StringFormatter
 from tron.config.config_utils import valid_bool
-from tron.config.config_utils import valid_context_variable_expr
 from tron.config.config_utils import valid_dict
 from tron.config.config_utils import valid_float
 from tron.config.config_utils import valid_identifier
@@ -67,8 +68,7 @@ def build_format_string_validator(context_object):
         )
 
         try:
-            valid_context_variable_expr(value, config_context)
-            value % context
+            StringFormatter(context).format(value)
             return value
         except (KeyError, ValueError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
@@ -152,6 +152,41 @@ def valid_node_name(value, config_context):
         msg = "Unknown node name %s at %s"
         raise ConfigError(msg % (value, config_context.path))
     return value
+
+
+def valid_master_address(value, config_context):
+    """Validates and normalizes Mesos master address.
+
+    Must be HTTP or not include a scheme, and only include
+    a host, without any path components.
+    """
+    valid_string(value, config_context)
+
+    # Parse with HTTP as default, only HTTP allowed.
+    scheme, netloc, path, params, query, fragment = urlparse(value, 'http')
+    if scheme != 'http':
+        msg = f"Only HTTP supported for Mesos master address, got {value}"
+        raise ConfigError(msg)
+
+    if params or query or fragment:
+        msg = f"Mesos master address may not contain path components, got {value}"
+        raise ConfigError(msg)
+
+    # Only one of netloc or path allowed, and no / except trailing ones.
+    # netloc is empty if there's no scheme, then we try the path.
+    path = path.rstrip('/')
+    if (netloc and path) or '/' in path:
+        msg = f"Mesos master address may not contain path components, got {value}"
+        raise ConfigError(msg)
+
+    if not netloc:
+        netloc = path
+
+    if not netloc:
+        msg = f"Mesos master address is missing host, got {value}"
+        raise ConfigError(msg)
+
+    return f'{scheme}://{netloc}'
 
 
 class ValidateConstraint(Validator):
@@ -316,6 +351,12 @@ def valid_mesos_action(action, config_context):
             )
 
 
+def valid_trigger_downstreams(trigger_downstreams, config_context):
+    if isinstance(trigger_downstreams, (type(None), bool, dict)):
+        return trigger_downstreams
+    raise ConfigError('must be None, bool or dict')
+
+
 class ValidateAction(Validator):
     """Validate an action."""
     config_class = ConfigAction
@@ -334,6 +375,9 @@ class ValidateAction(Validator):
         'docker_parameters': None,
         'env': None,
         'extra_volumes': None,
+        'trigger_downstreams': None,
+        'triggered_by': None,
+        'on_upstream_rerun': None,
     }
     requires = build_list_of_type_validator(
         valid_action_name,
@@ -372,6 +416,12 @@ class ValidateAction(Validator):
             valid_dict,
         'extra_volumes':
             build_list_of_type_validator(valid_volume, allow_empty=True),
+        'trigger_downstreams':
+            valid_trigger_downstreams,
+        'triggered_by':
+            build_list_of_type_validator(valid_string, allow_empty=True),
+        'on_upstream_rerun':
+            config_utils.build_enum_validator(schema.ActionOnRerun),
     }
 
     def post_validation(self, action, config_context):
@@ -404,6 +454,9 @@ class ValidateCleanupAction(Validator):
         'docker_parameters': None,
         'env': None,
         'extra_volumes': None,
+        'trigger_downstreams': None,
+        'triggered_by': None,
+        'on_upstream_rerun': None,
     }
     validators = {
         'name':
@@ -436,6 +489,12 @@ class ValidateCleanupAction(Validator):
             valid_dict,
         'extra_volumes':
             build_list_of_type_validator(valid_volume, allow_empty=True),
+        'trigger_downstreams':
+            valid_trigger_downstreams,
+        'triggered_by':
+            build_list_of_type_validator(valid_string, allow_empty=True),
+        'on_upstream_rerun':
+            config_utils.build_enum_validator(schema.ActionOnRerun),
     }
 
     def post_validation(self, action, config_context):
@@ -590,7 +649,7 @@ class ValidateMesos(Validator):
 
     validators = {
         'master_address':
-            valid_string,
+            valid_master_address,
         'master_port':
             valid_int,
         'secret':
@@ -648,6 +707,7 @@ class ValidateConfig(Validator):
         'node_pools': {},
         'jobs': (),
         'mesos_options': ConfigMesos(**ValidateMesos.defaults),
+        'eventbus_enabled': None,
     }
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
     nodes = build_dict_name_validator(valid_node, allow_empty=True)
@@ -661,6 +721,7 @@ class ValidateConfig(Validator):
         'nodes': nodes,
         'node_pools': node_pools,
         'mesos_options': valid_mesos_options,
+        'eventbus_enabled': valid_bool,
     }
     optional = False
 

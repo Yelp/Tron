@@ -9,9 +9,7 @@ from __future__ import unicode_literals
 
 import functools
 import time
-
-import six
-from six.moves.urllib.parse import quote
+from urllib.parse import quote
 
 from tron import actioncommand
 from tron import scheduler
@@ -44,7 +42,7 @@ class ReprAdapter(object):
         repr_data = {field: getattr(self._obj, field) for field in self.fields}
         translated = {
             field: func()
-            for field, func in six.iteritems(self.translators)
+            for field, func in self.translators.items()
         }
         repr_data.update(translated)
         return repr_data
@@ -78,7 +76,7 @@ class RunAdapter(ReprAdapter):
     """Base class for JobRun and ActionRun adapters."""
 
     def get_state(self):
-        return self._obj.state.name
+        return self._obj.state
 
     def get_node(self):
         return NodeAdapter(self._obj.node).get_repr()
@@ -116,6 +114,8 @@ class ActionRunAdapter(RunAdapter):
         'run_num',
         'retries_delay',
         'in_delay',
+        'triggered_by',
+        'trigger_downstreams',
     ]
 
     def __init__(
@@ -171,6 +171,18 @@ class ActionRunAdapter(RunAdapter):
         if self._obj.in_delay is not None:
             return self._obj.in_delay.getTime() - time.time()
 
+    def get_triggered_by(self) -> str:
+        remaining = set(self._obj.remaining_triggers)
+        all_triggers = sorted(self._obj.rendered_triggers)
+        return ', '.join(
+            f"{trig}{' (done)' if trig not in remaining else ''}"
+            for trig in all_triggers
+        )
+
+    def get_trigger_downstreams(self) -> str:
+        triggers_to_emit = self._obj.triggers_to_emit()
+        return ', '.join(sorted(triggers_to_emit))
+
 
 class ActionGraphAdapter(object):
     def __init__(self, action_graph):
@@ -201,7 +213,7 @@ class ActionRunGraphAdapter(object):
                 'name': action_run.action_name,
                 'command': action_run.rendered_command,
                 'raw_command': action_run.bare_command,
-                'state': action_run.state.name,
+                'state': action_run.state,
                 'start_time': action_run.start_time,
                 'end_time': action_run.end_time,
                 'dependent': [dep.name for dep in deps],

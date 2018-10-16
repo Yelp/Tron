@@ -13,7 +13,6 @@ from testifycompat import setup
 from testifycompat import teardown
 from testifycompat import TestCase
 from tests.assertions import assert_raises
-from tron.eventbus import make_eventbus
 from tron.trondaemon import PIDFile
 from tron.trondaemon import TronDaemon
 
@@ -71,11 +70,7 @@ class TronDaemonTestCase(TestCase):
     @setup
     def setup(self):
         self.tmpdir = tempfile.TemporaryDirectory()
-        self.logdir = os.path.join(self.tmpdir.name, "_events")
-        os.mkdir(self.logdir)
-
         trond_opts = mock.Mock()
-        trond_opts.nodaemon = True
         trond_opts.working_dir = self.tmpdir.name
         trond_opts.pid_file = os.path.join(self.tmpdir.name, "pidfile")
         self.trond = TronDaemon(trond_opts)
@@ -83,23 +78,3 @@ class TronDaemonTestCase(TestCase):
     @teardown
     def teardown(self):
         self.tmpdir.cleanup()
-
-    @mock.patch('tron.trondaemon.log', autospec=None)
-    def test_run_eventbus(self, _):
-        self.trond.setup_eventbus_dir = mock.Mock()
-        self.trond._run_eventbus()
-        assert self.trond.setup_eventbus_dir.call_count == 1
-
-    @mock.patch('tron.trondaemon.log', autospec=None)
-    def test_setup_eventbus_dir(self, _):
-        os.rmdir(self.logdir)
-
-        self.trond.eventbus = make_eventbus(self.logdir)
-        self.trond.eventbus.event_log = {"foo": "bar"}
-        self.trond.setup_eventbus_dir()
-        assert os.path.exists(self.logdir)
-        assert os.path.exists(os.path.join(self.logdir, "current"))
-
-        new_eb = make_eventbus(self.logdir)
-        new_eb.sync_load_log()
-        assert new_eb.event_log == self.trond.eventbus.event_log

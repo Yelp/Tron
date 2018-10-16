@@ -5,6 +5,7 @@ import logging
 
 from tron.actioncommand import NoActionRunnerFactory
 from tron.core.actionrun import ActionRun
+from tron.core.actionrun import MesosActionRun
 from tron.core.actionrun import SSHActionRun
 
 log = logging.getLogger(__name__)
@@ -13,25 +14,22 @@ log = logging.getLogger(__name__)
 def filter_action_runs_needing_recovery(action_runs):
     return [
         action_run for action_run in action_runs
-        if action_run.state == ActionRun.STATE_UNKNOWN
+        if action_run.state == ActionRun.UNKNOWN
     ]
 
 
-def filter_recoverable_action_runs(action_runs):
+def group_by_actionrun_type(action_runs):
     """
-    Given a list of action_runs, create a filtered list that only includes those that can be recovered
-    For now, the only test is whether the run is an SSHActionRun
+    Given a list of action_runs, group them by type.
     """
-    return [
-        action_run for action_run in action_runs
-        if isinstance(action_run, SSHActionRun)
-    ]
-
-
-def filter_recovery_candidates(runs):
-    return filter_recoverable_action_runs(
-        action_runs=filter_action_runs_needing_recovery(action_runs=runs),
-    )
+    ssh_runs = []
+    mesos_runs = []
+    for action_run in action_runs:
+        if isinstance(action_run, SSHActionRun):
+            ssh_runs.append(action_run)
+        elif isinstance(action_run, MesosActionRun):
+            mesos_runs.append(action_run)
+    return ssh_runs, mesos_runs
 
 
 def build_recovery_command(recovery_binary, path):
@@ -95,8 +93,9 @@ def recover_action_run(action_run, action_runner):
 
 def launch_recovery_actionruns_for_job_runs(job_runs, master_action_runner):
     for run in job_runs:
-        runs_to_recover = filter_recovery_candidates(run._action_runs)
-        for action_run in runs_to_recover:
+        to_recover = filter_action_runs_needing_recovery(run._action_runs)
+        ssh_runs, mesos_runs = group_by_actionrun_type(to_recover)
+        for action_run in ssh_runs:
             if type(action_run.action_runner) == NoActionRunnerFactory and \
                type(master_action_runner) != NoActionRunnerFactory:
                 action_runner = master_action_runner
@@ -105,3 +104,6 @@ def launch_recovery_actionruns_for_job_runs(job_runs, master_action_runner):
             deferred = recover_action_run(action_run, action_runner)
             if not deferred:
                 log.debug("unable to recover action run %s" % action_run.id)
+
+        for action_run in mesos_runs:
+            action_run.recover()

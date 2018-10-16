@@ -3,8 +3,6 @@ from __future__ import unicode_literals
 
 import logging
 
-import six
-
 from tron.core import action
 from tron.utils import maybe_decode
 from tron.utils.timeutils import delta_total_seconds
@@ -24,7 +22,7 @@ class ActionGraph(object):
         """Create this graph from a job config."""
         actions = {
             maybe_decode(name): action.Action.from_config(conf)
-            for name, conf in six.iteritems(actions_config)
+            for name, conf in actions_config.items()
         }
         if cleanup_action_config:
             cleanup_action = action.Action.from_config(cleanup_action_config)
@@ -36,7 +34,7 @@ class ActionGraph(object):
     def _build_dag(cls, actions, actions_config):
         """Return a directed graph from a dict of actions keyed by name."""
         base = []
-        for a in six.itervalues(actions):
+        for _, a in actions.items():
             dependencies = cls._get_dependencies(actions_config, a.name)
             if not dependencies:
                 base.append(a)
@@ -44,8 +42,8 @@ class ActionGraph(object):
 
             for dependency in dependencies:
                 dependency_action = actions[dependency]
-                a.required_actions.append(dependency_action)
-                dependency_action.dependent_actions.append(a)
+                a.required_actions.add(dependency_action.name)
+                dependency_action.dependent_actions.add(a.name)
         return base
 
     @classmethod
@@ -63,16 +61,29 @@ class ActionGraph(object):
         """
         if name not in self.action_map:
             return []
-        return self.action_map[name].required_actions
+
+        return (
+            self.action_map[action]
+            for action in self.action_map[name].required_actions
+        )
 
     def get_dependent_actions(self, name):
-        return self.action_map[name].dependent_actions
+        if name not in self.action_map:
+            return []
+
+        return (
+            self.action_map[action]
+            for action in self.action_map[name].dependent_actions
+        )
 
     def get_actions(self):
-        return six.itervalues(self.action_map)
+        return iter(val for _, val in self.action_map.items())
 
     def get_action_map(self):
         return self.action_map
+
+    def get_required_triggers(self, _action_name):
+        return []
 
     @property
     def names(self):

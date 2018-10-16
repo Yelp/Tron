@@ -1,3 +1,73 @@
+tron (0.9.6.4) trusty; urgency=medium
+
+  * 0.9.6.4 tagged with 'make release'
+    Commit: Released 0.9.6.3 via make release
+
+ -- root <root@01f20dd7c1de>  Mon, 15 Oct 2018 18:27:07 +0000
+
+tron (0.9.6.3) trusty; urgency=medium
+
+  * 0.9.6.3 tagged with 'make release'
+    Commit: Merge pull request #555 from Yelp/u/chl/TRON-
+    442_create_migrate_job_tool  add tronctl move command
+
+ -- root <root@ba6f1cb3e4b9>  Mon, 15 Oct 2018 17:52:20 +0000
+
+tron (0.9.6.2) trusty; urgency=medium
+
+  * 0.9.6.2 tagged with 'make release'
+    Commit: Merge pull request #548 from Yelp/skip-docs-diagram  Skip
+    state diagram in docs
+
+ -- root <root@ee50de3acebd>  Tue, 02 Oct 2018 12:23:05 +0000
+
+tron (0.9.6.1) trusty; urgency=medium
+
+  * 0.9.6.1 tagged with 'make release'
+    Commit: fix format string bugs (#538)  * fix format string bugs
+
+ -- root <root@3b2deac05b19>  Fri, 21 Sep 2018 23:46:13 +0000
+
+tron (0.9.6.0) trusty; urgency=medium
+
+  * 0.9.6.0 tagged with 'make release'
+  * Remove percent string support
+  * Fix bug with fail and retries
+  * Remove headers from tronfig
+  * Emit triggers for cross-job dependencies
+
+ -- root <root@6267c3201084>  Thu, 20 Sep 2018 01:20:15 +0000
+
+tron (0.9.5.1) trusty; urgency=medium
+
+  * 0.9.5.1 tagged with 'make release'
+  * Update taskproc to 0.1.2 for Mesos fixes
+  * Save jobs when re-configured
+  * Fix tronweb CSS
+  * Make scheme optional for Mesos master address
+  * More feedback on killing Mesos actions
+
+ -- root <root@df7a4a1e435e>  Mon, 10 Sep 2018 21:14:06 +0000
+
+tron (0.9.5.0) trusty; urgency=medium
+
+  * 0.9.5.0 tagged with 'make release'
+  * Increase upstart timeout
+  * Remove enableall/disableall from jobs controller
+  * Deprecate --nodaemon
+
+ -- root <root@dd45ed9b4f6d>  Wed, 05 Sep 2018 22:04:23 +0000
+
+tron (0.9.4.0) trusty; urgency=medium
+
+  * 0.9.4.0 tagged with 'make release'
+  * add string format support (#490)
+  * recover Mesos action runs on restart
+  * run reactor on separate thread
+  * job trigger configs and eventbus
+
+ -- root <root@a3969702bcb5>  Tue, 04 Sep 2018 22:23:25 +0000
+
 tron (0.9.3.0) trusty; urgency=medium
 
   * 0.9.3.0 tagged with 'make release'

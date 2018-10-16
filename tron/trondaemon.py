@@ -9,17 +9,17 @@ import logging
 import logging.config
 import os
 import signal
+import threading
+import time
 
-import daemon
+import ipdb
 import lockfile
 import pkg_resources
-import six
 from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.python import log as twisted_log
 
 import tron
-from tron.eventbus import make_eventbus
 from tron.manhole import make_manhole
 from tron.mesos import MesosClusterRepository
 from tron.utils import flockfile
@@ -83,8 +83,9 @@ class PIDFile(object):
         self._try_unlock()
         try:
             os.unlink(self.filename)
+            log.info(f"Removed pidfile: {self.filename}")
         except OSError:
-            log.warning("Failed to remove pidfile: %s" % self.filename)
+            log.warning(f"Failed to remove pidfile: {self.filename}")
 
 
 def setup_logging(options):
@@ -122,29 +123,21 @@ class NoDaemonContext(object):
     """A mock DaemonContext for running trond without being a daemon."""
 
     def __init__(self, **kwargs):
-        self.signal_map = kwargs.pop('signal_map', {})
         self.pidfile = kwargs.pop('pidfile', None)
         self.working_dir = kwargs.pop('working_directory', '.')
-        self.signal_map[signal.SIGUSR1] = self._handle_debug
-
-    def _handle_debug(self, *args):
-        import ipdb
-        ipdb.set_trace()
 
     def __enter__(self):
-        for signum, handler in six.iteritems(self.signal_map):
-            signal.signal(signum, handler)
-
         os.chdir(self.working_dir)
         if self.pidfile:
             self.pidfile.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        log.info("NoDaemonContext exit")
         if self.pidfile:
             self.pidfile.__exit__(exc_type, exc_val, exc_tb)
 
-    def terminate(self, *args):
-        pass
+    def terminate(self, signal_number, *_):
+        raise SystemExit(f"Terminating on signal {signal_number!r}")
 
 
 class TronDaemon(object):
@@ -153,22 +146,16 @@ class TronDaemon(object):
     def __init__(self, options):
         self.options = options
         self.mcp = None
-        nodaemon = self.options.nodaemon
-        context_class = NoDaemonContext if nodaemon else daemon.DaemonContext
-        self.context = self._build_context(options, context_class)
+        self.context = self._build_context(options)
+        self.manhole_sock = f"{self.options.working_dir}/manhole.sock"
 
-    def _build_context(self, options, context_class):
-        signal_map = {
-            signal.SIGHUP: self._handle_reconfigure,
-            signal.SIGINT: self._handle_shutdown,
-            signal.SIGTERM: self._handle_shutdown,
-        }
+    def _build_context(self, options):
         pidfile = PIDFile(options.pid_file)
-        return context_class(
+        return NoDaemonContext(
             working_directory=options.working_dir,
             umask=0o022,
             pidfile=pidfile,
-            signal_map=signal_map,
+            signal_map={},
             files_preserve=[pidfile.lock.file],
         )
 
@@ -179,33 +166,11 @@ class TronDaemon(object):
             self._run_www_api()
             self._run_manhole()
             self._run_reactor()
-            self._run_eventbus()
-
-    def setup_eventbus_dir(self):
-        """Create log directory and link to current log if those don't
-        already exist"""
-        if not os.path.exists(self.eventbus.log_dir):
-            log.warning(f"eventbus: creating {self.eventbus.log_dir}")
-            os.mkdir(self.eventbus.log_dir)
-
-        if not os.path.exists(self.eventbus.log_current) or not os.path.exists(
-            os.readlink(self.eventbus.log_current)
-        ):
-            log.warning(f"eventbus: creating {self.eventbus.log_current}")
-            self.eventbus.sync_save_log("initial save")
-
-    def _run_eventbus(self):
-        self.eventbus = make_eventbus(f"{self.options.working_dir}/_events")
-        self.setup_eventbus_dir()
-        # self.eventbus.start()
 
     def _run_manhole(self):
         self.manhole = make_manhole(dict(trond=self, mcp=self.mcp))
-
-        reactor.listenUNIX(
-            f"{self.options.working_dir}/manhole.sock", self.manhole
-        )
-        log.info(f"manhole started on {self.options.working_dir}/manhole.sock")
+        reactor.listenUNIX(self.manhole_sock, self.manhole, wantPID=1)
+        log.info(f"manhole started on {self.manhole_sock}")
 
     def _run_www_api(self):
         # Local import required because of reactor import in server and www
@@ -230,16 +195,43 @@ class TronDaemon(object):
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        reactor.run()
+        threading.Thread(
+            target=reactor.run,
+            daemon=True,
+            kwargs=dict(installSignalHandlers=0)
+        ).start()
+        signal_map = {
+            signal.SIGHUP: self._handle_reconfigure,
+            signal.SIGINT: self._handle_shutdown,
+            signal.SIGTERM: self._handle_shutdown,
+            signal.SIGQUIT: self._handle_shutdown,
+            signal.SIGUSR1: self._handle_debug,
+        }
+        while True:
+            signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
+            signum = signal.sigwait(set(signal_map.keys()))
+            logging.info("Got signal %s" % signum)
+            if signum in signal_map:
+                signal_map[signum](signum, None)
 
     def _handle_shutdown(self, sig_num, stack_frame):
-        log.info("Shutdown requested: sig %s" % sig_num)
+        log.info("Shutdown requested via %s" % sig_num)
+        reactor.callLater(0, reactor.stop)
+        waited = 0
+        while reactor.running:
+            if waited > 5:
+                log.error("timed out waiting for reactor shutdown")
+                break
+            time.sleep(0.1)
+            waited += 0.1
         if self.mcp:
             self.mcp.shutdown()
         MesosClusterRepository.shutdown()
-        reactor.stop()
         self.context.terminate(sig_num, stack_frame)
 
     def _handle_reconfigure(self, _signal_number, _stack_frame):
         log.info("Reconfigure requested by SIGHUP.")
         reactor.callLater(0, self.mcp.reconfigure)
+
+    def _handle_debug(self, _signal_number, _stack_frame):
+        ipdb.set_trace()
