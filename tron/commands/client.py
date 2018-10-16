@@ -1,14 +1,9 @@
 """
 A command line http client used by tronview, tronctl, and tronfig
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
+import urllib
 from collections import namedtuple
-
-from six.moves import filter
-from six.moves import urllib
 
 import tron
 from tron.config.schema import MASTER_NAMESPACE
@@ -21,7 +16,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-USER_AGENT = "Tron Command/%s +http://github.com/Yelp/Tron" % tron.__version__
+USER_AGENT = f"Tron Command/{tron.__version__} +http://github.com/Yelp/Tron"
 DECODE_ERROR = "DECODE_ERROR"
 URL_ERROR = 'URL_ERROR'
 
@@ -89,10 +84,8 @@ def request(uri, data=None):
 
 def build_get_url(url, data=None):
     if data:
-        return '{}?{}'.format(
-            url,
-            urllib.parse.urlencode(sorted(data.items())),
-        )
+        query_str = urllib.parse.urlencode(sorted(data.items()))
+        return f'{url}?{query_str}'
     else:
         return url
 
@@ -204,6 +197,7 @@ class TronObjectType(object):
     job = 'JOB'
     job_run = 'JOB_RUN'
     action_run = 'ACTION_RUN'
+    event = 'EVENT'
 
     url_builders = {
         'jobs': get_job_url,
@@ -232,7 +226,7 @@ def get_object_type_from_identifier(url_index, identifier):
 
     def get_name_parts(identifier, namespace=None):
         if namespace:
-            identifier = '%s.%s' % (namespace, identifier)
+            identifier = f'{namespace}.{identifier}'
 
         name_elements = identifier.split('.')
         name = '.'.join(name_elements[:2])

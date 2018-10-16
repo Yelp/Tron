@@ -236,8 +236,6 @@ class EventBus:
         new_subscriptions = defaultdict(list)
         removed = 0
         for prefix, subs in self.event_subscribers.items():
-            if prefix not in new_subscriptions:
-                new_subscriptions[prefix] = []
             for (sub, cb) in subs:
                 if sub == subscriber:
                     removed += 1

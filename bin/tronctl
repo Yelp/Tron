@@ -35,6 +35,8 @@ COMMAND_HELP = (
     ('stop', 'Stop the action run (SIGTERM)'),
     ('kill', 'Force kill the action run (SIGKILL)'),
     ('move', 'Rename a job'),
+    ('publish', 'Publish actionrun trigger'),
+    ('discard', 'Discard existing actionrun trigger'),
 )
 
 log = logging.getLogger('tronctl')
