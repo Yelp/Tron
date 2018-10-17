@@ -9,6 +9,7 @@ import logging
 import logging.config
 import os
 import signal
+import threading
 import time
 
 import ipdb
@@ -144,7 +145,7 @@ class NoDaemonContext(object):
             signal.signal(signum, handler)
 
     def terminate(self, signal_number, *_):
-        raise SystemExit(f"Terminating on signal {signal_number!r}")
+        raise SystemExit(f"Terminating on signal {str(signal_number)}")
 
 
 class TronDaemon(object):
@@ -153,35 +154,10 @@ class TronDaemon(object):
     def __init__(self, options):
         self.options = options
         self.mcp = None
+        self._sigint_handler = self._make_sigint_handler(
+            signal.getsignal(signal.SIGINT))
         self.context = self._build_context(options)
         self.manhole_sock = f"{self.options.working_dir}/manhole.sock"
-
-    def _make_sigint_handler(self, prev_handler=None):
-        """ Creates a SIGINT handler that takes into account a previous
-        handler to differentiate between a user request to shutdown, versus
-        another source we want to prevent from interrupting the reactor.
-
-        :type prev_handler: function
-        :param prev_handler: The previous SIGINT handler, set by another source.
-                             We use it to verify whether or not a SIGINT we
-                             received is a genuine shutdown request.
-        """
-        def handler(signum, frame):
-            try:
-                if prev_handler is not None:
-                    prev_handler(signum, frame)
-            except KeyboardInterrupt:
-                # Previous signal handler didn't raise another exception,
-                # so must be user requesting shutdown.
-                pass
-            except Exception as e:
-                # We received a SIGINT, but was caused by another thread
-                # aborting due to its own error. In this case, we don't want to
-                # stop running.
-                log.info(f"Non-reactor thread raised: {e}")
-                return
-            self._handle_shutdown(signum, frame)
-        return handler
 
     def _build_context(self, options):
         pidfile = PIDFile(options.pid_file)
@@ -190,13 +166,11 @@ class TronDaemon(object):
             umask=0o022,
             pidfile=pidfile,
             signal_map={
-                signal.SIGHUP: self._handle_reconfigure,
-                signal.SIGINT: self._make_sigint_handler(
-                    signal.getsignal(signal.SIGINT)
-                ),
-                signal.SIGTERM: self._handle_shutdown,
-                signal.SIGQUIT: self._handle_shutdown,
-                signal.SIGUSR1: self._handle_debug,
+                signal.SIGHUP: signal.SIG_DFL,
+                signal.SIGINT: signal.default_int_handler,
+                signal.SIGTERM: signal.SIG_DFL,
+                signal.SIGQUIT: signal.SIG_DFL,
+                signal.SIGUSR1: signal.SIG_DFL,
             },
             files_preserve=[pidfile.lock.file],
         )
@@ -237,10 +211,66 @@ class TronDaemon(object):
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        reactor.run()
+        signal_map = {
+            signal.SIGHUP: self._handle_reconfigure,
+            signal.SIGINT: self._sigint_handler,
+            signal.SIGTERM: self._handle_shutdown,
+            signal.SIGQUIT: self._handle_shutdown,
+            signal.SIGUSR1: self._handle_debug,
+        }
+        signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
+
+        threading.Thread(
+            target=reactor.run,
+            daemon=True,
+            kwargs=dict(installSignalHandlers=0)
+        ).start()
+
+        while True:
+            try:
+                # We use a sigtimedwait instead of a sigwait here because in the
+                # event other threads try to interrupt the main thread, a
+                # KeyboardInterrupt will be thrown. A sigwait will not unblock,
+                # but a sigtimedwait will.
+                signum = signal.sigtimedwait(set(signal_map.keys()), 0)
+                if signum is not None:
+                    signum = signal.Signals(signum.si_signo)
+            except KeyboardInterrupt:
+                signum = signal.SIGINT
+
+            if signum in signal_map:
+                logging.info(f"Got signal {str(signum)}")
+                signal_map[signum](signum, None)
+
+    def _make_sigint_handler(self, prev_handler=None):
+        """ Creates a SIGINT handler that takes into account a previous
+        handler to differentiate between a user request to shutdown, versus
+        another source we want to prevent from interrupting the reactor.
+
+        :type prev_handler: function
+        :param prev_handler: The previous SIGINT handler, set by another source.
+                             We use it to verify whether or not a SIGINT we
+                             received is a genuine shutdown request.
+        """
+        def handler(signum, frame):
+            try:
+                if prev_handler is not None:
+                    prev_handler(signum, frame)
+            except KeyboardInterrupt:
+                # Previous signal handler didn't raise another exception,
+                # so must be user requesting shutdown.
+                pass
+            except Exception as e:
+                # We received a SIGINT, but was caused by another thread
+                # aborting due to its own error. In this case, we don't want to
+                # stop running.
+                log.info(f"Non-reactor thread raised: {e}")
+                return
+            self._handle_shutdown(signum, frame)
+        return handler
 
     def _handle_shutdown(self, sig_num, stack_frame):
-        log.info("Shutdown requested via %s" % sig_num)
+        log.info(f"Shutdown requested via {str(sig_num)}")
         reactor.callLater(0, reactor.stop)
         waited = 0
         while reactor.running:
