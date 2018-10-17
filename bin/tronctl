@@ -164,7 +164,7 @@ def move(args):
 def backfill(args):
     if args.start_date is None:
         print("Error: For a backfill, --start-date must be set")
-        return
+        yield False
 
     if args.end_date is None:
         args.end_date = datetime.datetime.today()
