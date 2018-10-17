@@ -204,13 +204,34 @@ class EventsController:
     COMMANDS = {'publish', 'discard'}
 
     def publish(self, event):
+        if not EventBus.instance:
+            return dict(error='EventBus disabled')
+
         if EventBus.has_event(event):
-            log.info(f"event {event} already published")
-        else:
-            EventBus.publish(event)
+            msg = f"event {event} already published"
+            log.warning(msg)
+            return dict(response=msg)
+
+        if not EventBus.publish(event):
+            msg = f'could not publish {event}'
+            log.error(msg)
+            return dict(error=msg)
+
+        return dict(response='OK')
 
     def discard(self, event):
+        if not EventBus.instance:
+            return dict(error='EventBus disabled')
+
         if not EventBus.discard(event):
-            msg = f"event {event} could not be discarded"
+            msg = f"could not discard {event}"
             log.error(msg)
-            return msg
+            return dict(error=msg)
+
+        return dict(response='OK')
+
+    def info(self):
+        if not EventBus.instance:
+            return dict(error='EventBus disabled')
+
+        return dict(response=EventBus.instance.event_log)

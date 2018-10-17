@@ -54,10 +54,10 @@ class EventBus:
         EventBus.instance = None
 
     @staticmethod
-    def publish(message):
+    def publish(event):
         if not EventBus.instance:
             return
-        return EventBus.instance._publish(message)
+        return EventBus.instance._publish(event)
 
     @staticmethod
     def subscribe(prefix, subscriber, callback):
@@ -72,16 +72,16 @@ class EventBus:
         return EventBus.instance._clear_subscriptions(subscriber)
 
     @staticmethod
-    def has_event(message):
+    def has_event(event):
         if not EventBus.instance:
             return
-        return EventBus.instance._has_event(message)
+        return EventBus.instance._has_event(event)
 
     @staticmethod
     def discard(event):
         if not EventBus.instance:
             return
-        EventBus.instance._discard(event)
+        return EventBus.instance._discard(event)
 
     def __init__(self, log_dir):
         self.enabled = False

@@ -413,6 +413,15 @@ class EventsResource(resource.Resource):
         super().__init__()
         self.controller = controller.EventsController()
 
+    @AsyncResource.exclusive
+    def render_GET(self, request):
+        response = self.controller.info()
+        return respond(
+            request,
+            response,
+            code=http.INTERNAL_SERVER_ERROR if 'error' in response else http.OK
+        )
+
     @AsyncResource.bounded
     def render_POST(self, request):
         command = requestargs.get_string(request, 'command')
@@ -422,14 +431,13 @@ class EventsResource(resource.Resource):
                 dict(error=f'Unknown command: {command}'),
                 code=http.BAD_REQUEST,
             )
-
         event = requestargs.get_string(request, 'event')
         fn = getattr(self.controller, command)
-        err = fn(event)
+        response = fn(event)
         return respond(
             request,
-            dict(error=err),
-            code=http.BAD_REQUEST if err else http.OK
+            response,
+            code=http.INTERNAL_SERVER_ERROR if 'error' in response else http.OK
         )
 
 
