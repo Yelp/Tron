@@ -147,7 +147,7 @@ class TestActionRunGraphAdapter(TestCase):
         result = self.adapter.get_repr()
         assert len(result) == 2
         assert self.a1.id == result[0]['id']
-        assert self.a1.dependent_actions == result[0]['dependent']
+        assert ['a2'] == result[0]['dependent']
 
 
 class TestJobRunAdapter(TestCase):
