@@ -50,10 +50,6 @@ Optional Fields
       A comma-separated string of email destinations. Defaults to the "team"
       default.
 
-    **irc_channels**
-      A list of IRC channels to send alerts to. Defaults to the team setting.
-      Set an empty list to specify no IRC notifications.
-
     **slack_channels**
       A list of Slack channels to send alerts to. Defaults to the team setting.
       Set an empty list to specify no Slack notifications.
@@ -68,12 +64,6 @@ Optional Fields
     **tags** (default **None**)
       A list of arbitrary tags that can be used in handlers for different
       metadata needs.
-
-    **ttl** (default **None**)
-      A human readable time unit to set the check TTL. If the monitoring
-      framework does not hear from the check after this time unit, it will
-      spawn a new failing event. Defaults to None, meaning the framework will
-      only spawn events when it receives them.
 
     **component** (default **None**)
       A list of components affected by the event. A good example here would be

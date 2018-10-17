@@ -30,9 +30,8 @@ class State(Enum):
     STUCK = "stuck"
     NO_RUN_YET = "no_run_yet"
     NOT_SCHEDULED = "not_scheduled"
-    WAITING_FOR_FIRST_RUN = "waiting_for_first_run"
+    NO_RUNS_TO_CHECK = "no_runs_to_check"
     UNKNOWN = "unknown"
-    CANCELLED = "cancelled"
     SKIPPED = "skipped"
 
 
@@ -114,14 +113,11 @@ def compute_check_result_for_job_runs(client, job, job_content):
     if last_state == State.SUCCEEDED:
         prefix = "OK: The last job run succeeded"
         status = 0
-    elif last_state == State.WAITING_FOR_FIRST_RUN:
-        prefix = "OK: The job is 'new' and waiting for the first run"
+    elif last_state == State.NO_RUNS_TO_CHECK:
+        prefix = "OK: The job is 'new' and/or has no runs to check"
         status = 0
     elif last_state == State.SKIPPED:
         prefix = "OK: The last job run was skipped"
-        status = 0
-    elif last_state == State.CANCELLED:
-        prefix = "OK: The last job run was cancelled"
         status = 0
     elif last_state == State.STUCK:
         prefix = "WARN: Job exceeded expected runtime or still running when next job is scheduled"
@@ -201,13 +197,13 @@ def get_relevant_run_and_state(job_content):
         return run, State.STUCK
     for run in job_runs:
         state = run.get('state', 'unknown')
-        if state in ["failed", "succeeded", "unknown", "cancelled", "skipped"]:
+        if state in ["failed", "succeeded", "unknown", "skipped"]:
             return run, State(state)
         elif state in ["running"]:
             action_state = is_action_failed_or_unknown(run)
             if action_state != State.SUCCEEDED:
                 return run, action_state
-    return job_runs[0], State.WAITING_FOR_FIRST_RUN
+    return job_runs[0], State.NO_RUNS_TO_CHECK
 
 
 def is_action_failed_or_unknown(job_run):

@@ -986,7 +986,7 @@ class TestCheckJobs(TestCase):
 
 # These tests test job without succeeded/failed run scenarios
 
-    def test_job_waiting_for_first_run(self):
+    def test_job_no_runs_to_check(self):
         job_runs = {
             'status':
                 'scheduled',
@@ -1008,7 +1008,7 @@ class TestCheckJobs(TestCase):
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.1')
-        assert_equal(state, State.WAITING_FOR_FIRST_RUN)
+        assert_equal(state, State.NO_RUNS_TO_CHECK)
 
     def test_job_has_no_runs_at_all(self):
         job_runs = {
