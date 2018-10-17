@@ -77,6 +77,12 @@ class EventBus:
             return
         return EventBus.instance._has_event(message)
 
+    @staticmethod
+    def discard(event):
+        if not EventBus.instance:
+            return
+        EventBus.instance._discard(event)
+
     def __init__(self, log_dir):
         self.enabled = False
         self.event_log = {}
@@ -113,6 +119,12 @@ class EventBus:
         else:
             log.error(f"can't publish {event!r}, must be dict")
             return False
+
+    def _discard(self, event) -> bool:
+        if not self._has_event(event):
+            return False
+        del self.event_log[event]
+        return True
 
     def _subscribe(self, prefix, subscriber, callback):
         self.subscribe_queue.append((prefix, subscriber, callback))

@@ -2,7 +2,9 @@
 A command line http client used by tronview, tronctl, and tronfig
 """
 import logging
-import urllib
+import urllib.error
+import urllib.parse
+import urllib.request
 from collections import namedtuple
 
 import tron
@@ -32,10 +34,10 @@ default_headers = {
 }
 
 
-def build_url_request(uri, data, headers=None):
+def build_url_request(uri, data, headers=None, method=None):
     headers = headers or default_headers
     enc_data = urllib.parse.urlencode(data).encode() if data else None
-    return urllib.request.Request(uri, enc_data, headers)
+    return urllib.request.Request(uri, enc_data, headers=headers, method=method)
 
 
 def load_response_content(http_response):
@@ -67,9 +69,9 @@ def build_http_error_response(exc):
     return Response(exc.code, exc.msg, content)
 
 
-def request(uri, data=None):
+def request(uri, data=None, headers=None, method=None):
     log.info("Request to %s with %s", uri, data)
-    request = build_url_request(uri, data)
+    request = build_url_request(uri, data, headers=headers, method=method)
     try:
         response = urllib.request.urlopen(request)
     except urllib.error.HTTPError as e:

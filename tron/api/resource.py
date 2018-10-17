@@ -406,6 +406,33 @@ class StatusResource(resource.Resource):
         return respond(request, {'status': "I'm alive."})
 
 
+class EventsResource(resource.Resource):
+    isLeaf = True
+
+    def __init__(self):
+        super().__init__()
+        self.controller = controller.EventsController()
+
+    @AsyncResource.bounded
+    def render_POST(self, request):
+        command = requestargs.get_string(request, 'command')
+        if command not in self.controller.COMMANDS:
+            return respond(
+                request,
+                dict(error=f'Unknown command: {command}'),
+                code=http.BAD_REQUEST,
+            )
+
+        event = requestargs.get_string(request, 'event')
+        fn = getattr(self.controller, command)
+        err = fn(event)
+        return respond(
+            request,
+            dict(error=err),
+            code=http.BAD_REQUEST if err else http.OK
+        )
+
+
 class ApiRootResource(resource.Resource):
     def __init__(self, mcp):
         self._master_control = mcp
@@ -419,6 +446,7 @@ class ApiRootResource(resource.Resource):
 
         self.putChild(b'config', ConfigResource(mcp))
         self.putChild(b'status', StatusResource(mcp))
+        self.putChild(b'events', EventsResource())
         self.putChild(b'', self)
 
     @AsyncResource.bounded

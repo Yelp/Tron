@@ -4,6 +4,7 @@ Web Controllers for the API.
 import logging
 
 from tron import yaml
+from tron.eventbus import EventBus
 
 log = logging.getLogger(__name__)
 
@@ -197,3 +198,19 @@ class ConfigController(object):
 
     def get_namespaces(self):
         return self.config_manager.get_namespaces()
+
+
+class EventsController:
+    COMMANDS = {'publish', 'discard'}
+
+    def publish(self, event):
+        if EventBus.has_event(event):
+            log.info(f"event {event} already published")
+        else:
+            EventBus.publish(event)
+
+    def discard(self, event):
+        if not EventBus.discard(event):
+            msg = f"event {event} could not be discarded"
+            log.error(msg)
+            return msg
