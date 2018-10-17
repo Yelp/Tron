@@ -1,3 +1,10 @@
+tron (0.9.7.0) trusty; urgency=medium
+
+  * 0.9.7.0 tagged with 'make release'
+    Commit: fix typo in systemd unit file
+
+ -- root <root@e8a748ec4fd2>  Wed, 17 Oct 2018 17:37:58 +0000
+
 tron (0.9.6.5) trusty; urgency=medium
 
   * 0.9.6.5 tagged with 'make release'
