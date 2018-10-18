@@ -52,6 +52,11 @@ def respond(request, response_dict, code=http.OK, headers=None):
     for key, val in six.iteritems((headers or {})):
         request.setHeader(str(key), str(val))
 
+    # make sure the object can be serializable
+    for key, value in response_dict.items():
+        if isinstance(value, set):
+            response_dict[key] = list(value)
+
     result = json.dumps(
         response_dict,
         cls=JSONEncoder,
