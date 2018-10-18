@@ -238,8 +238,8 @@ class TronDaemon(object):
             except KeyboardInterrupt:
                 signum = signal.SIGINT
 
+            logging.info(f"Got signal {str(signum)}")
             if signum in signal_map:
-                logging.info(f"Got signal {str(signum)}")
                 signal_map[signum](signum, None)
 
     def _make_sigint_handler(self, prev_handler=None):
@@ -264,7 +264,7 @@ class TronDaemon(object):
                 # We received a SIGINT, but was caused by another thread
                 # aborting due to its own error. In this case, we don't want to
                 # stop running.
-                log.info(f"Non-reactor thread raised: {e}")
+                log.error(f"Non-reactor thread raised: {e}")
                 return
             self._handle_shutdown(signum, frame)
         return handler

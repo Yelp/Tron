@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import os
 import tempfile
+from collections import defaultdict
 
 import lockfile
 import mock
@@ -78,6 +79,29 @@ class TronDaemonTestCase(TestCase):
     @teardown
     def teardown(self):
         self.tmpdir.cleanup()
+
+    @mock.patch('tron.trondaemon.PIDFile', mock.Mock(), autospec=None)
+    def test_init(self):
+        daemon = TronDaemon.__new__(TronDaemon)  # skip __init__
+        daemon._make_sigint_handler = mock.Mock()
+        options = mock.Mock()
+        _sig_handlers = defaultdict(lambda: 'original_handler')
+
+        with mock.patch(
+            'signal.getsignal',
+            mock.Mock(side_effect=_sig_handlers.__getitem__),
+            autospec=None
+        ), mock.patch(
+            'signal.signal',
+            mock.Mock(side_effect=_sig_handlers.__setitem__),
+            autospec=None
+        ):
+            daemon.__init__(options)
+
+            assert daemon._make_sigint_handler.call_count == 1
+            assert daemon._make_sigint_handler.call_args == mock.call(
+                'original_handler'
+            )
 
     def test_make_sigint_handler_keyboardinterrupt(self):
         daemon = TronDaemon.__new__(TronDaemon)  # skip __init__
