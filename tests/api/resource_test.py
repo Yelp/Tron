@@ -154,6 +154,7 @@ class TestApiRootResource(WWWTestCase):
         expected_children = [
             b'jobs',
             b'config',
+            b'metrics',
             b'status',
             b'',
         ]
@@ -330,6 +331,28 @@ class TestConfigResource:
             'error': self.controller.delete_config.return_value,
         }
         mock_respond.assert_called_with(request, response_content)
+
+
+class TestMetricsResource:
+
+    @mock.patch('tron.api.resource.view_all_metrics', autospec=True)
+    def test_render_GET(self, mock_view_metrics, request, mock_respond):
+        resource = www.MetricsResource()
+        resource.render_GET(request)
+        mock_respond.assert_called_with(request, mock_view_metrics.return_value)
+
+
+class TestTronSite:
+
+    @mock.patch('tron.api.resource.meter', autospec=True)
+    def test_log_request(self, mock_meter):
+        site = www.TronSite.create(
+            mock.create_autospec(mcp.MasterControlProgram),
+            'webpath',
+        )
+        request = mock.Mock(code=500)
+        site.log(request)
+        assert mock_meter.call_count == 1
 
 
 if __name__ == '__main__':
