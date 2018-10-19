@@ -368,7 +368,7 @@ def compute_check_result_for_job(client, job):
     # We want to prevent a monitoring config from setting the check_every
     # attribute, since one config should not dictate how often this script runs
     sensu_kwargs = (pmap(job['monitoring'])
-                    .remove(PRECIOUS_JOB_ATTR)
+                    .discard(PRECIOUS_JOB_ATTR)
                     .discard('check_every'))
     kwargs = kwargs.update(sensu_kwargs)
 
