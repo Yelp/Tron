@@ -250,7 +250,7 @@ def build_groc_schedule_parser_re():
     DATE_SUFFIXES = 'st|nd|rd|th'
 
     # every|1st|2nd|3rd (also would accept 3nd, 1rd, 4st)
-    MONTH_DAYS_EXPR = '(?P<month_days>every|((\d+(%s),?)+))?' % DATE_SUFFIXES
+    MONTH_DAYS_EXPR = r'(?P<month_days>every|((\d+(%s),?)+))?' % DATE_SUFFIXES
     DAYS_EXPR = r'((?P<days>((%s),?)+))?' % DAY_VALUES
     MONTHS_EXPR = r'((in|of)\s+(?P<months>((%s),?)+))?' % MONTH_VALUES
 

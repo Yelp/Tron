@@ -113,6 +113,9 @@ class TestMesosTask(TestCase):
             task_config=mock.Mock(
                 cmd='echo hello world',
                 task_id=self.task_id,
+                cpus=0.1,
+                mem=100,
+                disk=100,
             ),
         )
         # Suppress logging
