@@ -1404,6 +1404,24 @@ class TestCheckPreciousJobs(TestCase):
         assert run_buckets['2018.10.14'] == []
 
     @patch('check_tron_jobs.Client', autospec=True)
+    def test_compute_check_result_for_job_not_precious(self, mock_client):
+        client = mock_client('fake_server')
+        del self.job['monitoring'][check_tron_jobs.PRECIOUS_JOB_ATTR]
+        check_tron_jobs.guess_realert_every = mock.Mock(return_value=1)
+        check_tron_jobs.get_object_type_from_identifier = \
+            mock.Mock(return_value=mock.Mock())
+        client.job = mock.Mock(return_value=self.job)
+        check_tron_jobs.compute_check_result_for_job_runs = mock.Mock(
+            return_value={'output': 'fake_output', 'status': 'fake_status'}
+        )
+
+        results = check_tron_jobs.compute_check_result_for_job(client, self.job)
+
+        assert len(results) == 1
+        assert results[0]['name'] == 'check_tron_job.fake_job'
+        assert check_tron_jobs.compute_check_result_for_job_runs.call_count == 1
+
+    @patch('check_tron_jobs.Client', autospec=True)
     def test_compute_check_result_for_job_disabled(self, mock_client):
         client = mock_client('fake_server')
         check_tron_jobs.guess_realert_every = mock.Mock(return_value=1)
