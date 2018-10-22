@@ -31,19 +31,16 @@ def parse_args():
     parser.add_argument(
         '--server',
         required=True,
-        # default='http://tronplayground-uswest1adevc.dev.yelpcorp.com:8089',
         help='specify the location of tron master'
     )
     parser.add_argument(
         '--old-ns',
         required=True,
-        # default='dsc-test-service',
         help='Old namespace'
     )
     parser.add_argument(
         '--new-ns',
         required=True,
-        # default='test_namespace',
         help='New namespace'
     )
     parser.add_argument(
@@ -69,12 +66,18 @@ def check_job_if_running(jobs_status, job_name):
     return False
 
 
-def command_jobs(command, jobs, args):
+def command_jobs(command, jobs, args, ns=None):
+    """ This function run tronctl command for the jobs
+    command: the tronctl command it will run
+    jobs: a list of jobs
+    args: the args for this script
+    ns: the namespace to use as the prefix for each job, if None, the scrip would use args.old_ns instead
+    """
     data = {'command': command}
     command_flag = True
     for job in jobs:
-        if command == 'enable':
-            job_name = args.new_ns + '.' + job['name']
+        if ns is not None:
+            job_name = ns + '.' + job['name']
         else:
             job_name = args.old_ns + '.' + job['name']
 
@@ -95,11 +98,14 @@ def command_jobs(command, jobs, args):
 
 
 def ssh_command(hostname, command):
+    print(bcolors.BOLD + 'Executing the command: ssh -A {} {}'.format(hostname, command) + bcolors.ENDC)
     ssh = subprocess.Popen(["ssh", "-A", hostname, command], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    exitcode = ssh.wait()
     result = ssh.stdout.readlines()
     error = ssh.stderr.readlines()
-    if error != []:
-        print(bcolors.BOLD + 'Execute command {}: {}'.format(command, error) + bcolors.ENDC)
+    if exitcode != 0:
+        print(bcolors.FAIL + 'Execute command {} failed: {}'.format(command, error) + bcolors.ENDC)
+        exit(exitcode)
     return result
 
 
@@ -111,24 +117,24 @@ def main():
         tron_client = client.Client(args.server)
         jobs_status = tron_client.jobs()
 
-        migration_flag = True
+        is_migration_safe = True
         with open(filename, "r") as f:
             jobs = yaml.load(f)['jobs']
             for job in jobs:
                 job_name = args.old_ns + '.' + job['name']
-                migration_flag = migration_flag & check_job_if_running(jobs_status, job_name)
+                is_migration_safe = is_migration_safe & check_job_if_running(jobs_status, job_name)
 
-        if migration_flag is True:
+        if is_migration_safe is True:
             print(bcolors.OKBLUE + "Jobs are not running. Disable all the jobs." + bcolors.ENDC)
         else:
             print(bcolors.WARNING + "Some jobs are still running, abort this migration," + bcolors.ENDC)
             return
 
-        if command_jobs('disable', jobs, args) is True:
+        if command_jobs('disable', jobs, args, ns=args.old_ns) is True:
             print(bcolors.OKBLUE + "Jobs disabled" + bcolors.ENDC)
         else:
             print(bcolors.WARNING + "Some jobs aren't disabled, starting recovery" + bcolors.ENDC)
-            if command_jobs('enable', jobs, args) is True:
+            if command_jobs('enable', jobs, args, ns=args.old_ns) is True:
                 print(bcolors.OKBLUE + "Recovery successfully: Jobs are enabled again." + bcolors.ENDC)
             else:
                 print(bcolors.WARNING + "Recovery failed: Please manually check the status of jobs" + bcolors.ENDC)
@@ -141,7 +147,7 @@ def main():
         res = input("Merge and push yelpsoa-configs branch. Ready to continue? [y/n]")
         if res == 'y':
             # wait for 10 seconds after pushing the branch
-            time.sleep(10)
+            time.sleep(30)
             # rsyn yelpsoa-configs
             command = "sudo rsync -a --delay-updates --contimeout=10 --timeout=10 --chmod=Du+rwx,go+rx --port=8731 --delete yelpsoa-slave.local.yelpcorp.com::yelpsoa-configs /nail/etc/services"
             ssh_command(hostname, command)
@@ -152,14 +158,11 @@ def main():
             # update new namespace
             ssh_command(hostname, "sudo paasta_setup_tron_namespace " + args.new_ns)
 
-            # update old namespace
-            ssh_command(hostname, "sudo paasta_setup_tron_namespace " + args.old_ns)
-
         # start cron
         ssh_command(hostname, "sudo service cron start")
 
         print(bcolors.OKBLUE + "Jobs migration are done. Enable all jobs" + bcolors.ENDC)
-        if command_jobs('enable', jobs, args) is True:
+        if command_jobs('enable', jobs, args, ns=args.new_ns) is True:
             print(bcolors.OKBLUE + "Jobs are running at namespace {}".format(args.new_ns) + bcolors.ENDC)
         else:
             print(bcolors.WARNING + "Something wrong, please manually check the status of jobs" + bcolors.ENDC)
