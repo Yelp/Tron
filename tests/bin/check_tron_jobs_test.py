@@ -534,7 +534,7 @@ class TestCheckJobs(TestCase):
 
 # These tests test job/action stuck scenarios
 
-    def test_job_stuck(self):
+    def test_job_next_run_starting_no_overlap_is_stuck(self):
         job_runs = {
             'status':
                 'running',
@@ -573,6 +573,62 @@ class TestCheckJobs(TestCase):
         assert_equal(run['id'], 'MASTER.test.1')
         assert_equal(state, State.STUCK)
 
+    def test_job_next_run_starting_overlap_allowed_not_stuck(self):
+        job_runs = {
+            'status':
+                'running',
+            'next_run':
+                None,
+            'allow_overlap': True,
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.3',
+                    'state':
+                        'queued',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                    'end_time':
+                        None,
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'running',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1200),
+                        ),
+                    'end_time':
+                        None,
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1700),
+                        ),
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run['id'], 'MASTER.test.1')
+        assert_equal(state, State.SUCCEEDED)
+
     def test_job_running_job_exceeds_expected_runtime(self):
         job_runs = {
             'status':
@@ -581,6 +637,7 @@ class TestCheckJobs(TestCase):
                 None,
             'expected_runtime':
                 480.0,
+            'allow_overlap': True,
             'runs': [
                 {
                     'id':
