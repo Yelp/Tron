@@ -238,8 +238,8 @@ class TronDaemon(object):
             except KeyboardInterrupt:
                 signum = signal.SIGINT
 
-            logging.info(f"Got signal {str(signum)}")
             if signum in signal_map:
+                logging.info(f"Got signal {str(signum)}")
                 signal_map[signum](signum, None)
 
     def _make_sigint_handler(self, prev_handler=None):
