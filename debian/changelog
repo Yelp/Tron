@@ -1,3 +1,11 @@
+tron (0.9.8.1) trusty; urgency=medium
+
+  * 0.9.8.1 tagged with 'make release'
+    Commit: Merge pull request #569 from Yelp/signal-none  Don't log
+    other signals
+
+ -- root <root@451d5f0d3ffd>  Tue, 23 Oct 2018 23:30:47 +0000
+
 tron (0.9.8.0) trusty; urgency=medium
 
   * 0.9.8.0 tagged with 'make release'
