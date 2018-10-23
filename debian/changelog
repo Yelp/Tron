@@ -1,3 +1,11 @@
+tron (0.9.8.0) trusty; urgency=medium
+
+  * 0.9.8.0 tagged with 'make release'
+    Commit: Merge pull request #566 from Yelp/monitoring-allow-overlap
+    If runs are allowed to overlap, don't consider that case stuck
+
+ -- root <root@7d14a7a2764c>  Tue, 23 Oct 2018 20:51:02 +0000
+
 tron (0.9.7.0) trusty; urgency=medium
 
   * 0.9.7.0 tagged with 'make release'
