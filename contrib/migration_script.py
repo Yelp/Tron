@@ -161,6 +161,9 @@ def main():
         # start cron
         ssh_command(hostname, "sudo service cron start")
 
+        #clean up namespace
+        ssh_command(hostname, "sudo paasta_cleanup_tron_namespaces")
+
         print(bcolors.OKBLUE + "Jobs migration are done. Enable all jobs" + bcolors.ENDC)
         if command_jobs('enable', jobs, args, ns=args.new_ns) is True:
             print(bcolors.OKBLUE + "Jobs are running at namespace {}".format(args.new_ns) + bcolors.ENDC)
