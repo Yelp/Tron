@@ -199,7 +199,6 @@ class TronObjectType(object):
     job = 'JOB'
     job_run = 'JOB_RUN'
     action_run = 'ACTION_RUN'
-    event = 'EVENT'
 
     url_builders = {
         'jobs': get_job_url,
