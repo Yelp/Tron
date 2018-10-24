@@ -59,8 +59,8 @@ def warn_node_pools(content):
         return
 
     print(
-        "\n\nNode Pools should be moved into a node_pools section." +
-        " The following node pools were found:\n" +
+        "\n\nNode Pools should be moved into a node_pools section."
+        " The following node pools were found:\n"
         "\n".join(str(n) for n in node_pools),
         file=sys.stderr,
     )

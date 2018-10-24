@@ -61,8 +61,7 @@ def filter_jobs_actions_runs(prefix, inputs):
         # If what a user typed is exactly what is already in a suggestion, then we need to give them
         # Even more suggestions (+1)
         return [
-            i for i in inputs if i.startswith(prefix) and
-            (i.count('.') == dots or i.count('.') == dots + 1)
+            i for i in inputs if i.startswith(prefix) and (i.count('.') == dots or i.count('.') == dots + 1)
         ]
     else:
         # Otherwise we only want to scope our suggestions to those that are on the same "level"
