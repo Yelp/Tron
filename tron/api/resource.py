@@ -20,9 +20,12 @@ except ImportError:
 
 from twisted.web import http, resource, static, server
 
+from tron import __version__
 from tron.api import adapter, controller
 from tron.api import requestargs
 from tron.api.async_resource import AsyncResource
+from tron.metrics import view_all_metrics
+from tron.metrics import meter
 from tron.utils import maybe_decode
 
 log = logging.getLogger(__name__)
@@ -403,7 +406,22 @@ class StatusResource(resource.Resource):
 
     @AsyncResource.bounded
     def render_GET(self, request):
-        return respond(request, {'status': "I'm alive."})
+        return respond(request, {
+            'status': "I'm alive.",
+            'version': __version__,
+        })
+
+
+class MetricsResource(resource.Resource):
+
+    isLeaf = True
+
+    def __init__(self):
+        resource.Resource.__init__(self)
+
+    @AsyncResource.exclusive
+    def render_GET(self, request):
+        return respond(request, view_all_metrics())
 
 
 class EventsResource(resource.Resource):
@@ -455,6 +473,7 @@ class ApiRootResource(resource.Resource):
         self.putChild(b'config', ConfigResource(mcp))
         self.putChild(b'status', StatusResource(mcp))
         self.putChild(b'events', EventsResource())
+        self.putChild(b'metrics', MetricsResource())
         self.putChild(b'', self)
 
     @AsyncResource.bounded
@@ -508,6 +527,17 @@ class TronSite(server.Site):
     def startFactory(self):
         server.Site.startFactory(self)
         self.logFile = LogAdapter(self.access_log)
+
+    def log(self, request):
+        super().log(request)
+        if 200 <= request.code < 300:
+            meter('tron.site.2xx')
+        if 300 <= request.code < 400:
+            meter('tron.site.3xx')
+        if 400 <= request.code < 500:
+            meter('tron.site.4xx')
+        if 500 <= request.code < 600:
+            meter('tron.site.5xx')
 
     def __repr__(self):
         return '%s(%s)' % (self.__class__.__name__, self.resource)

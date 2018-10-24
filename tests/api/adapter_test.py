@@ -20,6 +20,7 @@ from tron.api.adapter import ActionRunAdapter
 from tron.api.adapter import JobRunAdapter
 from tron.api.adapter import ReprAdapter
 from tron.api.adapter import RunAdapter
+from tron.core import actiongraph
 from tron.core import actionrun
 from tron.core import job
 
@@ -131,18 +132,22 @@ class TestActionRunAdapter(TestCase):
 class TestActionRunGraphAdapter(TestCase):
     @setup
     def setup_adapter(self):
+        self.a1 = mock.MagicMock(action_name="a1", dependent_actions=['a2'])
+        self.a2 = mock.MagicMock(action_name="a2")
         self.action_runs = mock.create_autospec(
             actionrun.ActionRunCollection,
-            action_graph=mock.MagicMock(),
+            action_graph=actiongraph.ActionGraph(
+                [self.a1], {'a1': self.a1, 'a2': self.a2}
+            ),
         )
         self.adapter = adapter.ActionRunGraphAdapter(self.action_runs)
-        self.action_run = mock.MagicMock()
-        self.action_runs.__iter__.return_value = [self.action_run]
+        self.action_runs.__iter__.return_value = [self.a1, self.a2]
 
     def test_get_repr(self):
         result = self.adapter.get_repr()
-        assert_equal(len(result), 1)
-        assert_equal(self.action_run.id, result[0]['id'])
+        assert len(result) == 2
+        assert self.a1.id == result[0]['id']
+        assert ['a2'] == result[0]['dependent']
 
 
 class TestJobRunAdapter(TestCase):

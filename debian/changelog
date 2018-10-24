@@ -1,3 +1,34 @@
+tron (0.9.8.1) trusty; urgency=medium
+
+  * 0.9.8.1 tagged with 'make release'
+    Commit: Merge pull request #569 from Yelp/signal-none  Don't log
+    other signals
+
+ -- root <root@451d5f0d3ffd>  Tue, 23 Oct 2018 23:30:47 +0000
+
+tron (0.9.8.0) trusty; urgency=medium
+
+  * 0.9.8.0 tagged with 'make release'
+    Commit: Merge pull request #566 from Yelp/monitoring-allow-overlap
+    If runs are allowed to overlap, don't consider that case stuck
+
+ -- root <root@7d14a7a2764c>  Tue, 23 Oct 2018 20:51:02 +0000
+
+tron (0.9.7.0) trusty; urgency=medium
+
+  * 0.9.7.0 tagged with 'make release'
+    Commit: fix typo in systemd unit file
+
+ -- root <root@e8a748ec4fd2>  Wed, 17 Oct 2018 17:37:58 +0000
+
+tron (0.9.6.5) trusty; urgency=medium
+
+  * 0.9.6.5 tagged with 'make release'
+    Commit: Merge pull request #561 from Yelp/fix-dependent  Fix
+    actiongraph adapter failing to render dependent actions
+
+ -- root <root@473767c09859>  Tue, 16 Oct 2018 17:37:45 +0000
+
 tron (0.9.6.4) trusty; urgency=medium
 
   * 0.9.6.4 tagged with 'make release'

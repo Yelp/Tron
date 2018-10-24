@@ -4,6 +4,7 @@
 import logging
 from collections import deque
 
+import tron.metrics as metrics
 from tron import command_context
 from tron import node
 from tron.core.actionrun import ActionRun
@@ -227,6 +228,7 @@ class JobRun(Observable, Observer):
 
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
+        metrics.meter(f'tron.actionrun.{event}')
 
         if not action_run.is_done:
             return

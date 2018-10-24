@@ -64,7 +64,7 @@ dev:
 example_cluster:
 	tox -e example-cluster
 
-LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/\x27/"/g')
+LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/\x27/\\\x27/g')
 release: docker_trusty docs
 	$(DOCKER_RUN) tron-builder-trusty /bin/bash -c " \
 		dch -v $(VERSION) --distribution trusty --changelog debian/changelog \

@@ -30,8 +30,54 @@ Optional Fields
 ---------------
 
 **monitoring** (default **{}**)
-    (Beta Feature) Dictionary of key: value pairs to inform the monitoring
-    framework on how to alert teams for job failures.
+    Dictionary of key: value pairs to inform the monitoring framework on how to
+    alert teams for job failures.
+
+    **team**
+      Team responsible for the job. Must already be defined in the monitoring
+      framework.
+
+    **page** (default **False**)
+      Boolean on whether or not an alert for this job is page-worthy.
+
+    **runbook**
+      Runbook associated with the job.
+
+    **tip** (default **None**)
+      A short 1-line version of the runbook.
+
+    **notification_email**
+      A comma-separated string of email destinations. Defaults to the "team"
+      default.
+
+    **slack_channels**
+      A list of Slack channels to send alerts to. Defaults to the team setting.
+      Set an empty list to specify no Slack notifications.
+
+    **ticket** (default **False**)
+      A Boolean value to enable ticket creation.
+
+    **project** (default **None**)
+      A string representing the JIRA project that the ticket should go under.
+      Defaults to the team value.
+
+    **tags** (default **None**)
+      A list of arbitrary tags that can be used in handlers for different
+      metadata needs.
+
+    **component** (default **None**)
+      A list of components affected by the event. A good example here would be
+      to include the job that is being affected.
+
+    **description** (default **None**)
+      Human readable text giving more context on any monitoring events.
+
+    **check_that_every_day_has_a_successful_run** (default **False**)
+      If **True**, the latest job run each day will be checked to see if it was
+      successful.
+
+      If **False**, only the latest overall run will be checked to see if it was
+      successful.
 
 **queueing** (default **True**)
     If a job run is still running when the next job run is to be scheduled,
