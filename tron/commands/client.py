@@ -110,6 +110,9 @@ class Client(object):
     def status(self):
         return self.http_get('/api/status')
 
+    def metrics(self):
+        return self.http_get('/api/metrics')
+
     def config(
         self,
         config_name,
