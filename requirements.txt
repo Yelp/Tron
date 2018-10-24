@@ -1,15 +1,1 @@
-bsddb3
-cryptography>=2.1.4
-dataclasses>=0.6
-ipdb
-ipython
-psutil
-pyasn1>=0.0.13
-pycrypto>=2.4
-pytest
-pytimeparse
-pytz>=2011n
-PyYAML>=3.0
-requests
-task_processing[mesos_executor]>=0.1.2
-Twisted>=17.0.0
+-e .
