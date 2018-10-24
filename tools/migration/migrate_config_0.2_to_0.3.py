@@ -84,8 +84,8 @@ def warn_requires_list(content):
         return
 
     print(
-        "\n\nAction requires should be a list." +
-        " The following actions have requires that are not lists:\n" +
+        "\n\nAction requires should be a list."
+        " The following actions have requires that are not lists:\n"
         "\n".join(action_names),
         file=sys.stderr,
     )
