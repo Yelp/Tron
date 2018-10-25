@@ -6,6 +6,7 @@ ipython
 psutil
 pyasn1>=0.0.13
 pycrypto>=2.4
+pyflakes >= 0.8.0
 pytest
 pytimeparse
 pytz>=2011n
