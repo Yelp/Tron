@@ -61,6 +61,14 @@ def parse_cli():
         default=0,
     )
     parser.add_argument(
+        "--events",
+        "-E",
+        action="count",
+        dest="events",
+        help="Display stored events",
+        default=0,
+    )
+    parser.add_argument(
         'name',
         nargs='?',
         help='job name | job run id | action id',
@@ -144,6 +152,10 @@ def main():
 
     display.Color.toggle(args.display_color)
     client = Client(args.server)
+
+    if args.events:
+        print(client.request("/api/events"))
+        return
 
     if not args.name:
         output = view_all(args, client)
