@@ -7,6 +7,7 @@ from collections import defaultdict
 
 import lockfile
 import mock
+import pytest
 
 from testifycompat import assert_equal
 from testifycompat import assert_in
@@ -38,15 +39,32 @@ class TestPIDFile(TestCase):
     def test_check_if_pidfile_exists_file_locked(self):
         assert_raises(lockfile.AlreadyLocked, PIDFile, self.filename)
 
-    def test_check_if_pidfile_exists_file_exists(self):
+    def test_check_if_pidfile_exists_file_exists_daemon_running(self):
         self.pidfile.__exit__(None, None, None)
         with open(self.filename, 'w') as fh:
             fh.write('123\n')
 
         with mock.patch.object(PIDFile, 'is_process_running') as mock_method:
             mock_method.return_value = True
+
             exception = assert_raises(SystemExit, PIDFile, self.filename)
             assert_in('Daemon running as 123', str(exception))
+
+    def test_check_if_pidfile_exists_orphaned_file_exists(self):
+        self.pidfile.__exit__(None, None, None)
+        with open(self.filename, 'w') as fh:
+            fh.write('123\n')
+
+        with mock.patch.object(PIDFile, 'is_process_running') as mock_method:
+            mock_method.return_value = False
+
+            try:
+                PIDFile(self.filename)
+            except SystemExit:
+                pytest.fail(
+                    "SystemExit raised when pid file "
+                    "should have been reused"
+                )
 
     def test_is_process_running(self):
         assert self.pidfile.is_process_running(os.getpid())
@@ -74,12 +92,14 @@ class TronDaemonTestCase(TestCase):
         trond_opts = mock.Mock()
         trond_opts.working_dir = self.tmpdir.name
         trond_opts.pid_file = os.path.join(self.tmpdir.name, "pidfile")
-        self.trond = TronDaemon(trond_opts)
+        with mock.patch('tron.trondaemon.setup_logging', autospec=True):
+            self.trond = TronDaemon(trond_opts)
 
     @teardown
     def teardown(self):
         self.tmpdir.cleanup()
 
+    @mock.patch('tron.trondaemon.setup_logging', mock.Mock(), autospec=None)
     @mock.patch('tron.trondaemon.PIDFile', mock.Mock(), autospec=None)
     def test_init(self):
         daemon = TronDaemon.__new__(TronDaemon)  # skip __init__
@@ -129,3 +149,39 @@ class TronDaemonTestCase(TestCase):
         handler('fake_signum', 'fake_frame')
 
         daemon._handle_shutdown.call_count == 0
+
+    def test_run_manhole_reuse_manhole(self):
+        manhole_lock = f"{self.trond.manhole_sock}.lock"
+
+        try:
+            with open(
+                self.trond.manhole_sock,
+                'w+'
+            ), open(
+                manhole_lock,
+                'w+'
+            ), mock.patch(
+                'twisted.internet.reactor.listenUNIX',
+                autospec=True,
+            ) as mock_listenUNIX:
+                self.trond._run_manhole()
+
+                assert mock_listenUNIX.call_count == 1
+        finally:
+            os.remove(self.trond.manhole_sock)
+            os.remove(manhole_lock)
+
+    def test_run_manhole_new_manhole(self):
+        with open(self.trond.manhole_sock, 'w+'):
+            pass
+
+        with mock.patch(
+            'twisted.internet.reactor.listenUNIX',
+            autospec=True,
+        ) as mock_listenUNIX:
+            self.trond._run_manhole()
+
+            assert mock_listenUNIX.call_count == 1
+            # _run_manhole will remove the old manhole.sock but not recreate
+            # it because we mocked out listenUNIX
+            assert not os.path.exists(self.trond.manhole_sock)

@@ -48,15 +48,13 @@ class PIDFile(object):
 
         if self.is_process_running(pid):
             self._try_unlock()
-            raise SystemExit(f"Daemon running as {pid}")
+            error_msg = f"Daemon running as {pid} without lock"
+            log.error(error_msg)
+            raise SystemExit(error_msg)
 
         if pid:
-            self._try_unlock()
-            raise SystemExit(
-                f"A tron pidfile is already present at {self.filename} using "
-                f"PID {pid}. The existing pidfile must be removed before "
-                "starting another tron daemon."
-            )
+            log.info(f"Reusing orphaned tron pidfile: {self.filename}")
+            self.lock.file.truncate(0)
 
     def is_process_running(self, pid):
         """Return True if the process is still running."""
@@ -152,6 +150,8 @@ class TronDaemon(object):
 
     def __init__(self, options):
         self.options = options
+        setup_logging(self.options)
+
         self.mcp = None
         self._sigint_handler = self._make_sigint_handler(
             signal.getsignal(signal.SIGINT)
@@ -177,13 +177,22 @@ class TronDaemon(object):
 
     def run(self):
         with self.context:
-            setup_logging(self.options)
             self._run_mcp()
             self._run_www_api()
             self._run_manhole()
             self._run_reactor()
 
     def _run_manhole(self):
+        # This condition is made with the assumption that no existing daemon
+        # is running. If there is one, the following code could potentially
+        # cause problems for the other daemon by removing its socket.
+        if (os.path.exists(self.manhole_sock) and
+                not os.path.exists(f"{self.manhole_sock}.lock")):
+            # A socket was left behind but without its lock, so we can't reuse
+            # it. Therefore, we need to delete it.
+            log.info('Removing orphaned manhole socket')
+            os.remove(self.manhole_sock)
+
         self.manhole = make_manhole(dict(trond=self, mcp=self.mcp))
         reactor.listenUNIX(self.manhole_sock, self.manhole, wantPID=1)
         log.info(f"manhole started on {self.manhole_sock}")
