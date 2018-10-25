@@ -197,6 +197,8 @@ class JobScheduler(Observer):
 
     def update_name(self, name):
         self.job.name = name
+        for run in self.get_job_runs():
+            run.job_name = name
         self.job.runs.remove_pending()
         self.create_and_schedule_runs(ignore_last_run_time=False)
 
