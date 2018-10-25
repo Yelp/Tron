@@ -1,7 +1,7 @@
-from unittest import TestCase
+from unittest import TestCase  # noqa: F401
 
-from testifycompat.assertions import *
-from testifycompat.fixtures import *
+from testifycompat.assertions import *  # noqa: F401, F403
+from testifycompat.fixtures import *  # noqa: F401, F403
 
 
 version = '0.1.2'
