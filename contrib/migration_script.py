@@ -130,17 +130,7 @@ def main():
             print(bcolors.WARNING + "Some jobs are still running, abort this migration," + bcolors.ENDC)
             return
 
-        if command_jobs('disable', jobs, args, ns=args.old_ns) is True:
-            print(bcolors.OKBLUE + "Jobs disabled" + bcolors.ENDC)
-        else:
-            print(bcolors.WARNING + "Some jobs aren't disabled, starting recovery" + bcolors.ENDC)
-            if command_jobs('enable', jobs, args, ns=args.old_ns) is True:
-                print(bcolors.OKBLUE + "Recovery successfully: Jobs are enabled again." + bcolors.ENDC)
-            else:
-                print(bcolors.WARNING + "Recovery failed: Please manually check the status of jobs" + bcolors.ENDC)
-            return
-
-        # stop cron
+        # try stop cron
         ssh_command(hostname, "sudo service cron stop")
 
         # wait unitil yelpsoa-configs branch is merged
@@ -158,17 +148,12 @@ def main():
             # update new namespace
             ssh_command(hostname, "sudo paasta_setup_tron_namespace " + args.new_ns)
 
-        # start cron
-        ssh_command(hostname, "sudo service cron start")
-
         #clean up namespace
         ssh_command(hostname, "sudo paasta_cleanup_tron_namespaces")
 
-        print(bcolors.OKBLUE + "Jobs migration are done. Enable all jobs" + bcolors.ENDC)
-        if command_jobs('enable', jobs, args, ns=args.new_ns) is True:
-            print(bcolors.OKBLUE + "Jobs are running at namespace {}".format(args.new_ns) + bcolors.ENDC)
-        else:
-            print(bcolors.WARNING + "Something wrong, please manually check the status of jobs" + bcolors.ENDC)
+        # start cron
+        ssh_command(hostname, "sudo service cron start")
+
     return
 
 
