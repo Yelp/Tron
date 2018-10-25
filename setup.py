@@ -31,13 +31,14 @@ setup(
     install_requires=[
         'argcomplete==1.9.4',
         'bsddb3==6.2.6',
-        'cryptography==2.3.1',
+        'cryptography==2.3.1',  # Twisted dependency for SSH
         'dataclasses==0.6',
         'humanize==0.5.1',
         'ipdb==0.11',
         'ipython==6.5.0',
         'lockfile==0.12.2',
         'psutil==5.4.7',
+        'pyasn1==0.4.4',  # Twisted dependency for SSH
         'pyformance==0.4',
         'pysensu-yelp==0.4.0',
         'pytimeparse==1.1.8',
