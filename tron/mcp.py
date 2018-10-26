@@ -45,9 +45,7 @@ class MasterControlProgram(object):
         try:
             self._load_config(reconfigure=True)
         except Exception as e:
-            log.exception(
-                f"reconfigure failure: {e.__class__.__name__}: {e}"
-            )
+            log.exception(f"reconfigure failure: {e.__class__.__name__}: {e}")
             raise e
 
     def _load_config(self, reconfigure=False):
@@ -73,7 +71,8 @@ class MasterControlProgram(object):
         """Apply a configuration."""
         master_config_directives = [
             (self.update_state_watcher_config, 'state_persistence'),
-            (self.set_context_base, 'command_context'), (
+            (self.set_context_base, 'command_context'),
+            (
                 node.NodePoolRepository.update_from_config,
                 'nodes',
                 'node_pools',

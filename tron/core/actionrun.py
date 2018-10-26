@@ -139,25 +139,33 @@ class ActionRun(Observable):
 
     default_transitions = dict(fail=FAILED, success=SUCCEEDED)
     STATE_MACHINE = Machine(
-        'scheduled', **{
-            CANCELLED: dict(skip=SKIPPED),
-            FAILED: dict(skip=SKIPPED),
-            RUNNING: dict(fail_unknown=UNKNOWN, **default_transitions),
-            STARTING: dict(started=RUNNING, fail=FAILED),
-            UNKNOWN: dict(running=RUNNING, **default_transitions),
-            QUEUED: dict(
-                cancel=CANCELLED,
-                start=STARTING,
-                schedule=SCHEDULED,
-                **default_transitions,
-            ),
-            SCHEDULED: dict(
-                ready=QUEUED,
-                queue=QUEUED,
-                cancel=CANCELLED,
-                start=STARTING,
-                **default_transitions,
-            ),
+        'scheduled',
+        **{
+            CANCELLED:
+                dict(skip=SKIPPED),
+            FAILED:
+                dict(skip=SKIPPED),
+            RUNNING:
+                dict(fail_unknown=UNKNOWN, **default_transitions),
+            STARTING:
+                dict(started=RUNNING, fail=FAILED),
+            UNKNOWN:
+                dict(running=RUNNING, **default_transitions),
+            QUEUED:
+                dict(
+                    cancel=CANCELLED,
+                    start=STARTING,
+                    schedule=SCHEDULED,
+                    **default_transitions,
+                ),
+            SCHEDULED:
+                dict(
+                    ready=QUEUED,
+                    queue=QUEUED,
+                    cancel=CANCELLED,
+                    start=STARTING,
+                    **default_transitions,
+                ),
         }
     )
 
@@ -366,7 +374,9 @@ class ActionRun(Observable):
             )
             return self.transition_and_notify(target)
         else:
-            log.debug(f"{self} cannot transition from {self.state} via {target}")
+            log.debug(
+                f"{self} cannot transition from {self.state} via {target}"
+            )
 
     def retry(self):
         """Invoked externally (via API) when action needs to be re-tried
@@ -425,7 +435,9 @@ class ActionRun(Observable):
         if isinstance(self.trigger_downstreams, bool):
             templates = ["shortdate.{shortdate}"]
         elif isinstance(self.trigger_downstreams, dict):
-            templates = [f"{k}.{v}" for k, v in self.trigger_downstreams.items()]
+            templates = [
+                f"{k}.{v}" for k, v in self.trigger_downstreams.items()
+            ]
         else:
             log.error(f"{self} trigger_downstreams must be true or dict")
 
@@ -444,15 +456,14 @@ class ActionRun(Observable):
     # TODO: cache if safe
     @property
     def rendered_triggers(self) -> List[str]:
-        return [
-            self.render_template(trig) for trig in self.triggered_by or []
-        ]
+        return [self.render_template(trig) for trig in self.triggered_by or []]
 
     # TODO: subscribe for events and maintain a list of remaining triggers
     @property
     def remaining_triggers(self):
         return [
-            trig for trig in self.rendered_triggers if not EventBus.has_event(trig)
+            trig for trig in self.rendered_triggers
+            if not EventBus.has_event(trig)
         ]
 
     def success(self):
@@ -653,7 +664,9 @@ class SSHActionRun(ActionRun, Observer):
 
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
-        log.debug(f"{self} action_command state change: {action_command.state}")
+        log.debug(
+            f"{self} action_command state change: {action_command.state}"
+        )
 
         if event == ActionCommand.RUNNING:
             return self.transition_and_notify('started')
@@ -772,7 +785,9 @@ class MesosActionRun(ActionRun, Observer):
     def _kill_mesos_task(self):
         msgs = []
         if not self.is_active:
-            msgs.append(f'Action is {self.state}, not running. Continuing anyway.')
+            msgs.append(
+                f'Action is {self.state}, not running. Continuing anyway.'
+            )
 
         mesos_cluster = MesosClusterRepository.get_cluster()
         if self.mesos_task_id is None:
@@ -781,16 +796,22 @@ class MesosActionRun(ActionRun, Observer):
             msgs.append(f"Sending kill for {self.mesos_task_id}...")
             succeeded = mesos_cluster.kill(self.mesos_task_id)
             if succeeded:
-                msgs.append("Sent! It can take up to docker_stop_timeout (current setting is 2 mins) to stop.")
+                msgs.append(
+                    "Sent! It can take up to docker_stop_timeout (current setting is 2 mins) to stop."
+                )
             else:
-                msgs.append("Error while sending kill request. Please try again.")
+                msgs.append(
+                    "Error while sending kill request. Please try again."
+                )
 
         return '\n'.join(msgs)
 
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
         # TODO: consolidate? Same as SSHActionRun for now
-        log.debug(f"{self} action_command state change: {action_command.state}")
+        log.debug(
+            f"{self} action_command state change: {action_command.state}"
+        )
 
         if event == ActionCommand.RUNNING:
             return self.transition_and_notify('started')

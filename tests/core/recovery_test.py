@@ -99,14 +99,18 @@ class TestRecovery(TestCase):
                 mock.patch('tron.core.recovery.recover_action_run', autospec=True) as mock_recover_action_run:
 
             mock_actions = [
-                mock.Mock(action_runner=NoActionRunnerFactory(), spec=SSHActionRun),
+                mock.Mock(
+                    action_runner=NoActionRunnerFactory(), spec=SSHActionRun
+                ),
                 mock.Mock(
                     action_runner=SubprocessActionRunnerFactory(
                         status_path='/tmp/foo', exec_path=('/tmp/foo')
                     ),
                     spec=SSHActionRun,
                 ),
-                mock.Mock(action_runner=NoActionRunnerFactory(), spec=MesosActionRun),
+                mock.Mock(
+                    action_runner=NoActionRunnerFactory(), spec=MesosActionRun
+                ),
             ]
 
             mock_filter.return_value = mock_actions

@@ -89,7 +89,9 @@ def compute_check_result_for_job_runs(client, job, job_content):
         kwargs["status"] = 2
         return kwargs
     else:  # if no run scheduled, no run_time available
-        relevant_job_run_date = _timestamp_to_shortdate(relevant_job_run['run_time'])
+        relevant_job_run_date = _timestamp_to_shortdate(
+            relevant_job_run['run_time']
+        )
 
     # A job_run is like MASTER.foo.1
     job_run_id = get_object_type_from_identifier(
@@ -184,7 +186,8 @@ def get_relevant_run_and_state(job_content):
     # If runs are precious, then it is possible for a day to have no scheduled
     # run if it already had a successful one. Thus, we do not want to return a
     # NOT_SCHEDULED state, but a SUCCEEDED.
-    if run is None and not job_content['monitoring'].get(PRECIOUS_JOB_ATTR, False):
+    if run is None and not job_content['monitoring'
+                                       ].get(PRECIOUS_JOB_ATTR, False):
         return job_runs[0], State.NOT_SCHEDULED
     job_expected_runtime = job_content.get('expected_runtime', None)
     actions_expected_runtime = job_content.get('actions_expected_runtime', {})
@@ -221,7 +224,9 @@ def is_job_scheduled(job_runs):
     return None
 
 
-def is_job_stuck(job_runs, job_expected_runtime, actions_expected_runtime, allow_overlap):
+def is_job_stuck(
+    job_runs, job_expected_runtime, actions_expected_runtime, allow_overlap
+):
     next_run_time = None
     for job_run in job_runs:
         if job_run.get('state', 'unknown') == "running":
@@ -366,27 +371,31 @@ def compute_check_result_for_job(client, job):
 
     # We want to prevent a monitoring config from setting the check_every
     # attribute, since one config should not dictate how often this script runs
-    sensu_kwargs = (pmap(job['monitoring'])
-                    .discard(PRECIOUS_JOB_ATTR)
-                    .discard('check_every'))
+    sensu_kwargs = (
+        pmap(job['monitoring']).discard(PRECIOUS_JOB_ATTR)
+        .discard('check_every')
+    )
     kwargs = kwargs.update(sensu_kwargs)
 
     kwargs_list = []
     if job["status"] == "disabled":
-        kwargs = kwargs.set('output', "OK: {} is disabled and won't be checked.".format(
-            job['name'],
-        ))
+        kwargs = kwargs.set(
+            'output',
+            "OK: {} is disabled and won't be checked.".format(job['name'], )
+        )
         kwargs = kwargs.set('status', 0)
         kwargs_list.append(kwargs)
     else:
         # The job is not disabled, therefore we have to look at its run history
         url_index = client.index()
         tron_id = get_object_type_from_identifier(url_index, job["name"])
-        job_content = pmap(client.job(
-            tron_id.url,
-            count=20,
-            include_action_runs=True,
-        ))
+        job_content = pmap(
+            client.job(
+                tron_id.url,
+                count=20,
+                include_action_runs=True,
+            )
+        )
 
         if job['monitoring'].get(PRECIOUS_JOB_ATTR, False):
             dated_runs = sort_runs_by_interval(job_content, interval='day')
@@ -401,7 +410,9 @@ def compute_check_result_for_job(client, job):
             )
             dated_kwargs = kwargs.update(results)
             if date:  # if empty date, leave job name alone
-                dated_kwargs = dated_kwargs.set('name', f"{kwargs['name']}-{date}")
+                dated_kwargs = dated_kwargs.set(
+                    'name', f"{kwargs['name']}-{date}"
+                )
             kwargs_list.append(dated_kwargs)
 
     return [dict(kws) for kws in kwargs_list]
