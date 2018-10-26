@@ -292,8 +292,7 @@ def make_tron_config(
     return schema.TronConfig(
         action_runner=action_runner or FrozenDict(),
         output_stream_dir=output_stream_dir,
-        command_context=command_context or
-        FrozenDict(batch_dir='/tron/batch/test/foo', python='/usr/bin/python'),
+        command_context=command_context or FrozenDict(batch_dir='/tron/batch/test/foo', python='/usr/bin/python'),
         ssh_options=ssh_options or make_ssh_options(),
         time_zone=time_zone,
         state_persistence=state_persistence,
