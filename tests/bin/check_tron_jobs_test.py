@@ -1194,9 +1194,7 @@ class TestCheckJobs(TestCase):
         assert_equal(run['id'], 'MASTER.test.2')
         assert_equal(state, State.UNKNOWN)
 
-
-# These tests test guess realert feature
-
+    # These tests test guess realert feature
     def test_guess_realert_every(self):
         job_runs = {
             'status':

@@ -12,7 +12,6 @@ import IPython
 import pkg_resources
 
 import tron
-import tron.mcp
 from tron import trondaemon
 from tron.commands import cmd_utils
 from tron.config import manager
