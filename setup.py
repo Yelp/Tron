@@ -28,28 +28,6 @@ setup(
         "Intended Audience :: System Administrators",
         "Development Status :: 4 - Beta",
     ],
-    install_requires=[
-        'argcomplete==1.9.4',
-        'bsddb3==6.2.6',
-        'cryptography==2.3.1',  # Twisted dependency for SSH
-        'dataclasses==0.6',
-        'humanize==0.5.1',
-        'ipdb==0.11',
-        'ipython==6.5.0',
-        'lockfile==0.12.2',
-        'psutil==5.4.7',
-        'pyasn1==0.4.4',  # Twisted dependency for SSH
-        'pyformance==0.4',
-        'pysensu-yelp==0.4.0',
-        'pytimeparse==1.1.8',
-        'pytz==2018.5',
-        'PyYAML==3.13',
-        'requests==2.19.1',
-        'six==1.11.0',
-        'SQLAlchemy==1.2.12',
-        'task_processing[mesos_executor]==0.1.2',
-        'Twisted==18.7.0',
-    ],
     packages=find_packages(
         exclude=['tests.*', 'tests', 'example-cluster']
     ) + ['tronweb'],

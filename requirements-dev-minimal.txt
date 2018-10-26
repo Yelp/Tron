@@ -1,0 +1,6 @@
+flake8
+mock
+pre-commit
+pylint
+pytest
+yapf
