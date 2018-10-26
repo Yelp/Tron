@@ -1,3 +1,12 @@
+tron (0.9.8.4) trusty; urgency=medium
+
+  * 0.9.8.4 tagged with 'make release'
+    Commit: Revert 'Merge pull request #570 from Yelp/pin-requirements'
+    This reverts commit 33fb19df2d2ec508d254f209c1515bbffabc1523,
+    reversing changes made to b3c7ab8ae8ffa2f7a08e275175989ea5d8d54a8a.
+
+ -- root <root@073ed3171e5d>  Fri, 26 Oct 2018 21:36:49 +0000
+
 tron (0.9.8.3) trusty; urgency=medium
 
   * 0.9.8.3 tagged with 'make release'
