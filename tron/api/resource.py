@@ -2,15 +2,10 @@
 Web Services Interface used by command-line clients and web frontend to
 view current state, event history and send commands to trond.
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import collections
 import datetime
 import logging
 import traceback
-
-import six
 
 try:
     import simplejson as json
@@ -47,12 +42,14 @@ class JSONEncoder(json.JSONEncoder):
         return super(JSONEncoder, self).default(o)
 
 
-def respond(request, response_dict, code=http.OK, headers=None):
+def respond(request, response_dict, code=None, headers=None):
     """Helper to generate a json response"""
+    if code is None:
+        code = http.INTERNAL_SERVER_ERROR if response_dict.get('error') else http.OK
     request.setResponseCode(code)
     request.setHeader(b'content-type', b'application/json; charset=utf-8')
     request.setHeader(b'Access-Control-Allow-Origin', b'*')
-    for key, val in six.iteritems((headers or {})):
+    for key, val in (headers or {}).items():
         request.setHeader(str(key), str(val))
 
     result = json.dumps(
@@ -80,9 +77,7 @@ def handle_command(request, api_controller, obj, **kwargs):
     except Exception as e:
         log.exception('%r while executing command %s for %s', e, command, obj)
         trace = traceback.format_exc()
-        return respond(
-            request, {'error': trace}, code=http.INTERNAL_SERVER_ERROR
-        )
+        return respond(request, {'error': trace})
 
 
 class ErrorResource(resource.Resource):
@@ -434,11 +429,7 @@ class EventsResource(resource.Resource):
     @AsyncResource.exclusive
     def render_GET(self, request):
         response = self.controller.info()
-        return respond(
-            request,
-            response,
-            code=http.INTERNAL_SERVER_ERROR if 'error' in response else http.OK
-        )
+        return respond(request, response)
 
     @AsyncResource.bounded
     def render_POST(self, request):
@@ -452,11 +443,7 @@ class EventsResource(resource.Resource):
         event = requestargs.get_string(request, 'event')
         fn = getattr(self.controller, command)
         response = fn(event)
-        return respond(
-            request,
-            response,
-            code=http.INTERNAL_SERVER_ERROR if 'error' in response else http.OK
-        )
+        return respond(request, response)
 
 
 class ApiRootResource(resource.Resource):

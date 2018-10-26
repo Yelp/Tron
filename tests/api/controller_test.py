@@ -1,13 +1,10 @@
 import mock
+import pytest
 
-from testifycompat import assert_equal
-from testifycompat import assert_in
-from testifycompat import run
-from testifycompat import setup
-from testifycompat import TestCase
 from tron import mcp
 from tron.api import controller
 from tron.api.controller import ConfigController
+from tron.api.controller import EventsController
 from tron.api.controller import JobCollectionController
 from tron.api.controller import UnknownCommandError
 from tron.config import ConfigError
@@ -18,8 +15,8 @@ from tron.core.job_collection import JobCollection
 from tron.core.job_scheduler import JobScheduler
 
 
-class TestJobCollectionController(TestCase):
-    @setup
+class TestJobCollectionController:
+    @pytest.fixture(autouse=True)
     def setup_controller(self):
         self.collection = mock.create_autospec(
             JobCollection,
@@ -29,7 +26,7 @@ class TestJobCollectionController(TestCase):
         self.controller = JobCollectionController(self.collection)
 
     def test_handle_command_unknown(self):
-        with self.assertRaises(UnknownCommandError):
+        with pytest.raises(UnknownCommandError):
             self.controller.handle_command('enableall')
             self.controller.handle_command('disableall')
 
@@ -49,8 +46,8 @@ class TestJobCollectionController(TestCase):
         assert "Error" not in result
 
 
-class TestActionRunController(TestCase):
-    @setup
+class TestActionRunController:
+    @pytest.fixture(autouse=True)
     def setup_controller(self):
         self.action_run = mock.create_autospec(
             actionrun.ActionRun,
@@ -67,38 +64,38 @@ class TestActionRunController(TestCase):
         self.job_run.is_scheduled = True
         result = self.controller.handle_command('start')
         assert not self.action_run.start.mock_calls
-        assert_in("can not be started", result)
+        assert "can not be started" in result
 
     def test_handle_command_mapped_command(self):
         result = self.controller.handle_command('cancel')
         self.action_run.cancel.assert_called_with()
-        assert_in("now in state", result)
+        assert "now in state" in result
 
     def test_handle_command_mapped_command_failed(self):
         self.action_run.cancel.return_value = False
         result = self.controller.handle_command('cancel')
         self.action_run.cancel.assert_called_with()
-        assert_in("Failed to cancel", result)
+        assert "Failed to cancel" in result
 
     def test_handle_termination_not_implemented(self):
         self.action_run.stop.side_effect = NotImplementedError
         result = self.controller.handle_termination('stop')
-        assert_in("Failed to stop", result)
+        assert "Failed to stop" in result
 
     def test_handle_termination_success_without_extra_msg(self):
         self.action_run.kill.return_value = None
         result = self.controller.handle_termination('kill')
-        assert_in("Attempting to kill", result)
+        assert "Attempting to kill" in result
 
     def test_handle_termination_success_with_extra_msg(self):
         self.action_run.kill.return_value = "Warning Message"
         result = self.controller.handle_termination('kill')
-        assert_in("Attempting to kill", result)
-        assert_in("Warning Message", result)
+        assert "Attempting to kill" in result
+        assert "Warning Message" in result
 
 
-class TestJobRunController(TestCase):
-    @setup
+class TestJobRunController:
+    @pytest.fixture(autouse=True)
     def setup_controller(self):
         self.job_run = mock.create_autospec(
             jobrun.JobRun,
@@ -120,17 +117,17 @@ class TestJobRunController(TestCase):
     def test_handle_mapped_command(self):
         result = self.controller.handle_command('start')
         self.job_run.start.assert_called_with()
-        assert_in('now in state', result)
+        assert 'now in state' in result
 
     def test_handle_mapped_command_failure(self):
         self.job_run.cancel.return_value = False
         result = self.controller.handle_command('cancel')
         self.job_run.cancel.assert_called_with()
-        assert_in('Failed to cancel', result)
+        assert 'Failed to cancel' in result
 
 
-class TestJobController(TestCase):
-    @setup
+class TestJobController:
+    @pytest.fixture(autouse=True)
     def setup_controller(self):
         self.job_scheduler = mock.create_autospec(JobScheduler)
         self.controller = controller.JobController(self.job_scheduler)
@@ -149,8 +146,8 @@ class TestJobController(TestCase):
         self.job_scheduler.manual_start.assert_called_with(run_time=run_time)
 
 
-class TestConfigController(TestCase):
-    @setup
+class TestConfigController:
+    @pytest.fixture(autouse=True)
     def setup_controller(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
         self.manager = mock.create_autospec(manager.ConfigManager)
@@ -160,14 +157,14 @@ class TestConfigController(TestCase):
     def test_get_config_content_new(self):
         self.manager.__contains__.return_value = False
         content = self.controller._get_config_content('name')
-        assert_equal(content, self.controller.DEFAULT_NAMED_CONFIG)
+        assert content == self.controller.DEFAULT_NAMED_CONFIG
         assert not self.manager.read_raw_config.call_count
 
     def test_get_config_content_old(self):
         self.manager.__contains__.return_value = True
         name = 'the_name'
         content = self.controller._get_config_content(name)
-        assert_equal(content, self.manager.read_raw_config.return_value)
+        assert content == self.manager.read_raw_config.return_value
         self.manager.read_raw_config.assert_called_with(name)
 
     def test_read_config(self):
@@ -176,8 +173,8 @@ class TestConfigController(TestCase):
         resp = self.controller.read_config(name)
         self.manager.read_raw_config.assert_called_with(name)
         self.manager.get_hash.assert_called_with(name)
-        assert_equal(resp['config'], self.manager.read_raw_config.return_value)
-        assert_equal(resp['hash'], self.manager.get_hash.return_value)
+        assert resp['config'] == self.manager.read_raw_config.return_value
+        assert resp['hash'] == self.manager.get_hash.return_value
 
     def test_update_config(self):
         name, content, config_hash = None, mock.Mock(), mock.Mock()
@@ -196,14 +193,14 @@ class TestConfigController(TestCase):
             content,
             config_hash,
         )
-        assert_equal(error, "It broke")
+        assert error == "It broke"
         self.manager.write_config.assert_called_with(name, content)
         assert not self.mcp.reconfigure.call_count
 
     def test_update_config_hash_mismatch(self):
         name, content, config_hash = None, mock.Mock(), mock.Mock()
         error = self.controller.update_config(name, content, config_hash)
-        assert_equal(error, "Configuration has changed. Please try again.")
+        assert error == "Configuration has changed. Please try again."
 
     def test_delete_config(self):
         name, content, config_hash = None, "", mock.Mock()
@@ -225,7 +222,7 @@ class TestConfigController(TestCase):
     def test_delete_config_hash_mismatch(self):
         name, content, config_hash = None, "", mock.Mock()
         error = self.controller.delete_config(name, content, config_hash)
-        assert_equal(error, "Configuration has changed. Please try again.")
+        assert error == "Configuration has changed. Please try again."
 
     def test_delete_config_content_not_empty(self):
         name, content, config_hash = None, "content", mock.Mock()
@@ -235,8 +232,58 @@ class TestConfigController(TestCase):
     def test_get_namespaces(self):
         result = self.controller.get_namespaces()
         self.manager.get_namespaces.assert_called_with()
-        assert_equal(result, self.manager.get_namespaces.return_value)
+        assert result == self.manager.get_namespaces.return_value
 
 
-if __name__ == "__main__":
-    run()
+class TestEventsController:
+    @pytest.fixture(autouse=True)
+    def setup(self):
+        with mock.patch('tron.api.controller.EventBus', autospec=True) as eb:
+            eb.instance = mock.Mock()
+            self.eventbus = eb
+            self.controller = EventsController()
+            yield
+
+    def test_info(self):
+        self.eventbus.instance = None
+        assert self.controller.info() == dict(error='EventBus disabled')
+
+        self.eventbus.instance = mock.Mock()
+        assert self.controller.info() == dict(response=self.eventbus.instance.event_log)
+
+    def test_publish(self):
+        event = mock.Mock()
+        self.eventbus.instance = None
+        self.eventbus.has_event.return_value = True
+        self.eventbus.publish.return_value = False
+
+        assert self.controller.info() == dict(error='EventBus disabled')
+        assert len(self.eventbus.publish.mock_calls) == 0
+
+        self.eventbus.instance = mock.Mock()
+        assert self.controller.publish(event) == dict(response=f'event {event} already published')
+        assert len(self.eventbus.publish.mock_calls) == 0
+
+        self.eventbus.has_event.return_value = False
+        assert self.controller.publish(event) == dict(error=f'could not publish {event}')
+        assert len(self.eventbus.publish.mock_calls) == 1
+
+        self.eventbus.publish.return_value = True
+        assert self.controller.publish(event) == dict(response=f'OK')
+        assert len(self.eventbus.publish.mock_calls) == 2
+
+    def test_discard(self):
+        event = mock.Mock()
+        self.eventbus.instance = None
+        self.eventbus.discard.return_value = False
+
+        assert self.controller.info() == dict(error='EventBus disabled')
+        assert len(self.eventbus.discard.mock_calls) == 0
+
+        self.eventbus.instance = mock.Mock()
+        assert self.controller.discard(event) == dict(error=f'could not discard {event}')
+        assert len(self.eventbus.discard.mock_calls) == 1
+
+        self.eventbus.discard.return_value = True
+        assert self.controller.discard(event) == dict(response=f'OK')
+        assert len(self.eventbus.discard.mock_calls) == 2
