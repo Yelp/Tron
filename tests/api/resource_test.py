@@ -104,11 +104,7 @@ class TestHandleCommand:
         mock_controller.handle_command.side_effect = error
         www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
-        mock_respond.assert_called_with(
-            request,
-            {'error': mock.ANY},
-            code=http.INTERNAL_SERVER_ERROR,
-        )
+        mock_respond.assert_called_with(request, {'error': mock.ANY})
 
 
 class TestActionRunResource(WWWTestCase):
