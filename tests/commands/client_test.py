@@ -116,7 +116,7 @@ class TestClientRequest(TestCase):
             '/jobs',
         )
 
-        assert str(exception) == f"{error_response.error} {error_response.msg}"
+        assert str(exception) == error_response.content
 
     def test_request_success(self):
         ok_response = {'ok': 'ok'}

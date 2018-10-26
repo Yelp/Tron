@@ -178,7 +178,10 @@ class Client(object):
         uri = urllib.parse.urljoin(self.url_base, url)
         response = request(uri, data)
         if response.error:
-            raise RequestError(f'{response.error} {response.msg}')
+            if response.content:
+                raise RequestError(response.content)
+            else:
+                raise RequestError(f'{response.error} {response.msg}')
         return response.content
 
 
