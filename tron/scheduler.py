@@ -257,8 +257,10 @@ class IntervalScheduler(object):
         )
 
     def __eq__(self, other):
-        return isinstance(other, IntervalScheduler) and \
+        return (
+            isinstance(other, IntervalScheduler) and
             self.interval == other.interval
+        )
 
     def __ne__(self, other):
         return not self == other

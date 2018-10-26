@@ -308,8 +308,10 @@ def guess_realert_every(job):
             job_runs_started,
             key=lambda k: k['start_time'],
         ).get('start_time')
-        time_diff = time.mktime(_timestamp_to_timeobj(job_next_run)) - \
+        time_diff = (
+            time.mktime(_timestamp_to_timeobj(job_next_run)) -
             time.mktime(_timestamp_to_timeobj(job_previous_run))
+        )
         realert_every = max(int(time_diff / _run_interval), 1)
     except Exception as e:
         log.warning("guess_realert_every failed: {}".format(e))

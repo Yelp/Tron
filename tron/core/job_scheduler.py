@@ -94,8 +94,8 @@ class JobScheduler(Observer):
         # Since job updating only copies equality attributes (defined in the Job
         # class), we need to now enable or disable the job depending on if the
         # new job says so.
-        if curr_job.enabled is not new_job.enabled and \
-                curr_job.config_enabled is not new_job.config_enabled:
+        if (curr_job.enabled is not new_job.enabled and
+                curr_job.config_enabled is not new_job.config_enabled):
             if new_job.config_enabled:
                 log.info(f'{curr_job} re-enabled during reconfiguration')
                 self.enable()

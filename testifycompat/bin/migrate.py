@@ -21,7 +21,6 @@ import functools
 import re
 import sys
 
-
 def replace(pattern, repl):
     return functools.partial(re.sub, pattern, repl)
 
