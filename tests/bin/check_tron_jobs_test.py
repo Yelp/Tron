@@ -45,8 +45,7 @@ class TestCheckJobs(TestCase):
         assert_equal(error_code, 1)
         assert_equal(mock_check_job_result.call_count, 3)
 
-# These tests test job run succeeded scenarios
-
+    # These tests test job run succeeded scenarios
     def test_job_succeeded(self):
         job_runs = {
             'status':
@@ -224,8 +223,7 @@ class TestCheckJobs(TestCase):
         )
         assert_equal(actual["id"], "MASTER.test.action1")
 
-# These tests test job run failed scenarios
-
+    # These tests test job run failed scenarios
     def test_job_failed(self):
         job_runs = {
             'status':
@@ -532,8 +530,7 @@ class TestCheckJobs(TestCase):
         )
         assert_equal(actual["state"], "failed")
 
-# These tests test job/action stuck scenarios
-
+    # These tests test job/action stuck scenarios
     def test_job_next_run_starting_no_overlap_is_stuck(self):
         job_runs = {
             'status':
@@ -958,8 +955,7 @@ class TestCheckJobs(TestCase):
         )
         assert_equal(actual["id"], "MASTER.test.1.action2")
 
-# These tests test job has no scheduled run scenarios
-
+    # These tests test job has no scheduled run scenarios
     def test_no_job_scheduled_or_queuing(self):
         job_runs = {
             'status':
@@ -1042,8 +1038,7 @@ class TestCheckJobs(TestCase):
         )
         assert_equal(actual["id"], "MASTER.test.1.1")
 
-# These tests test job without succeeded/failed run scenarios
-
+    # These tests test job without succeeded/failed run scenarios
     def test_job_no_runs_to_check(self):
         job_runs = {
             'status':
@@ -1078,9 +1073,7 @@ class TestCheckJobs(TestCase):
         assert_equal(run, None)
         assert_equal(state, State.NO_RUN_YET)
 
-
-# These tests test job/action unknown scenarios
-
+    # These tests test job/action unknown scenarios
     def test_job_unknown(self):
         job_runs = {
             'status':
