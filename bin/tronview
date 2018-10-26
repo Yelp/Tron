@@ -154,8 +154,15 @@ def main():
     client = Client(args.server)
 
     if args.events:
-        print(client.request("/api/events"))
-        return
+        response = client.request("/api/events")
+        error = response.get('error')
+        if error:
+            print(error)
+            sys.exit(ExitCode.fail)
+        else:
+            for evt in response.get('response'):
+                print(evt)
+            sys.exit(ExitCode.success)
 
     if not args.name:
         output = view_all(args, client)
