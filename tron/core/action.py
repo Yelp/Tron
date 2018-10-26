@@ -30,6 +30,7 @@ class Action:
     trigger_downstreams: (bool, dict) = None
     triggered_by: set = None
     on_upstream_rerun: str = None
+    trigger_timeout: datetime.timedelta = None
     required_actions: set = field(default_factory=set)
     dependent_actions: set = field(default_factory=set)
 
@@ -56,6 +57,7 @@ class Action:
             trigger_downstreams=config.trigger_downstreams,
             triggered_by=config.triggered_by,
             on_upstream_rerun=config.on_upstream_rerun,
+            trigger_timeout=config.trigger_timeout,
             constraints=set(config.constraints or []),
             docker_parameters=set(config.docker_parameters or []),
             extra_volumes=set(config.extra_volumes or []),

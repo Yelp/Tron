@@ -100,6 +100,7 @@ class ActionRunFactory(object):
             'trigger_downstreams': action.trigger_downstreams,
             'triggered_by': action.triggered_by,
             'on_upstream_rerun': action.on_upstream_rerun,
+            'trigger_timeout': action.trigger_timeout,
         }
         if action.executor == ExecutorTypes.mesos:
             return MesosActionRun(**args)
@@ -203,6 +204,7 @@ class ActionRun(Observable):
         trigger_downstreams=None,
         triggered_by=None,
         on_upstream_rerun=None,
+        trigger_timeout=None,
     ):
         super().__init__()
         self.job_run_id = maybe_decode(job_run_id)
@@ -236,6 +238,7 @@ class ActionRun(Observable):
         self.trigger_downstreams = trigger_downstreams
         self.triggered_by = triggered_by
         self.on_upstream_rerun = on_upstream_rerun
+        self.trigger_timeout = trigger_timeout
 
         if self.exit_statuses is None:
             self.exit_statuses = []
@@ -311,6 +314,7 @@ class ActionRun(Observable):
             trigger_downstreams=state_data.get('trigger_downstreams'),
             triggered_by=state_data.get('triggered_by'),
             on_upstream_rerun=state_data.get('on_upstream_rerun'),
+            trigger_timeout=state_data.get('trigger_timeout'),
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -512,6 +516,7 @@ class ActionRun(Observable):
             'trigger_downstreams': self.trigger_downstreams,
             'triggered_by': self.triggered_by,
             'on_upstream_rerun': self.on_upstream_rerun,
+            'trigger_timeout': self.trigger_timeout,
         }
 
     def render_template(self, template):
