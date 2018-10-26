@@ -579,7 +579,8 @@ class TestCheckJobs(TestCase):
                 'running',
             'next_run':
                 None,
-            'allow_overlap': True,
+            'allow_overlap':
+                True,
             'runs': [
                 {
                     'id':
@@ -637,7 +638,8 @@ class TestCheckJobs(TestCase):
                 None,
             'expected_runtime':
                 480.0,
-            'allow_overlap': True,
+            'allow_overlap':
+                True,
             'runs': [
                 {
                     'id':
@@ -998,8 +1000,7 @@ class TestCheckJobs(TestCase):
                         ),
                 },
             ],
-            'monitoring':
-                {},
+            'monitoring': {},
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.2')
@@ -1076,6 +1077,7 @@ class TestCheckJobs(TestCase):
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run, None)
         assert_equal(state, State.NO_RUN_YET)
+
 
 # These tests test job/action unknown scenarios
 
@@ -1351,63 +1353,61 @@ class TestCheckPreciousJobs(TestCase):
             'notification_email': 'fake_email',
             check_tron_jobs.PRECIOUS_JOB_ATTR: True,
         }
-        self.runs = [
-            {
-                'id': f"{self.job_name}.0",
-                'job_name': self.job_name,
-                'run_num': 0,
-                'run_time': '2018-10-10 12:00:00',
-                'start_time': '2018-10-10 12:00:00',
-                'end_time': '2018-10-10 12:30:00',
-                'state': 'failed',
-                'exit_status': 1,
-            }, {
-                'id': f"{self.job_name}.1",
-                'job_name': self.job_name,
-                'run_num': 1,
-                'run_time': '2018-10-10 13:00:00',
-                'start_time': '2018-10-10 13:00:00',
-                'end_time': '2018-10-10 13:30:00',
-                'state': 'succeeded',
-                'exit_status': 0,
-            }, {
-                'id': f"{self.job_name}.2",
-                'job_name': self.job_name,
-                'run_num': 2,
-                'run_time': '2018-10-11 12:00:00',
-                'start_time': '2018-10-11 12:00:00',
-                'end_time': '2018-10-11 12:30:00',
-                'state': 'succeeded',
-                'exit_status': 0,
-            }, {
-                'id': f"{self.job_name}.3",
-                'job_name': self.job_name,
-                'run_num': 3,
-                'run_time': '2018-10-11 13:00:00',
-                'start_time': '2018-10-11 13:00:00',
-                'end_time': '2018-10-11 13:30:00',
-                'state': 'failed',
-                'exit_status': 1,
-            }, {
-                'id': f"{self.job_name}.4",
-                'job_name': self.job_name,
-                'run_num': 4,
-                'run_time': '2018-10-12 12:00:00',
-                'start_time': '2018-10-12 12:00:00',
-                'end_time': '2018-10-12 12:30:00',
-                'state': 'failed',
-                'exit_status': 1,
-            }, {
-                'id': f"{self.job_name}.5",
-                'job_name': self.job_name,
-                'run_num': 5,
-                'run_time': '2018-10-13 12:00:00',
-                'start_time': '2018-10-13 12:00:00',
-                'end_time': '2018-10-13 12:30:00',
-                'state': 'succeeded',
-                'exit_status': 0,
-            }
-        ]
+        self.runs = [{
+            'id': f"{self.job_name}.0",
+            'job_name': self.job_name,
+            'run_num': 0,
+            'run_time': '2018-10-10 12:00:00',
+            'start_time': '2018-10-10 12:00:00',
+            'end_time': '2018-10-10 12:30:00',
+            'state': 'failed',
+            'exit_status': 1,
+        }, {
+            'id': f"{self.job_name}.1",
+            'job_name': self.job_name,
+            'run_num': 1,
+            'run_time': '2018-10-10 13:00:00',
+            'start_time': '2018-10-10 13:00:00',
+            'end_time': '2018-10-10 13:30:00',
+            'state': 'succeeded',
+            'exit_status': 0,
+        }, {
+            'id': f"{self.job_name}.2",
+            'job_name': self.job_name,
+            'run_num': 2,
+            'run_time': '2018-10-11 12:00:00',
+            'start_time': '2018-10-11 12:00:00',
+            'end_time': '2018-10-11 12:30:00',
+            'state': 'succeeded',
+            'exit_status': 0,
+        }, {
+            'id': f"{self.job_name}.3",
+            'job_name': self.job_name,
+            'run_num': 3,
+            'run_time': '2018-10-11 13:00:00',
+            'start_time': '2018-10-11 13:00:00',
+            'end_time': '2018-10-11 13:30:00',
+            'state': 'failed',
+            'exit_status': 1,
+        }, {
+            'id': f"{self.job_name}.4",
+            'job_name': self.job_name,
+            'run_num': 4,
+            'run_time': '2018-10-12 12:00:00',
+            'start_time': '2018-10-12 12:00:00',
+            'end_time': '2018-10-12 12:30:00',
+            'state': 'failed',
+            'exit_status': 1,
+        }, {
+            'id': f"{self.job_name}.5",
+            'job_name': self.job_name,
+            'run_num': 5,
+            'run_time': '2018-10-13 12:00:00',
+            'start_time': '2018-10-13 12:00:00',
+            'end_time': '2018-10-13 12:30:00',
+            'state': 'succeeded',
+            'exit_status': 0,
+        }]
         self.job = {
             'name': 'fake_job',
             'status': 'enabled',
@@ -1418,13 +1418,17 @@ class TestCheckPreciousJobs(TestCase):
     def test_get_relevant_run_and_state_not_scheduled(self):
         self.job['monitoring'][check_tron_jobs.PRECIOUS_JOB_ATTR] = False
 
-        latest_run, state = check_tron_jobs.get_relevant_run_and_state(self.job)
+        latest_run, state = check_tron_jobs.get_relevant_run_and_state(
+            self.job
+        )
 
         assert latest_run['run_num'] == 5
         assert state == check_tron_jobs.State.NOT_SCHEDULED
 
     def test_get_relevant_run_and_state_ignore_not_scheduled(self):
-        latest_run, state = check_tron_jobs.get_relevant_run_and_state(self.job)
+        latest_run, state = check_tron_jobs.get_relevant_run_and_state(
+            self.job
+        )
 
         assert latest_run['run_num'] == 5
         assert state == check_tron_jobs.State.SUCCEEDED
@@ -1467,10 +1471,15 @@ class TestCheckPreciousJobs(TestCase):
             mock.Mock(return_value=mock.Mock())
         client.job = mock.Mock(return_value=self.job)
         check_tron_jobs.compute_check_result_for_job_runs = mock.Mock(
-            return_value={'output': 'fake_output', 'status': 'fake_status'}
+            return_value={
+                'output': 'fake_output',
+                'status': 'fake_status'
+            }
         )
 
-        results = check_tron_jobs.compute_check_result_for_job(client, self.job)
+        results = check_tron_jobs.compute_check_result_for_job(
+            client, self.job
+        )
 
         assert len(results) == 1
         assert results[0]['name'] == 'check_tron_job.fake_job'
@@ -1482,7 +1491,9 @@ class TestCheckPreciousJobs(TestCase):
         check_tron_jobs.guess_realert_every = mock.Mock(return_value=1)
         self.job['status'] = 'disabled'
 
-        results = check_tron_jobs.compute_check_result_for_job(client, self.job)
+        results = check_tron_jobs.compute_check_result_for_job(
+            client, self.job
+        )
 
         assert len(results) == 1
         assert results[0]['status'] == 0
@@ -1499,10 +1510,15 @@ class TestCheckPreciousJobs(TestCase):
             mock.Mock(return_value=mock.Mock())
         client.job = mock.Mock(return_value=self.job)
         check_tron_jobs.compute_check_result_for_job_runs = mock.Mock(
-            return_value={'output': 'fake_output', 'status': 'fake_status'}
+            return_value={
+                'output': 'fake_output',
+                'status': 'fake_status'
+            }
         )
 
-        results = check_tron_jobs.compute_check_result_for_job(client, self.job)
+        results = check_tron_jobs.compute_check_result_for_job(
+            client, self.job
+        )
 
         assert len(results) == 4
         assert set([res['name'] for res in results]) == set([

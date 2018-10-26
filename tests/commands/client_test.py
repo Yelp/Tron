@@ -105,9 +105,7 @@ class TestClientRequest(TestCase):
 
     def test_request_error(self):
         error_response = Response(
-            error='404',
-            msg='Not Found',
-            content='big kahuna error'
+            error='404', msg='Not Found', content='big kahuna error'
         )
         client.request = mock.Mock(return_value=error_response)
         exception = assert_raises(

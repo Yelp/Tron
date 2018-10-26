@@ -155,7 +155,8 @@ class TronDaemon(object):
         self.options = options
         self.mcp = None
         self._sigint_handler = self._make_sigint_handler(
-            signal.getsignal(signal.SIGINT))
+            signal.getsignal(signal.SIGINT)
+        )
         self.context = self._build_context(options)
         self.manhole_sock = f"{self.options.working_dir}/manhole.sock"
 
@@ -252,6 +253,7 @@ class TronDaemon(object):
                              We use it to verify whether or not a SIGINT we
                              received is a genuine shutdown request.
         """
+
         def handler(signum, frame):
             try:
                 if prev_handler is not None:
@@ -267,6 +269,7 @@ class TronDaemon(object):
                 log.error(f"Non-reactor thread raised: {e}")
                 return
             self._handle_shutdown(signum, frame)
+
         return handler
 
     def _handle_shutdown(self, sig_num, stack_frame):

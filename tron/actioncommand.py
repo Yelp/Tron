@@ -34,11 +34,17 @@ class ActionCommand(Observable):
     FAILSTART = 'failstart'
 
     STATE_MACHINE = Machine(
-        PENDING,
-        **{
-            PENDING: {'start': RUNNING, 'exit': FAILSTART},
-            RUNNING: {'exit': EXITING},
-            EXITING: {'close': COMPLETE},
+        PENDING, **{
+            PENDING: {
+                'start': RUNNING,
+                'exit': FAILSTART
+            },
+            RUNNING: {
+                'exit': EXITING
+            },
+            EXITING: {
+                'close': COMPLETE
+            },
         }
     )
 
@@ -117,7 +123,9 @@ class ActionCommand(Observable):
     @property
     def is_done(self):
         """Done implies no more work will be done, but might not be success."""
-        return self.machine.state in (ActionCommand.COMPLETE, ActionCommand.FAILSTART)
+        return self.machine.state in (
+            ActionCommand.COMPLETE, ActionCommand.FAILSTART
+        )
 
     def __repr__(self):
         return f"ActionCommand {self.id} {self.command}: {self.state}"

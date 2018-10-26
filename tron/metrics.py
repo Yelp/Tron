@@ -4,7 +4,6 @@ from pyformance.meters import Meter
 from pyformance.meters import SimpleGauge
 from pyformance.meters import Timer
 
-
 all_metrics = {}
 
 

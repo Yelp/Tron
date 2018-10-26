@@ -37,13 +37,19 @@ class TestJobCollection(TestCase):
             job_scheduler.get_job.assert_called_with()
 
     def test_move_running_job(self):
-        with mock.patch('tron.core.job_collection.JobCollection.get_by_name', autospec=None) as mock_scheduler:
+        with mock.patch(
+            'tron.core.job_collection.JobCollection.get_by_name',
+            autospec=None
+        ) as mock_scheduler:
             mock_scheduler.return_value.get_job.return_value.status = Job.STATUS_RUNNING
             result = self.collection.move('old.test', 'new.test')
             assert 'Job is still running.' in result
 
     def test_move(self):
-        with mock.patch('tron.core.job_collection.JobCollection.get_by_name', autospec=None) as mock_scheduler:
+        with mock.patch(
+            'tron.core.job_collection.JobCollection.get_by_name',
+            autospec=None
+        ) as mock_scheduler:
             mock_scheduler.return_value.get_job.return_value.status = Job.STATUS_ENABLED
             mock_scheduler.get_name.return_value = 'old.test'
             self.collection.add(mock_scheduler)

@@ -88,8 +88,8 @@ class EventBus:
         self.log_current = os.path.join(self.log_dir, "current")
         self.log_updates = 0
         self.log_last_save = 0
-        self.log_save_interval = 60   # save every minute
-        self.log_save_updates = 100   # save every 100 updates
+        self.log_save_interval = 60  # save every minute
+        self.log_save_updates = 100  # save every 100 updates
 
     def _start(self):
         self.enabled = True
@@ -190,7 +190,9 @@ class EventBus:
             self.log_updates = 0
 
         consume_dequeue(self.subscribe_queue, self.sync_subscribe)
-        consume_dequeue(self.clear_subscription_queue, self.sync_clear_subscriptions)
+        consume_dequeue(
+            self.clear_subscription_queue, self.sync_clear_subscriptions
+        )
         consume_dequeue(self.publish_queue, self.sync_publish)
 
     def sync_publish(self, event):

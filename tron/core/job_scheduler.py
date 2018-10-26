@@ -10,7 +10,6 @@ from tron.serialize import filehandler
 from tron.utils import timeutils
 from tron.utils.observer import Observer
 
-
 log = logging.getLogger(__name__)
 
 

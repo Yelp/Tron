@@ -260,7 +260,9 @@ class TestJobSchedulerOther(TestCase):
 
     @setup
     def setup_job(self):
-        self.job, self.job_scheduler = self._make_job_scheduler('jobname', True)
+        self.job, self.job_scheduler = self._make_job_scheduler(
+            'jobname', True
+        )
 
     def test_disable(self):
         self.job.runs.cancel_pending = mock.Mock()
@@ -332,7 +334,9 @@ class TestJobSchedulerFactory(TestCase):
 
     def test_build(self):
         config = mock.Mock()
-        with mock.patch('tron.core.job_scheduler.Job', autospec=True) as mock_job:
+        with mock.patch(
+            'tron.core.job_scheduler.Job', autospec=True
+        ) as mock_job:
             job_scheduler = self.factory.build(config)
             _, kwargs = mock_job.from_config.call_args
             assert_equal(kwargs['job_config'], config)

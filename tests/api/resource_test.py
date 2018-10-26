@@ -66,7 +66,6 @@ class WWWTestCase:
 
 
 class TestHandleCommand:
-
     @pytest.fixture
     def mock_respond(self, mock_respond):
         # in this test case, we don't want a side effect
@@ -117,7 +116,6 @@ class TestHandleCommand:
 
 
 class TestActionRunResource(WWWTestCase):
-
     @pytest.fixture(autouse=True)
     def setup_resource(self):
         self.job_run = mock.MagicMock()
@@ -131,7 +129,6 @@ class TestActionRunResource(WWWTestCase):
 
 
 class TestJobrunResource(WWWTestCase):
-
     @pytest.fixture(autouse=True)
     def setup_resource(self):
         self.job_run = mock.MagicMock()
@@ -144,7 +141,6 @@ class TestJobrunResource(WWWTestCase):
 
 
 class TestApiRootResource(WWWTestCase):
-
     @pytest.fixture(autouse=True)
     def setup_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
@@ -171,7 +167,6 @@ class TestApiRootResource(WWWTestCase):
 
 
 class TestRootResource(WWWTestCase):
-
     @pytest.fixture(autouse=True)
     def setup_resource(self):
         self.web_path = '/bogus/path'
@@ -190,7 +185,6 @@ class TestRootResource(WWWTestCase):
 
 
 class TestActionRunHistoryResource(WWWTestCase):
-
     @pytest.fixture(autouse=True)
     def setup_resource(self):
         self.action_runs = [mock.MagicMock(), mock.MagicMock()]
@@ -202,7 +196,6 @@ class TestActionRunHistoryResource(WWWTestCase):
 
 
 class TestJobCollectionResource(WWWTestCase):
-
     @pytest.fixture(autouse=True)
     def setup_resource(self):
         job_collection = mock.create_autospec(JobCollection)
@@ -225,7 +218,6 @@ class TestJobCollectionResource(WWWTestCase):
 
 
 class TestJobResource(WWWTestCase):
-
     @pytest.fixture(autouse=True)
     def setup_resource(self):
         self.job_scheduler = mock.create_autospec(JobScheduler)
@@ -291,7 +283,6 @@ class TestJobResource(WWWTestCase):
 
 
 class TestConfigResource:
-
     @pytest.fixture(autouse=True)
     def resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
@@ -334,16 +325,16 @@ class TestConfigResource:
 
 
 class TestMetricsResource:
-
     @mock.patch('tron.api.resource.view_all_metrics', autospec=True)
     def test_render_GET(self, mock_view_metrics, request, mock_respond):
         resource = www.MetricsResource()
         resource.render_GET(request)
-        mock_respond.assert_called_with(request, mock_view_metrics.return_value)
+        mock_respond.assert_called_with(
+            request, mock_view_metrics.return_value
+        )
 
 
 class TestTronSite:
-
     @mock.patch('tron.api.resource.meter', autospec=True)
     def test_log_request(self, mock_meter):
         site = www.TronSite.create(
