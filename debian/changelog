@@ -1,3 +1,12 @@
+tron (0.9.8.2) trusty; urgency=medium
+
+  * 0.9.8.2 tagged with 'make release'
+    Commit: Merge pull request #574 from
+    Yelp/u/chl/rename_all_job_name_after_migration  rename all job_name
+    after migration
+
+ -- root <root@0e8e0abfa7bf>  Thu, 25 Oct 2018 22:38:54 +0000
+
 tron (0.9.8.1) trusty; urgency=medium
 
   * 0.9.8.1 tagged with 'make release'
