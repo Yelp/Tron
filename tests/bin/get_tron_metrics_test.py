@@ -19,9 +19,9 @@ def test_send_data_metric():
         autospec=None,
     ) as mock_popen:
         get_tron_metrics.send_data_metric(
-            'fake_name',
-            'fake_metric_type',
-            'fake_value',
+            name='fake_name',
+            metric_type='fake_metric_type',
+            value='fake_value',
             dimensions={'fake_dim_key': 'fake_dim_value'},
             dry_run=False,
         )
@@ -37,9 +37,9 @@ def test_send_data_metric():
 def test_send_data_metric_dry_run():
     with mock.patch('subprocess.Popen', autospec=True) as mock_popen:
         get_tron_metrics.send_data_metric(
-            'fake_name',
-            'fake_metric_type',
-            'fake_value',
+            name='fake_name',
+            metric_type='fake_metric_type',
+            value='fake_value',
             dimensions='fake_dimensions',
             dry_run=True,
         )
@@ -55,9 +55,11 @@ def test_send_counter(mock_send_data_metric):
 
     assert mock_send_data_metric.call_count == 1
     assert mock_send_data_metric.call_args == mock.call(
-        'fake_name',
-        'counter',
-        'fake_count',
+        name='fake_name',
+        metric_type='counter',
+        value='fake_count',
+        dimensions={},
+        dry_run=False,
     )
 
 
@@ -69,9 +71,11 @@ def test_send_gauge(mock_send_data_metric):
 
     assert mock_send_data_metric.call_count == 1
     assert mock_send_data_metric.call_args == mock.call(
-        'fake_name',
-        'gauge',
-        'fake_value',
+        name='fake_name',
+        metric_type='gauge',
+        value='fake_value',
+        dimensions={},
+        dry_run=False,
     )
 
 
@@ -100,7 +104,7 @@ def test_send_histogram(mock_send_gauge):
 
     assert mock_send_gauge.call_count == len(kwargs)
     assert mock_send_gauge.call_args_list[0] == mock.call(
-        'fake_name-p50',
+        'fake_name.p50',
         **p50_kwargs,
     )
 

@@ -44,10 +44,7 @@ def check_bin_exists(bin):
     return True
 
 
-def send_data_metric(
-    name, metric_type, value,
-    dimensions={}, dry_run=False, **kwargs
-):
+def send_data_metric(name, metric_type, value, dimensions={}, dry_run=False):
     """
     Sends a single data point to meteorite via bash command
 
@@ -94,11 +91,23 @@ def send_data_metric(
 
 
 def send_counter(name, **kwargs):
-    send_data_metric(name, 'counter', kwargs.pop('count'), **kwargs)
+    send_data_metric(
+        name=name,
+        metric_type='counter',
+        value=kwargs.pop('count'),
+        dimensions=kwargs.pop('dimensions', {}),
+        dry_run=kwargs.pop('dry_run', False),
+    )
 
 
 def send_gauge(name, **kwargs):
-    send_data_metric(name, 'gauge', kwargs.pop('value'), **kwargs)
+    send_data_metric(
+        name=name,
+        metric_type='gauge',
+        value=kwargs.pop('value'),
+        dimensions=kwargs.pop('dimensions', {}),
+        dry_run=kwargs.pop('dry_run', False),
+    )
 
 
 def send_meter(name, **kwargs):
@@ -107,7 +116,7 @@ def send_meter(name, **kwargs):
 
 def send_histogram(name, **kwargs):
     for k in ['p50', 'p75', 'p95', 'p99']:  # Only send p50-99
-        gauge_name = f"{name}-{k}"
+        gauge_name = f"{name}.{k}"
         kwargs['value'] = kwargs[k]  # set for gauge
         send_gauge(gauge_name, **kwargs)
 
