@@ -81,7 +81,7 @@ def send_data_metric(name, metric_type, value, dimensions={}, dry_run=False):
     output = output.decode('utf-8').rstrip()
     error = error.decode('utf-8').rstrip()
 
-    if process.returncode:
+    if process.returncode != 0:
         log.error(
             "Meteorite failed with:\n"
             f"{textwrap.indent(error, '    ')}"
