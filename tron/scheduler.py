@@ -25,9 +25,6 @@ import datetime
 import logging
 import random
 
-from pytz import AmbiguousTimeError
-from pytz import NonExistentTimeError
-
 from tron.config import schedule_parse
 from tron.utils import timeutils
 from tron.utils import trontimespec
@@ -186,25 +183,7 @@ class GeneralScheduler(object):
             ) is None:
                 # tz-naive start times need to be localized first to the requested
                 # time zone.
-                try:
-                    start_time = self.time_zone.localize(
-                        start_time,
-                        is_dst=None,
-                    )
-                except AmbiguousTimeError:
-                    # We are in the infamous 1 AM block which happens twice on
-                    # fall-back. Pretend like it's the first time, every time.
-                    start_time = self.time_zone.localize(
-                        start_time,
-                        is_dst=True,
-                    )
-                except NonExistentTimeError:
-                    # We are in the infamous 2:xx AM block which does not
-                    # exist. Pretend like it's the later time, every time.
-                    start_time = self.time_zone.localize(
-                        start_time,
-                        is_dst=True,
-                    )
+                start_time = trontimespec.naive_as_timezone(start_time, self.time_zone)
 
         return self.time_spec.get_match(start_time) + get_jitter(self.jitter)
 
