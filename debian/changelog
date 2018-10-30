@@ -1,3 +1,11 @@
+tron (0.9.9.1) trusty; urgency=medium
+
+  * 0.9.9.1 tagged with 'make release'
+    Commit: modify action_id during job migration (#580)  * modify
+    action_id during job migration  * pin pre-commit 1.11.2
+
+ -- root <root@fe8465f9b037>  Tue, 30 Oct 2018 21:42:21 +0000
+
 tron (0.9.9.0) trusty; urgency=medium
 
   * 0.9.9.0 tagged with 'make release'
