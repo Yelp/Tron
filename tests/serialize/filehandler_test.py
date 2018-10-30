@@ -226,7 +226,7 @@ class TestOutputStreamSerializer(TestCase):
         self.filename = "STARS"
         self.content = "123\n456\n789"
         self.expected = [
-            line.encode('ascii') for line in self.content.split('\n')
+            line for line in self.content.split('\n')
         ]
 
     @teardown
