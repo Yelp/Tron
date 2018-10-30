@@ -11,8 +11,6 @@ import twisted.web.resource
 import twisted.web.server
 from twisted.web import http
 
-from testifycompat import assert_equal
-from testifycompat import run
 from tests.assertions import assert_call
 from tests.testingutils import autospec_method
 from tron import mcp
@@ -45,6 +43,11 @@ def build_request(**kwargs):
 
 
 @pytest.fixture
+def request():
+    return build_request()
+
+
+@pytest.fixture
 def mock_respond():
     with mock.patch(
         'tron.api.resource.respond',
@@ -52,11 +55,6 @@ def mock_respond():
     ) as mock_respond:
         mock_respond.side_effect = lambda _req, output, code=None: output
         yield mock_respond
-
-
-@pytest.fixture
-def request():
-    return build_request()
 
 
 @pytest.mark.usefixtures("mock_respond")
@@ -78,22 +76,20 @@ class TestHandleCommand:
         mock_controller, obj = mock.Mock(), mock.Mock()
         error = controller.UnknownCommandError()
         mock_controller.handle_command.side_effect = error
-        response = www.handle_command(request, mock_controller, obj)
+        www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
-        assert_equal(response, mock_respond.return_value)
         mock_respond.assert_called_with(
             request,
             {'error': f"Unknown command '{command}' for '{obj}'"},
-            code=http.NOT_IMPLEMENTED,
+            code=http.NOT_IMPLEMENTED
         )
 
     def test_handle_command(self, mock_respond):
         command = 'the command'
         request = build_request(command=command)
         mock_controller, obj = mock.Mock(), mock.Mock()
-        response = www.handle_command(request, mock_controller, obj)
+        www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
-        assert_equal(response, mock_respond.return_value)
         mock_respond.assert_called_with(
             request,
             {'result': mock_controller.handle_command.return_value},
@@ -105,14 +101,9 @@ class TestHandleCommand:
         mock_controller, obj = mock.Mock(), mock.Mock()
         error = Exception("uncaught exception")
         mock_controller.handle_command.side_effect = error
-        response = www.handle_command(request, mock_controller, obj)
+        www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
-        assert_equal(response, mock_respond.return_value)
-        mock_respond.assert_called_with(
-            request,
-            {'error': mock.ANY},
-            code=http.INTERNAL_SERVER_ERROR,
-        )
+        mock_respond.assert_called_with(request, {'error': mock.ANY})
 
 
 class TestActionRunResource(WWWTestCase):
@@ -122,10 +113,10 @@ class TestActionRunResource(WWWTestCase):
         self.action_run = mock.MagicMock(output_path=['one'])
         self.resource = www.ActionRunResource(self.action_run, self.job_run)
 
-    def test_render_GET(self):
+    def test_render_GET(self, mock_respond):
         request = build_request(num_lines="12")
         response = self.resource.render_GET(request)
-        assert_equal(response['id'], self.action_run.id)
+        assert response['id'] == self.resource.action_run.id
 
 
 class TestJobrunResource(WWWTestCase):
@@ -137,7 +128,7 @@ class TestJobrunResource(WWWTestCase):
 
     def test_render_GET(self, request):
         response = self.resource.render_GET(request)
-        assert_equal(response['id'], self.job_run.id)
+        assert response['id'] == self.job_run.id
 
 
 class TestApiRootResource(WWWTestCase):
@@ -152,9 +143,10 @@ class TestApiRootResource(WWWTestCase):
             b'config',
             b'metrics',
             b'status',
+            b'events',
             b'',
         ]
-        assert_equal(set(expected_children), set(self.resource.children))
+        assert set(expected_children) == set(self.resource.children)
 
     def test_render_GET(self):
         expected_keys = [
@@ -162,7 +154,7 @@ class TestApiRootResource(WWWTestCase):
             'namespaces',
         ]
         response = self.resource.render_GET(build_request())
-        assert_equal(set(response.keys()), set(expected_keys))
+        assert set(response.keys()) == set(expected_keys)
         self.mcp.get_job_collection().get_jobs.assert_called_with()
 
 
@@ -176,12 +168,12 @@ class TestRootResource(WWWTestCase):
     def test_render_GET(self):
         request = build_request()
         response = self.resource.render_GET(request)
-        assert_equal(response, 1)
-        assert_equal(request.redirect.call_count, 1)
+        assert response == 1
+        assert request.redirect.call_count == 1
         request.finish.assert_called_with()
 
     def test_get_children(self):
-        assert_equal(set(self.resource.children), {b'api', b'web', b''})
+        assert set(self.resource.children) == {b'api', b'web', b''}
 
 
 class TestActionRunHistoryResource(WWWTestCase):
@@ -192,7 +184,7 @@ class TestActionRunHistoryResource(WWWTestCase):
 
     def test_render_GET(self, request):
         response = self.resource.render_GET(request)
-        assert_equal(len(response), len(self.action_runs))
+        assert len(response) == len(self.action_runs)
 
 
 class TestJobCollectionResource(WWWTestCase):
@@ -241,32 +233,29 @@ class TestJobResource(WWWTestCase):
 
     def test_render_GET(self, request):
         result = self.resource.render_GET(request)
-        assert_equal(result['name'], self.job_scheduler.get_job().get_name())
+        assert result['name'] == self.job_scheduler.get_job().get_name()
 
     def test_get_run_from_identifier_HEAD(self):
         job_run = self.resource.get_run_from_identifier('HEAD')
         self.job_scheduler.get_job_runs.assert_called_with()
-        assert_equal(job_run, self.job_runs.get_newest.return_value)
+        assert job_run == self.job_runs.get_newest.return_value
 
     def test_get_run_from_identifier_number(self):
         job_run = self.resource.get_run_from_identifier('3')
         self.job_scheduler.get_job_runs.assert_called_with()
-        assert_equal(job_run, self.job_runs.get_run_by_num.return_value)
+        assert job_run == self.job_runs.get_run_by_num.return_value
         self.job_runs.get_run_by_num.assert_called_with(3)
 
     def test_get_run_from_identifier_negative_index(self):
         job_run = self.resource.get_run_from_identifier('-2')
-        assert_equal(job_run, self.job_runs.get_run_by_index.return_value)
+        assert job_run == self.job_runs.get_run_by_index.return_value
         self.job_runs.get_run_by_index.assert_called_with(-2)
 
     def test_getChild(self):
         autospec_method(self.resource.get_run_from_identifier)
         identifier = b'identifier'
         resource = self.resource.getChild(identifier, None)
-        assert_equal(
-            resource.job_run,
-            self.resource.get_run_from_identifier.return_value,
-        )
+        assert resource.job_run == self.resource.get_run_from_identifier.return_value
 
     def test_getChild_action_run_history(self):
         autospec_method(
@@ -278,13 +267,13 @@ class TestJobResource(WWWTestCase):
         self.job.action_graph.names = [action_name]
         self.job.runs.get_action_runs.return_value = action_runs
         resource = self.resource.getChild(action_name, None)
-        assert_equal(resource.__class__, www.ActionRunHistoryResource)
-        assert_equal(resource.action_runs, action_runs)
+        assert resource.__class__ == www.ActionRunHistoryResource
+        assert resource.action_runs == action_runs
 
 
 class TestConfigResource:
     @pytest.fixture(autouse=True)
-    def resource(self):
+    def setup_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
         self.resource = www.ConfigResource(self.mcp)
         self.controller = self.resource.controller = mock.create_autospec(
@@ -305,23 +294,23 @@ class TestConfigResource:
         name, config, hash = 'the_name', 'config', 'hash'
         request = build_request(name=name, config=config, hash=hash)
         self.resource.render_POST(request)
-        self.controller.update_config.assert_called_with(name, config, hash)
-        response_content = {
+        self.resource.controller.update_config.assert_called_with(name, config, hash)
+        expected_response = {
             'status': 'Active',
-            'error': self.controller.update_config.return_value,
+            'error': self.resource.controller.update_config.return_value,
         }
-        mock_respond.assert_called_with(request, response_content)
+        mock_respond.assert_called_with(request, expected_response)
 
     def test_render_POST_delete(self, mock_respond):
         name, config, hash = 'the_name', '', ''
         request = build_request(name=name, config=config, hash=hash)
         self.resource.render_POST(request)
-        self.controller.delete_config.assert_called_with(name, config, hash)
-        response_content = {
+        self.resource.controller.delete_config.assert_called_with(name, config, hash)
+        expected_response = {
             'status': 'Active',
-            'error': self.controller.delete_config.return_value,
+            'error': self.resource.controller.delete_config.return_value,
         }
-        mock_respond.assert_called_with(request, response_content)
+        mock_respond.assert_called_with(request, expected_response)
 
 
 class TestMetricsResource:
@@ -344,7 +333,3 @@ class TestTronSite:
         request = mock.Mock(code=500)
         site.log(request)
         assert mock_meter.call_count == 1
-
-
-if __name__ == '__main__':
-    run()

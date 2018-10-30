@@ -19,7 +19,7 @@ fi
 
 if ! pip3.6 list --format=columns | grep 'tron.*/work' > /dev/null; then
   echo Installing packages
-  pip3.6 install -q -e .
+  pip3.6 install -q -r requirements.txt -e .
 fi
 
 echo Starting Tron

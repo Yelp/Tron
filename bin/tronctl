@@ -4,16 +4,13 @@
 Part of the command line interface to the tron daemon. Provides the interface
 to controlling jobs and runs.
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import datetime
 import logging
 import sys
+from collections import defaultdict
+from urllib.parse import urljoin
 
 import argcomplete
-from six.moves.urllib.parse import urljoin
 
 from tron.commands import client
 from tron.commands import cmd_utils
@@ -35,6 +32,8 @@ COMMAND_HELP = (
     ('stop', 'Stop the action run (SIGTERM)'),
     ('kill', 'Force kill the action run (SIGKILL)'),
     ('move', 'Rename a job'),
+    ('publish', 'Publish actionrun trigger'),
+    ('discard', 'Discard existing actionrun trigger'),
 )
 
 log = logging.getLogger('tronctl')
@@ -94,23 +93,29 @@ def parse_cli():
     return args
 
 
-def edit(args, uri):
-    data = {'command': args.command}
-    if args.command == "start" and args.run_date:
-        data['run_time'] = str(args.run_date)
-    elif args.command == "move":
-        data['old_name'] = args.id[0]
-        data['new_name'] = args.id[1]
-
-    uri = urljoin(args.server, uri)
-    response = client.request(uri, data=data)
-
+def request(url, data, headers=None, method=None):
+    response = client.request(url, data=data, headers=headers, method=method)
     if response.error:
         print(f'Error: {response.content}')
         return
-
-    print(response.content['result'])
+    print(response.content.get('result', 'OK'))
     return True
+
+
+def event_publish(args):
+    for event in args.id:
+        yield request(
+            urljoin(args.server, "/api/events"),
+            dict(command='publish', event=event)
+        )
+
+
+def event_discard(args):
+    for event in args.id:
+        yield request(
+            urljoin(args.server, "/api/events"),
+            dict(command='discard', event=event)
+        )
 
 
 def control_objects(args):
@@ -130,7 +135,11 @@ def control_objects(args):
                 word=identifier, possibilities=possibilities
             )
             raise SystemExit(f"Error: {e}{suggestions}")
-        yield edit(args, tron_id.url)
+
+        data = dict(command=args.command)
+        if args.command == "start" and args.run_date:
+            data['run_time'] = str(args.run_date)
+        yield request(urljoin(args.server, tron_id.url), data)
 
 
 def move(args):
@@ -148,13 +157,15 @@ def move(args):
     if new_name in job_index.keys():
         raise SystemExit(f"Error: {new_name} exists already")
 
-    return edit(args, '/api/jobs')
+    data = dict(command='move', old_name=old_name, new_name=new_name)
+    yield request(urljoin(args.server, '/api/jobs'), data)
 
 
 def backfill(args):
     if args.start_date is None:
         print("Error: For a backfill, --start-date must be set")
-        return 1
+        yield False
+
     if args.end_date is None:
         args.end_date = datetime.datetime.today()
     dates = get_dates_for_backfill(
@@ -167,6 +178,7 @@ def backfill(args):
         print(f"tronctl start {args.id[0]} --date {date}")
     print("")
     print("Note that many jobs operate on the previous day's data.")
+    yield True
 
 
 def get_dates_for_backfill(start_date, end_date):
@@ -177,18 +189,23 @@ def get_dates_for_backfill(start_date, end_date):
     return dates
 
 
+COMMANDS = defaultdict(
+    lambda: control_objects,
+    publish=event_publish,
+    discard=event_discard,
+    backfill=backfill,
+    move=move,
+)
+
+
 def main():
     """run tronctl"""
     args = parse_cli()
     cmd_utils.setup_logging(args)
     cmd_utils.load_config(args)
-
-    if args.command == "backfill":
-        sys.exit(backfill(args))
-    elif args.command == "move":
-        sys.exit(move(args))
-    else:
-        if not all(control_objects(args)):
+    cmd = COMMANDS[args.command]
+    for ret in cmd(args):
+        if not ret:
             sys.exit(ExitCode.fail)
 
 

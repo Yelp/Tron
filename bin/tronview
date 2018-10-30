@@ -61,6 +61,14 @@ def parse_cli():
         default=0,
     )
     parser.add_argument(
+        "--events",
+        "-E",
+        action="store_true",
+        dest="events",
+        help="Display stored events",
+        default=0,
+    )
+    parser.add_argument(
         'name',
         nargs='?',
         help='job name | job run id | action id',
@@ -144,6 +152,18 @@ def main():
 
     display.Color.toggle(args.display_color)
     client = Client(args.server)
+
+    if args.events:
+        try:
+            response = client.request("/api/events")
+            error = response.get('error')
+            if not error:
+                for evt in response.get('response', ['* no recorded events *']):
+                    print(evt)
+                sys.exit(ExitCode.success)
+        except RequestError as err:
+            error = str(err)
+        raise SystemExit(f"Error: {error}")
 
     if not args.name:
         output = view_all(args, client)

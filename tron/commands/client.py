@@ -1,14 +1,11 @@
 """
 A command line http client used by tronview, tronctl, and tronfig
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
+import urllib.error
+import urllib.parse
+import urllib.request
 from collections import namedtuple
-
-from six.moves import filter
-from six.moves import urllib
 
 import tron
 from tron.config.schema import MASTER_NAMESPACE
@@ -21,7 +18,7 @@ except ImportError:
 
 log = logging.getLogger(__name__)
 
-USER_AGENT = "Tron Command/%s +http://github.com/Yelp/Tron" % tron.__version__
+USER_AGENT = f"Tron Command/{tron.__version__} +http://github.com/Yelp/Tron"
 DECODE_ERROR = "DECODE_ERROR"
 URL_ERROR = 'URL_ERROR'
 
@@ -37,10 +34,10 @@ default_headers = {
 }
 
 
-def build_url_request(uri, data, headers=None):
+def build_url_request(uri, data, headers=None, method=None):
     headers = headers or default_headers
     enc_data = urllib.parse.urlencode(data).encode() if data else None
-    return urllib.request.Request(uri, enc_data, headers)
+    return urllib.request.Request(uri, enc_data, headers=headers, method=method)
 
 
 def load_response_content(http_response):
@@ -72,9 +69,9 @@ def build_http_error_response(exc):
     return Response(exc.code, exc.msg, content)
 
 
-def request(uri, data=None):
+def request(uri, data=None, headers=None, method=None):
     log.info("Request to %s with %s", uri, data)
-    request = build_url_request(uri, data)
+    request = build_url_request(uri, data, headers=headers, method=method)
     try:
         response = urllib.request.urlopen(request)
     except urllib.error.HTTPError as e:
@@ -89,10 +86,8 @@ def request(uri, data=None):
 
 def build_get_url(url, data=None):
     if data:
-        return '{}?{}'.format(
-            url,
-            urllib.parse.urlencode(sorted(data.items())),
-        )
+        query_str = urllib.parse.urlencode(sorted(data.items()))
+        return f'{url}?{query_str}'
     else:
         return url
 
@@ -186,7 +181,10 @@ class Client(object):
         uri = urllib.parse.urljoin(self.url_base, url)
         response = request(uri, data)
         if response.error:
-            raise RequestError(f'{response.content}')
+            if response.content:
+                raise RequestError(response.content)
+            else:
+                raise RequestError(f'{response.error} {response.msg}')
         return response.content
 
 
@@ -235,7 +233,7 @@ def get_object_type_from_identifier(url_index, identifier):
 
     def get_name_parts(identifier, namespace=None):
         if namespace:
-            identifier = '%s.%s' % (namespace, identifier)
+            identifier = f'{namespace}.{identifier}'
 
         name_elements = identifier.split('.')
         name = '.'.join(name_elements[:2])

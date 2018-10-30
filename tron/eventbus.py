@@ -54,10 +54,10 @@ class EventBus:
         EventBus.instance = None
 
     @staticmethod
-    def publish(message):
+    def publish(event):
         if not EventBus.instance:
             return
-        return EventBus.instance._publish(message)
+        return EventBus.instance._publish(event)
 
     @staticmethod
     def subscribe(prefix, subscriber, callback):
@@ -72,10 +72,16 @@ class EventBus:
         return EventBus.instance._clear_subscriptions(subscriber)
 
     @staticmethod
-    def has_event(message):
+    def has_event(event):
         if not EventBus.instance:
             return
-        return EventBus.instance._has_event(message)
+        return EventBus.instance._has_event(event)
+
+    @staticmethod
+    def discard(event):
+        if not EventBus.instance:
+            return
+        return EventBus.instance._discard(event)
 
     def __init__(self, log_dir):
         self.enabled = False
@@ -113,6 +119,12 @@ class EventBus:
         else:
             log.error(f"can't publish {event!r}, must be dict")
             return False
+
+    def _discard(self, event) -> bool:
+        if not self._has_event(event):
+            return False
+        del self.event_log[event]
+        return True
 
     def _subscribe(self, prefix, subscriber, callback):
         self.subscribe_queue.append((prefix, subscriber, callback))
@@ -238,8 +250,6 @@ class EventBus:
         new_subscriptions = defaultdict(list)
         removed = 0
         for prefix, subs in self.event_subscribers.items():
-            if prefix not in new_subscriptions:
-                new_subscriptions[prefix] = []
             for (sub, cb) in subs:
                 if sub == subscriber:
                     removed += 1
