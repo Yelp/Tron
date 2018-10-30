@@ -1,3 +1,13 @@
+tron (0.9.9.0) trusty; urgency=medium
+
+  * 0.9.9.0 tagged with 'make release'
+  * Tronctl publish/discard events
+  * Update DST fall back behavior to be consistent
+  * Update requirements
+  * Add script for fetching metrics
+
+ -- root <root@0dab49ce8592>  Tue, 30 Oct 2018 17:54:04 +0000
+
 tron (0.9.8.4) trusty; urgency=medium
 
   * 0.9.8.4 tagged with 'make release'
