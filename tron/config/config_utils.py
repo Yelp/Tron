@@ -196,7 +196,10 @@ def build_dict_name_validator(item_validator, allow_empty=False):
 
     def validator(value, config_context):
         if isinstance(value, dict):
-            value = [{'name': name, **config} for name, config in value.items()]
+            value = [{
+                'name': name,
+                **config
+            } for name, config in value.items()]
 
         msg = "Duplicate name %%s at %s" % config_context.path
         name_dict = UniqueNameDict(msg)

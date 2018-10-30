@@ -73,7 +73,9 @@ def handle_command(request, api_controller, obj, **kwargs):
     except controller.UnknownCommandError:
         error_msg = f"Unknown command '{command}' for '{obj}'"
         log.warning(error_msg)
-        return respond(request, {'error': error_msg}, code=http.NOT_IMPLEMENTED)
+        return respond(
+            request, {'error': error_msg}, code=http.NOT_IMPLEMENTED
+        )
     except Exception as e:
         log.exception('%r while executing command %s for %s', e, command, obj)
         trace = traceback.format_exc()
@@ -83,6 +85,7 @@ def handle_command(request, api_controller, obj, **kwargs):
 class ErrorResource(resource.Resource):
     """ Equivalent to resource.NoResource, except error message is returned
     as JSON, not HTML """
+
     def __init__(self, error='No Such Resource', code=http.NOT_FOUND):
         resource.Resource.__init__(self)
         self.code = code
@@ -153,8 +156,10 @@ class JobRunResource(resource.Resource):
             action_run = self.job_run.action_runs[action_name]
             return ActionRunResource(action_run, self.job_run)
 
-        return ErrorResource(f"Cannot find action '{action_name}' for "
-                             f"'{self.job_run}'")
+        return ErrorResource(
+            f"Cannot find action '{action_name}' for "
+            f"'{self.job_run}'"
+        )
 
     @AsyncResource.bounded
     def render_GET(self, request):
@@ -401,10 +406,12 @@ class StatusResource(resource.Resource):
 
     @AsyncResource.bounded
     def render_GET(self, request):
-        return respond(request, {
-            'status': "I'm alive.",
-            'version': __version__,
-        })
+        return respond(
+            request, {
+                'status': "I'm alive.",
+                'version': __version__,
+            }
+        )
 
 
 class MetricsResource(resource.Resource):

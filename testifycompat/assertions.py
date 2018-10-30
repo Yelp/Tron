@@ -38,7 +38,7 @@ def assert_raises(exc, func=None, *args, **kwargs):
     if func is None:
         return pytest.raises(exc)
 
-    with pytest.raises(exc):
+    with pytest.raises(exc) as excinfo:
         func(*args, **kwargs)
 
 

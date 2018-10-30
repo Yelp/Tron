@@ -63,7 +63,7 @@ def parse_cli():
     parser.add_argument(
         "--events",
         "-E",
-        action="count",
+        action="store_true",
         dest="events",
         help="Display stored events",
         default=0,
@@ -154,15 +154,16 @@ def main():
     client = Client(args.server)
 
     if args.events:
-        response = client.request("/api/events")
-        error = response.get('error')
-        if error:
-            print(error)
-            sys.exit(ExitCode.fail)
-        else:
-            for evt in response.get('response'):
-                print(evt)
-            sys.exit(ExitCode.success)
+        try:
+            response = client.request("/api/events")
+            error = response.get('error')
+            if not error:
+                for evt in response.get('response', ['* no recorded events *']):
+                    print(evt)
+                sys.exit(ExitCode.success)
+        except RequestError as err:
+            error = str(err)
+        raise SystemExit(f"Error: {error}")
 
     if not args.name:
         output = view_all(args, client)

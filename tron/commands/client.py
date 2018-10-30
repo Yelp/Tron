@@ -105,6 +105,9 @@ class Client(object):
     def status(self):
         return self.http_get('/api/status')
 
+    def metrics(self):
+        return self.http_get('/api/metrics')
+
     def config(
         self,
         config_name,
@@ -178,7 +181,10 @@ class Client(object):
         uri = urllib.parse.urljoin(self.url_base, url)
         response = request(uri, data)
         if response.error:
-            raise RequestError(f'{response.error} {response.msg}')
+            if response.content:
+                raise RequestError(response.content)
+            else:
+                raise RequestError(f'{response.error} {response.msg}')
         return response.content
 
 

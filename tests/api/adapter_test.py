@@ -136,9 +136,10 @@ class TestActionRunGraphAdapter(TestCase):
         self.a2 = mock.MagicMock(action_name="a2")
         self.action_runs = mock.create_autospec(
             actionrun.ActionRunCollection,
-            action_graph=actiongraph.ActionGraph(
-                [self.a1], {'a1': self.a1, 'a2': self.a2}
-            ),
+            action_graph=actiongraph.ActionGraph([self.a1], {
+                'a1': self.a1,
+                'a2': self.a2
+            }),
         )
         self.adapter = adapter.ActionRunGraphAdapter(self.action_runs)
         self.action_runs.__iter__.return_value = [self.a1, self.a2]

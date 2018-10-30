@@ -11,9 +11,15 @@ def all_metrics():
 
 
 def test_get_metric(all_metrics):
-    timer = metrics.get_metric('timer', 'api.requests', {'method': 'GET'}, mock.Mock())
-    same_timer = metrics.get_metric('timer', 'api.requests', {'method': 'GET'}, mock.Mock())
-    other_timer = metrics.get_metric('timer', 'api.requests', {'method': 'POST'}, mock.Mock())
+    timer = metrics.get_metric(
+        'timer', 'api.requests', {'method': 'GET'}, mock.Mock()
+    )
+    same_timer = metrics.get_metric(
+        'timer', 'api.requests', {'method': 'GET'}, mock.Mock()
+    )
+    other_timer = metrics.get_metric(
+        'timer', 'api.requests', {'method': 'POST'}, mock.Mock()
+    )
     metrics.get_metric('something', 'name', None, mock.Mock())
     assert timer == same_timer
     assert other_timer != timer

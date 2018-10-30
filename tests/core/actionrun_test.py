@@ -1011,7 +1011,9 @@ class TestMesosActionRun(TestCase):
 
             mock_get_cluster = mock_cluster_repo.get_cluster
             mock_get_cluster.assert_called_once_with()
-            self.other_task_kwargs['constraints'] = [['an attr', 'an op', 'a val']]
+            self.other_task_kwargs['constraints'] = [[
+                'an attr', 'an op', 'a val'
+            ]]
             mock_get_cluster.return_value.create_task.assert_called_once_with(
                 action_run_id=self.action_run.id,
                 command=self.command,
@@ -1083,7 +1085,9 @@ class TestMesosActionRun(TestCase):
 
     @mock.patch('tron.core.actionrun.filehandler', autospec=True)
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_recover_no_mesos_task_id(self, mock_cluster_repo, mock_filehandler):
+    def test_recover_no_mesos_task_id(
+        self, mock_cluster_repo, mock_filehandler
+    ):
         self.action_run.machine.state = ActionRun.UNKNOWN
         self.action_run.mesos_task_id = None
 
@@ -1093,9 +1097,7 @@ class TestMesosActionRun(TestCase):
 
     @mock.patch('tron.core.actionrun.filehandler', autospec=True)
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_recover_task_none(
-        self, mock_cluster_repo, mock_filehandler
-    ):
+    def test_recover_task_none(self, mock_cluster_repo, mock_filehandler):
         self.action_run.machine.state = ActionRun.UNKNOWN
         self.action_run.mesos_task_id = 'my_mesos_id'
         # Task is None if Mesos is disabled
