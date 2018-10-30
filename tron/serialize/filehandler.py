@@ -179,9 +179,9 @@ class OutputStreamSerializer(object):
         try:
             cmd = ('tail', '-n', str(num_lines), path)
             tail_sub = Popen(cmd, stdout=PIPE)
-            return list(line.rstrip() for line in tail_sub.stdout)
+            return list(line.rstrip().decode() for line in tail_sub.stdout)
         except OSError as e:
-            log.error("Could not tail %s: %s" % (path, e))
+            log.error(f"Could not tail {path}: {e}")
             return []
 
     def open(self, filename):
