@@ -37,11 +37,11 @@ def check_bin_exists(bin):
 
     :param bin: (str) Name of the executable; could be a path to one
     """
-    try:
-        subprocess.call(['which', bin])
-    except OSError:
-        return False
-    return True
+    return subprocess.call(
+        ['which', bin],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+    ) == 0
 
 
 def send_data_metric(name, metric_type, value, dimensions={}, dry_run=False):
