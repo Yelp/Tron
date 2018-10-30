@@ -8,7 +8,6 @@ from tron.utils import collections
 from tron.utils import iteration
 from tron.utils import proxy
 
-
 log = logging.getLogger(__name__)
 
 

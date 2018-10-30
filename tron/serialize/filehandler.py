@@ -5,7 +5,6 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import logging
-import os
 import os.path
 import shutil
 import time

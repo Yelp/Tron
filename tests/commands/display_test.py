@@ -152,15 +152,11 @@ class TestAddColorForState(TestCase):
             yield
 
     def test_add_red(self):
-        text = display.add_color_for_state(
-            actionrun.ActionRun.FAILED,
-        )
+        text = display.add_color_for_state(actionrun.ActionRun.FAILED, )
         assert text.startswith(display.Color.colors['red']), text
 
     def test_add_green(self):
-        text = display.add_color_for_state(
-            actionrun.ActionRun.RUNNING,
-        )
+        text = display.add_color_for_state(actionrun.ActionRun.RUNNING, )
         assert text.startswith(display.Color.colors['green']), text
 
     def test_add_blue(self):

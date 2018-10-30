@@ -85,6 +85,21 @@ def to_timezone(t, tzinfo):
         return t
 
 
+def naive_as_timezone(t, tzinfo):
+    """Interprets the naive datetime with the given time zone."""
+    try:
+        result = tzinfo.localize(t, is_dst=None)
+    except AmbiguousTimeError:
+        # We are in the infamous 1 AM block which happens twice on
+        # fall-back. Pretend like it's the first time, every time.
+        result = tzinfo.localize(t, is_dst=True)
+    except NonExistentTimeError:
+        # We are in the infamous 2:xx AM block which does not
+        # exist. Pretend like it's the later time, every time.
+        result = tzinfo.localize(t, is_dst=True)
+    return result
+
+
 def get_time(time_string):
     """Converts a string to a datetime.time object.
 
@@ -282,17 +297,7 @@ class TimeSpecification(object):
     # TODO: test
     def handle_timezone(self, out, tzinfo):
         if self.timezone and pytz is not None:
-            try:
-                out = self.timezone.localize(out, is_dst=None)
-            except AmbiguousTimeError:
-                out = self.timezone.localize(out)
-            except NonExistentTimeError:
-                try:
-                    out = self.timezone.localize(
-                        out + datetime.timedelta(minutes=60),
-                    )
-                except NonExistentTimeError:
-                    return None
+            out = naive_as_timezone(out, self.timezone)
         return to_timezone(out, tzinfo)
 
     def __eq__(self, other):

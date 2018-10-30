@@ -381,7 +381,9 @@ class JobRunCollection(object):
 
     def get_newest(self, include_manual=True):
         """Returns the most recently created JobRun."""
-        return next_or_none(r for r in self.runs if include_manual or not r.manual)
+        return next_or_none(
+            r for r in self.runs if include_manual or not r.manual
+        )
 
     def get_pending(self):
         """Return the job runs that are queued or scheduled."""
@@ -393,9 +395,8 @@ class JobRunCollection(object):
 
     def get_active(self, node=None):
         return [
-            r
-            for r in self.runs
-            if (r.is_running or r.is_starting) and (not node or r.node == node)
+            r for r in self.runs if (r.is_running or r.is_starting) and
+            (not node or r.node == node)
         ]
 
     def get_first_queued(self, node=None):
@@ -412,8 +413,8 @@ class JobRunCollection(object):
         node is not None, then only looks for runs on that node.
         """
         return next_or_none(
-            r for r in self.runs
-            if (not node or r.node == node) and (r.is_running or r.is_scheduled)
+            r for r in self.runs if (not node or r.node == node) and
+            (r.is_running or r.is_scheduled)
         )
 
     def next_run_num(self):
