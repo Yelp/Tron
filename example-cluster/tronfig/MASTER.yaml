@@ -40,3 +40,4 @@ jobs:
       - name: "two"
         command: "exit $((RANDOM % 2))"
         triggered_by: ["MASTER.one.one.ymdhm.{ymdhm}"]
+        trigger_timeout: 5s
