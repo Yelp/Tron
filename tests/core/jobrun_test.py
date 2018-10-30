@@ -23,7 +23,12 @@ from tron.serialize import filehandler
 
 def build_mock_job():
     action_graph = mock.create_autospec(actiongraph.ActionGraph)
-    action_graph.action_map = {'foo': mock.Mock(triggered_by=[])}
+    action_graph.action_map = {
+        'foo': mock.Mock(
+            triggered_by=[],
+            trigger_timeout=datetime.timedelta(days=1)
+        )
+    }
     runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
     return mock.create_autospec(
         job.Job,
@@ -471,8 +476,8 @@ class TestJobRunCollection(TestCase):
         )
         assert_in(job_run, self.run_collection.runs)
         self.run_collection.remove_old_runs.assert_called_with()
-        assert_equal(job_run.run_num, 5)
-        assert_equal(job_run.job_name, mock_job.get_name.return_value)
+        assert job_run.run_num == 5
+        assert job_run.job_name == mock_job.get_name.return_value
 
     def test_build_new_run_manual(self):
         autospec_method(self.run_collection.remove_old_runs)
@@ -486,7 +491,7 @@ class TestJobRunCollection(TestCase):
         )
         assert_in(job_run, self.run_collection.runs)
         self.run_collection.remove_old_runs.assert_called_with()
-        assert_equal(job_run.run_num, 5)
+        assert job_run.run_num == 5
         assert job_run.manual
 
     def test_cancel_pending(self):

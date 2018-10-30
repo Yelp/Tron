@@ -188,6 +188,7 @@ class ActionRun(Observable):
     EXIT_NODE_ERROR = -2
     EXIT_STOP_KILL = -3
     EXIT_TRIGGER_TIMEOUT = -4
+    EXIT_MESOS_DISABLED = -5
 
     context_class = command_context.ActionRunContext
 

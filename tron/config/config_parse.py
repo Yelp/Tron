@@ -378,7 +378,7 @@ class ValidateAction(Validator):
         'trigger_downstreams': None,
         'triggered_by': None,
         'on_upstream_rerun': None,
-        'trigger_timeout': datetime.timedelta(hours=24),
+        'trigger_timeout': None,
     }
     requires = build_list_of_type_validator(
         valid_action_name,
@@ -460,7 +460,7 @@ class ValidateCleanupAction(Validator):
         'trigger_downstreams': None,
         'triggered_by': None,
         'on_upstream_rerun': None,
-        'trigger_timeout': datetime.timedelta(hours=24),
+        'trigger_timeout': None,
     }
     validators = {
         'name':
