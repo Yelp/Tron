@@ -398,6 +398,55 @@ class TestActionRun:
             self.action_run.__getattr__('is_not_a_real_state')
 
 
+class TestActionRunFactoryTriggerTimeout:
+    def test_trigger_timeout_default(self):
+        today = datetime.datetime.today()
+        day = datetime.timedelta(days=1)
+        tomorrow = today + day
+        action_run = ActionRunFactory.build_run_for_action(
+            mock.Mock(run_time=today),
+            mock.Mock(trigger_timeout=None),
+            mock.Mock(),
+        )
+        assert action_run.trigger_timeout_timestamp == tomorrow.timestamp()
+
+    def test_trigger_timeout_custom(self):
+        today = datetime.datetime.today()
+        hour = datetime.timedelta(hours=1)
+        target = today + hour
+        action_run = ActionRunFactory.build_run_for_action(
+            mock.Mock(run_time=today),
+            mock.Mock(trigger_timeout=hour),
+            mock.Mock(),
+        )
+        assert action_run.trigger_timeout_timestamp == target.timestamp()
+
+
+class TestActionRunTriggerTimeout:
+    @pytest.fixture(autouse=True)
+    def setup_teardown(self):
+        self.command = mock.Mock()
+        self.rendered_command = "do command action_name"
+        self.action_run = ActionRun(
+            job_run_id="ns.id.0",
+            name="action_name",
+            triggered_by=['hello'],
+            node=mock.Mock(),
+            bare_command=mock.Mock(),
+            output_path=mock.Mock(),
+            action_runner=mock.Mock(),
+            trigger_timeout_timestamp=mock.Mock(),
+        )
+        # These should be implemented in subclasses, we don't care here
+        self.action_run.submit_command = mock.Mock()
+        self.action_run.stop = mock.Mock()
+        self.action_run.kill = mock.Mock()
+
+    def test_trigger_timeout(self):
+        pass
+        #
+
+
 class TestSSHActionRun:
     @pytest.fixture(autouse=True)
     def setup_action_run(self):

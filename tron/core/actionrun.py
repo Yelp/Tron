@@ -604,11 +604,14 @@ class ActionRun(Observable):
         if not remaining_triggers:
             return
 
-        now = timeutils.current_time().timestamp()
-        delay = max(self.trigger_timeout_timestamp - now, 1)
-        self.trigger_timeout_call = reactor.callLater(
-            delay, self.trigger_timeout_reached
-        )
+        if self.trigger_timeout_timestamp:
+            now = timeutils.current_time().timestamp()
+            delay = max(self.trigger_timeout_timestamp - now, 1)
+            self.trigger_timeout_call = reactor.callLater(
+                delay, self.trigger_timeout_reached
+            )
+        else:
+            log.error(f"{self} has no trigger_timeout_timestamp")
 
         for trigger in remaining_triggers:
             EventBus.subscribe(trigger, self.__hash__(), self.trigger_notify)
