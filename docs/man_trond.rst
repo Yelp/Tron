@@ -40,8 +40,8 @@ Options
 ``--nodaemon``
     [DEPRECATED in 0.9.4] Indicates we should not fork and daemonize the process (default False)
 
-``--pid-file=PIDFILE``
-    Where to store pid of the executing process (default /var/run/tron.pid)
+``--lock-file=LOCKFILE``
+    Where to store the lock file of the executing process (default /var/run/tron.lock)
 
 ``-P LISTEN_PORT, --port=LISTEN_PORT``
     What port to listen on, defaults 8089
@@ -55,8 +55,8 @@ Files
 Working directory
     The directory where state and saved output of processes are stored.
 
-Pid file
-    Contains the pid of the daemonized process.
+Lock file
+    Ensures only one daemon runs at a time.
 
 Log File
     trond error log, configured from logging.conf

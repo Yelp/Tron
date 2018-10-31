@@ -26,63 +26,43 @@ from tron.utils import flockfile
 log = logging.getLogger(__name__)
 
 
-class PIDFile(object):
-    """Create and check for a PID file for the daemon."""
+class LockFile(object):
+    """ Create and maintain a lock for the daemon """
 
     def __init__(self, filename):
         self.lock = flockfile.FlockFile(filename)
-        self.check_if_pidfile_exists()
 
     @property
     def filename(self):
         return self.lock.path
 
-    def check_if_pidfile_exists(self):
-        self.lock.acquire()
+    def is_locked(self):
+        return self.lock.is_locked()
 
+    def acquire(self):
         try:
-            with open(self.filename, 'r') as fh:
-                pid = int(fh.read().strip())
-        except (IOError, ValueError):
-            pid = None
-
-        if self.is_process_running(pid):
-            self._try_unlock()
-            error_msg = f"Daemon running as {pid} without lock"
+            self.lock.acquire()
+        except lockfile.AlreadyLocked:
+            error_msg = f"Tron lockfile already locked: {self.filename}"
             log.error(error_msg)
-            raise SystemExit(error_msg)
-
-        if pid:
-            log.info(f"Reusing orphaned tron pidfile: {self.filename}")
-            self.lock.file.truncate(0)
-
-    def is_process_running(self, pid):
-        """Return True if the process is still running."""
-        if not pid:
-            return False
-        try:
-            os.kill(pid, 0)
-            return True
-        except OSError:
-            return False
+            raise SystemExit(f"error: {error_msg}")
 
     def __enter__(self):
-        print(os.getpid(), file=self.lock.file)
-        self.lock.file.flush()
+        self.acquire()
 
-    def _try_unlock(self):
+    def release(self):
         try:
             self.lock.release()
         except lockfile.NotLocked:
-            log.warning("Lockfile was already unlocked.")
+            log.warning(f"Tron lockfile already unlocked: {self.filename}")
 
     def __exit__(self, *args):
-        self._try_unlock()
+        self.release()
         try:
-            os.unlink(self.filename)
-            log.info(f"Removed pidfile: {self.filename}")
+            os.remove(self.filename)
+            log.info(f"Removed Tron lockfile: {self.filename}")
         except OSError:
-            log.warning(f"Failed to remove pidfile: {self.filename}")
+            log.warning(f"Failed to remove Tron lockfile: {self.filename}")
 
 
 def setup_logging(options):
@@ -120,7 +100,7 @@ class NoDaemonContext(object):
     """A mock DaemonContext for running trond without being a daemon."""
 
     def __init__(self, **kwargs):
-        self.pidfile = kwargs.pop('pidfile', None)
+        self.lockfile = kwargs.pop('lockfile', None)
         self.working_dir = kwargs.pop('working_directory', '.')
 
         self.signal_map = kwargs.pop('signal_map', {})
@@ -128,13 +108,13 @@ class NoDaemonContext(object):
 
     def __enter__(self):
         os.chdir(self.working_dir)
-        if self.pidfile:
-            self.pidfile.__enter__()
+        if self.lockfile:
+            self.lockfile.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         log.info("NoDaemonContext exit")
-        if self.pidfile:
-            self.pidfile.__exit__(exc_type, exc_val, exc_tb)
+        if self.lockfile:
+            self.lockfile.__exit__()
 
     def _set_signal_handlers(self, signal_map):
         """ Sets signal handlers for the current thread using a signal map """
@@ -160,11 +140,9 @@ class TronDaemon(object):
         self.manhole_sock = f"{self.options.working_dir}/manhole.sock"
 
     def _build_context(self, options):
-        pidfile = PIDFile(options.pid_file)
         return NoDaemonContext(
+            lockfile=LockFile(options.lock_file),
             working_directory=options.working_dir,
-            umask=0o022,
-            pidfile=pidfile,
             signal_map={
                 signal.SIGHUP: signal.SIG_DFL,
                 signal.SIGINT: signal.default_int_handler,
@@ -172,7 +150,6 @@ class TronDaemon(object):
                 signal.SIGQUIT: signal.SIG_DFL,
                 signal.SIGUSR1: signal.SIG_DFL,
             },
-            files_preserve=[pidfile.lock.file],
         )
 
     def run(self):

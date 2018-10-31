@@ -5,84 +5,59 @@ import os
 import tempfile
 from collections import defaultdict
 
-import lockfile
 import mock
-import pytest
 
-from testifycompat import assert_equal
-from testifycompat import assert_in
 from testifycompat import setup
 from testifycompat import teardown
 from testifycompat import TestCase
-from tests.assertions import assert_raises
-from tron.trondaemon import PIDFile
+from tron.trondaemon import LockFile
 from tron.trondaemon import TronDaemon
 
 
-class TestPIDFile(TestCase):
+class TestLockFile(TestCase):
     @setup
     @mock.patch('tron.trondaemon.log', autospec=None)
-    def setup_pidfile(self, _):
-        self.filename = os.path.join(tempfile.gettempdir(), 'test.pid')
-        self.pidfile = PIDFile(self.filename)
+    def setup_lockfile(self, _):
+        self.filename = os.path.join(tempfile.gettempdir(), 'test.lock')
+        self.lockfile = LockFile(self.filename)
 
     @teardown
     @mock.patch('tron.trondaemon.log', autospec=None)
-    def teardown_pidfile(self, _):
-        self.pidfile.__exit__(None, None, None)
+    def teardown_lockfile(self, _):
+        self.lockfile.__exit__(None, None, None)
 
-    def test__init__(self):
-        # Called from setup already
-        assert self.pidfile.lock.is_locked()
-        assert_equal(self.filename, self.pidfile.filename)
+    def test_acquire(self):
+        self.lockfile.acquire()
 
-    def test_check_if_pidfile_exists_file_locked(self):
-        assert_raises(lockfile.AlreadyLocked, PIDFile, self.filename)
+        assert self.lockfile.is_locked()
 
-    def test_check_if_pidfile_exists_file_exists_daemon_running(self):
-        self.pidfile.__exit__(None, None, None)
-        with open(self.filename, 'w') as fh:
-            fh.write('123\n')
+    @mock.patch('tron.trondaemon.log', mock.Mock(), autospec=None)
+    def test_acquire_already_locked(self):
+        dup_lockfile = LockFile(self.filename)
 
-        with mock.patch.object(PIDFile, 'is_process_running') as mock_method:
-            mock_method.return_value = True
+        self.lockfile.acquire()
 
-            exception = assert_raises(SystemExit, PIDFile, self.filename)
-            assert_in('Daemon running as 123', str(exception))
+        self.assertRaises(SystemExit, dup_lockfile.acquire)
 
-    def test_check_if_pidfile_exists_orphaned_file_exists(self):
-        self.pidfile.__exit__(None, None, None)
-        with open(self.filename, 'w') as fh:
-            fh.write('123\n')
+    def test_release(self):
+        self.lockfile.acquire()
+        self.lockfile.release()
 
-        with mock.patch.object(PIDFile, 'is_process_running') as mock_method:
-            mock_method.return_value = False
+        assert not self.lockfile.is_locked()
 
-            try:
-                PIDFile(self.filename)
-            except SystemExit:
-                pytest.fail(
-                    "SystemExit raised when pid file "
-                    "should have been reused"
-                )
+    @mock.patch('tron.trondaemon.log', autospec=True)
+    def test_release_not_locked(self, mock_log):
+        self.lockfile.release()
 
-    def test_is_process_running(self):
-        assert self.pidfile.is_process_running(os.getpid())
+        assert mock_log.warning.call_count == 1
 
-    def test_is_process_running_not_running(self):
-        assert not self.pidfile.is_process_running(None)
-        # Hope this isn't in use
-        assert not self.pidfile.is_process_running(99999)
+    @mock.patch('tron.trondaemon.log', mock.Mock(), autospec=None)
+    @mock.patch('os.remove', autospec=None)
+    def test_exit(self, mock_remove):
+        self.lockfile.__exit__()
 
-    def test__enter__(self):
-        self.pidfile.__enter__()
-        with open(self.filename, 'r') as fh:
-            assert_equal(fh.read(), '%s\n' % os.getpid())
-
-    def test__exit__(self):
-        self.pidfile.__exit__(None, None, None)
-        assert not self.pidfile.lock.is_locked()
-        assert not os.path.exists(self.filename)
+        assert mock_remove.call_count == 1
+        assert mock_remove.call_args == mock.call(self.lockfile.filename)
 
 
 class TronDaemonTestCase(TestCase):
@@ -91,7 +66,7 @@ class TronDaemonTestCase(TestCase):
         self.tmpdir = tempfile.TemporaryDirectory()
         trond_opts = mock.Mock()
         trond_opts.working_dir = self.tmpdir.name
-        trond_opts.pid_file = os.path.join(self.tmpdir.name, "pidfile")
+        trond_opts.lock_file = os.path.join(self.tmpdir.name, "lockfile")
         with mock.patch('tron.trondaemon.setup_logging', autospec=True):
             self.trond = TronDaemon(trond_opts)
 
@@ -100,7 +75,7 @@ class TronDaemonTestCase(TestCase):
         self.tmpdir.cleanup()
 
     @mock.patch('tron.trondaemon.setup_logging', mock.Mock(), autospec=None)
-    @mock.patch('tron.trondaemon.PIDFile', mock.Mock(), autospec=None)
+    @mock.patch('tron.trondaemon.LockFile', mock.Mock(), autospec=None)
     def test_init(self):
         daemon = TronDaemon.__new__(TronDaemon)  # skip __init__
         daemon._make_sigint_handler = mock.Mock()
