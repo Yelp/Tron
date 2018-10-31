@@ -600,20 +600,18 @@ class ActionRun(Observable):
             self.trigger_timeout_call = None
 
     def setup_subscriptions(self):
-        if self.triggered_by:
-            if self.remaining_triggers:
-                now = timeutils.current_time().timestamp()
-                delay = max(self.trigger_timeout_timestamp - now, 1)
-                self.trigger_timeout_call = reactor.callLater(
-                    delay, self.trigger_timeout_reached
-                )
+        remaining_triggers = self.remaining_triggers
+        if not remaining_triggers:
+            return
 
-            for trigger_pattern in self.triggered_by:
-                trigger = self.render_template(trigger_pattern)
-                if not EventBus.has_event(trigger):
-                    EventBus.subscribe(
-                        trigger, self.__hash__(), self.trigger_notify
-                    )
+        now = timeutils.current_time().timestamp()
+        delay = max(self.trigger_timeout_timestamp - now, 1)
+        self.trigger_timeout_call = reactor.callLater(
+            delay, self.trigger_timeout_reached
+        )
+
+        for trigger in remaining_triggers:
+            EventBus.subscribe(trigger, self.__hash__(), self.trigger_notify)
 
     def trigger_timeout_reached(self):
         if self.remaining_triggers:
