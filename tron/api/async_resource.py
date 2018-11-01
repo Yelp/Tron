@@ -11,7 +11,7 @@ def report_resource_request(resource, request, duration_ms):
     timer(
         name=f'tron.api.{resource.__class__.__name__}',
         delta=duration_ms,
-        dimensions={'method': request.method}
+        dimensions={'method': request.method.decode()}
     )
 
 
