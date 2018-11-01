@@ -437,14 +437,93 @@ class TestActionRunTriggerTimeout:
             action_runner=mock.Mock(),
             trigger_timeout_timestamp=mock.Mock(),
         )
-        # These should be implemented in subclasses, we don't care here
         self.action_run.submit_command = mock.Mock()
         self.action_run.stop = mock.Mock()
         self.action_run.kill = mock.Mock()
 
-    def test_trigger_timeout(self):
-        pass
-        #
+    def test_cleanup_clears_trigger_timeout(self):
+        self.action_run.clear_trigger_timeout = MagicMock()
+        self.action_run.cleanup()
+        self.action_run.clear_trigger_timeout.assert_called_with()
+
+    def test_clear_trigger_timeout(self):
+        timeout_call = MagicMock()
+        self.action_run.trigger_timeout_call = timeout_call
+        self.action_run.clear_trigger_timeout()
+        assert self.action_run.trigger_timeout_call is None
+        timeout_call.cancel.assert_called_with()
+
+    @mock.patch('tron.core.actionrun.EventBus', autospec=True)
+    @mock.patch('tron.core.actionrun.reactor', autospec=True)
+    def test_setup_subscriptions_no_triggers(self, reactor, eventbus):
+        self.action_run.triggered_by = []
+        self.action_run.setup_subscriptions()
+        assert not reactor.callLater.called
+        assert not eventbus.subscribe.called
+
+    @mock.patch('tron.core.actionrun.EventBus', autospec=True)
+    @mock.patch('tron.core.actionrun.reactor', autospec=True)
+    def test_setup_subscriptions_no_remaining(self, reactor, eventbus):
+        self.action_run.triggered_by = ['hello']
+        self.action_run.trigger_timeout_timestamp = None
+        eventbus.has_event.return_value = True
+        self.action_run.setup_subscriptions()
+        assert not reactor.callLater.called
+        assert not eventbus.subscribe.called
+        assert eventbus.has_event.call_args_list == [mock.call('hello')]
+
+    @mock.patch('tron.core.actionrun.timeutils', autospec=True)
+    @mock.patch('tron.core.actionrun.reactor', autospec=True)
+    def test_setup_subscriptions_timeout_in_future(self, reactor, timeutils):
+        now = datetime.datetime.now()
+        timeutils.current_time.return_value = now
+        self.action_run.trigger_timeout_timestamp = now.timestamp() + 10
+        self.action_run.setup_subscriptions()
+        reactor.callLater.assert_called_once_with(
+            10.0, self.action_run.trigger_timeout_reached
+        )
+
+    @mock.patch('tron.core.actionrun.timeutils', autospec=True)
+    @mock.patch('tron.core.actionrun.reactor', autospec=True)
+    def test_setup_subscriptions_timeout_in_past(self, reactor, timeutils):
+        now = datetime.datetime.now()
+        timeutils.current_time.return_value = now
+        self.action_run.trigger_timeout_timestamp = now.timestamp() - 10
+        self.action_run.setup_subscriptions()
+        reactor.callLater.assert_called_once_with(
+            1, self.action_run.trigger_timeout_reached
+        )
+
+    @mock.patch('tron.core.actionrun.EventBus', autospec=True)
+    def test_trigger_timeout_reached_no_remaining_notifies(self, eventbus):
+        self.action_run.notify = MagicMock()
+        self.action_run.triggered_by = ['hello']
+        eventbus.has_event.return_value = True
+        self.action_run.trigger_timeout_reached()
+        assert self.action_run.notify.called
+
+    @mock.patch('tron.core.actionrun.EventBus', autospec=True)
+    def test_trigger_timeout_reached_with_remaining_fails(self, eventbus):
+        self.action_run.fail = MagicMock()
+        self.action_run.triggered_by = ['hello']
+        eventbus.has_event.return_value = False
+        self.action_run.trigger_timeout_reached()
+        assert self.action_run.fail.called
+
+    def test_done_clears_trigger_timeout_call(self):
+        self.action_run.machine.check = mock.Mock(return_value=True)
+        self.action_run.transition_and_notify = MagicMock()
+        self.action_run.triggered_by = []
+        self.action_run.clear_trigger_timeout = MagicMock()
+        self.action_run._done(ActionRun.SUCCEEDED)
+        assert self.action_run.clear_trigger_timeout.called
+
+    def test_trigger_notify_clears_trigger_timeout(self):
+        self.action_run.notify = MagicMock()
+        self.action_run.triggered_by = []
+        self.action_run.clear_trigger_timeout = MagicMock()
+        self.action_run.trigger_notify()
+        assert self.action_run.clear_trigger_timeout.called
 
 
 class TestSSHActionRun:
