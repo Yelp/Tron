@@ -856,7 +856,6 @@ class MesosActionRun(ActionRun, Observer):
 
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
-        # TODO: consolidate? Same as SSHActionRun for now
         log.debug(
             f"{self} action_command state change: {action_command.state}"
         )
@@ -869,7 +868,9 @@ class MesosActionRun(ActionRun, Observer):
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
-                return self.fail_unknown()
+                # This is different from SSHActionRun
+                # Allows retries to happen, if configured
+                return self._exit_unsuccessful(None)
 
             if not action_command.exit_status:
                 return self.success()
