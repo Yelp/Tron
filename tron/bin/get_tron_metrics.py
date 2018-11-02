@@ -27,6 +27,16 @@ def parse_cli():
         default=False,
         help="Don't actually send metrics out. Defaults: %(default)s"
     )
+    parser.add_argument(
+        "--cluster",
+        default=None,
+        type=str,
+        help=(
+            "Cluster from which these metrics originate. "
+            "Sent as a dimension to meteorite. "
+            "Default: %(default)s"
+        ),
+    )
     args = parser.parse_args()
     return args
 
@@ -137,7 +147,7 @@ _METRIC_SENDERS = {
 }
 
 
-def send_metrics(metrics, dry_run=False):
+def send_metrics(metrics, cluster=None, dry_run=False):
     """
     Send metrics via meteorite
 
@@ -147,6 +157,12 @@ def send_metrics(metrics, dry_run=False):
         for kwargs in data:
             name = kwargs.pop('name')
             kwargs['dry_run'] = dry_run
+
+            if cluster:
+                dimensions = kwargs.get('dimensions', {})
+                dimensions['tron_cluster'] = cluster
+                kwargs['dimensions'] = dimensions
+
             _METRIC_SENDERS[metric_type](name, **kwargs)
 
 
@@ -158,7 +174,7 @@ def main():
 
     if check_bin_exists('meteorite'):
         metrics = client.metrics()
-        send_metrics(metrics, dry_run=args.dry_run)
+        send_metrics(metrics, cluster=args.cluster, dry_run=args.dry_run)
     else:
         log.error("'meteorite' was not found")
 
