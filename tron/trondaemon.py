@@ -12,7 +12,6 @@ import threading
 import time
 
 import ipdb
-import lockfile
 import pkg_resources
 from twisted.internet import defer
 from twisted.internet import reactor
@@ -24,45 +23,6 @@ from tron.mesos import MesosClusterRepository
 from tron.utils import flockfile
 
 log = logging.getLogger(__name__)
-
-
-class LockFile(object):
-    """ Create and maintain a lock for the daemon """
-
-    def __init__(self, filename):
-        self.lock = flockfile.FlockFile(filename)
-
-    @property
-    def filename(self):
-        return self.lock.path
-
-    def is_locked(self):
-        return self.lock.is_locked()
-
-    def acquire(self):
-        try:
-            self.lock.acquire()
-        except lockfile.AlreadyLocked:
-            error_msg = f"Tron lockfile already locked: {self.filename}"
-            log.error(error_msg)
-            raise SystemExit(f"error: {error_msg}")
-
-    def __enter__(self):
-        self.acquire()
-
-    def release(self):
-        try:
-            self.lock.release()
-        except lockfile.NotLocked:
-            log.warning(f"Tron lockfile already unlocked: {self.filename}")
-
-    def __exit__(self, *args):
-        self.release()
-        try:
-            os.remove(self.filename)
-            log.info(f"Removed Tron lockfile: {self.filename}")
-        except OSError:
-            log.warning(f"Failed to remove Tron lockfile: {self.filename}")
 
 
 def setup_logging(options):
@@ -109,12 +69,17 @@ class NoDaemonContext(object):
     def __enter__(self):
         os.chdir(self.working_dir)
         if self.lockfile:
-            self.lockfile.__enter__()
+            try:
+                self.lockfile.__enter__()
+            except OSError:
+                error_msg = f"Tron lockfile already locked: {self.lockfile}"
+                log.error(error_msg)
+                raise SystemExit(f"error: {error_msg}")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         log.info("NoDaemonContext exit")
         if self.lockfile:
-            self.lockfile.__exit__()
+            self.lockfile.__exit__(exc_type, exc_val, exc_tb)
 
     def _set_signal_handlers(self, signal_map):
         """ Sets signal handlers for the current thread using a signal map """
@@ -141,7 +106,7 @@ class TronDaemon(object):
 
     def _build_context(self, options):
         return NoDaemonContext(
-            lockfile=LockFile(options.lock_file),
+            lockfile=flockfile.FlockFile(options.lock_file),
             working_directory=options.working_dir,
             signal_map={
                 signal.SIGHUP: signal.SIG_DFL,
@@ -163,15 +128,12 @@ class TronDaemon(object):
         # This condition is made with the assumption that no existing daemon
         # is running. If there is one, the following code could potentially
         # cause problems for the other daemon by removing its socket.
-        if (os.path.exists(self.manhole_sock) and
-                not os.path.exists(f"{self.manhole_sock}.lock")):
-            # A socket was left behind but without its lock, so we can't reuse
-            # it. Therefore, we need to delete it.
+        if os.path.exists(self.manhole_sock):
             log.info('Removing orphaned manhole socket')
             os.remove(self.manhole_sock)
 
         self.manhole = make_manhole(dict(trond=self, mcp=self.mcp))
-        reactor.listenUNIX(self.manhole_sock, self.manhole, wantPID=1)
+        reactor.listenUNIX(self.manhole_sock, self.manhole)
         log.info(f"manhole started on {self.manhole_sock}")
 
     def _run_www_api(self):

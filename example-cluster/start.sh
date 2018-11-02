@@ -23,7 +23,6 @@ if ! pip3.6 list --format=columns | grep 'tron.*/work' > /dev/null; then
 fi
 
 echo Starting Tron
-rm -f /nail/tron/tron.lock
 FAKETIME_X=${FAKETIME_X:-10}
 exec faketime -f "+0.0y x$FAKETIME_X" \
   trond -l logging.conf -w /nail/tron -v --debug -H 0.0.0.0

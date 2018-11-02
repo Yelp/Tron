@@ -10,54 +10,7 @@ import mock
 from testifycompat import setup
 from testifycompat import teardown
 from testifycompat import TestCase
-from tron.trondaemon import LockFile
 from tron.trondaemon import TronDaemon
-
-
-class TestLockFile(TestCase):
-    @setup
-    @mock.patch('tron.trondaemon.log', autospec=None)
-    def setup_lockfile(self, _):
-        self.filename = os.path.join(tempfile.gettempdir(), 'test.lock')
-        self.lockfile = LockFile(self.filename)
-
-    @teardown
-    @mock.patch('tron.trondaemon.log', autospec=None)
-    def teardown_lockfile(self, _):
-        self.lockfile.__exit__(None, None, None)
-
-    def test_acquire(self):
-        self.lockfile.acquire()
-
-        assert self.lockfile.is_locked()
-
-    @mock.patch('tron.trondaemon.log', mock.Mock(), autospec=None)
-    def test_acquire_already_locked(self):
-        dup_lockfile = LockFile(self.filename)
-
-        self.lockfile.acquire()
-
-        self.assertRaises(SystemExit, dup_lockfile.acquire)
-
-    def test_release(self):
-        self.lockfile.acquire()
-        self.lockfile.release()
-
-        assert not self.lockfile.is_locked()
-
-    @mock.patch('tron.trondaemon.log', autospec=True)
-    def test_release_not_locked(self, mock_log):
-        self.lockfile.release()
-
-        assert mock_log.warning.call_count == 1
-
-    @mock.patch('tron.trondaemon.log', mock.Mock(), autospec=None)
-    @mock.patch('os.remove', autospec=None)
-    def test_exit(self, mock_remove):
-        self.lockfile.__exit__()
-
-        assert mock_remove.call_count == 1
-        assert mock_remove.call_args == mock.call(self.lockfile.filename)
 
 
 class TronDaemonTestCase(TestCase):
@@ -75,7 +28,7 @@ class TronDaemonTestCase(TestCase):
         self.tmpdir.cleanup()
 
     @mock.patch('tron.trondaemon.setup_logging', mock.Mock(), autospec=None)
-    @mock.patch('tron.trondaemon.LockFile', mock.Mock(), autospec=None)
+    @mock.patch('tron.utils.flockfile.FlockFile', mock.Mock(), autospec=None)
     def test_init(self):
         daemon = TronDaemon.__new__(TronDaemon)  # skip __init__
         daemon._make_sigint_handler = mock.Mock()
@@ -124,27 +77,6 @@ class TronDaemonTestCase(TestCase):
         handler('fake_signum', 'fake_frame')
 
         daemon._handle_shutdown.call_count == 0
-
-    def test_run_manhole_reuse_manhole(self):
-        manhole_lock = f"{self.trond.manhole_sock}.lock"
-
-        try:
-            with open(
-                self.trond.manhole_sock,
-                'w+'
-            ), open(
-                manhole_lock,
-                'w+'
-            ), mock.patch(
-                'twisted.internet.reactor.listenUNIX',
-                autospec=True,
-            ) as mock_listenUNIX:
-                self.trond._run_manhole()
-
-                assert mock_listenUNIX.call_count == 1
-        finally:
-            os.remove(self.trond.manhole_sock)
-            os.remove(manhole_lock)
 
     def test_run_manhole_new_manhole(self):
         with open(self.trond.manhole_sock, 'w+'):
