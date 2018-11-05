@@ -63,8 +63,8 @@ Debug mode, extra error reporting, no daemonizing
 .B \fB\-\-nodaemon\fP
 (DEPRECATED in 0.9.4) Indicates we should not fork and daemonize the process (default False)
 .TP
-.B \fB\-\-pid\-file=PIDFILE\fP
-Where to store pid of the executing process (default /var/run/tron.pid)
+.B \fB\-\-lock\-file=LOCKFILE\fP
+Where to store the lock file of the executing process (default /var/run/tron.lock)
 .TP
 .B \fB\-P LISTEN_PORT, \-\-port=LISTEN_PORT\fP
 What port to listen on, defaults 8089
@@ -78,8 +78,8 @@ What host to listen on defaults to localhost
 .B Working directory
 The directory where state and saved output of processes are stored.
 .TP
-.B Pid file
-Contains the pid of the daemonized process.
+.B Lock file
+Ensures only one daemon runs at a time.
 .TP
 .B Log File
 trond error log, configured from logging.conf

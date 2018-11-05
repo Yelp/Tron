@@ -12,7 +12,6 @@ import threading
 import time
 
 import ipdb
-import lockfile
 import pkg_resources
 from twisted.internet import defer
 from twisted.internet import reactor
@@ -24,67 +23,6 @@ from tron.mesos import MesosClusterRepository
 from tron.utils import flockfile
 
 log = logging.getLogger(__name__)
-
-
-class PIDFile(object):
-    """Create and check for a PID file for the daemon."""
-
-    def __init__(self, filename):
-        self.lock = flockfile.FlockFile(filename)
-        self.check_if_pidfile_exists()
-
-    @property
-    def filename(self):
-        return self.lock.path
-
-    def check_if_pidfile_exists(self):
-        self.lock.acquire()
-
-        try:
-            with open(self.filename, 'r') as fh:
-                pid = int(fh.read().strip())
-        except (IOError, ValueError):
-            pid = None
-
-        if self.is_process_running(pid):
-            self._try_unlock()
-            raise SystemExit(f"Daemon running as {pid}")
-
-        if pid:
-            self._try_unlock()
-            raise SystemExit(
-                f"A tron pidfile is already present at {self.filename} using "
-                f"PID {pid}. The existing pidfile must be removed before "
-                "starting another tron daemon."
-            )
-
-    def is_process_running(self, pid):
-        """Return True if the process is still running."""
-        if not pid:
-            return False
-        try:
-            os.kill(pid, 0)
-            return True
-        except OSError:
-            return False
-
-    def __enter__(self):
-        print(os.getpid(), file=self.lock.file)
-        self.lock.file.flush()
-
-    def _try_unlock(self):
-        try:
-            self.lock.release()
-        except lockfile.NotLocked:
-            log.warning("Lockfile was already unlocked.")
-
-    def __exit__(self, *args):
-        self._try_unlock()
-        try:
-            os.unlink(self.filename)
-            log.info(f"Removed pidfile: {self.filename}")
-        except OSError:
-            log.warning(f"Failed to remove pidfile: {self.filename}")
 
 
 def setup_logging(options):
@@ -122,7 +60,7 @@ class NoDaemonContext(object):
     """A mock DaemonContext for running trond without being a daemon."""
 
     def __init__(self, **kwargs):
-        self.pidfile = kwargs.pop('pidfile', None)
+        self.lockfile = kwargs.pop('lockfile', None)
         self.working_dir = kwargs.pop('working_directory', '.')
 
         self.signal_map = kwargs.pop('signal_map', {})
@@ -130,13 +68,18 @@ class NoDaemonContext(object):
 
     def __enter__(self):
         os.chdir(self.working_dir)
-        if self.pidfile:
-            self.pidfile.__enter__()
+        if self.lockfile:
+            try:
+                self.lockfile.__enter__()
+            except OSError:
+                error_msg = f"Tron lockfile already locked: {self.lockfile}"
+                log.error(error_msg)
+                raise SystemExit(f"error: {error_msg}")
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         log.info("NoDaemonContext exit")
-        if self.pidfile:
-            self.pidfile.__exit__(exc_type, exc_val, exc_tb)
+        if self.lockfile:
+            self.lockfile.__exit__(exc_type, exc_val, exc_tb)
 
     def _set_signal_handlers(self, signal_map):
         """ Sets signal handlers for the current thread using a signal map """
@@ -152,6 +95,8 @@ class TronDaemon(object):
 
     def __init__(self, options):
         self.options = options
+        setup_logging(self.options)
+
         self.mcp = None
         self._sigint_handler = self._make_sigint_handler(
             signal.getsignal(signal.SIGINT)
@@ -160,11 +105,9 @@ class TronDaemon(object):
         self.manhole_sock = f"{self.options.working_dir}/manhole.sock"
 
     def _build_context(self, options):
-        pidfile = PIDFile(options.pid_file)
         return NoDaemonContext(
+            lockfile=flockfile.FlockFile(options.lock_file),
             working_directory=options.working_dir,
-            umask=0o022,
-            pidfile=pidfile,
             signal_map={
                 signal.SIGHUP: signal.SIG_DFL,
                 signal.SIGINT: signal.default_int_handler,
@@ -172,20 +115,25 @@ class TronDaemon(object):
                 signal.SIGQUIT: signal.SIG_DFL,
                 signal.SIGUSR1: signal.SIG_DFL,
             },
-            files_preserve=[pidfile.lock.file],
         )
 
     def run(self):
         with self.context:
-            setup_logging(self.options)
             self._run_mcp()
             self._run_www_api()
             self._run_manhole()
             self._run_reactor()
 
     def _run_manhole(self):
+        # This condition is made with the assumption that no existing daemon
+        # is running. If there is one, the following code could potentially
+        # cause problems for the other daemon by removing its socket.
+        if os.path.exists(self.manhole_sock):
+            log.info('Removing orphaned manhole socket')
+            os.remove(self.manhole_sock)
+
         self.manhole = make_manhole(dict(trond=self, mcp=self.mcp))
-        reactor.listenUNIX(self.manhole_sock, self.manhole, wantPID=1)
+        reactor.listenUNIX(self.manhole_sock, self.manhole)
         log.info(f"manhole started on {self.manhole_sock}")
 
     def _run_www_api(self):
