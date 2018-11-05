@@ -28,7 +28,6 @@ class TronDaemonTestCase(TestCase):
         self.tmpdir.cleanup()
 
     @mock.patch('tron.trondaemon.setup_logging', mock.Mock(), autospec=None)
-    @mock.patch('tron.utils.flockfile.FlockFile', mock.Mock(), autospec=None)
     def test_init(self):
         daemon = TronDaemon.__new__(TronDaemon)  # skip __init__
         daemon._make_sigint_handler = mock.Mock()
@@ -43,13 +42,18 @@ class TronDaemonTestCase(TestCase):
             'signal.signal',
             mock.Mock(side_effect=_sig_handlers.__setitem__),
             autospec=None
-        ):
+        ), mock.patch(
+            'tron.utils.flockfile.FlockFile',
+            autospec=True,
+        ) as mock_flockfile:
             daemon.__init__(options)
 
             assert daemon._make_sigint_handler.call_count == 1
             assert daemon._make_sigint_handler.call_args == mock.call(
                 'original_handler'
             )
+            assert mock_flockfile.call_count == 1
+            assert daemon.context.lockfile == mock_flockfile.return_value
 
     def test_make_sigint_handler_keyboardinterrupt(self):
         daemon = TronDaemon.__new__(TronDaemon)  # skip __init__

@@ -28,7 +28,7 @@ class FlockFile(object):
             fcntl.flock(self.file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             fcntl.flock(self.file.fileno(), fcntl.LOCK_UN)
             return False
-        except OSError:
+        except BlockingIOError:
             log.debug(f"Locked by another process: {self.path}")
             return True
 
@@ -37,19 +37,20 @@ class FlockFile(object):
         try:
             fcntl.flock(self.file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             self._has_lock = True
-        except OSError as e:  # locked by someone else
+        except BlockingIOError as e:  # locked by someone else
             log.debug(f"Locked by another process: {self.path}")
             raise e
         log.debug(f"Locked {self.path}")
 
     def release(self):
         log.debug(f"Attempting to unlock: {self.path}")
-        try:
+        if self._has_lock:  # locked by us
             fcntl.flock(self.file.fileno(), fcntl.LOCK_UN)
             self._has_lock = False
-        except BlockingIOError as e:  # locked by someone else
-            log.debug(f"Locked by another process: {self.path}")
-            raise e
+        elif self.is_locked:  # locked by someone else
+            raise BlockingIOError(f"Locked by another process: {self.path}")
+        else:
+            log.warning(f"Attempted to release an unlocked file: {self.path}")
         log.debug(f"Unlocked {self.path}")
 
     def __enter__(self):

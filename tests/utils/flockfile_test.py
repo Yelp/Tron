@@ -29,7 +29,7 @@ def test_is_locked(mock_flockfile, is_locked):
     assert mock_flockfile.is_locked == is_locked
 
 
-@mock.patch('fcntl.flock', mock.Mock(side_effect=OSError), autospec=None)
+@mock.patch('fcntl.flock', mock.Mock(side_effect=BlockingIOError), autospec=None)
 def test_is_locked_by_other(mock_flockfile):
     mock_flockfile._has_lock = False
 
@@ -41,13 +41,21 @@ def test_acquire(mock_flockfile):
 
     assert mock_flockfile._has_lock
 
+    # cleanup
+    mock_flockfile.release()
 
-@mock.patch('fcntl.flock', mock.Mock(side_effect=OSError), autospec=None)
-def test_acquire_other_process_locked(mock_flockfile):
-    with pytest.raises(OSError):
+
+def test_acquire_other_process_locked(mock_flockfile, tmp_lockfile):
+    other_flockfile = FlockFile(tmp_lockfile)
+    other_flockfile.acquire()
+
+    with pytest.raises(BlockingIOError):
         mock_flockfile.acquire()
 
     assert not mock_flockfile._has_lock
+
+    # cleanup
+    other_flockfile.release()
 
 
 def test_release(mock_flockfile):
@@ -58,11 +66,19 @@ def test_release(mock_flockfile):
     assert not mock_flockfile._has_lock
 
 
-@mock.patch('fcntl.flock', mock.Mock(side_effect=BlockingIOError), autospec=None)
-def test_release_other_process_locked(mock_flockfile):
-    mock_flockfile._has_lock = True  # not possible, but allows us to test below
+def test_release_other_process_locked(mock_flockfile, tmp_lockfile):
+    other_flockfile = FlockFile(tmp_lockfile)
+    other_flockfile.acquire()
 
     with pytest.raises(BlockingIOError):
         mock_flockfile.release()
 
-    assert mock_flockfile._has_lock
+    # cleanup
+    other_flockfile.release()
+
+
+@mock.patch('tron.utils.flockfile.log', autospec=True)
+def test_release_unlocked_file(mock_log, mock_flockfile):
+    mock_flockfile.release()
+
+    assert mock_log.warning.call_count == 1
