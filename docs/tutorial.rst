@@ -38,7 +38,7 @@ On your management node, run::
     $ sudo -u <tron user> trond
 
 The chosen user will need SSH access to all your worker nodes, as well as
-permission to write to the working directory, log file, and pid file
+permission to write to the working directory, log file, and lock file
 (see ``trond --help`` for defaults).  You can change these directories using
 command line options. Also see :ref:`config_logging` on how to change the
 default logging settings.
