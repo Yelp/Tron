@@ -18,7 +18,6 @@ from tron.core import action
 from tron.eventbus import EventBus
 from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
-from tron.utils import iteration
 from tron.utils import maybe_decode
 from tron.utils import proxy
 from tron.utils import timeutils
@@ -879,6 +878,14 @@ class MesosActionRun(ActionRun, Observer):
     handler = handle_action_command_state_change
 
 
+def min_filter(seq):
+    return min(filter(None, seq)) if any(seq) else None
+
+
+def eager_all(seq):
+    return all(list(seq))
+
+
 class ActionRunCollection(object):
     """A collection of ActionRuns used by a JobRun."""
 
@@ -896,15 +903,15 @@ class ActionRunCollection(object):
                 proxy.attr_proxy('is_active', any),
                 proxy.attr_proxy('is_queued', all),
                 proxy.attr_proxy('is_complete', all),
-                proxy.func_proxy('queue', iteration.list_all),
-                proxy.func_proxy('cancel', iteration.list_all),
-                proxy.func_proxy('success', iteration.list_all),
-                proxy.func_proxy('fail', iteration.list_all),
-                proxy.func_proxy('ready', iteration.list_all),
-                proxy.func_proxy('cleanup', iteration.list_all),
-                proxy.func_proxy('stop', iteration.list_all),
-                proxy.attr_proxy('start_time', iteration.min_filter),
-                proxy.attr_proxy('state_data', iteration.list_all),
+                proxy.func_proxy('queue', eager_all),
+                proxy.func_proxy('cancel', eager_all),
+                proxy.func_proxy('success', eager_all),
+                proxy.func_proxy('fail', eager_all),
+                proxy.func_proxy('ready', eager_all),
+                proxy.func_proxy('cleanup', eager_all),
+                proxy.func_proxy('stop', eager_all),
+                proxy.attr_proxy('start_time', min_filter),
+                proxy.attr_proxy('state_data', eager_all),
             ],
         )
 
@@ -1004,9 +1011,11 @@ class ActionRunCollection(object):
         if not self.is_done:
             return None
         end_times = (
-            run.end_time for run in self.get_action_runs_with_cleanup()
+            run.end_time
+            for run in self.get_action_runs_with_cleanup()
+            if run.end_time
         )
-        return iteration.max_filter(end_times)
+        return max(end_times) if any(end_times) else None
 
     def __str__(self):
         def blocked_state(action_run):

@@ -5,7 +5,6 @@ from six.moves import filter
 
 from tron.core.job import Job
 from tron.utils import collections
-from tron.utils import iteration
 from tron.utils import proxy
 
 log = logging.getLogger(__name__)
@@ -17,12 +16,12 @@ class JobCollection:
     def __init__(self):
         self.jobs = collections.MappingCollection('jobs')
         self.proxy = proxy.CollectionProxy(
-            lambda: six.itervalues(self.jobs),
+            self.jobs.values,
             [
-                proxy.func_proxy('enable', iteration.list_all),
-                proxy.func_proxy('disable', iteration.list_all),
-                proxy.func_proxy('schedule', iteration.list_all),
-                proxy.func_proxy('run_queue_schedule', iteration.list_all),
+                proxy.func_proxy('enable', lambda seq: all(list(seq))),
+                proxy.func_proxy('disable', lambda seq: all(list(seq))),
+                proxy.func_proxy('schedule', lambda seq: all(list(seq))),
+                proxy.func_proxy('run_queue_schedule', lambda seq: all(list(seq))),
             ],
         )
 
