@@ -208,9 +208,9 @@ def create_action_runner_factory_from_config(config):
     create ActionCommand objects. The factory definition should match the
     constructor for ActionCommand.
     """
-    if not config or config.runner_type == schema.ActionRunnerTypes.none.value:
+    if not config or config.runner_type == schema.ActionRunnerTypes.none:
         return NoActionRunnerFactory()
-    elif config.runner_type == schema.ActionRunnerTypes.subprocess.value:
+    elif config.runner_type == schema.ActionRunnerTypes.subprocess:
         return SubprocessActionRunnerFactory.from_config(config)
     else:
         raise ValueError("Unknown runner type: %s", config.runner_type)
