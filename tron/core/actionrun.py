@@ -1,6 +1,7 @@
 """
  tron.core.actionrun
 """
+import datetime
 import logging
 from typing import List
 
@@ -78,6 +79,11 @@ class ActionRunFactory(object):
         run_node = action.node_pool.next(
         ) if action.node_pool else job_run.node
 
+        if action.trigger_timeout:
+            trigger_timeout = job_run.run_time + action.trigger_timeout
+        else:
+            trigger_timeout = job_run.run_time + datetime.timedelta(days=1)
+
         args = {
             'job_run_id': job_run.id,
             'name': action.name,
@@ -100,6 +106,7 @@ class ActionRunFactory(object):
             'trigger_downstreams': action.trigger_downstreams,
             'triggered_by': action.triggered_by,
             'on_upstream_rerun': action.on_upstream_rerun,
+            'trigger_timeout_timestamp': trigger_timeout.timestamp(),
         }
         if action.executor == ExecutorTypes.mesos:
             return MesosActionRun(**args)
@@ -177,6 +184,12 @@ class ActionRun(Observable):
     FAILED_RENDER = 'false # Command failed to render correctly. See the Tron error log.'
     NOTIFY_TRIGGER_READY = 'trigger_ready'
 
+    EXIT_INVALID_COMMAND = -1
+    EXIT_NODE_ERROR = -2
+    EXIT_STOP_KILL = -3
+    EXIT_TRIGGER_TIMEOUT = -4
+    EXIT_MESOS_DISABLED = -5
+
     context_class = command_context.ActionRunContext
 
     # TODO: create a class for ActionRunId, JobRunId, Etc
@@ -211,6 +224,7 @@ class ActionRun(Observable):
         trigger_downstreams=None,
         triggered_by=None,
         on_upstream_rerun=None,
+        trigger_timeout_timestamp=None,
     ):
         super().__init__()
         self.job_run_id = maybe_decode(job_run_id)
@@ -244,6 +258,8 @@ class ActionRun(Observable):
         self.trigger_downstreams = trigger_downstreams
         self.triggered_by = triggered_by
         self.on_upstream_rerun = on_upstream_rerun
+        self.trigger_timeout_timestamp = trigger_timeout_timestamp
+        self.trigger_timeout_call = None
 
         if self.exit_statuses is None:
             self.exit_statuses = []
@@ -319,6 +335,7 @@ class ActionRun(Observable):
             trigger_downstreams=state_data.get('trigger_downstreams'),
             triggered_by=state_data.get('triggered_by'),
             on_upstream_rerun=state_data.get('on_upstream_rerun'),
+            trigger_timeout_timestamp=state_data.get('trigger_timeout_timestamp'),
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -348,7 +365,7 @@ class ActionRun(Observable):
 
         if not self.is_valid_command:
             log.error(f"{self} invalid command: {self.bare_command}")
-            self.fail(-1)
+            self.fail(self.EXIT_INVALID_COMMAND)
             return
 
         return self.submit_command()
@@ -366,6 +383,7 @@ class ActionRun(Observable):
         if self.machine.check(target):
             if self.triggered_by:
                 EventBus.clear_subscriptions(self.__hash__())
+            self.clear_trigger_timeout()
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
             log.info(
@@ -401,7 +419,7 @@ class ActionRun(Observable):
         """Used by `fail` when action run has to be re-tried."""
         if self.retries_delay is not None:
             self.in_delay = reactor.callLater(
-                self.retries_delay.seconds, self.start_after_delay
+                self.retries_delay.total_seconds(), self.start_after_delay
             )
             log.info(f"{self} delaying for a retry in {self.retries_delay}s")
         else:
@@ -480,7 +498,7 @@ class ActionRun(Observable):
         if self.in_delay is not None:
             self.in_delay.cancel()
             self.in_delay = None
-            self.fail(-3)
+            self.fail(self.EXIT_STOP_KILL)
             return True
 
     @property
@@ -523,6 +541,7 @@ class ActionRun(Observable):
             'trigger_downstreams': self.trigger_downstreams,
             'triggered_by': self.triggered_by,
             'on_upstream_rerun': self.on_upstream_rerun,
+            'trigger_timeout_timestamp': self.trigger_timeout_timestamp,
         }
 
     def render_template(self, template):
@@ -572,15 +591,44 @@ class ActionRun(Observable):
         self.clear_observers()
         if self.triggered_by:
             EventBus.clear_subscriptions(self.__hash__())
+        self.clear_trigger_timeout()
         self.cancel()
 
+    def clear_trigger_timeout(self):
+        if self.trigger_timeout_call:
+            self.trigger_timeout_call.cancel()
+            self.trigger_timeout_call = None
+
     def setup_subscriptions(self):
-        for trigger_pattern in self.triggered_by or []:
-            trigger = self.render_template(trigger_pattern)
+        remaining_triggers = self.remaining_triggers
+        if not remaining_triggers:
+            return
+
+        if self.trigger_timeout_timestamp:
+            now = timeutils.current_time().timestamp()
+            delay = max(self.trigger_timeout_timestamp - now, 1)
+            self.trigger_timeout_call = reactor.callLater(
+                delay, self.trigger_timeout_reached
+            )
+        else:
+            log.error(f"{self} has no trigger_timeout_timestamp")
+
+        for trigger in remaining_triggers:
             EventBus.subscribe(trigger, self.__hash__(), self.trigger_notify)
+
+    def trigger_timeout_reached(self):
+        if self.remaining_triggers:
+            self.trigger_timeout_call = None
+            log.warning(
+                f"{self} reached timeout waiting for: {self.remaining_triggers}"
+            )
+            self.fail(self.EXIT_TRIGGER_TIMEOUT)
+        else:
+            self.notify(ActionRun.NOTIFY_TRIGGER_READY)
 
     def trigger_notify(self, *_):
         if not self.remaining_triggers:
+            self.clear_trigger_timeout()
             self.notify(ActionRun.NOTIFY_TRIGGER_READY)
 
     def __getattr__(self, name: str):
@@ -621,7 +669,7 @@ class SSHActionRun(ActionRun, Observer):
             self.node.submit_command(action_command)
         except node.Error as e:
             log.warning("Failed to start %s: %r", self.id, e)
-            self._exit_unsuccessful(-2)
+            self._exit_unsuccessful(self.EXIT_NODE_ERROR)
             return
         return True
 
@@ -707,7 +755,7 @@ class MesosActionRun(ActionRun, Observer):
             serializer=serializer,
         )
         if not task:  # Mesos is disabled
-            self.fail(None)
+            self.fail(self.EXIT_MESOS_DISABLED)
             return
 
         self.mesos_task_id = task.get_mesos_id()
