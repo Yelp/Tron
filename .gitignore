@@ -21,6 +21,7 @@ tron.iml
 __pycache__/
 .pytest_cache/
 tron_state
+tron.lock
 
 # Example cluster
 example-cluster/config
