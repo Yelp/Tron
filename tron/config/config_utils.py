@@ -127,6 +127,17 @@ def build_enum_validator(enum):
     return build_type_validator(enum.__contains__, msg)
 
 
+def build_real_enum_validator(enum):
+    def enum_validator(value, config_context):
+        try:
+            return enum(value)
+        except Exception:
+            raise ConfigError(
+                f'Value at {config_context.path} is not in {enum!r}: {value!r}'
+            )
+    return enum_validator
+
+
 def valid_time(value, config_context):
     valid_string(value, config_context)
     for format in ['%H:%M', '%H:%M:%S']:

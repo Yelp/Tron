@@ -216,7 +216,7 @@ class ValidateVolume(Validator):
     validators = {
         'container_path': valid_string,
         'host_path': valid_string,
-        'mode': config_utils.build_enum_validator(['RO', 'RW']),
+        'mode': config_utils.build_real_enum_validator(schema.VolumeModes),
     }
 
 
@@ -399,7 +399,7 @@ class ValidateAction(Validator):
         'expected_runtime':
             config_utils.valid_time_delta,
         'executor':
-            config_utils.build_enum_validator(schema.ExecutorTypes),
+            config_utils.build_real_enum_validator(schema.ExecutorTypes),
         'cpus':
             valid_float,
         'mem':
@@ -421,7 +421,7 @@ class ValidateAction(Validator):
         'triggered_by':
             build_list_of_type_validator(valid_string, allow_empty=True),
         'on_upstream_rerun':
-            config_utils.build_enum_validator(schema.ActionOnRerun),
+            config_utils.build_real_enum_validator(schema.ActionOnRerun),
         'trigger_timeout':
             config_utils.valid_time_delta,
     }
@@ -475,7 +475,7 @@ class ValidateCleanupAction(Validator):
         'expected_runtime':
             config_utils.valid_time_delta,
         'executor':
-            config_utils.build_enum_validator(schema.ExecutorTypes),
+            config_utils.build_real_enum_validator(schema.ExecutorTypes),
         'cpus':
             valid_float,
         'mem':
@@ -497,7 +497,7 @@ class ValidateCleanupAction(Validator):
         'triggered_by':
             build_list_of_type_validator(valid_string, allow_empty=True),
         'on_upstream_rerun':
-            config_utils.build_enum_validator(schema.ActionOnRerun),
+            config_utils.build_real_enum_validator(schema.ActionOnRerun),
         'trigger_timeout':
             config_utils.valid_time_delta,
     }
@@ -600,7 +600,7 @@ class ValidateActionRunner(Validator):
 
     validators = {
         'runner_type':
-            config_utils.build_enum_validator(schema.ActionRunnerTypes, ),
+            config_utils.build_real_enum_validator(schema.ActionRunnerTypes),
         'remote_status_path':
             valid_string,
         'remote_exec_path':
@@ -619,7 +619,7 @@ class ValidateStatePersistence(Validator):
         'name':
             valid_string,
         'store_type':
-            config_utils.build_enum_validator(schema.StatePersistenceTypes, ),
+            config_utils.build_real_enum_validator(schema.StatePersistenceTypes),
         'connection_details':
             valid_string,
         'buffer_size':

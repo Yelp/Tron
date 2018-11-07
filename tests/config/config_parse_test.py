@@ -113,7 +113,7 @@ def make_mesos_options():
 def make_action(**kwargs):
     kwargs.setdefault('name', 'action'),
     kwargs.setdefault('command', 'command')
-    kwargs.setdefault('executor', 'ssh')
+    kwargs.setdefault('executor', schema.ExecutorTypes.ssh)
     kwargs.setdefault('requires', ())
     kwargs.setdefault('expected_runtime', datetime.timedelta(1))
     return schema.ConfigAction(**kwargs)
@@ -122,7 +122,7 @@ def make_action(**kwargs):
 def make_cleanup_action(**kwargs):
     kwargs.setdefault('name', 'cleanup'),
     kwargs.setdefault('command', 'command')
-    kwargs.setdefault('executor', 'ssh')
+    kwargs.setdefault('executor', schema.ExecutorTypes.ssh)
     kwargs.setdefault('expected_runtime', datetime.timedelta(1))
     return schema.ConfigCleanupAction(**kwargs)
 
@@ -264,7 +264,7 @@ def make_master_jobs():
                         make_action(
                             name='action_mesos',
                             command='test_command_mesos',
-                            executor='mesos',
+                            executor=schema.ExecutorTypes.mesos,
                             cpus=0.1,
                             mem=100,
                             docker_image='container:latest',
@@ -963,7 +963,7 @@ class TestValidateJobs(TestCase):
                         'action_mesos':
                             make_action(
                                 name='action_mesos',
-                                executor='mesos',
+                                executor=schema.ExecutorTypes.mesos,
                                 cpus=4.0,
                                 mem=300.0,
                                 constraints=(
@@ -989,7 +989,7 @@ class TestValidateJobs(TestCase):
                                     schema.ConfigVolume(
                                         container_path='/tmp',
                                         host_path='/home/tmp',
-                                        mode='RO',
+                                        mode=schema.VolumeModes.RO,
                                     ),
                                 ),
                                 expected_runtime=datetime.timedelta(hours=24),
@@ -1013,7 +1013,7 @@ class TestValidateJobs(TestCase):
             MASTER_NAMESPACE,
         )
         config_parse.validate_jobs(test_config, context)
-        assert_equal(expected_jobs, test_config['jobs'])
+        assert expected_jobs == test_config['jobs']
 
 
 class TestValidMesosAction(TestCase):
@@ -1021,30 +1021,22 @@ class TestValidMesosAction(TestCase):
         config = dict(
             name='test_missing',
             command='echo hello',
-            executor=schema.ExecutorTypes.mesos,
+            executor='mesos',
             cpus=0.2,
             mem=150,
         )
-        assert_raises(
-            ConfigError,
-            config_parse.valid_action,
-            config,
-            NullConfigContext,
-        )
+        with pytest.raises(ConfigError):
+            config_parse.valid_action(config, NullConfigContext)
 
     def test_cleanup_missing_docker_image(self):
         config = dict(
             command='echo hello',
-            executor=schema.ExecutorTypes.mesos,
+            executor='mesos',
             cpus=0.2,
             mem=150,
         )
-        assert_raises(
-            ConfigError,
-            config_parse.valid_action,
-            config,
-            NullConfigContext,
-        )
+        with pytest.raises(ConfigError):
+            config_parse.valid_action(config, NullConfigContext)
 
 
 class TestValidCleanupActionName(TestCase):
@@ -1369,7 +1361,7 @@ class TestValidateVolume(TestCase):
         config = {
             'container_path': '/nail/srv',
             'host_path': '/tmp',
-            'mode': 'RO',
+            'mode': schema.VolumeModes.RO,
         }
         assert_equal(
             schema.ConfigVolume(**config),
@@ -1390,12 +1382,10 @@ class TestValidateVolume(TestCase):
                 'mode': 'invalid',
             },
         ]
-        assert_raises(
-            ConfigError,
-            config_parse.valid_mesos_options.validate,
-            mesos_options,
-            self.context,
-        )
+
+        with pytest.raises(ConfigError):
+            config_parse.valid_mesos_options.validate(mesos_options, self.context)
+
         # After we fix the error, expect error to go away.
         mesos_options['default_volumes'][1]['mode'] = 'RW'
         assert config_parse.valid_mesos_options.validate(

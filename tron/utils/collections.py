@@ -57,25 +57,3 @@ class MappingCollection(dict):
 
     def remove_item(self, item):
         return self.remove(item.get_name())
-
-
-class Enum(object):
-    """Enumeration of values."""
-
-    def __init__(self, values):
-        self.values = set(values)
-
-    @classmethod
-    def create(cls, *values):
-        return cls(values)
-
-    def __contains__(self, item):
-        return item in self.values
-
-    def __getattr__(self, name):
-        if name in self.values:
-            return name
-        raise AttributeError(name)
-
-    def __iter__(self):
-        return iter(self.values)

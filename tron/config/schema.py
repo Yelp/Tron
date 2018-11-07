@@ -5,8 +5,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 from collections import namedtuple
-
-from tron.utils.collections import Enum
+from enum import Enum
 
 MASTER_NAMESPACE = "MASTER"
 
@@ -219,12 +218,15 @@ ConfigParameter = config_object_factory(
     optional=[],
 )
 
-StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
 
-ExecutorTypes = Enum.create('ssh', 'mesos')
+StatePersistenceTypes = Enum(
+    'StatePersistenceTypes', dict(shelve='shelve', sql='sql', yaml='yaml')
+)
 
-ActionRunnerTypes = Enum.create('none', 'subprocess')
+ExecutorTypes = Enum('ExecutorTypes', dict(ssh='ssh', mesos='mesos'))
 
-VolumeModes = Enum.create('RO', 'RW')
+ActionRunnerTypes = Enum('ActionRunnerTypes', dict(none='none', subprocess='subprocess'))
 
-ActionOnRerun = Enum.create('rerun')
+VolumeModes = Enum('VolumeModes', dict(RO='RO', RW='RW'))
+
+ActionOnRerun = Enum('ActionOnRerun', dict(rerun='rerun'))
