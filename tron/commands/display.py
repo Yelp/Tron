@@ -384,6 +384,9 @@ class DisplayActionRuns(TableDisplay):
         self.data = data['runs']
         self.job_run = data
 
+    def rows(self):
+        return self.data
+
 
 def display_node(source, _=None):
     if not source:

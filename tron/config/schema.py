@@ -160,6 +160,7 @@ ConfigAction = config_object_factory(
         'trigger_downstreams',  # None, bool or dict
         'triggered_by',  # list or None
         'on_upstream_rerun',  # ActionOnRerun or None
+        'trigger_timeout',  # datetime.deltatime or None
     ],
 )
 
@@ -185,6 +186,7 @@ ConfigCleanupAction = config_object_factory(
         'trigger_downstreams',  # None, bool or dict
         'triggered_by',  # list or None
         'on_upstream_rerun',  # ActionOnRerun or None
+        'trigger_timeout',  # datetime.deltatime or None
     ],
 )
 

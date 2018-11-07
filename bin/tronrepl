@@ -21,8 +21,8 @@ log = logging.getLogger(__name__)
 DEFAULT_CONF = 'default_config.yaml'
 DEFAULT_CONF_PATH = 'config/'
 DEFAULT_WORKING_DIR = '/var/lib/tron/'
-DEFAULT_PIDFILE = 'tron-repl.pid'
-DEFAULT_PIDPATH = '/var/run/' + DEFAULT_PIDFILE
+DEFAULT_LOCKFILE = 'tron-repl.lock'
+DEFAULT_LOCKPATH = '/var/run/' + DEFAULT_LOCKFILE
 
 
 def parse_cli():
@@ -55,11 +55,16 @@ def parse_cli():
         help="[DEPRECATED] Disable daemonizing, default %(default)s",
     )
 
-    parser.add_argument(
+    parser.add_argument(  # for backwards compatibility
         "--pid-file",
-        help="File path to PID file, defaults to %s if working directory "
+        help="[DEPRECATED] File path to pid file. Use --lock-file instead."
+    )
+
+    parser.add_argument(
+        "--lock-file",
+        help="File path to lock file, defaults to %s if working directory "
         "is default. Otherwise defaults to <working dir>/%s" %
-        (DEFAULT_PIDPATH, DEFAULT_PIDFILE),
+        (DEFAULT_LOCKPATH, DEFAULT_LOCKFILE),
     )
 
     logging_group = parser.add_argument_group('logging', '')
@@ -119,13 +124,15 @@ def parse_cli():
         if not os.path.exists(args.log_conf):
             parser.error("Logging config file not found: %s" % args.log_conf, )
 
-    if not args.pid_file:
-        if args.working_dir == DEFAULT_WORKING_DIR:
-            args.pid_file = DEFAULT_PIDPATH
+    if not args.lock_file:
+        if args.pid_file:  # for backwards compatibility
+            args.lock_file = args.pid_file
+        elif args.working_dir == DEFAULT_WORKING_DIR:
+            args.lock_file = DEFAULT_LOCKPATH
         else:
-            args.pid_file = DEFAULT_PIDFILE
+            args.lock_file = DEFAULT_LOCKFILE
 
-    args.pid_file = os.path.join(args.working_dir, args.pid_file)
+    args.lock_file = os.path.join(args.working_dir, args.lock_file)
     args.config_path = os.path.join(
         args.working_dir,
         args.config_path,

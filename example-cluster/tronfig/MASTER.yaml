@@ -22,21 +22,18 @@ nodes:
 time_zone: US/Eastern
 
 jobs:
-  - name: "one"
+  one:
     node: localhost
-    schedule: "cron * * * * *"
-    time_zone: "US/Pacific"
+    schedule: "cron */5 * * * *"
     actions:
-      - name: "one"
-        command: "exit $((RANDOM % 2))"
-        trigger_downstreams:
-          ymdhm: "{ymdhm}"
-        retries: 3
-  - name: "two"
+      one:
+        command: sleep 10 && date
+        trigger_downstreams: {ymdhm: "{ymdhm}"}
+  two:
     node: localhost
-    schedule: "cron * * * * *"
-    time_zone: "US/Pacific"
+    schedule: "cron */5 * * * *"
     actions:
-      - name: "two"
-        command: "exit $((RANDOM % 2))"
+      two:
+        command: sleep 10 && date
         triggered_by: ["MASTER.one.one.ymdhm.{ymdhm}"]
+        trigger_timeout: 30s

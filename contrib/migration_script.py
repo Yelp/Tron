@@ -47,6 +47,10 @@ def parse_args():
         'source',
         help='source file to get list of jobs'
     )
+    parser.add_argument(
+        '--job',
+        help='Specify a single job to migrate'
+    )
     args = parser.parse_args()
     return args
 
@@ -120,9 +124,19 @@ def main():
         is_migration_safe = True
         with open(filename, "r") as f:
             jobs = yaml.load(f)['jobs']
-            for job in jobs:
-                job_name = args.old_ns + '.' + job['name']
-                is_migration_safe = is_migration_safe & check_job_if_running(jobs_status, job_name)
+            job_names = [job['name'] for job in jobs]
+            if args.job is not None:  # only want to migrate specific job
+                # Overwrite existing jobs since only migrating one job
+                jobs = [job for job in jobs if job['name'] == args.job]
+                if not jobs:
+                    raise ValueError(f'Invalid job specified. Options were {job_names}')
+                job_name_with_ns = args.old_ns + '.' + args.job
+                is_migration_safe = is_migration_safe & check_job_if_running(jobs_status, job_name_with_ns)
+
+            else:  # Migrate all jobs in namespace
+                for job_name in job_names:
+                    job_name_with_ns = args.old_ns + '.' + job_name
+                    is_migration_safe = is_migration_safe & check_job_if_running(jobs_status, job_name_with_ns)
 
         if is_migration_safe is True:
             print(bcolors.OKBLUE + "Jobs are not running. Disable all the jobs." + bcolors.ENDC)

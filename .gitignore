@@ -22,16 +22,20 @@ __pycache__/
 .pytest_cache/
 tron_state
 tron.lock
+manhole.sock
+manhole.sock.lock
 
 # Example cluster
 example-cluster/config
 example-cluster/MASTER.*
-example-cluster/tron-repl.pid
+example-cluster/tron-repl.lock
 example-cluster/tron_state*
 example-cluster/manhole.sock*
 example-cluster/_events/
 *.stdout
 *.stderr
+dev/manhole.sock.lock
+dev/tron.pid
 
 # Generated debian artifacts
 debian/tron

@@ -378,6 +378,7 @@ class ValidateAction(Validator):
         'trigger_downstreams': None,
         'triggered_by': None,
         'on_upstream_rerun': None,
+        'trigger_timeout': None,
     }
     requires = build_list_of_type_validator(
         valid_action_name,
@@ -422,6 +423,8 @@ class ValidateAction(Validator):
             build_list_of_type_validator(valid_string, allow_empty=True),
         'on_upstream_rerun':
             config_utils.build_enum_validator(schema.ActionOnRerun),
+        'trigger_timeout':
+            config_utils.valid_time_delta,
     }
 
     def post_validation(self, action, config_context):
@@ -457,6 +460,7 @@ class ValidateCleanupAction(Validator):
         'trigger_downstreams': None,
         'triggered_by': None,
         'on_upstream_rerun': None,
+        'trigger_timeout': None,
     }
     validators = {
         'name':
@@ -495,6 +499,8 @@ class ValidateCleanupAction(Validator):
             build_list_of_type_validator(valid_string, allow_empty=True),
         'on_upstream_rerun':
             config_utils.build_enum_validator(schema.ActionOnRerun),
+        'trigger_timeout':
+            config_utils.valid_time_delta,
     }
 
     def post_validation(self, action, config_context):

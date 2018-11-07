@@ -5,7 +5,7 @@ After=network.target
 [Service]
 User=tron
 EnvironmentFile=/etc/default/tron
-ExecStart=/usr/bin/trond --pid-file=${PIDFILE} --working-dir=${WORKINGDIR} -H 0.0.0.0 -P 8089 -l ${LOGCONF}
+ExecStart=/usr/bin/trond --lock-file=${LOCKFILE:-$PIDFILE} --working-dir=${WORKINGDIR} -H 0.0.0.0 -P 8089 -l ${LOGCONF}
 TimeoutStopSec=20
 Restart=on-failure
 

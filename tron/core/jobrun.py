@@ -216,8 +216,13 @@ class JobRun(Observable, Observer):
     def handle_action_run_state_change(self, action_run: ActionRun, event):
         """Handle events triggered by JobRuns."""
         log.info(f"{self} got an event: {event}")
+        metrics.meter(f'tron.actionrun.{event}')
+
         if event == ActionRun.NOTIFY_TRIGGER_READY:
-            log.info(f"{action_run} is ready to run")
+            if timeutils.current_timestamp() < self.run_time.timestamp():
+                log.info(f"{self} triggers are satisfied but not run_time yet")
+                return
+
             started = self._start_action_runs()
             if any(started):
                 log.info(
@@ -228,7 +233,6 @@ class JobRun(Observable, Observer):
 
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
-        metrics.meter(f'tron.actionrun.{event}')
 
         if not action_run.is_done:
             return
