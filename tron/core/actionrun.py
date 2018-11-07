@@ -155,7 +155,7 @@ class ActionRun(Observable):
             RUNNING:
                 dict(fail_unknown=UNKNOWN, **default_transitions),
             STARTING:
-                dict(started=RUNNING, fail=FAILED),
+                dict(started=RUNNING, fail=FAILED, fail_unknown=UNKNOWN),
             UNKNOWN:
                 dict(running=RUNNING, **default_transitions),
             QUEUED:
@@ -342,7 +342,7 @@ class ActionRun(Observable):
         if run.is_running:
             run._done('fail_unknown')
         if run.is_starting:
-            run._exit_unsuccessful(None)
+            run.handle(ActionCommand.FAILSTART)
         return run
 
     def start(self):
@@ -444,7 +444,10 @@ class ActionRun(Observable):
                         len(self.exit_statuses),
                     )
                 )
-        return self.fail(exit_status)
+        if exit_status is None:
+            return self._done('fail_unknown', exit_status)
+        else:
+            return self._done('fail', exit_status)
 
     def triggers_to_emit(self) -> List[str]:
         if not self.trigger_downstreams:
@@ -720,7 +723,7 @@ class SSHActionRun(ActionRun, Observer):
             return self.transition_and_notify('started')
 
         if event == ActionCommand.FAILSTART:
-            return self._exit_unsuccessful(None)
+            return self._exit_unsuccessful(-2)
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
@@ -856,7 +859,6 @@ class MesosActionRun(ActionRun, Observer):
 
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
-        # TODO: consolidate? Same as SSHActionRun for now
         log.debug(
             f"{self} action_command state change: {action_command.state}"
         )
@@ -869,7 +871,9 @@ class MesosActionRun(ActionRun, Observer):
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
-                return self.fail_unknown()
+                # This is different from SSHActionRun
+                # Allows retries to happen, if configured
+                return self._exit_unsuccessful(None)
 
             if not action_command.exit_status:
                 return self.success()
