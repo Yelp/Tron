@@ -78,7 +78,7 @@ class TronDaemon(object):
         self.manhole_sock = f"{self.options.working_dir}/manhole.sock"
 
     def run(self):
-        with no_daemon_context(self.lock_file, self.working_dir, self.signals):
+        with no_daemon_context(self.working_dir, self.lock_file, self.signals):
             self._run_mcp()
             self._run_www_api()
             self._run_manhole()
