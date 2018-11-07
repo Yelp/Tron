@@ -48,7 +48,6 @@ from tron.config.schema import ConfigVolume
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
 from tron.config.schema import TronConfig
-from tron.utils.dicts import FrozenDict
 
 log = logging.getLogger(__name__)
 
@@ -133,7 +132,7 @@ def valid_known_hosts_file(file_path, config_context):
 
 def valid_command_context(context, config_context):
     # context can be any dict.
-    return FrozenDict(**valid_dict(context or {}, config_context))
+    return valid_dict(context or {}, config_context)
 
 
 def valid_time_zone(tz, config_context):
@@ -696,7 +695,7 @@ DEFAULT_NODE = ValidateNode().do_shortcut(node='localhost')
 class ValidateConfig(Validator):
     """Given a parsed config file (should be only basic literals and
     containers), return an immutable, fully populated series of namedtuples and
-    FrozenDicts with all defaults filled in, all valid values, and no unused
+    dicts with all defaults filled in, all valid values, and no unused
     values. Throws a ConfigError if any part of the input dict is invalid.
     """
     config_class = TronConfig

@@ -13,8 +13,6 @@ from six import string_types
 
 from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
-from tron.utils import dicts
-from tron.utils.dicts import FrozenDict
 
 MAX_IDENTIFIER_LENGTH = 255
 IDENTIFIER_RE = re.compile(r'^[A-Za-z_][\w\-]{0,254}$')
@@ -44,13 +42,13 @@ class UniqueNameDict(dict):
     """
 
     def __init__(self, fmt_string):
-        super(dict, self).__init__()
+        super().__init__()
         self.fmt_string = fmt_string
 
     def __setitem__(self, key, value):
         if key in self:
             raise ConfigError(self.fmt_string % key)
-        super(UniqueNameDict, self).__setitem__(key, value)
+        super().__setitem__(key, value)
 
 
 def unique_names(fmt_string, *seqs):
@@ -142,12 +140,17 @@ def valid_time(value, config_context):
 
 # Translations from possible configuration units to the argument to
 # datetime.timedelta
-TIME_INTERVAL_UNITS = dicts.invert_dict_list({
+TIME_INTERVAL_MAPPING = {
     'days': ['d', 'day', 'days'],
     'hours': ['h', 'hr', 'hrs', 'hour', 'hours'],
     'minutes': ['m', 'min', 'mins', 'minute', 'minutes'],
     'seconds': ['s', 'sec', 'secs', 'second', 'seconds'],
-})
+}
+TIME_INTERVAL_UNITS = {
+    short: long
+    for (long, short_list) in TIME_INTERVAL_MAPPING.items()
+    for short in short_list
+}
 
 TIME_INTERVAL_RE = re.compile(r"^\s*(?P<value>\d+)\s*(?P<units>[a-zA-Z]+)\s*$")
 
@@ -205,7 +208,7 @@ def build_dict_name_validator(item_validator, allow_empty=False):
         name_dict = UniqueNameDict(msg)
         for item in valid(value, config_context):
             name_dict[item.name] = item
-        return FrozenDict(**name_dict)
+        return name_dict
 
     return validator
 

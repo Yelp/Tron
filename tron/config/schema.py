@@ -42,12 +42,12 @@ TronConfig = config_object_factory(
         'output_stream_dir',  # str
         'action_runner',  # ConfigActionRunner
         'state_persistence',  # ConfigState
-        'command_context',  # FrozenDict of str
+        'command_context',  # dict of str
         'ssh_options',  # ConfigSSHOptions
         'time_zone',  # pytz time zone
-        'nodes',  # FrozenDict of ConfigNode
-        'node_pools',  # FrozenDict of ConfigNodePool
-        'jobs',  # FrozenDict of ConfigJob
+        'nodes',  # dict of ConfigNode
+        'node_pools',  # dict of ConfigNodePool
+        'jobs',  # dict of ConfigJob
         'mesos_options',  # ConfigMesos
         'eventbus_enabled',  # bool or None
     ],
@@ -56,7 +56,7 @@ TronConfig = config_object_factory(
 NamedTronConfig = config_object_factory(
     name='NamedTronConfig',
     optional=[
-        'jobs',  # FrozenDict of ConfigJob
+        'jobs',  # dict of ConfigJob
     ],
 )
 
@@ -120,7 +120,7 @@ ConfigJob = config_object_factory(
         'name',  # str
         'node',  # str
         'schedule',  # Config*Scheduler
-        'actions',  # FrozenDict of ConfigAction
+        'actions',  # dict of ConfigAction
         'namespace',  # str
     ],
     optional=[

@@ -34,7 +34,6 @@ from tron.config.config_utils import NullConfigContext
 from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
 from tron.config.schema import MASTER_NAMESPACE
-from tron.utils.dicts import FrozenDict
 
 BASE_CONFIG = dict(
     ssh_options=dict(agent=False, identities=['tests/test_id_rsa']),
@@ -62,14 +61,14 @@ def make_ssh_options():
 
 
 def make_command_context():
-    return FrozenDict({
+    return {
         'python': '/usr/bin/python',
         'batch_dir': '/tron/batch/test/foo',
-    })
+    }
 
 
 def make_nodes():
-    return FrozenDict({
+    return {
         'node0':
             schema.ConfigNode(
                 name='node0',
@@ -84,17 +83,17 @@ def make_nodes():
                 hostname='node1',
                 port=22,
             ),
-    })
+    }
 
 
 def make_node_pools():
-    return FrozenDict({
+    return {
         'NodePool':
             schema.ConfigNodePool(
                 nodes=('node0', 'node1'),
                 name='NodePool',
             ),
-    })
+    }
 
 
 def make_mesos_options():
@@ -145,7 +144,7 @@ def make_job(**kwargs):
             jitter=None,
         )
     )
-    kwargs.setdefault('actions', FrozenDict({'action': make_action()}))
+    kwargs.setdefault('actions', {'action': make_action()})
     kwargs.setdefault('queueing', True)
     kwargs.setdefault('run_limit', 50)
     kwargs.setdefault('all_nodes', False)
@@ -158,7 +157,7 @@ def make_job(**kwargs):
 
 
 def make_master_jobs():
-    return FrozenDict({
+    return {
         'MASTER.test_job0':
             make_job(
                 name='MASTER.test_job0',
@@ -179,7 +178,7 @@ def make_master_jobs():
                     original="00:30:00 MWF",
                     jitter=None,
                 ),
-                actions=FrozenDict({
+                actions={
                     'action':
                         make_action(
                             requires=('action1', ),
@@ -190,7 +189,7 @@ def make_master_jobs():
                             name='action1',
                             expected_runtime=datetime.timedelta(0, 7200)
                         ),
-                }),
+                },
                 time_zone=pytz.timezone("Pacific/Auckland"),
                 expected_runtime=datetime.timedelta(1),
                 cleanup_action=None,
@@ -200,13 +199,13 @@ def make_master_jobs():
             make_job(
                 name='MASTER.test_job2',
                 node='node1',
-                actions=FrozenDict({
+                actions={
                     'action2_0':
                         make_action(
                             name='action2_0',
                             command='test_command2.0',
                         )
-                }),
+                },
                 time_zone=pytz.timezone("Pacific/Auckland"),
                 expected_runtime=datetime.timedelta(1),
                 cleanup_action=None,
@@ -216,7 +215,7 @@ def make_master_jobs():
                 name='MASTER.test_job_actions_dict',
                 node='node1',
                 schedule=ConfigConstantScheduler(),
-                actions=FrozenDict({
+                actions={
                     'action':
                         make_action(),
                     'action1':
@@ -227,7 +226,7 @@ def make_master_jobs():
                             requires=('action', 'action1'),
                             node='node0',
                         ),
-                }),
+                },
                 cleanup_action=None,
                 expected_runtime=datetime.timedelta(1),
             ),
@@ -260,7 +259,7 @@ def make_master_jobs():
                     days=set(),
                     jitter=None,
                 ),
-                actions=FrozenDict({
+                actions={
                     'action_mesos':
                         make_action(
                             name='action_mesos',
@@ -270,11 +269,11 @@ def make_master_jobs():
                             mem=100,
                             docker_image='container:latest',
                         ),
-                }),
+                },
                 cleanup_action=None,
                 expected_runtime=datetime.timedelta(1),
             ),
-    })
+    }
 
 
 def make_tron_config(
@@ -290,10 +289,10 @@ def make_tron_config(
     mesos_options=None,
 ):
     return schema.TronConfig(
-        action_runner=action_runner or FrozenDict(),
+        action_runner=action_runner or {},
         output_stream_dir=output_stream_dir,
         command_context=command_context or
-        FrozenDict(batch_dir='/tron/batch/test/foo', python='/usr/bin/python'),
+        dict(batch_dir='/tron/batch/test/foo', python='/usr/bin/python'),
         ssh_options=ssh_options or make_ssh_options(),
         time_zone=time_zone,
         state_persistence=state_persistence,
@@ -424,7 +423,7 @@ class TestNamedConfig(TestCase):
 
     def test_attributes(self):
         expected = make_named_tron_config(
-            jobs=FrozenDict({
+            jobs={
                 'test_job':
                     make_job(
                         name="test_job",
@@ -435,7 +434,7 @@ class TestNamedConfig(TestCase):
                         ),
                         expected_runtime=datetime.timedelta(1),
                     )
-            })
+            }
         )
         test_config = validate_fragment(
             'test_namespace',
@@ -456,7 +455,7 @@ class TestNamedConfig(TestCase):
 
     def test_attributes_with_master_context(self):
         expected = make_named_tron_config(
-            jobs=FrozenDict({
+            jobs={
                 'test_namespace.test_job':
                     make_job(
                         name="test_namespace.test_job",
@@ -467,7 +466,7 @@ class TestNamedConfig(TestCase):
                         ),
                         expected_runtime=datetime.timedelta(1),
                     )
-            })
+            }
         )
         master_config = dict(
             nodes=[dict(
@@ -948,7 +947,7 @@ class TestValidateJobs(TestCase):
             **BASE_CONFIG
         )
 
-        expected_jobs = FrozenDict({
+        expected_jobs = {
             'MASTER.test_job0':
                 make_job(
                     name='MASTER.test_job0',
@@ -956,7 +955,7 @@ class TestValidateJobs(TestCase):
                         timedelta=datetime.timedelta(0, 20),
                         jitter=None,
                     ),
-                    actions=FrozenDict({
+                    actions={
                         'action':
                             make_action(
                                 expected_runtime=datetime.timedelta(0, 1200),
@@ -1002,10 +1001,10 @@ class TestValidateJobs(TestCase):
                                 triggered_by=("foo.bar", ),
                                 trigger_downstreams=True,
                             ),
-                    }),
+                    },
                     expected_runtime=datetime.timedelta(0, 1200),
                 ),
-        })
+        }
 
         context = config_utils.ConfigContext(
             'config',
