@@ -43,17 +43,16 @@ class TronDaemonTestCase(TestCase):
             mock.Mock(side_effect=_sig_handlers.__setitem__),
             autospec=None
         ), mock.patch(
-            'tron.utils.flockfile.FlockFile',
+            'tron.utils.flock',
             autospec=True,
-        ) as mock_flockfile:
+        ) as mock_flock:
             daemon.__init__(options)
 
             assert daemon._make_sigint_handler.call_count == 1
             assert daemon._make_sigint_handler.call_args == mock.call(
                 'original_handler'
             )
-            assert mock_flockfile.call_count == 1
-            assert daemon.context.lockfile == mock_flockfile.return_value
+            assert mock_flock.call_count == 0
 
     def test_make_sigint_handler_keyboardinterrupt(self):
         daemon = TronDaemon.__new__(TronDaemon)  # skip __init__

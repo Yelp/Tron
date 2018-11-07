@@ -1,10 +1,7 @@
 """
  Daemonize trond.
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
+import contextlib
 import logging.config
 import os
 import signal
@@ -20,7 +17,9 @@ from twisted.python import log as twisted_log
 import tron
 from tron.manhole import make_manhole
 from tron.mesos import MesosClusterRepository
-from tron.utils import flockfile
+from tron.utils import chdir
+from tron.utils import flock
+from tron.utils import signals
 
 log = logging.getLogger(__name__)
 
@@ -56,38 +55,10 @@ def setup_logging(options):
         defer.setDebugging(True)
 
 
-class NoDaemonContext(object):
-    """A mock DaemonContext for running trond without being a daemon."""
-
-    def __init__(self, **kwargs):
-        self.lockfile = kwargs.pop('lockfile', None)
-        self.working_dir = kwargs.pop('working_directory', '.')
-
-        self.signal_map = kwargs.pop('signal_map', {})
-        self._set_signal_handlers(self.signal_map)
-
-    def __enter__(self):
-        os.chdir(self.working_dir)
-        if self.lockfile:
-            try:
-                self.lockfile.__enter__()
-            except OSError:
-                error_msg = f"Tron lockfile already locked: {self.lockfile}"
-                log.error(error_msg)
-                raise SystemExit(f"error: {error_msg}")
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        log.info("NoDaemonContext exit")
-        if self.lockfile:
-            self.lockfile.__exit__(exc_type, exc_val, exc_tb)
-
-    def _set_signal_handlers(self, signal_map):
-        """ Sets signal handlers for the current thread using a signal map """
-        for signum, handler in signal_map.items():
-            signal.signal(signum, handler)
-
-    def terminate(self, signal_number, *_):
-        raise SystemExit(f"Terminating on signal {str(signal_number)}")
+@contextlib.contextmanager
+def no_daemon_context(workdir, lockfile=None, signal_map={}):
+    with chdir(workdir), flock(lockfile), signals(signal_map):
+        yield
 
 
 class TronDaemon(object):
@@ -101,24 +72,13 @@ class TronDaemon(object):
         self._sigint_handler = self._make_sigint_handler(
             signal.getsignal(signal.SIGINT)
         )
-        self.context = self._build_context(options)
+        self.lock_file = self.options.lock_file
+        self.working_dir = self.options.working_dir
+        self.signals = {signal.SIGINT: signal.default_int_handler}
         self.manhole_sock = f"{self.options.working_dir}/manhole.sock"
 
-    def _build_context(self, options):
-        return NoDaemonContext(
-            lockfile=flockfile.FlockFile(options.lock_file),
-            working_directory=options.working_dir,
-            signal_map={
-                signal.SIGHUP: signal.SIG_DFL,
-                signal.SIGINT: signal.default_int_handler,
-                signal.SIGTERM: signal.SIG_DFL,
-                signal.SIGQUIT: signal.SIG_DFL,
-                signal.SIGUSR1: signal.SIG_DFL,
-            },
-        )
-
     def run(self):
-        with self.context:
+        with no_daemon_context(self.lock_file, self.working_dir, self.signals):
             self._run_mcp()
             self._run_www_api()
             self._run_manhole()
@@ -232,7 +192,7 @@ class TronDaemon(object):
         if self.mcp:
             self.mcp.shutdown()
         MesosClusterRepository.shutdown()
-        self.context.terminate(sig_num, stack_frame)
+        raise SystemExit(f"Terminating on signal {str(sig_num)}")
 
     def _handle_reconfigure(self, _signal_number, _stack_frame):
         log.info("Reconfigure requested by SIGHUP.")
