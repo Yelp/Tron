@@ -339,10 +339,9 @@ class ActionRun(Observable):
         )
 
         # Transition running to fail unknown because exit status was missed
-        if run.is_running:
+        # Recovery will look for unknown runs
+        if run.is_active:
             run._done('fail_unknown')
-        if run.is_starting:
-            run.handle(ActionCommand.FAILSTART)
         return run
 
     def start(self):
