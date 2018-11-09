@@ -722,7 +722,7 @@ class SSHActionRun(ActionRun, Observer):
             return self.transition_and_notify('started')
 
         if event == ActionCommand.FAILSTART:
-            return self._exit_unsuccessful(-2)
+            return self._exit_unsuccessful(self.EXIT_NODE_ERROR)
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
