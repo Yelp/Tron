@@ -1,6 +1,7 @@
 import subprocess
 
 import mock
+import pytest
 
 from tron.bin import get_tron_metrics
 
@@ -120,7 +121,8 @@ def test_send_timer(mock_send_meter, mock_send_histogram):
     assert mock_send_histogram.call_args == mock.call('fake_name')
 
 
-def test_send_metrics():
+@pytest.mark.parametrize('cluster', ['fake_cluster', None])
+def test_send_metrics(cluster):
     mock_send_counter = mock.Mock()
     metrics = dict(counter=[dict(name='fake_name')])
 
@@ -129,10 +131,14 @@ def test_send_metrics():
         dict(counter=mock_send_counter),
         autospec=None,
     ):
-        get_tron_metrics.send_metrics(metrics, True)
+        get_tron_metrics.send_metrics(metrics, cluster=cluster, dry_run=True)
 
     assert mock_send_counter.call_count == 1
-    assert mock_send_counter.call_args == mock.call(
-        'fake_name',
-        dry_run=True,
-    )
+    if cluster:
+        assert mock_send_counter.call_args == mock.call(
+            'fake_name',
+            dry_run=True,
+            dimensions={'tron_cluster': 'fake_cluster'},
+        )
+    else:
+        assert mock_send_counter.call_args == mock.call('fake_name', dry_run=True)
