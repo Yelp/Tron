@@ -8,10 +8,10 @@ Table of Jobs with start date of last run
 
 """
 import optparse
-import os
 
 from tron.config import manager
 from tron.serialize.runstate import statemanager
+from tron.utils import chdir
 
 
 def parse_options():
@@ -74,8 +74,8 @@ def display_report(state_config, job_states):
 def main(config_path, working_dir):
     container = get_container(config_path)
     config = container.get_master().state_persistence
-    os.chdir(working_dir)
-    display_report(config, *get_state(container))
+    with chdir(working_dir):
+        display_report(config, *get_state(container))
 
 
 if __name__ == "__main__":
