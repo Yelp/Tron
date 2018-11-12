@@ -1271,3 +1271,48 @@ class TestMesosActionRun:
         self.action_run.machine.state = ActionRun.RUNNING
         error_message = self.action_run.stop()
         assert error_message == "Error: Can't find task id for the action."
+
+    def test_handler_exiting_unknown(self):
+        self.action_run.action_command = mock.create_autospec(
+            actioncommand.ActionCommand,
+            exit_status=None,
+        )
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+        assert self.action_run.handler(
+            self.action_run.action_command,
+            ActionCommand.EXITING,
+        )
+        assert self.action_run.is_unknown
+        assert self.action_run.exit_status is None
+
+    def test_handler_exiting_unknown_retry(self):
+        self.action_run.action_command = mock.create_autospec(
+            actioncommand.ActionCommand,
+            exit_status=None,
+        )
+        self.action_run.retries_remaining = 1
+        self.action_run.exit_statuses = []
+        self.action_run.start = mock.Mock()
+
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+        assert self.action_run.handler(
+            self.action_run.action_command,
+            ActionCommand.EXITING,
+        )
+        assert self.action_run.retries_remaining == 0
+        assert not self.action_run.is_unknown
+        assert self.action_run.start.call_count == 1
+
+    def test_handler_exiting_failstart_unknown(self):
+        self.action_run.action_command = mock.create_autospec(
+            actioncommand.ActionCommand,
+            exit_status=None,
+        )
+        self.action_run.machine.transition('start')
+        assert self.action_run.handler(
+            self.action_run.action_command,
+            ActionCommand.FAILSTART,
+        )
+        assert self.action_run.is_unknown
