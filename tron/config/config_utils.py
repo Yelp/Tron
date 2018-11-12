@@ -1,15 +1,9 @@
 """Utilities used for configuration parsing and validation."""
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import datetime
 import functools
 import itertools
 import re
 from string import Formatter
-
-import six
-from six import string_types
 
 from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
@@ -96,7 +90,7 @@ valid_int = functools.partial(valid_number, int)
 valid_float = functools.partial(valid_number, float)
 
 valid_identifier = build_type_validator(
-    lambda s: isinstance(s, string_types) and IDENTIFIER_RE.match(s),
+    lambda s: isinstance(s, str) and IDENTIFIER_RE.match(s),
     'Identifier at %s is not a valid identifier: %s',
 )
 
@@ -106,7 +100,7 @@ valid_list = build_type_validator(
 )
 
 valid_string = build_type_validator(
-    lambda s: isinstance(s, string_types),
+    lambda s: isinstance(s, str),
     'Value at %s is not a string: %s',
 )
 
@@ -361,7 +355,7 @@ class Validator(object):
         """Set any default values for any optional values that were not
         specified.
         """
-        for key, value in six.iteritems(self.defaults):
+        for key, value in self.defaults.items():
             output_dict.setdefault(key, value)
 
     def path_name(self, name=None):
@@ -385,7 +379,7 @@ class Validator(object):
     def validate_contents(self, input, config_context):
         """Override this to validate each value in the input."""
         valid_input = {}
-        for key, value in six.iteritems(input):
+        for key, value in input.items():
             if key in self.validators:
                 child_context = config_context.build_child_context(key)
                 valid_input[key] = self.validators[key](value, child_context)

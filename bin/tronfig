@@ -11,8 +11,6 @@ import sys
 import tempfile
 import traceback
 
-from six.moves import input
-
 from tron.commands import cmd_utils
 from tron.commands.client import Client
 from tron.config import config_parse
@@ -121,8 +119,7 @@ def delete_config(client, config_name):
         return
 
     response = input(
-        "This will delete the configuration for the %s namespace. Proceed? (y/n): "
-        % config_name,
+        f"This will delete the configuration for the {config_name} namespace. Proceed? (y/n): "
     )
     if response[:1].lower() != 'y':
         return

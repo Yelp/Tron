@@ -7,12 +7,11 @@ from __future__ import unicode_literals
 import logging
 import os.path
 import shutil
+import sys
 import time
 from collections import OrderedDict
 from subprocess import PIPE
 from subprocess import Popen
-
-import six
 
 from tron.utils import maybe_encode
 
@@ -174,7 +173,7 @@ class OutputStreamSerializer(object):
         if not path or not os.path.exists(path):
             return []
         if not num_lines:
-            num_lines = six.MAXSIZE
+            num_lines = sys.maxsize
 
         try:
             cmd = ('tail', '-n', str(num_lines), path)

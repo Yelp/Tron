@@ -1,9 +1,7 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
+from urllib.error import HTTPError
+from urllib.error import URLError
 
 import mock
-from six.moves.urllib.error import HTTPError
-from six.moves.urllib.error import URLError
 
 from testifycompat import assert_equal
 from testifycompat import assert_in

@@ -1,12 +1,7 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import itertools
 import logging
 import time
 from contextlib import contextmanager
-
-import six
 
 from tron.config import schema
 from tron.core import job
@@ -105,7 +100,7 @@ class StateSaveBuffer(object):
 
     def __iter__(self):
         """Return all buffered data and clear the buffer."""
-        for key, item in six.iteritems(self.buffer):
+        for key, item in self.buffer.items():
             yield key, item
         self.buffer.clear()
 
@@ -169,7 +164,7 @@ class PersistentStateManager(object):
         key_to_state_map = self._impl.restore(key_to_item_map.keys())
         return {
             key_to_item_map[key]: state_data
-            for key, state_data in six.iteritems(key_to_state_map)
+            for key, state_data in key_to_state_map.items()
         }
 
     def save(self, type_enum, name, state_data):

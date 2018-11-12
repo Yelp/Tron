@@ -4,14 +4,9 @@ WARNING: Using this store is NOT recommended.  It will be far too slow for
 anything but the most trivial setups.  It should only be used with a high
 buffer size (10+), and a low run_limit (< 10).
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import operator
 import os
 from collections import namedtuple
-
-from six.moves import filter
 
 from tron import yaml
 from tron.serialize import runstate

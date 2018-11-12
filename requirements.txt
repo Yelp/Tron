@@ -14,7 +14,6 @@ pytimeparse==1.1.8
 pytz==2018.5
 PyYAML==3.13
 requests==2.20.0
-six==1.11.0
 SQLAlchemy==1.2.12
 task_processing[mesos_executor]==0.1.2
 Twisted==18.7.0

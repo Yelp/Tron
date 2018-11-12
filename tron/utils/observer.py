@@ -1,10 +1,5 @@
 """Implements the Observer/Observable pattern,"""
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
-
-from six import string_types
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +21,7 @@ class Observable(object):
             <string>                Matches only that event
             <sequence of strings>   Matches any of the events in the sequence
         """
-        if isinstance(watch_spec, (string_types, bool)):
+        if isinstance(watch_spec, (str, bool)):
             self._observers.setdefault(watch_spec, []).append(observer)
             return
 

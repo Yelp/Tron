@@ -2,9 +2,6 @@
 Parse a dictionary structure and return an immutable structure that
 contain a validated configuration.
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import datetime
 import getpass
 import itertools
@@ -13,8 +10,6 @@ import os
 from urllib.parse import urlparse
 
 import pytz
-import six
-from six import string_types
 from task_processing.plugins.mesos.constraints import OPERATORS
 
 from tron import command_context
@@ -291,7 +286,7 @@ class ValidateNode(Validator):
 
     def do_shortcut(self, node):
         """Nodes can be specified with just a hostname string."""
-        if isinstance(node, string_types):
+        if isinstance(node, str):
             return schema.ConfigNode(hostname=node, name=node, **self.defaults)
 
     def set_defaults(self, output_dict, config_context):
@@ -582,7 +577,7 @@ class ValidateJob(Validator):
 
     def post_validation(self, job, config_context):
         """Validate actions for the job."""
-        for _, action in six.iteritems(job['actions']):
+        for _, action in job['actions'].items():
             self._validate_dependencies(job, job['actions'], action)
 
 
@@ -735,7 +730,7 @@ class ValidateConfig(Validator):
         another pool.
         """
         all_node_names = set(config['nodes'])
-        for node_pool in six.itervalues(config['node_pools']):
+        for node_pool in config['node_pools'].values():
             invalid_names = set(node_pool.nodes) - all_node_names
             if invalid_names:
                 msg = "NodePool %s contains other NodePools: " % node_pool.name
@@ -809,7 +804,7 @@ def validate_config_mapping(config_mapping):
     nodes = get_nodes_from_master_namespace(master)
     yield MASTER_NAMESPACE, master
 
-    for name, content in six.iteritems(config_mapping):
+    for name, content in config_mapping.items():
         context = ConfigContext(
             name,
             nodes,
@@ -826,7 +821,7 @@ class ConfigContainer(object):
         self.configs = config_mapping
 
     def items(self):
-        return six.iteritems(self.configs)
+        return self.configs.items()
 
     @classmethod
     def create(cls, config_mapping):
@@ -835,14 +830,14 @@ class ConfigContainer(object):
     # TODO: DRY with get_jobs()
     def get_job_names(self):
         job_names = []
-        for config in six.itervalues(self.configs):
+        for config in self.configs.values():
             job_names.extend(config.jobs)
         return job_names
 
     def get_jobs(self):
         return dict(
             itertools.chain.from_iterable(
-                six.iteritems(config.jobs)
+                config.jobs.items()
                 for _, config in self.configs.items()
             ),
         )
