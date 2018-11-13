@@ -777,6 +777,17 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         assert action_run.exit_status == 0
         assert action_run.end_time == self.now
 
+    def test_from_state_starting(self):
+        self.state_data['state'] = 'starting'
+        action_run = ActionRun.from_state(
+            self.state_data,
+            self.parent_context,
+            self.output_path,
+            self.run_node,
+            lambda: None,
+        )
+        assert action_run.is_unknown
+
     def test_from_state_queued(self):
         self.state_data['state'] = 'queued'
         action_run = ActionRun.from_state(

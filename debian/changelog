@@ -1,3 +1,11 @@
+tron (0.9.9.2) trusty; urgency=medium
+
+  * 0.9.9.2 tagged with 'make release'
+    Commit: Merge pull request #583 from Yelp/u/kawaiwan/add-cluster-to-
+    tron-metrics  Add cluster option to metrics script
+
+ -- root <root@56ea502bead2>  Mon, 12 Nov 2018 18:25:34 +0000
+
 tron (0.9.9.1) trusty; urgency=medium
 
   * 0.9.9.1 tagged with 'make release'

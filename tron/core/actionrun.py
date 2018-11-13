@@ -304,15 +304,14 @@ class ActionRun(Observable):
         else:
             action_runner = NoActionRunnerFactory()
 
-        rendered_command = state_data.get('rendered_command')
         run = cls(
             job_run_id=job_run_id,
             name=action_name,
             node=job_run_node,
             parent_context=parent_context,
             output_path=output_path,
-            rendered_command=rendered_command,
-            bare_command=state_data['command'],
+            rendered_command=maybe_decode(state_data.get('rendered_command')),
+            bare_command=maybe_decode(state_data['command']),
             cleanup=cleanup,
             start_time=state_data['start_time'],
             end_time=state_data['end_time'],
@@ -338,10 +337,9 @@ class ActionRun(Observable):
         )
 
         # Transition running to fail unknown because exit status was missed
-        if run.is_running:
+        # Recovery will look for unknown runs
+        if run.is_active:
             run._done('fail_unknown')
-        if run.is_starting:
-            run.handle(ActionCommand.FAILSTART)
         return run
 
     def start(self):
@@ -523,8 +521,8 @@ class ActionRun(Observable):
             'state': self.state,
             'start_time': self.start_time,
             'end_time': self.end_time,
-            'command': command,
-            'rendered_command': self.rendered_command,
+            'command': maybe_decode(command),
+            'rendered_command': maybe_decode(self.rendered_command),
             'node_name': self.node.get_name() if self.node else None,
             'exit_status': self.exit_status,
             'retries_remaining': self.retries_remaining,
@@ -722,7 +720,7 @@ class SSHActionRun(ActionRun, Observer):
             return self.transition_and_notify('started')
 
         if event == ActionCommand.FAILSTART:
-            return self._exit_unsuccessful(-2)
+            return self._exit_unsuccessful(self.EXIT_NODE_ERROR)
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
