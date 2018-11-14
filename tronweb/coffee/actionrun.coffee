@@ -153,9 +153,7 @@ class module.ActionRunView extends Backbone.View
             <div class="span12">
                 <h1>
                     <small>Action Run</small>
-                    <a href="<%= job_url %>"><%= formatName(job_name) %></a>.
-                    <a href="<%= job_run_url %>"><%= run_num %></a>.
-                    <%= formatName(action_name) %>
+                    <a href="<%= job_url %>"><%= formatName(job_name) %></a>.<a href="<%= job_run_url %>"><%= run_num %></a>.<%= formatName(action_name) %>
                     <span id="refresh"></span>
                 </h1>
             </div>
