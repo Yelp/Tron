@@ -98,6 +98,7 @@ class TronDaemon(object):
         setup_logging(self.options)
 
         self.mcp = None
+        # This must happen before the context is built
         self._sigint_handler = self._make_sigint_handler(
             signal.getsignal(signal.SIGINT)
         )
@@ -108,21 +109,56 @@ class TronDaemon(object):
         return NoDaemonContext(
             lockfile=flockfile.FlockFile(options.lock_file),
             working_directory=options.working_dir,
+            # We have the context set all the signal handlers here to defaults
+            # just in case someone else sets them differently. We do this so
+            # that we can handle them synchronously in _run_reactor
             signal_map={
-                signal.SIGHUP: signal.SIG_DFL,
+                signal.SIGHUP: signal.SIG_IGN,
                 signal.SIGINT: signal.default_int_handler,
-                signal.SIGTERM: signal.SIG_DFL,
-                signal.SIGQUIT: signal.SIG_DFL,
-                signal.SIGUSR1: signal.SIG_DFL,
+                signal.SIGTERM: signal.SIG_IGN,
+                signal.SIGQUIT: signal.SIG_IGN,
+                signal.SIGUSR1: signal.SIG_IGN,
             },
         )
 
     def run(self):
-        with self.context:
-            self._run_mcp()
-            self._run_www_api()
-            self._run_manhole()
-            self._run_reactor()
+        # Distinct from the context's signal map. That is used to set signal
+        # handlers in Python. We use the ones below to synchronously
+        signal_map = {
+            signal.SIGHUP: self._handle_reconfigure,
+            signal.SIGINT: self._sigint_handler,
+            signal.SIGTERM: self._handle_shutdown,
+            signal.SIGQUIT: self._handle_shutdown,
+            signal.SIGUSR1: self._handle_debug,
+        }
+        signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
+
+        def run_everything():
+            with self.context:
+                self._run_mcp()
+                self._run_www_api()
+                self._run_manhole()
+                self._run_reactor()
+        threading.Thread(
+            target=run_everything,
+            daemon=True,
+        ).start()
+
+        while True:
+            # We use a sigtimedwait instead of a sigwait here because in the
+            # event other threads try to interrupt the main thread, a
+            # KeyboardInterrupt will be thrown. A sigwait will not unblock,
+            # but a sigtimedwait will.
+            try:
+                signum = signal.sigtimedwait(set(signal_map.keys()), 0)
+                if signum is not None:
+                    signum = signal.Signals(signum.si_signo)
+            except KeyboardInterrupt:
+                signum = signal.SIGINT
+
+            if signum in signal_map:
+                log.info(f"Got signal {str(signum)}")
+                signal_map[signum](signum, None)
 
     def _run_manhole(self):
         # This condition is made with the assumption that no existing daemon
@@ -159,36 +195,7 @@ class TronDaemon(object):
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        signal_map = {
-            signal.SIGHUP: self._handle_reconfigure,
-            signal.SIGINT: self._sigint_handler,
-            signal.SIGTERM: self._handle_shutdown,
-            signal.SIGQUIT: self._handle_shutdown,
-            signal.SIGUSR1: self._handle_debug,
-        }
-        signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
-
-        threading.Thread(
-            target=reactor.run,
-            daemon=True,
-            kwargs=dict(installSignalHandlers=0)
-        ).start()
-
-        while True:
-            try:
-                # We use a sigtimedwait instead of a sigwait here because in the
-                # event other threads try to interrupt the main thread, a
-                # KeyboardInterrupt will be thrown. A sigwait will not unblock,
-                # but a sigtimedwait will.
-                signum = signal.sigtimedwait(set(signal_map.keys()), 0)
-                if signum is not None:
-                    signum = signal.Signals(signum.si_signo)
-            except KeyboardInterrupt:
-                signum = signal.SIGINT
-
-            if signum in signal_map:
-                logging.info(f"Got signal {str(signum)}")
-                signal_map[signum](signum, None)
+        reactor.run(installSignalHandlers=0)
 
     def _make_sigint_handler(self, prev_handler=None):
         """ Creates a SIGINT handler that takes into account a previous
