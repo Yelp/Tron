@@ -1,3 +1,11 @@
+tron (0.9.9.3) trusty; urgency=medium
+
+  * 0.9.9.3 tagged with 'make release'
+    Commit: Merge pull request #587 from Yelp/TRON-536  Removed spaces
+    in action run html
+
+ -- root <root@df98fb91b710>  Thu, 15 Nov 2018 00:20:45 +0000
+
 tron (0.9.9.2) trusty; urgency=medium
 
   * 0.9.9.2 tagged with 'make release'
