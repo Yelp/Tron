@@ -21,6 +21,7 @@ import tron
 from tron.manhole import make_manhole
 from tron.mesos import MesosClusterRepository
 from tron.utils import flockfile
+from tron.utils import signalqueue
 
 log = logging.getLogger(__name__)
 
@@ -96,11 +97,13 @@ class TronDaemon(object):
     def __init__(self, options):
         self.options = options
         setup_logging(self.options)
-
         self.mcp = None
+
         self._sigint_handler = self._make_sigint_handler(
             signal.getsignal(signal.SIGINT)
         )
+        self.sigqueue = signalqueue.SignalQueue()
+
         self.context = self._build_context(options)
         self.manhole_sock = f"{self.options.working_dir}/manhole.sock"
 
@@ -108,13 +111,13 @@ class TronDaemon(object):
         return NoDaemonContext(
             lockfile=flockfile.FlockFile(options.lock_file),
             working_directory=options.working_dir,
-            signal_map={
-                signal.SIGHUP: signal.SIG_DFL,
-                signal.SIGINT: signal.default_int_handler,
-                signal.SIGTERM: signal.SIG_DFL,
-                signal.SIGQUIT: signal.SIG_DFL,
-                signal.SIGUSR1: signal.SIG_DFL,
-            },
+            signal_map = {sig: self.sigqueue.handler for sig in [
+                signal.SIGHUP,
+                signal.SIGINT,
+                signal.SIGTERM,
+                signal.SIGQUIT,
+                signal.SIGUSR1,
+            ]},
         )
 
     def run(self):
@@ -123,6 +126,22 @@ class TronDaemon(object):
             self._run_www_api()
             self._run_manhole()
             self._run_reactor()
+
+            # signal handlers we use to handle signals synchronously
+            signal_map = {
+                signal.SIGHUP: self._handle_reconfigure,
+                signal.SIGINT: self._sigint_handler,
+                signal.SIGTERM: self._handle_shutdown,
+                signal.SIGQUIT: self._handle_shutdown,
+                signal.SIGUSR1: self._handle_debug,
+            }
+            # wait for signals to become available then handle them one by one
+            while True:
+                signum = self.sigqueue.wait()  # does not block
+                if signum in signal_map:
+                    sig = signal.Signals(signum)  # int to proper Signal
+                    log.info(f"Got signal {str(sig)}")
+                    signal_map[signum](sig, None)
 
     def _run_manhole(self):
         # This condition is made with the assumption that no existing daemon
@@ -159,36 +178,11 @@ class TronDaemon(object):
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        signal_map = {
-            signal.SIGHUP: self._handle_reconfigure,
-            signal.SIGINT: self._sigint_handler,
-            signal.SIGTERM: self._handle_shutdown,
-            signal.SIGQUIT: self._handle_shutdown,
-            signal.SIGUSR1: self._handle_debug,
-        }
-        signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
-
         threading.Thread(
             target=reactor.run,
             daemon=True,
-            kwargs=dict(installSignalHandlers=0)
+            kwargs=dict(installSignalHandlers=0),
         ).start()
-
-        while True:
-            try:
-                # We use a sigtimedwait instead of a sigwait here because in the
-                # event other threads try to interrupt the main thread, a
-                # KeyboardInterrupt will be thrown. A sigwait will not unblock,
-                # but a sigtimedwait will.
-                signum = signal.sigtimedwait(set(signal_map.keys()), 0)
-                if signum is not None:
-                    signum = signal.Signals(signum.si_signo)
-            except KeyboardInterrupt:
-                signum = signal.SIGINT
-
-            if signum in signal_map:
-                logging.info(f"Got signal {str(signum)}")
-                signal_map[signum](signum, None)
 
     def _make_sigint_handler(self, prev_handler=None):
         """ Creates a SIGINT handler that takes into account a previous
