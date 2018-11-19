@@ -244,6 +244,10 @@ class MesosTask(ActionCommand):
 
         if event.terminal:
             self.log.info('Event was terminal, closing task')
+            message = event.raw.get('message', '')
+            reason = event.raw.get('reason', '')
+            if message or reason:
+                self.log.info(f'More info: {reason}: {message}')
             self.report_resources(decrement=True)
 
             exit_code = int(not getattr(event, 'success', False))
