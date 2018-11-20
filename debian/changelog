@@ -1,3 +1,11 @@
+tron (0.9.9.4) trusty; urgency=medium
+
+  * 0.9.9.4 tagged with 'make release'
+    - Fix signal handling so that Tron gracefull shuts down
+    - Add more information to log lines
+
+ -- root <root@ec5f977bc63f>  Mon, 19 Nov 2018 23:59:43 +0000
+
 tron (0.9.9.3) trusty; urgency=medium
 
   * 0.9.9.3 tagged with 'make release'
