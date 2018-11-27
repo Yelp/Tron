@@ -179,12 +179,36 @@ Optional Fields
     and the action will not enter the failed state until retries are exhausted.
     Defaults to None (0 retries allowed).
 
-**retries_delay** (beta)
+**retries_delay**
     A timedelta to wait in between retries.
 
 **expected_runtime** (default **24h**)
-    A time interval (ex: "2 hours") that specifies the maximum expected duration of each action run.
-    Monitoring will alert if a action run is still running after this duration.
+    A time interval (ex: "2 hours") that specifies the maximum expected duration
+    of each action run. Monitoring will alert if a action run is still running
+    after this duration.
+
+**trigger_downstreams** (bool or dict)
+    Upon successfull completion of an action, will emit a trigger for every
+    item in the dictionary. When set to ``true``, a default dict of
+    ``{shortdate: "{shortdate}"}`` is assumed. Emitted triggers will be in form:
+    ``<namespace>.<job>.<action>.<dict key>.<rendered value>``. See
+    ``triggered_by`` for more information.
+
+**triggered_by** (list)
+    When list is not empty, action will not start until all required triggers
+    have been emitted by upstream actions. Unlike with ``requires`` attribute,
+    dependent actions don't have to belong to the same job. ``triggered_by``
+    template may contain any pattern allowed in ``command`` attribute.
+
+    Example:
+
+::
+    triggered_by:
+    - "other_namespace.some_job.action1.shortdate.{shortdate-1}"
+
+**trigger_timeout** (timedelta)
+    How long will action wait for dependencies listed in ``triggered_by`` before
+    failing. Is not included in ``expected_runtime``.
 
 Example Actions
 ^^^^^^^^^^^^^^^
