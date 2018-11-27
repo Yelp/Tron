@@ -243,7 +243,13 @@ class TestMesosTask(TestCase):
         assert self.task.is_complete
 
     def test_log_event_error(self):
-        with mock.patch.object(self.task, 'log_event_info') as mock_log_event:
+        with mock.patch.object(
+            self.task,
+            'log_event_info',
+        ) as mock_log_event, mock.patch.object(
+            self.task.log,
+            'warning',
+        ) as mock_log:
             mock_log_event.side_effect = Exception
             self.task.handle_event(
                 mock_task_event(
@@ -252,6 +258,7 @@ class TestMesosTask(TestCase):
                 )
             )
             assert mock_log_event.called
+            assert mock_log.called
         assert self.task.state == MesosTask.RUNNING
 
     def test_get_event_logger_add_unique_handlers(self):
