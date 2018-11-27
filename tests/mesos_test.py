@@ -349,9 +349,13 @@ class TestMesosCluster(TestCase):
 
     def test_set_enabled_off(self):
         cluster = MesosCluster('mesos-cluster-a.me', enabled=True)
+        mock_task = mock.Mock()
+        cluster.tasks = {'task': mock_task}
         cluster.set_enabled(False)
-        assert_equal(cluster.enabled, False)
-        assert_equal(cluster.runner.stop.call_count, 1)
+        assert not cluster.enabled
+        assert cluster.runner.stop.call_count == 1
+        assert cluster.tasks == {}
+        assert mock_task.exited.call_count == 1
 
     def test_set_enabled_on(self):
         cluster = MesosCluster('mesos-cluster-a.me', enabled=False)
@@ -630,15 +634,16 @@ class TestMesosCluster(TestCase):
         assert_equal(cluster.runner.stop.call_count, 1)
         assert_equal(cluster.deferred.cancel.call_count, 1)
 
-    def test_stop(self):
+    def test_stop_default(self):
+        # When stopping, tasks should not exit. They will be recovered
         cluster = MesosCluster('mesos-cluster-a.me')
         mock_task = mock.MagicMock()
         cluster.tasks = {'task_id': mock_task}
         cluster.stop()
-        assert_equal(cluster.runner.stop.call_count, 1)
-        assert_equal(cluster.deferred.cancel.call_count, 1)
-        mock_task.exited.assert_called_once_with(None)
-        assert_equal(len(cluster.tasks), 0)
+        assert cluster.runner.stop.call_count == 1
+        assert cluster.deferred.cancel.call_count == 1
+        assert mock_task.exited.call_count == 0
+        assert len(cluster.tasks) == 1
 
     def test_stop_disabled(self):
         # Shouldn't raise an error
