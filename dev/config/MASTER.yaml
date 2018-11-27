@@ -14,28 +14,9 @@ mesos_options:
 jobs:
     - name: "test"
       node: localhost
-      schedule: "interval 10min"
+      schedule: "interval 1m"
       actions:
         - name: "first"
-          command: "/bin/sleep 5m"
-          executor: mesos
-          docker_image: docker-paasta.yelpcorp.com:443/services-robj-test-service:paasta-e9fc795ec881cfd1b9d4b68540504690deddd4ec
+          command: "echo 'hello world'"
           cpus: 1
           mem: 100
-          constraints:
-              - attribute: pool
-                operator: LIKE
-                value: default
-          env:
-              PAASTA_SERVICE: robj-test-service
-          docker_parameters:
-            - key: memory-swap
-              value: 1088m
-            - key: cpu-period
-              value: '100000'
-            - key: cpu-quota
-              value: '250000'
-            - key: label
-              value: paasta_service=robj-test-service
-            - key: label
-              value: paasta_instance=test.first
