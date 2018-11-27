@@ -865,7 +865,7 @@ class MesosActionRun(ActionRun, Observer):
             return self.transition_and_notify('started')
 
         if event == ActionCommand.FAILSTART:
-            return self._exit_unsuccessful(None)
+            return self._exit_unsuccessful(action_command.exit_status)
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:

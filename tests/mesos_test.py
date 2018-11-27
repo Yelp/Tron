@@ -205,13 +205,15 @@ class TestMesosTask(TestCase):
         assert self.task.is_failed
         assert self.task.is_done
 
-    def test_handle_unknown_terminal_event(self):
+    def test_handle_terminal_event_offer_timeout(self):
         self.task.started()
         event = mock_task_event(
             task_id=self.task_id,
             platform_type=None,
             terminal=True,
             success=False,
+            raw='failed due to offer timeout',
+            message='stop',
         )
         self.task.handle_event(event)
         assert self.task.is_failed
