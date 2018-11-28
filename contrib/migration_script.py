@@ -62,6 +62,9 @@ def check_job_if_running(jobs_status, job_name):
             if status == 'running':
                 print(bcolors.FAIL + 'job {} is still running, can not migrate'.format(job_name) + bcolors.ENDC)
                 return False
+            elif status == 'disabled':
+                print(bcolors.WARNING + 'job {} is disabled, need to cancel it manually later'.format(job_name) + bcolors.ENDC)
+                return True
             else:
                 print(bcolors.OKGREEN + 'job {} is not running, can migrate'.format(job_name) + bcolors.ENDC)
                 return True
@@ -88,6 +91,7 @@ def command_jobs(command, jobs, args, ns=None):
         if command == 'move':
             data = {'command': command, 'old_name': args.old_ns + '.' + job['name'], 'new_name': args.new_ns + '.' + job['name']}
             uri = urljoin(args.server, 'api/jobs')
+            job_name = args.new_ns + '.' + job['name']
         else:
             data = {'command': command}
             uri = urljoin(args.server, 'api/jobs/' + job_name)
@@ -139,7 +143,7 @@ def main():
                     is_migration_safe = is_migration_safe & check_job_if_running(jobs_status, job_name_with_ns)
 
         if is_migration_safe is True:
-            print(bcolors.OKBLUE + "Jobs are not running. Disable all the jobs." + bcolors.ENDC)
+            print(bcolors.OKBLUE + "Jobs are not running." + bcolors.ENDC)
         else:
             print(bcolors.WARNING + "Some jobs are still running, abort this migration," + bcolors.ENDC)
             return
@@ -161,6 +165,10 @@ def main():
 
             # update new namespace
             ssh_command(hostname, "sudo paasta_setup_tron_namespace " + args.new_ns)
+
+            # update old namespace if only one job is moving
+            if args.job:
+                ssh_command(hostname, "sudo paasta_setup_tron_namespace " + args.old_ns)
 
         #clean up namespace
         ssh_command(hostname, "sudo paasta_cleanup_tron_namespaces")

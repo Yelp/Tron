@@ -73,8 +73,9 @@ class JobScheduler(Observer):
     def schedule_reconfigured(self):
         """Remove the pending run and create new runs with the new JobScheduler.
         """
-        self.job.runs.remove_pending()
-        self.create_and_schedule_runs(ignore_last_run_time=True)
+        if self.job.enabled:
+            self.job.runs.remove_pending()
+            self.create_and_schedule_runs(ignore_last_run_time=True)
 
     def schedule(self):
         """Schedule the next run for this job by setting a callback to fire
