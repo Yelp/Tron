@@ -4,7 +4,7 @@ ssh_options:
     ## SSH agent or list
     # identities:
     #     - /home/tron/.ssh/id_dsa
-    agent: true
+    agent: false
 
 ## Directory used to store stdout/stderr from jobs. Defaults
 ## to the working directory
