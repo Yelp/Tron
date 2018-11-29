@@ -157,7 +157,7 @@ class ActionRun(Observable):
             STARTING:
                 dict(started=RUNNING, fail=FAILED, fail_unknown=UNKNOWN),
             UNKNOWN:
-                dict(running=RUNNING, **default_transitions),
+                dict(running=RUNNING, fail_unknown=UNKNOWN, **default_transitions),
             QUEUED:
                 dict(
                     cancel=CANCELLED,
@@ -340,7 +340,7 @@ class ActionRun(Observable):
         # Transition running to fail unknown because exit status was missed
         # Recovery will look for unknown runs
         if run.is_active:
-            run._done('fail_unknown')
+            run.transition_and_notify('fail_unknown')
         return run
 
     def start(self):
@@ -492,8 +492,8 @@ class ActionRun(Observable):
 
     def fail_unknown(self):
         """Failed with unknown reason."""
-        log.warning(f"{self} lost communication")
-        return self.transition_and_notify('fail_unknown')
+        log.warning(f"{self} failed with no exit code")
+        return self._done('fail_unknown', None)
 
     def cancel_delay(self):
         if self.in_delay is not None:
@@ -767,15 +767,16 @@ class MesosActionRun(ActionRun, Observer):
         return task
 
     def recover(self):
-        if self.mesos_task_id is None:
-            log.error(f'{self} no task ID, cannot recover')
-            return
-
         if not self.machine.check('running'):
             log.error(
                 f'{self} unable to transition from {self.machine.state}'
                 'to running for recovery'
             )
+            return
+
+        if self.mesos_task_id is None:
+            log.error(f'{self} no task ID, cannot recover')
+            self.fail_unknown()
             return
 
         log.info(f'{self} recovering Mesos run')

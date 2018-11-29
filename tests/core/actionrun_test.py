@@ -695,6 +695,7 @@ class TestSSHActionRun:
         )
         assert self.action_run.is_unknown
         assert self.action_run.exit_status is None
+        assert self.action_run.end_time is not None
 
     def test_handler_unhandled(self):
         self.action_run.build_action_command()
@@ -719,7 +720,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             'node_name': 'anode',
             'command': 'do things',
             'start_time': 'start_time',
-            'end_time': 'end_time',
+            'end_time': None,
             'state': 'succeeded',
         }
         self.run_node = MagicMock()
@@ -752,8 +753,8 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             lambda: None,
         )
         assert action_run.is_unknown
-        assert action_run.exit_status == 0
-        assert action_run.end_time == self.now
+        assert action_run.exit_status is None
+        assert action_run.end_time is None
 
     def test_from_state_starting(self):
         self.state_data['state'] = 'starting'
@@ -765,6 +766,8 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             lambda: None,
         )
         assert action_run.is_unknown
+        assert action_run.exit_status is None
+        assert action_run.end_time is None
 
     def test_from_state_queued(self):
         self.state_data['state'] = 'queued'
@@ -1187,6 +1190,7 @@ class TestMesosActionRun:
             mock_watch.assert_called_once_with(task)
 
         assert self.action_run.is_running
+        assert self.action_run.end_time is None
         mock_filehandler.OutputStreamSerializer.assert_called_with(
             self.action_run.output_path,
         )
@@ -1212,6 +1216,7 @@ class TestMesosActionRun:
         self.action_run.recover()
         assert mock_cluster_repo.get_cluster.call_count == 0
         assert self.action_run.is_unknown
+        assert self.action_run.end_time is not None
 
     @mock.patch('tron.core.actionrun.filehandler', autospec=True)
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
@@ -1226,6 +1231,7 @@ class TestMesosActionRun:
         mock_get_cluster.assert_called_once_with()
         assert self.action_run.is_unknown
         assert mock_get_cluster.return_value.recover.call_count == 0
+        assert self.action_run.end_time is not None
 
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_kill_task(self, mock_cluster_repo):
@@ -1274,6 +1280,7 @@ class TestMesosActionRun:
         )
         assert self.action_run.is_unknown
         assert self.action_run.exit_status is None
+        assert self.action_run.end_time is not None
 
     def test_handler_exiting_unknown_retry(self):
         self.action_run.action_command = mock.create_autospec(

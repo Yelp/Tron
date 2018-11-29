@@ -303,7 +303,7 @@ class MesosCluster:
         if is_enabled:
             self.connect()
         else:
-            self.stop()
+            self.stop(fail_tasks=True)
 
     def configure_tasks(
         self,
@@ -509,7 +509,7 @@ class MesosCluster:
         else:
             log.warning('Unknown type of event: {}'.format(event))
 
-    def stop(self):
+    def stop(self, fail_tasks=False):
         self.framework_id = None
         if self.runner:
             self.runner.stop()
@@ -519,9 +519,10 @@ class MesosCluster:
             self.deferred.cancel()
         self.queue = PyDeferredQueue()
 
-        for key, task in list(self.tasks.items()):
-            task.exited(None)
-            del self.tasks[key]
+        if fail_tasks:
+            for key, task in list(self.tasks.items()):
+                task.exited(None)
+                del self.tasks[key]
 
     def kill(self, task_id):
         return self.runner.kill(task_id)
