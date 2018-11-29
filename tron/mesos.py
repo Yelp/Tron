@@ -205,6 +205,13 @@ class MesosTask(ActionCommand):
         elif mesos_type is None:
             self.log.info(f'Non-Mesos event: {event.raw}')
 
+        # Mesos events may have task reasons
+        if mesos_type:
+            message = event.raw.get('message', '')
+            reason = event.raw.get('reason', '')
+            if message or reason:
+                self.log.info(f'More info: {reason}: {message}')
+
     def handle_event(self, event):
         event_id = getattr(event, 'task_id', None)
         if event_id != self.get_mesos_id():
@@ -244,10 +251,6 @@ class MesosTask(ActionCommand):
 
         if event.terminal:
             self.log.info('Event was terminal, closing task')
-            message = event.raw.get('message', '')
-            reason = event.raw.get('reason', '')
-            if message or reason:
-                self.log.info(f'More info: {reason}: {message}')
             self.report_resources(decrement=True)
 
             exit_code = int(not getattr(event, 'success', False))

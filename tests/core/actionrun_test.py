@@ -1294,14 +1294,14 @@ class TestMesosActionRun:
         assert not self.action_run.is_unknown
         assert self.action_run.start.call_count == 1
 
-    def test_handler_exiting_failstart_unknown(self):
+    def test_handler_exiting_failstart_failed(self):
         self.action_run.action_command = mock.create_autospec(
             actioncommand.ActionCommand,
-            exit_status=None,
+            exit_status=1,
         )
         self.action_run.machine.transition('start')
         assert self.action_run.handler(
             self.action_run.action_command,
             ActionCommand.FAILSTART,
         )
-        assert self.action_run.is_unknown
+        assert self.action_run.is_failed
