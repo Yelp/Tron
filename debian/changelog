@@ -1,3 +1,13 @@
+tron (0.9.9.5) trusty; urgency=medium
+
+  * 0.9.9.5 tagged with 'make release'
+  * Allow passing extra options to systemd-based distros.
+  * Update end times for actions
+  * Fix bug related to Mesos offer timeouts
+  * Do not reschedule disabled job if it is reconfigured
+
+ -- root <root@ca07d1ca6c45>  Tue, 04 Dec 2018 21:38:20 +0000
+
 tron (0.9.9.4) trusty; urgency=medium
 
   * 0.9.9.4 tagged with 'make release'
