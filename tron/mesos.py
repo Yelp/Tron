@@ -517,6 +517,7 @@ class MesosCluster:
         # Clear message queue
         if self.deferred:
             self.deferred.cancel()
+            self.deferred = None
         self.queue = PyDeferredQueue()
 
         if fail_tasks:
