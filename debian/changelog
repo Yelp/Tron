@@ -1,3 +1,10 @@
+tron (0.9.9.6) trusty; urgency=medium
+
+  * 0.9.9.6 tagged with 'make release'
+  * Fixes for inactive framework
+
+ -- root <root@1ade25b89bcb>  Thu, 06 Dec 2018 00:59:04 +0000
+
 tron (0.9.9.5) trusty; urgency=medium
 
   * 0.9.9.5 tagged with 'make release'
