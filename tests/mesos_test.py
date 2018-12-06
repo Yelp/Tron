@@ -640,8 +640,8 @@ class TestMesosCluster(TestCase):
         )
         cluster = MesosCluster('mesos-cluster-a.me')
         cluster._process_event(event)
-        assert_equal(cluster.runner.stop.call_count, 1)
-        assert_equal(cluster.deferred.cancel.call_count, 1)
+        assert cluster.runner.stop.call_count == 1
+        assert cluster.deferred is None
 
     def test_stop_default(self):
         # When stopping, tasks should not exit. They will be recovered
@@ -650,7 +650,7 @@ class TestMesosCluster(TestCase):
         cluster.tasks = {'task_id': mock_task}
         cluster.stop()
         assert cluster.runner.stop.call_count == 1
-        assert cluster.deferred.cancel.call_count == 1
+        assert cluster.deferred is None
         assert mock_task.exited.call_count == 0
         assert len(cluster.tasks) == 1
 
