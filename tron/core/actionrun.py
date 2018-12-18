@@ -738,11 +738,8 @@ class SSHActionRun(ActionRun, Observer):
 class MesosActionRun(ActionRun, Observer):
     """An ActionRun that executes the command on a Mesos cluster.
     """
-
-    def submit_command(self):
-        serializer = filehandler.OutputStreamSerializer(self.output_path)
-        mesos_cluster = MesosClusterRepository.get_cluster()
-        task = mesos_cluster.create_task(
+    def _create_mesos_task(self, mesos_cluster, serializer):
+        return mesos_cluster.create_task(
             action_run_id=self.id,
             command=self.command,
             cpus=self.cpus,
@@ -754,7 +751,13 @@ class MesosActionRun(ActionRun, Observer):
             env=self.env,
             extra_volumes=[e._asdict() for e in self.extra_volumes],
             serializer=serializer,
+            task_id=self.mesos_task_id,
         )
+
+    def submit_command(self):
+        serializer = filehandler.OutputStreamSerializer(self.output_path)
+        mesos_cluster = MesosClusterRepository.get_cluster()
+        task = self._create_mesos_task(mesos_cluster, serializer)
         if not task:  # Mesos is disabled
             self.fail(self.EXIT_MESOS_DISABLED)
             return
@@ -783,19 +786,7 @@ class MesosActionRun(ActionRun, Observer):
 
         serializer = filehandler.OutputStreamSerializer(self.output_path)
         mesos_cluster = MesosClusterRepository.get_cluster()
-        task = mesos_cluster.create_task(
-            action_run_id=self.id,
-            command=self.command,
-            cpus=self.cpus,
-            mem=self.mem,
-            constraints=self.constraints,
-            docker_image=self.docker_image,
-            docker_parameters=self.docker_parameters,
-            env=self.env,
-            extra_volumes=[e._asdict() for e in self.extra_volumes],
-            serializer=serializer,
-            task_id=self.mesos_task_id,
-        )
+        task = self._create_mesos_task(mesos_cluster, serializer)
         if not task:
             log.warning(
                 f'{self} cannot recover, Mesos is disabled or '
