@@ -12,6 +12,8 @@ from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron import node
 from tron.config.schema import ConfigConstraint
+from tron.config.schema import ConfigParameter
+from tron.config.schema import ConfigVolume
 from tron.config.schema import ExecutorTypes
 from tron.core import actiongraph
 from tron.core import jobrun
@@ -1098,16 +1100,16 @@ class TestMesosActionRun:
     def setup_action_run(self):
         self.output_path = mock.MagicMock()
         self.command = "do the command"
+        self.extra_volumes = [ConfigVolume('/mnt/foo', '/mnt/foo', 'RO')]
+        self.constraints = [ConfigConstraint('an attr', 'an op', 'a val')]
+        self.docker_parameters = [ConfigParameter('init', 'true')]
         self.other_task_kwargs = {
             'cpus': 1,
             'mem': 50,
             'docker_image': 'container:v2',
-            'constraints': [ConfigConstraint('an attr', 'an op', 'a val')],
             'env': {
                 'TESTING': 'true'
             },
-            'docker_parameters': [],
-            'extra_volumes': [],
         }
         self.action_run = MesosActionRun(
             job_run_id="job_run_id",
@@ -1116,6 +1118,9 @@ class TestMesosActionRun:
             rendered_command=self.command,
             output_path=self.output_path,
             executor=ExecutorTypes.mesos,
+            extra_volumes=self.extra_volumes,
+            constraints=self.constraints,
+            docker_parameters=self.docker_parameters,
             **self.other_task_kwargs
         )
 
@@ -1132,13 +1137,15 @@ class TestMesosActionRun:
 
             mock_get_cluster = mock_cluster_repo.get_cluster
             mock_get_cluster.assert_called_once_with()
-            self.other_task_kwargs['constraints'] = [[
-                'an attr', 'an op', 'a val'
-            ]]
+
             mock_get_cluster.return_value.create_task.assert_called_once_with(
                 action_run_id=self.action_run.id,
                 command=self.command,
                 serializer=serializer,
+                task_id=None,
+                extra_volumes=[e._asdict() for e in self.extra_volumes],
+                constraints=[['an attr', 'an op', 'a val']],
+                docker_parameters=[{'key': 'init', 'value': 'true'}],
                 **self.other_task_kwargs
             )
             task = mock_get_cluster.return_value.create_task.return_value
@@ -1183,6 +1190,9 @@ class TestMesosActionRun:
                 command=self.command,
                 serializer=serializer,
                 task_id='my_mesos_id',
+                extra_volumes=[e._asdict() for e in self.extra_volumes],
+                constraints=[['an attr', 'an op', 'a val']],
+                docker_parameters=[{'key': 'init', 'value': 'true'}],
                 **self.other_task_kwargs
             )
             task = mock_get_cluster.return_value.create_task.return_value
