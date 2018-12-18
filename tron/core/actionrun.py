@@ -792,7 +792,7 @@ class MesosActionRun(ActionRun, Observer):
             docker_image=self.docker_image,
             docker_parameters=self.docker_parameters,
             env=self.env,
-            extra_volumes=self.extra_volumes,
+            extra_volumes=[e._asdict() for e in self.extra_volumes],
             serializer=serializer,
             task_id=self.mesos_task_id,
         )

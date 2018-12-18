@@ -12,6 +12,7 @@ from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron import node
 from tron.config.schema import ConfigConstraint
+from tron.config.schema import ConfigVolume
 from tron.config.schema import ExecutorTypes
 from tron.core import actiongraph
 from tron.core import jobrun
@@ -1098,6 +1099,7 @@ class TestMesosActionRun:
     def setup_action_run(self):
         self.output_path = mock.MagicMock()
         self.command = "do the command"
+        self.extra_volumes = [ConfigVolume('/mnt/foo', '/mnt/foo', 'RO')]
         self.other_task_kwargs = {
             'cpus': 1,
             'mem': 50,
@@ -1107,7 +1109,6 @@ class TestMesosActionRun:
                 'TESTING': 'true'
             },
             'docker_parameters': [],
-            'extra_volumes': [],
         }
         self.action_run = MesosActionRun(
             job_run_id="job_run_id",
@@ -1116,6 +1117,7 @@ class TestMesosActionRun:
             rendered_command=self.command,
             output_path=self.output_path,
             executor=ExecutorTypes.mesos,
+            extra_volumes = self.extra_volumes,
             **self.other_task_kwargs
         )
 
@@ -1139,6 +1141,7 @@ class TestMesosActionRun:
                 action_run_id=self.action_run.id,
                 command=self.command,
                 serializer=serializer,
+                extra_volumes=[e._asdict() for e in self.extra_volumes],
                 **self.other_task_kwargs
             )
             task = mock_get_cluster.return_value.create_task.return_value
@@ -1183,6 +1186,7 @@ class TestMesosActionRun:
                 command=self.command,
                 serializer=serializer,
                 task_id='my_mesos_id',
+                extra_volumes=[e._asdict() for e in self.extra_volumes],
                 **self.other_task_kwargs
             )
             task = mock_get_cluster.return_value.create_task.return_value
