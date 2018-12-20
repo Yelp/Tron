@@ -85,6 +85,10 @@ def recover_action_run(action_run, action_runner):
 
 def launch_recovery_actionruns_for_job_runs(job_runs, master_action_runner):
     for run in job_runs:
+        if not run._action_runs:
+            log.info(f'Skipping recovery of {run} with no action runs (may have been cleaned up)')
+            continue
+
         ssh_runs, mesos_runs = filter_action_runs_needing_recovery(run._action_runs)
         for action_run in ssh_runs:
             if type(action_run.action_runner) == NoActionRunnerFactory and \
