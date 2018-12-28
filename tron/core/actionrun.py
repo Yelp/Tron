@@ -738,7 +738,7 @@ class SSHActionRun(ActionRun, Observer):
 class MesosActionRun(ActionRun, Observer):
     """An ActionRun that executes the command on a Mesos cluster.
     """
-    def _create_mesos_task(self, mesos_cluster, serializer):
+    def _create_mesos_task(self, mesos_cluster, serializer, task_id=None):
         return mesos_cluster.create_task(
             action_run_id=self.id,
             command=self.command,
@@ -751,7 +751,7 @@ class MesosActionRun(ActionRun, Observer):
             env=self.env,
             extra_volumes=[e._asdict() for e in self.extra_volumes],
             serializer=serializer,
-            task_id=self.mesos_task_id,
+            task_id=task_id,
         )
 
     def submit_command(self):
@@ -786,7 +786,11 @@ class MesosActionRun(ActionRun, Observer):
 
         serializer = filehandler.OutputStreamSerializer(self.output_path)
         mesos_cluster = MesosClusterRepository.get_cluster()
-        task = self._create_mesos_task(mesos_cluster, serializer)
+        task = self._create_mesos_task(
+            mesos_cluster,
+            serializer,
+            self.mesos_task_id,
+        )
         if not task:
             log.warning(
                 f'{self} cannot recover, Mesos is disabled or '

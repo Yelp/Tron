@@ -1128,6 +1128,8 @@ class TestMesosActionRun:
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_submit_command(self, mock_cluster_repo, mock_filehandler):
         serializer = mock_filehandler.OutputStreamSerializer.return_value
+        # submit_command should reset the task_id
+        self.action_run.mesos_task_id = 'last_attempt'
         with mock.patch.object(
             self.action_run,
             'watch',
@@ -1151,6 +1153,7 @@ class TestMesosActionRun:
             task = mock_get_cluster.return_value.create_task.return_value
             mock_get_cluster.return_value.submit.assert_called_once_with(task)
             mock_watch.assert_called_once_with(task)
+            assert self.action_run.mesos_task_id == task.get_mesos_id.return_value
 
         mock_filehandler.OutputStreamSerializer.assert_called_with(
             self.action_run.output_path,
