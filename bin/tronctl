@@ -175,7 +175,7 @@ def backfill(args):
     print(f"Please run the following {len(dates)} commands:")
     print("")
     for date in dates:
-        print(f"tronctl start {args.id[0]} --date {date}")
+        print(f"tronctl start {args.id[0]} --run-date {date}")
     print("")
     print("Note that many jobs operate on the previous day's data.")
     yield True
