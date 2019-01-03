@@ -38,9 +38,22 @@ class TronDaemonTestCase(TestCase):
             autospec=True,
         ) as mock_flock:
             daemon.__init__(options)
+            assert mock_flock.call_count == 0
 
-            assert mock_flock.call_count == 1
-            assert daemon.context.lockfile == mock_flockfile.return_value
+    def test_run_uses_context(self):
+        with mock.patch(
+            'tron.trondaemon.setup_logging', mock.Mock(), autospec=None
+        ), mock.patch(
+            'tron.trondaemon.no_daemon_context', mock.Mock(), autospec=None
+        ) as ndc:
+            ndc.return_value = mock.MagicMock()
+            ndc.return_value.__enter__.side_effect = RuntimeError()
+            daemon = TronDaemon(mock.Mock())
+            try:
+                daemon.run()
+            except Exception:
+                pass
+            assert ndc.call_count == 1
 
     def test_run_manhole_new_manhole(self):
         with open(self.trond.manhole_sock, 'w+'):

@@ -69,9 +69,6 @@ class TronDaemon(object):
         setup_logging(self.options)
 
         self.mcp = None
-        self._sigint_handler = self._make_sigint_handler(
-            signal.getsignal(signal.SIGINT)
-        )
         self.lock_file = self.options.lock_file
         self.working_dir = self.options.working_dir
         self.signals = {signal.SIGINT: signal.default_int_handler}
