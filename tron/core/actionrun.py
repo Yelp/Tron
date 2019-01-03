@@ -877,7 +877,8 @@ class MesosActionRun(ActionRun, Observer):
 
 
 def min_filter(seq):
-    return min(filter(None, seq)) if any(seq) else None
+    seq = list(filter(None, seq))
+    return min(seq) if any(seq) else None
 
 
 def eager_all(seq):
@@ -1008,7 +1009,7 @@ class ActionRunCollection(object):
     def end_time(self):
         if not self.is_done:
             return None
-        end_times = (
+        end_times = list(
             run.end_time
             for run in self.get_action_runs_with_cleanup()
             if run.end_time
