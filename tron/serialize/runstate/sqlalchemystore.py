@@ -1,11 +1,6 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import operator
 from collections import namedtuple
 from contextlib import contextmanager
-
-from six.moves import filter
 
 from tron import yaml
 from tron.config.config_utils import MAX_IDENTIFIER_LENGTH

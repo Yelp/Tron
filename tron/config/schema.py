@@ -5,8 +5,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 from collections import namedtuple
-
-from tron.utils.collections import Enum
+from enum import Enum
 
 MASTER_NAMESPACE = "MASTER"
 
@@ -42,12 +41,12 @@ TronConfig = config_object_factory(
         'output_stream_dir',  # str
         'action_runner',  # ConfigActionRunner
         'state_persistence',  # ConfigState
-        'command_context',  # FrozenDict of str
+        'command_context',  # dict of str
         'ssh_options',  # ConfigSSHOptions
         'time_zone',  # pytz time zone
-        'nodes',  # FrozenDict of ConfigNode
-        'node_pools',  # FrozenDict of ConfigNodePool
-        'jobs',  # FrozenDict of ConfigJob
+        'nodes',  # dict of ConfigNode
+        'node_pools',  # dict of ConfigNodePool
+        'jobs',  # dict of ConfigJob
         'mesos_options',  # ConfigMesos
         'eventbus_enabled',  # bool or None
     ],
@@ -56,7 +55,7 @@ TronConfig = config_object_factory(
 NamedTronConfig = config_object_factory(
     name='NamedTronConfig',
     optional=[
-        'jobs',  # FrozenDict of ConfigJob
+        'jobs',  # dict of ConfigJob
     ],
 )
 
@@ -120,7 +119,7 @@ ConfigJob = config_object_factory(
         'name',  # str
         'node',  # str
         'schedule',  # Config*Scheduler
-        'actions',  # FrozenDict of ConfigAction
+        'actions',  # dict of ConfigAction
         'namespace',  # str
     ],
     optional=[
@@ -219,12 +218,15 @@ ConfigParameter = config_object_factory(
     optional=[],
 )
 
-StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
 
-ExecutorTypes = Enum.create('ssh', 'mesos')
+StatePersistenceTypes = Enum(
+    'StatePersistenceTypes', dict(shelve='shelve', sql='sql', yaml='yaml')
+)
 
-ActionRunnerTypes = Enum.create('none', 'subprocess')
+ExecutorTypes = Enum('ExecutorTypes', dict(ssh='ssh', mesos='mesos'))
 
-VolumeModes = Enum.create('RO', 'RW')
+ActionRunnerTypes = Enum('ActionRunnerTypes', dict(none='none', subprocess='subprocess'))
 
-ActionOnRerun = Enum.create('rerun')
+VolumeModes = Enum('VolumeModes', dict(RO='RO', RW='RW'))
+
+ActionOnRerun = Enum('ActionOnRerun', dict(rerun='rerun'))

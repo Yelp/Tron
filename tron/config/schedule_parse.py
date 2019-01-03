@@ -1,15 +1,10 @@
 """
 Parse and validate scheduler configuration and return immutable structures.
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import calendar
 import datetime
 import re
 from collections import namedtuple
-
-from six import string_types
 
 from tron.config import config_utils
 from tron.config import ConfigError
@@ -94,7 +89,7 @@ def schedule_config_from_legacy_dict(schedule, config_context):
 
 
 def valid_schedule(schedule, config_context):
-    if isinstance(schedule, string_types):
+    if isinstance(schedule, str):
         return schedule_config_from_string(schedule, config_context)
 
     if 'type' not in schedule:

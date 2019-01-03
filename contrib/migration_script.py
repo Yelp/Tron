@@ -5,10 +5,10 @@ This script is for migrating jobs to another namespace
 import argparse
 import subprocess
 import time
+from urllib.parse import urljoin
+from urllib.parse import urlparse
 
 import yaml
-from six.moves.urllib.parse import urljoin
-from six.moves.urllib.parse import urlparse
 
 from tron.commands import client
 

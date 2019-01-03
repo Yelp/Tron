@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import mock
 
 from testifycompat import assert_equal
@@ -74,30 +71,3 @@ class TestMappingCollections(TestCase):
             item,
             self.collection.remove_item,
         )
-
-
-class TestEnum(TestCase):
-    @setup
-    def setup_enum(self):
-        self.values = ['one', 'two', 'three']
-        self.enum = collections.Enum.create(*self.values)
-
-    def test_create(self):
-        assert_equal(self.enum.values, set(self.values))
-
-    def test__contains__(self):
-        assert_in('one', self.enum)
-        assert_in('two', self.enum)
-        assert_in('three', self.enum)
-        assert_not_in('four', self.enum)
-        assert_not_in('zero', self.enum)
-
-    def test__getattr__(self):
-        assert_equal(self.enum.one, 'one')
-        assert_equal(self.enum.two, 'two')
-
-    def test__getattr__miss(self):
-        assert_raises(AttributeError, lambda: self.enum.seven)
-
-    def test__iter__(self):
-        assert_equal(set(self.enum), set(self.values))

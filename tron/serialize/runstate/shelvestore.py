@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
 import operator
 import pickle
@@ -9,8 +6,6 @@ import sys
 from io import BytesIO
 
 import bsddb3
-from six.moves import filter
-from six.moves import zip
 
 from tron.utils import maybe_decode
 

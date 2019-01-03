@@ -7,17 +7,11 @@ Count of jobs
 Table of Jobs with start date of last run
 
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import optparse
-
-import six
 
 from tron.config import manager
 from tron.serialize.runstate import statemanager
-from tron.utils import tool_utils
+from tron.utils import chdir
 
 
 def parse_options():
@@ -66,7 +60,7 @@ def format_jobs(job_states):
         last_run = format_date(max(start_times)) if start_times else None
         return format % (name, job['enabled'], len(job['runs']), last_run)
 
-    seq = sorted(build(*item) for item in six.iteritems(job_states))
+    seq = sorted(build(*item) for item in job_states.items())
     return header + "".join(seq)
 
 
@@ -80,7 +74,7 @@ def display_report(state_config, job_states):
 def main(config_path, working_dir):
     container = get_container(config_path)
     config = container.get_master().state_persistence
-    with tool_utils.working_dir(working_dir):
+    with chdir(working_dir):
         display_report(config, *get_state(container))
 
 

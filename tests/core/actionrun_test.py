@@ -21,9 +21,31 @@ from tron.core.actionrun import ActionCommand
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunCollection
 from tron.core.actionrun import ActionRunFactory
+from tron.core.actionrun import eager_all
 from tron.core.actionrun import MesosActionRun
+from tron.core.actionrun import min_filter
 from tron.core.actionrun import SSHActionRun
 from tron.serialize import filehandler
+
+
+class TestMinFilter:
+    def test_min_filter(self):
+        seq = [None, 2, None, 7, None, 9, 10, 12, 1]
+        assert min_filter(seq) == 1
+
+
+class TestEagerAll:
+    def test_all_true(self):
+        assert eager_all(range(1, 5))
+
+    def test_all_false(self):
+        assert not eager_all(0 for _ in range(7))
+
+    def test_full_iteration(self):
+        seq = iter([1, 0, 3, 0, 5])
+        assert not eager_all(seq)
+        with pytest.raises(StopIteration):
+            next(seq)
 
 
 class TestActionRunFactory:

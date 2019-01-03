@@ -6,15 +6,10 @@
  Display warnings for action requires sections that are not lists.
 
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import optparse
 import re
 import sys
 
-import six
 import yaml
 
 YAML_TAG_RE = re.compile(r'!\w+\b')
@@ -104,7 +99,7 @@ def build_anchor_mapping(content):
 
     return {
         anchor_name: name_from_doc(loader.construct_document(yaml_node))
-        for anchor_name, yaml_node in six.iteritems(loader.anchors)
+        for anchor_name, yaml_node in loader.anchors.items()
     }
 
 
@@ -115,7 +110,7 @@ def update_references(content):
         return len(kv[0])
 
     anchors_by_length = sorted(
-        six.iteritems(anchor_mapping),
+        anchor_mapping.items(),
         key=key_length_func,
         reverse=True,
     )

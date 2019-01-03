@@ -14,19 +14,13 @@
  Pre 0.5 state files can be read by the YamlStateStore. See the configuration
  documentation for more details on how to create state_persistence sections.
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import optparse
-
-import six
 
 from tron.config import manager
 from tron.config import schema
 from tron.serialize import runstate
 from tron.serialize.runstate.statemanager import PersistenceManagerFactory
-from tron.utils import tool_utils
+from tron.utils import chdir
 
 
 def parse_options():
@@ -73,7 +67,7 @@ def get_state_manager_from_config(config_path, working_dir):
     config_manager = manager.ConfigManager(config_path)
     config_container = config_manager.load()
     state_config = config_container.get_master().state_persistence
-    with tool_utils.working_dir(working_dir):
+    with chdir(working_dir):
         return PersistenceManagerFactory.from_config(state_config)
 
 
@@ -85,7 +79,7 @@ def get_current_config(config_path):
 def add_namespaces(state_data):
     return {
         '%s.%s' % (schema.MASTER_NAMESPACE, name): data
-        for (name, data) in six.iteritems(state_data)
+        for (name, data) in state_data.items()
     }
 
 
@@ -120,7 +114,7 @@ def convert_state(opts):
     if opts.namespace:
         job_states = add_namespaces(job_states)
 
-    for name, job in six.iteritems(job_states):
+    for name, job in job_states.items():
         dest_manager.save(runstate.JOB_STATE, name, job)
     print("Migrated %s jobs." % len(job_states))
 

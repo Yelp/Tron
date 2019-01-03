@@ -10,35 +10,10 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """A complete time specification based on the Google App Engine GROC spec."""
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import calendar
 import datetime
 
-from six.moves import filter
-
-try:
-    import pytz
-    assert pytz
-except ImportError:
-    pytz = None
-
-HOURS = 'hours'
-MINUTES = 'minutes'
-
-try:
-    from pytz import NonExistentTimeError
-    assert NonExistentTimeError
-    from pytz import AmbiguousTimeError
-    assert AmbiguousTimeError
-except ImportError:
-
-    class NonExistentTimeError(Exception):
-        pass
-
-    class AmbiguousTimeError(Exception):
-        pass
+import pytz
 
 
 def get_timezone(timezone_string):
@@ -55,8 +30,6 @@ def get_timezone(timezone_string):
           loaded
     """
     if timezone_string:
-        if pytz is None:
-            raise ValueError('need pytz in order to specify a timezone')
         return pytz.timezone(timezone_string)
     else:
         return None
@@ -73,9 +46,7 @@ def to_timezone(t, tzinfo):
     Returns:
       a datetime object in the time zone 'tzinfo'
     """
-    if pytz is None:
-        return t.replace(tzinfo=tzinfo)
-    elif tzinfo:
+    if tzinfo:
         if not t.tzinfo:
             t = pytz.utc.localize(t)
         return tzinfo.normalize(t.astimezone(tzinfo))
@@ -89,11 +60,11 @@ def naive_as_timezone(t, tzinfo):
     """Interprets the naive datetime with the given time zone."""
     try:
         result = tzinfo.localize(t, is_dst=None)
-    except AmbiguousTimeError:
+    except pytz.AmbiguousTimeError:
         # We are in the infamous 1 AM block which happens twice on
         # fall-back. Pretend like it's the first time, every time.
         result = tzinfo.localize(t, is_dst=True)
-    except NonExistentTimeError:
+    except pytz.NonExistentTimeError:
         # We are in the infamous 2:xx AM block which does not
         # exist. Pretend like it's the later time, every time.
         result = tzinfo.localize(t, is_dst=True)
@@ -296,7 +267,7 @@ class TimeSpecification(object):
 
     # TODO: test
     def handle_timezone(self, out, tzinfo):
-        if self.timezone and pytz is not None:
+        if self.timezone:
             out = naive_as_timezone(out, self.timezone)
         return to_timezone(out, tzinfo)
 

@@ -2,7 +2,6 @@ import itertools
 import logging
 import random
 
-import six
 from twisted.conch.client.knownhosts import KnownHostsFile
 from twisted.internet import defer
 from twisted.internet import protocol
@@ -98,13 +97,13 @@ class NodePoolRepository(object):
         known_hosts,
         ssh_config,
     ):
-        for config in six.itervalues(node_configs):
+        for config in node_configs.values():
             pub_key = known_hosts.get_public_key(config.hostname)
             node = Node.from_config(config, ssh_options, pub_key, ssh_config)
             self.add_node(node)
 
     def _update_node_pools(self, node_pool_configs):
-        for config in six.itervalues(node_pool_configs):
+        for config in node_pool_configs.values():
             nodes = self._get_nodes_by_name(config.nodes)
             pool = NodePool.from_config(config, nodes)
             self.pools.replace(pool)
@@ -444,7 +443,7 @@ class Node(object):
 
         log.info("Service to %s stopped", self.hostname)
 
-        for run_id, run in six.iteritems(self.run_states):
+        for run_id, run in self.run_states.items():
             if run.state == RUN_STATE_CONNECTING:
                 # Now we can trigger a reconnect and re-start any waiting runs.
                 self._connect_then_run(run)

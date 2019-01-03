@@ -2,9 +2,6 @@
 Parse a dictionary structure and return an immutable structure that
 contain a validated configuration.
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import datetime
 import getpass
 import itertools
@@ -13,8 +10,6 @@ import os
 from urllib.parse import urlparse
 
 import pytz
-import six
-from six import string_types
 from task_processing.plugins.mesos.constraints import OPERATORS
 
 from tron import command_context
@@ -48,7 +43,6 @@ from tron.config.schema import ConfigVolume
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
 from tron.config.schema import TronConfig
-from tron.utils.dicts import FrozenDict
 
 log = logging.getLogger(__name__)
 
@@ -133,7 +127,7 @@ def valid_known_hosts_file(file_path, config_context):
 
 def valid_command_context(context, config_context):
     # context can be any dict.
-    return FrozenDict(**valid_dict(context or {}, config_context))
+    return valid_dict(context or {}, config_context)
 
 
 def valid_time_zone(tz, config_context):
@@ -217,7 +211,7 @@ class ValidateVolume(Validator):
     validators = {
         'container_path': valid_string,
         'host_path': valid_string,
-        'mode': config_utils.build_enum_validator(['RO', 'RW']),
+        'mode': config_utils.build_real_enum_validator(schema.VolumeModes),
     }
 
 
@@ -292,7 +286,7 @@ class ValidateNode(Validator):
 
     def do_shortcut(self, node):
         """Nodes can be specified with just a hostname string."""
-        if isinstance(node, string_types):
+        if isinstance(node, str):
             return schema.ConfigNode(hostname=node, name=node, **self.defaults)
 
     def set_defaults(self, output_dict, config_context):
@@ -400,7 +394,7 @@ class ValidateAction(Validator):
         'expected_runtime':
             config_utils.valid_time_delta,
         'executor':
-            config_utils.build_enum_validator(schema.ExecutorTypes),
+            config_utils.build_real_enum_validator(schema.ExecutorTypes),
         'cpus':
             valid_float,
         'mem':
@@ -422,7 +416,7 @@ class ValidateAction(Validator):
         'triggered_by':
             build_list_of_type_validator(valid_string, allow_empty=True),
         'on_upstream_rerun':
-            config_utils.build_enum_validator(schema.ActionOnRerun),
+            config_utils.build_real_enum_validator(schema.ActionOnRerun),
         'trigger_timeout':
             config_utils.valid_time_delta,
     }
@@ -476,7 +470,7 @@ class ValidateCleanupAction(Validator):
         'expected_runtime':
             config_utils.valid_time_delta,
         'executor':
-            config_utils.build_enum_validator(schema.ExecutorTypes),
+            config_utils.build_real_enum_validator(schema.ExecutorTypes),
         'cpus':
             valid_float,
         'mem':
@@ -498,7 +492,7 @@ class ValidateCleanupAction(Validator):
         'triggered_by':
             build_list_of_type_validator(valid_string, allow_empty=True),
         'on_upstream_rerun':
-            config_utils.build_enum_validator(schema.ActionOnRerun),
+            config_utils.build_real_enum_validator(schema.ActionOnRerun),
         'trigger_timeout':
             config_utils.valid_time_delta,
     }
@@ -583,7 +577,7 @@ class ValidateJob(Validator):
 
     def post_validation(self, job, config_context):
         """Validate actions for the job."""
-        for _, action in six.iteritems(job['actions']):
+        for _, action in job['actions'].items():
             self._validate_dependencies(job, job['actions'], action)
 
 
@@ -601,7 +595,7 @@ class ValidateActionRunner(Validator):
 
     validators = {
         'runner_type':
-            config_utils.build_enum_validator(schema.ActionRunnerTypes, ),
+            config_utils.build_real_enum_validator(schema.ActionRunnerTypes),
         'remote_status_path':
             valid_string,
         'remote_exec_path':
@@ -620,7 +614,7 @@ class ValidateStatePersistence(Validator):
         'name':
             valid_string,
         'store_type':
-            config_utils.build_enum_validator(schema.StatePersistenceTypes, ),
+            config_utils.build_real_enum_validator(schema.StatePersistenceTypes),
         'connection_details':
             valid_string,
         'buffer_size':
@@ -696,7 +690,7 @@ DEFAULT_NODE = ValidateNode().do_shortcut(node='localhost')
 class ValidateConfig(Validator):
     """Given a parsed config file (should be only basic literals and
     containers), return an immutable, fully populated series of namedtuples and
-    FrozenDicts with all defaults filled in, all valid values, and no unused
+    dicts with all defaults filled in, all valid values, and no unused
     values. Throws a ConfigError if any part of the input dict is invalid.
     """
     config_class = TronConfig
@@ -736,7 +730,7 @@ class ValidateConfig(Validator):
         another pool.
         """
         all_node_names = set(config['nodes'])
-        for node_pool in six.itervalues(config['node_pools']):
+        for node_pool in config['node_pools'].values():
             invalid_names = set(node_pool.nodes) - all_node_names
             if invalid_names:
                 msg = "NodePool %s contains other NodePools: " % node_pool.name
@@ -810,7 +804,7 @@ def validate_config_mapping(config_mapping):
     nodes = get_nodes_from_master_namespace(master)
     yield MASTER_NAMESPACE, master
 
-    for name, content in six.iteritems(config_mapping):
+    for name, content in config_mapping.items():
         context = ConfigContext(
             name,
             nodes,
@@ -827,7 +821,7 @@ class ConfigContainer(object):
         self.configs = config_mapping
 
     def items(self):
-        return six.iteritems(self.configs)
+        return self.configs.items()
 
     @classmethod
     def create(cls, config_mapping):
@@ -836,14 +830,14 @@ class ConfigContainer(object):
     # TODO: DRY with get_jobs()
     def get_job_names(self):
         job_names = []
-        for config in six.itervalues(self.configs):
+        for config in self.configs.values():
             job_names.extend(config.jobs)
         return job_names
 
     def get_jobs(self):
         return dict(
             itertools.chain.from_iterable(
-                six.iteritems(config.jobs)
+                config.jobs.items()
                 for _, config in self.configs.items()
             ),
         )

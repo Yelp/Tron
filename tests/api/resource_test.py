@@ -5,7 +5,6 @@ from unittest.mock import MagicMock
 
 import mock
 import pytest
-import six
 import twisted.web.http
 import twisted.web.resource
 import twisted.web.server
@@ -38,7 +37,7 @@ REQUEST.childLink = lambda val: "/jobs/%s" % val
 
 
 def build_request(**kwargs):
-    args = {k.encode(): [v.encode()] for k, v in six.iteritems(kwargs)}
+    args = {k.encode(): [v.encode()] for k, v in kwargs.items()}
     return mock.create_autospec(twisted.web.server.Request, args=args)
 
 

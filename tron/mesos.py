@@ -9,7 +9,6 @@ from twisted.internet.defer import logError
 
 import tron.metrics as metrics
 from tron.actioncommand import ActionCommand
-from tron.utils.dicts import get_deep
 from tron.utils.queue import PyDeferredQueue
 
 TASK_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
@@ -190,13 +189,13 @@ class MesosTask(ActionCommand):
         mesos_type = getattr(event, 'platform_type', None)
         if mesos_type == 'staging':
             # TODO: Save these in state?
-            agent = get_deep(event.raw, 'offer.agent_id.value')
-            hostname = get_deep(event.raw, 'offer.hostname')
+            agent = event.raw.get('offer', {}).get('agent_id', {}).get('value')
+            hostname = event.raw.get('offer', {}).get('hostname')
             self.log.info(
                 f'Staging task on agent {agent} (hostname {hostname})'
             )
         elif mesos_type == 'running':
-            agent = get_deep(event.raw, 'agent_id.value')
+            agent = event.raw.get('agent_id', {}).get('value')
             self.log.info(f'Running on agent {agent}')
         elif mesos_type == 'finished':
             pass

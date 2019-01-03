@@ -1,11 +1,7 @@
 import logging
 
-import six
-from six.moves import filter
-
 from tron.core.job import Job
 from tron.utils import collections
-from tron.utils import iteration
 from tron.utils import proxy
 
 log = logging.getLogger(__name__)
@@ -17,12 +13,12 @@ class JobCollection:
     def __init__(self):
         self.jobs = collections.MappingCollection('jobs')
         self.proxy = proxy.CollectionProxy(
-            lambda: six.itervalues(self.jobs),
+            self.jobs.values,
             [
-                proxy.func_proxy('enable', iteration.list_all),
-                proxy.func_proxy('disable', iteration.list_all),
-                proxy.func_proxy('schedule', iteration.list_all),
-                proxy.func_proxy('run_queue_schedule', iteration.list_all),
+                proxy.func_proxy('enable', lambda seq: all(list(seq))),
+                proxy.func_proxy('disable', lambda seq: all(list(seq))),
+                proxy.func_proxy('schedule', lambda seq: all(list(seq))),
+                proxy.func_proxy('run_queue_schedule', lambda seq: all(list(seq))),
             ],
         )
 
@@ -38,7 +34,7 @@ class JobCollection:
                     job_scheduler.schedule()
                 yield job_scheduler.get_job()
 
-        seq = (factory.build(config) for config in six.itervalues(job_configs))
+        seq = (factory.build(config) for config in job_configs.values())
         return map_to_job_and_schedule(filter(self.add, seq))
 
     def add(self, job_scheduler):
@@ -82,7 +78,8 @@ class JobCollection:
         return [sched.get_job_runs() for sched in self]
 
     def __iter__(self):
-        return six.itervalues(self.jobs)
+        for val in self.jobs.values():
+            yield val
 
     def __getattr__(self, name):
         return self.proxy.perform(name)

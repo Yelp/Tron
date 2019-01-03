@@ -1,11 +1,7 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import hashlib
 import logging
 import os
 
-import six
 import yaml as yaml_raw
 
 from tron import yaml
@@ -137,7 +133,7 @@ class ConfigManager(object):
         config_parse.ConfigContainer.create(name_mapping)
 
     def get_config_name_mapping(self):
-        seq = six.iteritems(self.manifest.get_file_mapping())
+        seq = self.manifest.get_file_mapping().items()
         return {name: read(filename) for name, filename in seq}
 
     def load(self):
