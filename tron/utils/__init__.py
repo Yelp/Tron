@@ -37,7 +37,7 @@ def flock(fd):
         close = True
 
     try:
-        fcntl.lockf(fd, fcntl.LOCK_EX)
+        fcntl.lockf(fd, fcntl.LOCK_EX | fcntl.LOCK_NB)
     except BlockingIOError as e:  # locked by someone else
         log.debug(f"Locked by another process: {fd}")
         raise e
