@@ -156,7 +156,7 @@ class ActionRun(Observable):
             STARTING:
                 dict(started=RUNNING, fail=FAILED, fail_unknown=UNKNOWN),
             UNKNOWN:
-                dict(running=RUNNING, **default_transitions),
+                dict(running=RUNNING, fail_unknown=UNKNOWN, **default_transitions),
             QUEUED:
                 dict(
                     cancel=CANCELLED,
@@ -339,7 +339,7 @@ class ActionRun(Observable):
         # Transition running to fail unknown because exit status was missed
         # Recovery will look for unknown runs
         if run.is_active:
-            run._done('fail_unknown')
+            run.transition_and_notify('fail_unknown')
         return run
 
     def start(self):
@@ -491,8 +491,8 @@ class ActionRun(Observable):
 
     def fail_unknown(self):
         """Failed with unknown reason."""
-        log.warning(f"{self} lost communication")
-        return self.transition_and_notify('fail_unknown')
+        log.warning(f"{self} failed with no exit code")
+        return self._done('fail_unknown', None)
 
     def cancel_delay(self):
         if self.in_delay is not None:
@@ -737,11 +737,8 @@ class SSHActionRun(ActionRun, Observer):
 class MesosActionRun(ActionRun, Observer):
     """An ActionRun that executes the command on a Mesos cluster.
     """
-
-    def submit_command(self):
-        serializer = filehandler.OutputStreamSerializer(self.output_path)
-        mesos_cluster = MesosClusterRepository.get_cluster()
-        task = mesos_cluster.create_task(
+    def _create_mesos_task(self, mesos_cluster, serializer, task_id=None):
+        return mesos_cluster.create_task(
             action_run_id=self.id,
             command=self.command,
             cpus=self.cpus,
@@ -753,7 +750,13 @@ class MesosActionRun(ActionRun, Observer):
             env=self.env,
             extra_volumes=[e._asdict() for e in self.extra_volumes],
             serializer=serializer,
+            task_id=task_id,
         )
+
+    def submit_command(self):
+        serializer = filehandler.OutputStreamSerializer(self.output_path)
+        mesos_cluster = MesosClusterRepository.get_cluster()
+        task = self._create_mesos_task(mesos_cluster, serializer)
         if not task:  # Mesos is disabled
             self.fail(self.EXIT_MESOS_DISABLED)
             return
@@ -766,10 +769,6 @@ class MesosActionRun(ActionRun, Observer):
         return task
 
     def recover(self):
-        if self.mesos_task_id is None:
-            log.error(f'{self} no task ID, cannot recover')
-            return
-
         if not self.machine.check('running'):
             log.error(
                 f'{self} unable to transition from {self.machine.state}'
@@ -777,22 +776,19 @@ class MesosActionRun(ActionRun, Observer):
             )
             return
 
+        if self.mesos_task_id is None:
+            log.error(f'{self} no task ID, cannot recover')
+            self.fail_unknown()
+            return
+
         log.info(f'{self} recovering Mesos run')
 
         serializer = filehandler.OutputStreamSerializer(self.output_path)
         mesos_cluster = MesosClusterRepository.get_cluster()
-        task = mesos_cluster.create_task(
-            action_run_id=self.id,
-            command=self.command,
-            cpus=self.cpus,
-            mem=self.mem,
-            constraints=self.constraints,
-            docker_image=self.docker_image,
-            docker_parameters=self.docker_parameters,
-            env=self.env,
-            extra_volumes=self.extra_volumes,
-            serializer=serializer,
-            task_id=self.mesos_task_id,
+        task = self._create_mesos_task(
+            mesos_cluster,
+            serializer,
+            self.mesos_task_id,
         )
         if not task:
             log.warning(
@@ -864,7 +860,7 @@ class MesosActionRun(ActionRun, Observer):
             return self.transition_and_notify('started')
 
         if event == ActionCommand.FAILSTART:
-            return self._exit_unsuccessful(None)
+            return self._exit_unsuccessful(action_command.exit_status)
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:

@@ -147,6 +147,31 @@ class TestPersistentStateManager(TestCase):
             self.manager.save("something", 'name', mock.Mock())
         assert not self.store.save.mock_calls
 
+    def test_check_consistency(self):
+        state_data = mock.Mock()
+        state = {runstate.JOB_STATE: {'name': state_data}}
+        key = f"{runstate.JOB_STATE}name"
+
+        self.manager._check_consistency(state)
+
+        assert self.store.save.call_count == 1
+        assert self.store.save.call_args == mock.call([(key, state_data)])
+
+    def test_check_consistency_failed(self):
+        state = {runstate.JOB_STATE: {'name': mock.Mock()}}
+
+        with mock.patch.object(
+            self.store,
+            'save',
+            side_effect=PersistenceStoreError,
+            autospec=None,
+        ):
+            assert_raises(
+                PersistenceStoreError,
+                self.manager._check_consistency,
+                state
+            )
+
     def test_cleanup(self):
         self.manager.cleanup()
         self.store.cleanup.assert_called_with()

@@ -12,6 +12,8 @@ from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron import node
 from tron.config.schema import ConfigConstraint
+from tron.config.schema import ConfigParameter
+from tron.config.schema import ConfigVolume
 from tron.config.schema import ExecutorTypes
 from tron.core import actiongraph
 from tron.core import jobrun
@@ -717,6 +719,7 @@ class TestSSHActionRun:
         )
         assert self.action_run.is_unknown
         assert self.action_run.exit_status is None
+        assert self.action_run.end_time is not None
 
     def test_handler_unhandled(self):
         self.action_run.build_action_command()
@@ -741,7 +744,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             'node_name': 'anode',
             'command': 'do things',
             'start_time': 'start_time',
-            'end_time': 'end_time',
+            'end_time': None,
             'state': 'succeeded',
         }
         self.run_node = MagicMock()
@@ -774,8 +777,8 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             lambda: None,
         )
         assert action_run.is_unknown
-        assert action_run.exit_status == 0
-        assert action_run.end_time == self.now
+        assert action_run.exit_status is None
+        assert action_run.end_time is None
 
     def test_from_state_starting(self):
         self.state_data['state'] = 'starting'
@@ -787,6 +790,8 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             lambda: None,
         )
         assert action_run.is_unknown
+        assert action_run.exit_status is None
+        assert action_run.end_time is None
 
     def test_from_state_queued(self):
         self.state_data['state'] = 'queued'
@@ -1117,16 +1122,16 @@ class TestMesosActionRun:
     def setup_action_run(self):
         self.output_path = mock.MagicMock()
         self.command = "do the command"
+        self.extra_volumes = [ConfigVolume('/mnt/foo', '/mnt/foo', 'RO')]
+        self.constraints = [ConfigConstraint('an attr', 'an op', 'a val')]
+        self.docker_parameters = [ConfigParameter('init', 'true')]
         self.other_task_kwargs = {
             'cpus': 1,
             'mem': 50,
             'docker_image': 'container:v2',
-            'constraints': [ConfigConstraint('an attr', 'an op', 'a val')],
             'env': {
                 'TESTING': 'true'
             },
-            'docker_parameters': [],
-            'extra_volumes': [],
         }
         self.action_run = MesosActionRun(
             job_run_id="job_run_id",
@@ -1135,6 +1140,9 @@ class TestMesosActionRun:
             rendered_command=self.command,
             output_path=self.output_path,
             executor=ExecutorTypes.mesos,
+            extra_volumes=self.extra_volumes,
+            constraints=self.constraints,
+            docker_parameters=self.docker_parameters,
             **self.other_task_kwargs
         )
 
@@ -1142,6 +1150,8 @@ class TestMesosActionRun:
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_submit_command(self, mock_cluster_repo, mock_filehandler):
         serializer = mock_filehandler.OutputStreamSerializer.return_value
+        # submit_command should reset the task_id
+        self.action_run.mesos_task_id = 'last_attempt'
         with mock.patch.object(
             self.action_run,
             'watch',
@@ -1151,18 +1161,21 @@ class TestMesosActionRun:
 
             mock_get_cluster = mock_cluster_repo.get_cluster
             mock_get_cluster.assert_called_once_with()
-            self.other_task_kwargs['constraints'] = [[
-                'an attr', 'an op', 'a val'
-            ]]
+
             mock_get_cluster.return_value.create_task.assert_called_once_with(
                 action_run_id=self.action_run.id,
                 command=self.command,
                 serializer=serializer,
+                task_id=None,
+                extra_volumes=[e._asdict() for e in self.extra_volumes],
+                constraints=[['an attr', 'an op', 'a val']],
+                docker_parameters=[{'key': 'init', 'value': 'true'}],
                 **self.other_task_kwargs
             )
             task = mock_get_cluster.return_value.create_task.return_value
             mock_get_cluster.return_value.submit.assert_called_once_with(task)
             mock_watch.assert_called_once_with(task)
+            assert self.action_run.mesos_task_id == task.get_mesos_id.return_value
 
         mock_filehandler.OutputStreamSerializer.assert_called_with(
             self.action_run.output_path,
@@ -1202,6 +1215,9 @@ class TestMesosActionRun:
                 command=self.command,
                 serializer=serializer,
                 task_id='my_mesos_id',
+                extra_volumes=[e._asdict() for e in self.extra_volumes],
+                constraints=[['an attr', 'an op', 'a val']],
+                docker_parameters=[{'key': 'init', 'value': 'true'}],
                 **self.other_task_kwargs
             )
             task = mock_get_cluster.return_value.create_task.return_value
@@ -1209,6 +1225,7 @@ class TestMesosActionRun:
             mock_watch.assert_called_once_with(task)
 
         assert self.action_run.is_running
+        assert self.action_run.end_time is None
         mock_filehandler.OutputStreamSerializer.assert_called_with(
             self.action_run.output_path,
         )
@@ -1234,6 +1251,7 @@ class TestMesosActionRun:
         self.action_run.recover()
         assert mock_cluster_repo.get_cluster.call_count == 0
         assert self.action_run.is_unknown
+        assert self.action_run.end_time is not None
 
     @mock.patch('tron.core.actionrun.filehandler', autospec=True)
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
@@ -1248,6 +1266,7 @@ class TestMesosActionRun:
         mock_get_cluster.assert_called_once_with()
         assert self.action_run.is_unknown
         assert mock_get_cluster.return_value.recover.call_count == 0
+        assert self.action_run.end_time is not None
 
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_kill_task(self, mock_cluster_repo):
@@ -1296,6 +1315,7 @@ class TestMesosActionRun:
         )
         assert self.action_run.is_unknown
         assert self.action_run.exit_status is None
+        assert self.action_run.end_time is not None
 
     def test_handler_exiting_unknown_retry(self):
         self.action_run.action_command = mock.create_autospec(
@@ -1316,14 +1336,14 @@ class TestMesosActionRun:
         assert not self.action_run.is_unknown
         assert self.action_run.start.call_count == 1
 
-    def test_handler_exiting_failstart_unknown(self):
+    def test_handler_exiting_failstart_failed(self):
         self.action_run.action_command = mock.create_autospec(
             actioncommand.ActionCommand,
-            exit_status=None,
+            exit_status=1,
         )
         self.action_run.machine.transition('start')
         assert self.action_run.handler(
             self.action_run.action_command,
             ActionCommand.FAILSTART,
         )
-        assert self.action_run.is_unknown
+        assert self.action_run.is_failed

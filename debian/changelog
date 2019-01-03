@@ -1,3 +1,44 @@
+tron (0.9.9.8) trusty; urgency=medium
+
+  * 0.9.9.8 tagged with 'make release'
+    Commit: Merge pull request #603 from Yelp/recovery-none-action-runs
+    Skip job runs with no action runs during recovery
+
+ -- root <root@59681c79eb69>  Thu, 20 Dec 2018 19:19:02 +0000
+
+tron (0.9.9.7) trusty; urgency=medium
+
+  * 0.9.9.7 tagged with 'make release'
+  * Fix type bug in creating tasks during recovery
+  * Only recover Mesos actions with no end time
+
+ -- root <root@c190ab3d065f>  Tue, 18 Dec 2018 19:27:22 +0000
+
+tron (0.9.9.6) trusty; urgency=medium
+
+  * 0.9.9.6 tagged with 'make release'
+  * Fixes for inactive framework
+
+ -- root <root@1ade25b89bcb>  Thu, 06 Dec 2018 00:59:04 +0000
+
+tron (0.9.9.5) trusty; urgency=medium
+
+  * 0.9.9.5 tagged with 'make release'
+  * Allow passing extra options to systemd-based distros.
+  * Update end times for actions
+  * Fix bug related to Mesos offer timeouts
+  * Do not reschedule disabled job if it is reconfigured
+
+ -- root <root@ca07d1ca6c45>  Tue, 04 Dec 2018 21:38:20 +0000
+
+tron (0.9.9.4) trusty; urgency=medium
+
+  * 0.9.9.4 tagged with 'make release'
+    - Fix signal handling so that Tron gracefull shuts down
+    - Add more information to log lines
+
+ -- root <root@ec5f977bc63f>  Mon, 19 Nov 2018 23:59:43 +0000
+
 tron (0.9.9.3) trusty; urgency=medium
 
   * 0.9.9.3 tagged with 'make release'

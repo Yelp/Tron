@@ -12,23 +12,15 @@ log = logging.getLogger(__name__)
 
 
 def filter_action_runs_needing_recovery(action_runs):
-    return [
-        action_run for action_run in action_runs
-        if action_run.state == ActionRun.UNKNOWN
-    ]
-
-
-def group_by_actionrun_type(action_runs):
-    """
-    Given a list of action_runs, group them by type.
-    """
     ssh_runs = []
     mesos_runs = []
     for action_run in action_runs:
         if isinstance(action_run, SSHActionRun):
-            ssh_runs.append(action_run)
+            if action_run.state == ActionRun.UNKNOWN:
+                ssh_runs.append(action_run)
         elif isinstance(action_run, MesosActionRun):
-            mesos_runs.append(action_run)
+            if action_run.state == ActionRun.UNKNOWN and action_run.end_time is None:
+                mesos_runs.append(action_run)
     return ssh_runs, mesos_runs
 
 
@@ -93,8 +85,11 @@ def recover_action_run(action_run, action_runner):
 
 def launch_recovery_actionruns_for_job_runs(job_runs, master_action_runner):
     for run in job_runs:
-        to_recover = filter_action_runs_needing_recovery(run._action_runs)
-        ssh_runs, mesos_runs = group_by_actionrun_type(to_recover)
+        if not run._action_runs:
+            log.info(f'Skipping recovery of {run} with no action runs (may have been cleaned up)')
+            continue
+
+        ssh_runs, mesos_runs = filter_action_runs_needing_recovery(run._action_runs)
         for action_run in ssh_runs:
             if type(action_run.action_runner) == NoActionRunnerFactory and \
                type(master_action_runner) != NoActionRunnerFactory:

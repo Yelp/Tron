@@ -204,6 +204,13 @@ class MesosTask(ActionCommand):
         elif mesos_type is None:
             self.log.info(f'Non-Mesos event: {event.raw}')
 
+        # Mesos events may have task reasons
+        if mesos_type:
+            message = event.raw.get('message', '')
+            reason = event.raw.get('reason', '')
+            if message or reason:
+                self.log.info(f'More info: {reason}: {message}')
+
     def handle_event(self, event):
         event_id = getattr(event, 'task_id', None)
         if event_id != self.get_mesos_id():
@@ -295,7 +302,7 @@ class MesosCluster:
         if is_enabled:
             self.connect()
         else:
-            self.stop()
+            self.stop(fail_tasks=True)
 
     def configure_tasks(
         self,
@@ -501,7 +508,7 @@ class MesosCluster:
         else:
             log.warning('Unknown type of event: {}'.format(event))
 
-    def stop(self):
+    def stop(self, fail_tasks=False):
         self.framework_id = None
         if self.runner:
             self.runner.stop()
@@ -509,11 +516,13 @@ class MesosCluster:
         # Clear message queue
         if self.deferred:
             self.deferred.cancel()
+            self.deferred = None
         self.queue = PyDeferredQueue()
 
-        for key, task in list(self.tasks.items()):
-            task.exited(None)
-            del self.tasks[key]
+        if fail_tasks:
+            for key, task in list(self.tasks.items()):
+                task.exited(None)
+                del self.tasks[key]
 
     def kill(self, task_id):
         return self.runner.kill(task_id)
