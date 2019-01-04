@@ -162,7 +162,7 @@ class TestActionRunFactory:
         action = MagicMock(
             name='theaction',
             command="doit",
-            executor=ExecutorTypes.ssh,
+            executor=ExecutorTypes.ssh.value,
         )
         action_run = ActionRunFactory.build_run_for_action(
             self.job_run,
@@ -175,7 +175,7 @@ class TestActionRunFactory:
         action = MagicMock(
             name='theaction',
             command="doit",
-            executor=ExecutorTypes.mesos,
+            executor=ExecutorTypes.mesos.value,
             cpus=10,
             mem=500,
             constraints=[['pool', 'LIKE', 'default']],
@@ -216,7 +216,7 @@ class TestActionRunFactory:
 
     def test_action_run_from_state_mesos(self):
         state_data = self.action_state_data
-        state_data['executor'] = ExecutorTypes.mesos
+        state_data['executor'] = ExecutorTypes.mesos.value
         state_data['cpus'] = 2
         state_data['mem'] = 200
         state_data['constraints'] = [['pool', 'LIKE', 'default']]
@@ -1139,7 +1139,7 @@ class TestMesosActionRun:
             node=mock.create_autospec(node.Node),
             rendered_command=self.command,
             output_path=self.output_path,
-            executor=ExecutorTypes.mesos,
+            executor=ExecutorTypes.mesos.value,
             extra_volumes=self.extra_volumes,
             constraints=self.constraints,
             docker_parameters=self.docker_parameters,

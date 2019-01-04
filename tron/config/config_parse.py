@@ -333,7 +333,7 @@ action_context = command_context.build_filled_context(
 
 def valid_mesos_action(action, config_context):
     required_keys = {'cpus', 'mem', 'docker_image'}
-    if action.get('executor') == schema.ExecutorTypes.mesos:
+    if action.get('executor') == schema.ExecutorTypes.mesos.value:
         missing_keys = required_keys - set(action.keys())
         if missing_keys:
             raise ConfigError(
@@ -361,7 +361,7 @@ class ValidateAction(Validator):
         'retries': None,
         'retries_delay': None,
         'expected_runtime': datetime.timedelta(hours=24),
-        'executor': schema.ExecutorTypes.ssh,
+        'executor': schema.ExecutorTypes.ssh.value,
         'cpus': None,
         'mem': None,
         'constraints': None,
@@ -443,7 +443,7 @@ class ValidateCleanupAction(Validator):
         'retries': None,
         'retries_delay': None,
         'expected_runtime': datetime.timedelta(hours=24),
-        'executor': schema.ExecutorTypes.ssh,
+        'executor': schema.ExecutorTypes.ssh.value,
         'cpus': None,
         'mem': None,
         'constraints': None,

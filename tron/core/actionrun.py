@@ -107,7 +107,7 @@ class ActionRunFactory(object):
             'on_upstream_rerun': action.on_upstream_rerun,
             'trigger_timeout_timestamp': trigger_timeout.timestamp(),
         }
-        if action.executor == ExecutorTypes.mesos:
+        if action.executor == ExecutorTypes.mesos.value:
             return MesosActionRun(**args)
         return SSHActionRun(**args)
 
@@ -122,7 +122,7 @@ class ActionRunFactory(object):
             'cleanup': cleanup,
         }
 
-        if state_data.get('executor') == ExecutorTypes.mesos:
+        if state_data.get('executor') == ExecutorTypes.mesos.value:
             return MesosActionRun.from_state(**args)
         return SSHActionRun.from_state(**args)
 
@@ -321,7 +321,7 @@ class ActionRun(Observable):
             retries_delay=state_data.get('retries_delay'),
             exit_statuses=state_data.get('exit_statuses'),
             action_runner=action_runner,
-            executor=state_data.get('executor', ExecutorTypes.ssh),
+            executor=state_data.get('executor', ExecutorTypes.ssh.value),
             cpus=state_data.get('cpus'),
             mem=state_data.get('mem'),
             constraints=state_data.get('constraints'),

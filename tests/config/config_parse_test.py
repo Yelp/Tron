@@ -113,7 +113,7 @@ def make_mesos_options():
 def make_action(**kwargs):
     kwargs.setdefault('name', 'action'),
     kwargs.setdefault('command', 'command')
-    kwargs.setdefault('executor', schema.ExecutorTypes.ssh)
+    kwargs.setdefault('executor', schema.ExecutorTypes.ssh.value)
     kwargs.setdefault('requires', ())
     kwargs.setdefault('expected_runtime', datetime.timedelta(1))
     return schema.ConfigAction(**kwargs)
@@ -122,7 +122,7 @@ def make_action(**kwargs):
 def make_cleanup_action(**kwargs):
     kwargs.setdefault('name', 'cleanup'),
     kwargs.setdefault('command', 'command')
-    kwargs.setdefault('executor', schema.ExecutorTypes.ssh)
+    kwargs.setdefault('executor', schema.ExecutorTypes.ssh.value)
     kwargs.setdefault('expected_runtime', datetime.timedelta(1))
     return schema.ConfigCleanupAction(**kwargs)
 
@@ -264,7 +264,7 @@ def make_master_jobs():
                         make_action(
                             name='action_mesos',
                             command='test_command_mesos',
-                            executor=schema.ExecutorTypes.mesos,
+                            executor=schema.ExecutorTypes.mesos.value,
                             cpus=0.1,
                             mem=100,
                             docker_image='container:latest',
@@ -963,7 +963,7 @@ class TestValidateJobs(TestCase):
                         'action_mesos':
                             make_action(
                                 name='action_mesos',
-                                executor=schema.ExecutorTypes.mesos,
+                                executor=schema.ExecutorTypes.mesos.value,
                                 cpus=4.0,
                                 mem=300.0,
                                 constraints=(
@@ -989,7 +989,7 @@ class TestValidateJobs(TestCase):
                                     schema.ConfigVolume(
                                         container_path='/tmp',
                                         host_path='/home/tmp',
-                                        mode=schema.VolumeModes.RO,
+                                        mode=schema.VolumeModes.RO.value,
                                     ),
                                 ),
                                 expected_runtime=datetime.timedelta(hours=24),
@@ -1361,7 +1361,7 @@ class TestValidateVolume(TestCase):
         config = {
             'container_path': '/nail/srv',
             'host_path': '/tmp',
-            'mode': schema.VolumeModes.RO,
+            'mode': schema.VolumeModes.RO.value,
         }
         assert_equal(
             schema.ConfigVolume(**config),

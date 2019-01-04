@@ -124,7 +124,7 @@ def build_enum_validator(enum):
 def build_real_enum_validator(enum):
     def enum_validator(value, config_context):
         try:
-            return enum(value)
+            return enum(value).value
         except Exception:
             raise ConfigError(
                 f'Value at {config_context.path} is not in {enum!r}: {value!r}'
