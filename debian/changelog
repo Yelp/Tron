@@ -1,3 +1,11 @@
+tron (0.9.9.9) trusty; urgency=medium
+
+  * 0.9.9.9 tagged with 'make release'
+    Commit: tron.config.schema: use enum types values e'plicitly to fi'
+    regression after migrating to native enums
+
+ -- root <root@721323e97d41>  Mon, 07 Jan 2019 13:46:43 +0000
+
 tron (0.9.9.8) trusty; urgency=medium
 
   * 0.9.9.8 tagged with 'make release'
