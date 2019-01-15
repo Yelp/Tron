@@ -34,12 +34,23 @@ window.dateFromNow = (string, defaultString='never') ->
 
 
 window.getDuration = (time) ->
-    [time, ms] = time.split('.')
-    [hours, minutes, seconds] = time.split(':')
-    moment.duration
-        hours: parseInt(hours)
-        minutes: parseInt(minutes)
-        seconds: parseInt(seconds)
+    if time.indexOf("day") != -1
+        [day, rest] = time.split(',')
+        [days, b]= day.split(' ')
+        [time, ms] = rest.split('.')
+        [hours, minutes, seconds] = time.split(':')
+        moment.duration
+            days: parseInt(days)
+            hours: parseInt(hours)
+            minutes: parseInt(minutes)
+            seconds: parseInt(seconds)
+    else
+        [time, ms] = time.split('.')
+        [hours, minutes, seconds] = time.split(':')
+        moment.duration
+            hours: parseInt(hours)
+            minutes: parseInt(minutes)
+            seconds: parseInt(seconds)
 
 
 window.formatDuration = (duration) ->
