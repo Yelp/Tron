@@ -35,8 +35,8 @@ window.dateFromNow = (string, defaultString='never') ->
 
 window.getDuration = (time) ->
     if time.indexOf("day") != -1
-        [day, rest] = time.split(',')
-        [days, b]= day.split(' ')
+        [dayStr, rest] = time.split(',')
+        [days, day]= dayStr.split(' ')
         [time, ms] = rest.split('.')
         [hours, minutes, seconds] = time.split(':')
         moment.duration
