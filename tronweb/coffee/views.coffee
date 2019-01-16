@@ -35,7 +35,7 @@ window.dateFromNow = (string, defaultString='never') ->
 
 window.getDuration = (time) ->
     days = '0'
-    if time.indexOf("day") != -1 or time.indexOf("days") != -1
+    if time.indexOf("day") != -1
         [dayStr, time] = time.split(',')
         [days, day]= dayStr.split(' ')
     [time, ms] = time.split('.')
