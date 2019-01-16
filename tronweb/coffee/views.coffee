@@ -48,7 +48,6 @@ window.getDuration = (time) ->
 
 
 window.formatDuration = (duration) ->
-    duration = '1 day, 12:02:32.1332'
     template = _.template """
         <span class="label label-clear tt-enable" title="<%= duration %>">
           <%= humanized %>
