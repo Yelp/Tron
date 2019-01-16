@@ -34,26 +34,21 @@ window.dateFromNow = (string, defaultString='never') ->
 
 
 window.getDuration = (time) ->
-    if time.indexOf("day") != -1
-        [dayStr, rest] = time.split(',')
+    days = '0'
+    if time.indexOf("day") != -1 or time.indexOf("days") != -1
+        [dayStr, time] = time.split(',')
         [days, day]= dayStr.split(' ')
-        [time, ms] = rest.split('.')
-        [hours, minutes, seconds] = time.split(':')
-        moment.duration
-            days: parseInt(days)
-            hours: parseInt(hours)
-            minutes: parseInt(minutes)
-            seconds: parseInt(seconds)
-    else
-        [time, ms] = time.split('.')
-        [hours, minutes, seconds] = time.split(':')
-        moment.duration
-            hours: parseInt(hours)
-            minutes: parseInt(minutes)
-            seconds: parseInt(seconds)
+    [time, ms] = time.split('.')
+    [hours, minutes, seconds] = time.split(':')
+    moment.duration
+        days: parseInt(days)
+        hours: parseInt(hours)
+        minutes: parseInt(minutes)
+        seconds: parseInt(seconds)
 
 
 window.formatDuration = (duration) ->
+    duration = '1 day, 12:02:32.1332'
     template = _.template """
         <span class="label label-clear tt-enable" title="<%= duration %>">
           <%= humanized %>
