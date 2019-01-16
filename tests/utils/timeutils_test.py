@@ -298,7 +298,7 @@ class DateArithmeticYMDHTest(TestCase):
             return DateArithmetic.parse('ym-1', datetime.datetime(*ym))
 
         assert_equal(parse(2018, 1, 1), '2017-12')
-        assert_equal(parse(2017, 12, 1), '2018-01')
+        assert_equal(parse(2018, 2, 1), '2018-01')
 
     def test_ymd_plus(self):
         def parse(*ymd):
