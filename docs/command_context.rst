@@ -13,7 +13,7 @@ command configuration.
     form ``{shortdate+6}`` which returns a date 6 days in the future,
     ``{shortdate-2}`` which returns a date 2 days before the run date.
 
-**ymd, ymdh, ymdhm**
+**ym, ymd, ymdh, ymdhm**
     Same as ``shortdate`` but better granularity. Arithmetic works with most
     granular unit: ``ymdh+1`` is  +1 hours, ``ymdhm+1`` is +1 minute.
 

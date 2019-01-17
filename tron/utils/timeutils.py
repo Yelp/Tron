@@ -77,6 +77,7 @@ class DateArithmetic(object):
         'day': '%d',
         'hour': '%H',
         'shortdate': '%Y-%m-%d',
+        'ym': '%Y-%m',
         'ymd': '%Y-%m-%d',
         'ymdh': '%Y-%m-%dT%H',
         'ymdhm': '%Y-%m-%dT%H:%M',
@@ -103,7 +104,7 @@ class DateArithmetic(object):
                 dt += macro_timedelta(dt, **kwargs)
             return dt.strftime(cls.DATE_FORMATS[attr])
 
-        if attr in ('ymd', 'ymdh', 'ymdhm'):
+        if attr in ('ym', 'ymd', 'ymdh', 'ymdhm'):
             args = [0] * len(attr)
             args[-1] = delta
             dt += macro_timedelta(dt, *args)

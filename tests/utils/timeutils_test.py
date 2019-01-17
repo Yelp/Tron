@@ -286,6 +286,20 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
 
 
 class DateArithmeticYMDHTest(TestCase):
+    def test_ym_plus(self):
+        def parse(*ym):
+            return DateArithmetic.parse('ym+1', datetime.datetime(*ym))
+
+        assert_equal(parse(2018, 1, 1), '2018-02')
+        assert_equal(parse(2017, 12, 1), '2018-01')
+
+    def test_ym_minus(self):
+        def parse(*ym):
+            return DateArithmetic.parse('ym-1', datetime.datetime(*ym))
+
+        assert_equal(parse(2018, 1, 1), '2017-12')
+        assert_equal(parse(2018, 2, 1), '2018-01')
+
     def test_ymd_plus(self):
         def parse(*ymd):
             return DateArithmetic.parse('ymd+1', datetime.datetime(*ymd))
