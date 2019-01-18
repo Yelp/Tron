@@ -9,7 +9,7 @@ lockfile==0.12.2
 psutil==5.4.7
 pyasn1==0.4.4
 pyformance==0.4
-pysensu-yelp==0.4.0
+pysensu-yelp==0.4.1
 pytimeparse==1.1.8
 pytz==2018.5
 PyYAML==3.13

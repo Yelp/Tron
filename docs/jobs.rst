@@ -61,6 +61,13 @@ Optional Fields
       A string representing the JIRA project that the ticket should go under.
       Defaults to the team value.
 
+    **priority** (default **None**)
+      A JIRA ticket priority to use when creating a ticket. This only makes
+      sense to use when in combination with the ticket parameter set to True.
+      This value should be a string value like '0', '1', '3.14', etc. If not
+      set, the default will be the default_priority setting for the sensu team
+      or the default priority used for the JIRA project.
+
     **tags** (default **None**)
       A list of arbitrary tags that can be used in handlers for different
       metadata needs.
