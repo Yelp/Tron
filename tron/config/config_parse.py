@@ -364,6 +364,7 @@ class ValidateAction(Validator):
         'executor': schema.ExecutorTypes.ssh.value,
         'cpus': None,
         'mem': None,
+        'disk': None,
         'constraints': None,
         'docker_image': None,
         'docker_parameters': None,
@@ -398,6 +399,8 @@ class ValidateAction(Validator):
         'cpus':
             valid_float,
         'mem':
+            valid_float,
+        'disk':
             valid_float,
         'constraints':
             build_list_of_type_validator(valid_constraint, allow_empty=True),
@@ -446,6 +449,7 @@ class ValidateCleanupAction(Validator):
         'executor': schema.ExecutorTypes.ssh.value,
         'cpus': None,
         'mem': None,
+        'disk': None,
         'constraints': None,
         'docker_image': None,
         'docker_parameters': None,
@@ -474,6 +478,8 @@ class ValidateCleanupAction(Validator):
         'cpus':
             valid_float,
         'mem':
+            valid_float,
+        'disk':
             valid_float,
         'constraints':
             build_list_of_type_validator(valid_constraint, allow_empty=True),

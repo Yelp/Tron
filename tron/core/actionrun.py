@@ -97,6 +97,7 @@ class ActionRunFactory(object):
             'executor': action.executor,
             'cpus': action.cpus,
             'mem': action.mem,
+            'disk': action.disk,
             'constraints': action.constraints,
             'docker_image': action.docker_image,
             'docker_parameters': action.docker_parameters,
@@ -214,6 +215,7 @@ class ActionRun(Observable):
         executor=None,
         cpus=None,
         mem=None,
+        disk=None,
         constraints=None,
         docker_image=None,
         docker_parameters=None,
@@ -242,6 +244,7 @@ class ActionRun(Observable):
         self.executor = executor
         self.cpus = cpus
         self.mem = mem
+        self.disk = disk
         self.constraints = constraints
         self.docker_image = docker_image
         self.docker_parameters = docker_parameters
@@ -324,6 +327,7 @@ class ActionRun(Observable):
             executor=state_data.get('executor', ExecutorTypes.ssh.value),
             cpus=state_data.get('cpus'),
             mem=state_data.get('mem'),
+            disk=state_data.get('disk'),
             constraints=state_data.get('constraints'),
             docker_image=state_data.get('docker_image'),
             docker_parameters=state_data.get('docker_parameters'),
@@ -532,6 +536,7 @@ class ActionRun(Observable):
             'executor': self.executor,
             'cpus': self.cpus,
             'mem': self.mem,
+            'disk': self.disk,
             'constraints': self.constraints,
             'docker_image': self.docker_image,
             'docker_parameters': self.docker_parameters,
@@ -743,6 +748,7 @@ class MesosActionRun(ActionRun, Observer):
             command=self.command,
             cpus=self.cpus,
             mem=self.mem,
+            disk=self.disk,
             constraints=[[c.attribute, c.operator, c.value]
                          for c in self.constraints],
             docker_image=self.docker_image,

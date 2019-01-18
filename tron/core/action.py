@@ -22,6 +22,7 @@ class Action:
     executor: str = None
     cpus: float = None
     mem: float = None
+    disk: float = None
     constraints: set = field(default_factory=set)
     docker_image: str = None
     docker_parameters: set = field(default_factory=set)
@@ -53,6 +54,7 @@ class Action:
             executor=config.executor,
             cpus=config.cpus,
             mem=config.mem,
+            disk=config.disk,
             docker_image=config.docker_image,
             trigger_downstreams=config.trigger_downstreams,
             triggered_by=config.triggered_by,
