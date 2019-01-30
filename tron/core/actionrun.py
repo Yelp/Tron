@@ -189,6 +189,14 @@ class ActionRun(Observable):
     EXIT_TRIGGER_TIMEOUT = -4
     EXIT_MESOS_DISABLED = -5
 
+    EXIT_REASONS = {
+        EXIT_INVALID_COMMAND: 'Invalid command',
+        EXIT_NODE_ERROR: 'Node error',
+        EXIT_STOP_KILL: 'Stopped or killed',
+        EXIT_TRIGGER_TIMEOUT: 'Timed out waiting for trigger',
+        EXIT_MESOS_DISABLED: 'Mesos disabled',
+    }
+
     context_class = command_context.ActionRunContext
 
     # TODO: create a class for ActionRunId, JobRunId, Etc
