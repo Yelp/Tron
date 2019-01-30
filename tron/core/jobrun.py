@@ -207,11 +207,18 @@ class JobRun(Observable, Observer):
         """Start all startable action runs, and return any that were
         successfully started.
         """
-        return [
+        started_runs = [
             action_run
             for action_run in self.action_runs.get_startable_action_runs()
             if action_run.start()
         ]
+
+        if not started_runs:
+            for r in self.action_runs:
+                if r.is_blocked_on_trigger:
+                    log.debug(f"{r} is blocked on triggers: {r.remaining_triggers}")
+
+        return started_runs
 
     def handle_action_run_state_change(self, action_run: ActionRun, event):
         """Handle events triggered by JobRuns."""
@@ -308,6 +315,8 @@ class JobRun(Observable, Observer):
             return ActionRun.STARTING
         if self.action_runs.is_failed:
             return ActionRun.FAILED
+        if self.seconds_until_run_time() == 0 and self.action_runs.is_blocked_on_trigger:
+            return ActionRun.RUNNING
         if self.action_runs.is_scheduled:
             return ActionRun.SCHEDULED
         if self.action_runs.is_queued:

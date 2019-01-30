@@ -56,8 +56,8 @@ class EventBusTestCase(TestCase):
         self.eventbus.sync_load_log = mock.Mock()
         reactor.callLater = mock.Mock()
         self.eventbus.start()
-        assert self.eventbus.sync_load_log.call_count is 1
-        assert reactor.callLater.call_count is 1
+        assert self.eventbus.sync_load_log.call_count == 1
+        assert reactor.callLater.call_count == 1
 
     def test_shutdown(self):
         assert self.eventbus.enabled
@@ -112,8 +112,8 @@ class EventBusTestCase(TestCase):
         self.eventbus.enabled = True
         self.eventbus.sync_shutdown = mock.Mock()
         self.eventbus.sync_loop()
-        assert reactor.callLater.call_count is 1
-        assert self.eventbus.sync_shutdown.call_count is 0
+        assert reactor.callLater.call_count == 1
+        assert self.eventbus.sync_shutdown.call_count == 0
 
     @mock.patch('tron.eventbus.reactor', autospec=True)
     def test_sync_loop_shutdown(self, reactor):
@@ -121,7 +121,7 @@ class EventBusTestCase(TestCase):
         self.eventbus.enabled = False
         self.eventbus.sync_save_log = mock.Mock()
         self.eventbus.sync_loop()
-        assert reactor.callLater.call_count is 0
+        assert reactor.callLater.call_count == 0
 
     @mock.patch('tron.eventbus.time', autospec=True)
     def test_sync_process_save_log(self, time):
@@ -131,23 +131,23 @@ class EventBusTestCase(TestCase):
         self.eventbus.log_save_interval = 20
         self.eventbus.sync_save_log = mock.Mock()
         self.eventbus.sync_process()
-        assert self.eventbus.sync_save_log.call_count is 0
+        assert self.eventbus.sync_save_log.call_count == 0
 
         time.time = mock.Mock(return_value=21)
         self.eventbus.sync_process()
-        assert self.eventbus.sync_save_log.call_count is 1
+        assert self.eventbus.sync_save_log.call_count == 1
 
         time.time = mock.Mock(return_value=0)
         self.eventbus.log_updates = 0
         self.eventbus.log_save_updates = 20
         self.eventbus.sync_save_log = mock.Mock()
         self.eventbus.sync_process()
-        assert self.eventbus.sync_save_log.call_count is 0
+        assert self.eventbus.sync_save_log.call_count == 0
 
         self.eventbus.log_updates = 21
         self.eventbus.sync_process()
-        assert self.eventbus.sync_save_log.call_count is 1
-        assert self.eventbus.log_updates is 0
+        assert self.eventbus.sync_save_log.call_count == 1
+        assert self.eventbus.log_updates == 0
 
     @mock.patch('tron.eventbus.time', autospec=True)
     def test_sync_process_flush_queues(self, time):
@@ -171,8 +171,8 @@ class EventBusTestCase(TestCase):
         self.eventbus.event_log = {}
         self.eventbus.log_save_updates = 0
         self.eventbus.sync_publish(evt)
-        assert self.eventbus.log_updates is 1
-        assert reactor.callLater.call_count is 1
+        assert self.eventbus.log_updates == 1
+        assert reactor.callLater.call_count == 1
 
     @mock.patch('tron.eventbus.reactor', autospec=True)
     def test_sync_publish_replace(self, reactor):
@@ -182,8 +182,8 @@ class EventBusTestCase(TestCase):
         self.eventbus.log_save_updates = 0
         self.eventbus.sync_publish(evt1)
         self.eventbus.sync_publish(evt2)
-        assert self.eventbus.log_updates is 2
-        assert reactor.callLater.call_count is 2
+        assert self.eventbus.log_updates == 2
+        assert reactor.callLater.call_count == 2
 
     @mock.patch('tron.eventbus.reactor', autospec=True)
     def test_sync_publish_duplicate(self, reactor):
@@ -191,8 +191,8 @@ class EventBusTestCase(TestCase):
         self.eventbus.event_log = {'foo': {'bar': 'baz'}}
         self.eventbus.log_save_updates = 0
         self.eventbus.sync_publish(evt)
-        assert self.eventbus.log_updates is 0
-        assert reactor.callLater.call_count is 0
+        assert self.eventbus.log_updates == 0
+        assert reactor.callLater.call_count == 0
 
     def test_sync_subscribe(self):
         self.eventbus.event_subscribers = defaultdict(list)
@@ -227,10 +227,10 @@ class EventBusTestCase(TestCase):
         }
 
         self.eventbus.sync_notify('p')
-        assert reactor.callLater.call_count is 0
+        assert reactor.callLater.call_count == 0
 
         self.eventbus.sync_notify('pre')
-        assert reactor.callLater.call_count is 1
+        assert reactor.callLater.call_count == 1
 
         self.eventbus.sync_notify('prefix')
-        assert reactor.callLater.call_count is 4
+        assert reactor.callLater.call_count == 4
