@@ -374,9 +374,6 @@ class DisplayActionRuns(TableDisplay):
         if self.fields[field_idx] == 'duration':
             # Strip microseconds
             value = value[:-7] if value else "-"
-        if self.fields[field_idx] == 'exit_status':
-            if value < 0:
-                value = actionrun.ActionRun.EXIT_REASONS.get(value, value)
 
         return super(DisplayActionRuns, self).format_value(field_idx, value)
 
@@ -423,6 +420,7 @@ field_display_mapping = {
     'node_pool': display_node_pool,
     'scheduler': display_scheduler,
     'state_delayed': display_state_delayed,
+    'exit_status': lambda v, _: actionrun.ActionRun.EXIT_REASONS.get(v, v),
 }
 
 
