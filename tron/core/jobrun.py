@@ -214,13 +214,8 @@ class JobRun(Observable, Observer):
         ]
 
         if not started_runs:
-            blocked_on_triggers = [
-                r
-                for r in self.action_runs
-                if r.is_blocked_on_trigger
-            ]
-            if blocked_on_triggers:
-                for r in blocked_on_triggers:
+            for r in self.action_runs:
+                if r.is_blocked_on_trigger:
                     log.debug(f"{r} is blocked on triggers: {r.remaining_triggers}")
 
         return started_runs
