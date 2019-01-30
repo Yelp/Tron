@@ -304,6 +304,8 @@ class JobRun(Observable, Observer):
             return ActionRun.CANCELLED
         if self.action_runs.is_running:
             return ActionRun.RUNNING
+        if self.action_runs.is_blocked_on_trigger:
+            return ActionRun.RUNNING
         if self.action_runs.is_starting:
             return ActionRun.STARTING
         if self.action_runs.is_failed:

@@ -631,6 +631,10 @@ class ActionRun(Observable):
             self.clear_trigger_timeout()
             self.notify(ActionRun.NOTIFY_TRIGGER_READY)
 
+    @property
+    def is_blocked_on_trigger(self):
+        return bool(self.remaining_triggers)
+
     def __getattr__(self, name: str):
         """Support convenience properties for checking if this ActionRun is in
         a specific state (Ex: self.is_running would check if self.state is
@@ -970,12 +974,14 @@ class ActionRunCollection(object):
             if any(not run.is_complete for run in required_runs):
                 return True
 
-        waiting_for = action_run.remaining_triggers
-        if waiting_for:
-            log.debug(f"{action_run} waiting for: {waiting_for}")
+        if action_run.is_blocked_on_trigger:
             return True
 
         return False
+
+    @property
+    def is_blocked_on_trigger(self):
+        return any(r.is_blocked_on_trigger for r in self.action_runs)
 
     @property
     def is_done(self):
