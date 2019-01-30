@@ -48,7 +48,7 @@ def get_default_server():
 
 def filter_jobs_actions_runs(prefix, inputs):
     dots = prefix.count('.')
-    if prefix is "":
+    if prefix == "":
         # If the user hasn't begun to type anything, we need to get them started with all jobs
         return [i for i in inputs if i.count('.') == 1]
     elif dots == 0:
