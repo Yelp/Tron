@@ -633,7 +633,7 @@ class ActionRun(Observable):
 
     @property
     def is_blocked_on_trigger(self):
-        return bool(self.remaining_triggers)
+        return not self.is_done and bool(self.remaining_triggers)
 
     def __getattr__(self, name: str):
         """Support convenience properties for checking if this ActionRun is in
