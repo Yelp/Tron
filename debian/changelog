@@ -1,3 +1,11 @@
+tron (0.9.9.10) trusty; urgency=medium
+
+  * 0.9.9.10 tagged with 'make release'
+    Commit: Merge pull request #611 from Yelp/fix-job-appearing-pending
+    Fix job appearing pending when waiting on trigger requirement
+
+ -- root <root@1158d4960025>  Thu, 31 Jan 2019 11:44:45 +0000
+
 tron (0.9.9.9) trusty; urgency=medium
 
   * 0.9.9.9 tagged with 'make release'
