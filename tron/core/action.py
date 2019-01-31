@@ -54,7 +54,7 @@ class Action:
             executor=config.executor,
             cpus=config.cpus,
             mem=config.mem,
-            disk=config.disk,
+            disk=(1024. if config.disk is None else config.disk),
             docker_image=config.docker_image,
             trigger_downstreams=config.trigger_downstreams,
             triggered_by=config.triggered_by,
