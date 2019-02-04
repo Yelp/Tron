@@ -1,3 +1,11 @@
+tron (0.9.9.11) trusty; urgency=medium
+
+  * 0.9.9.11 tagged with 'make release'
+    Commit: Merge pull request #610 from Yelp/disk_support  Added disk
+    support to tron on mesos
+
+ -- root <root@15e900d9051e>  Mon, 04 Feb 2019 18:50:33 +0000
+
 tron (0.9.9.10) trusty; urgency=medium
 
   * 0.9.9.10 tagged with 'make release'
