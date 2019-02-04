@@ -267,6 +267,7 @@ def make_master_jobs():
                             executor=schema.ExecutorTypes.mesos.value,
                             cpus=0.1,
                             mem=100,
+                            disk=600,
                             docker_image='container:latest',
                         ),
                 },
@@ -378,6 +379,7 @@ class ConfigTestCase(TestCase):
                         command="test_command_mesos",
                         cpus=.1,
                         mem=100,
+                        disk=600,
                         docker_image='container:latest',
                     )
                 ]
@@ -410,7 +412,7 @@ class ConfigTestCase(TestCase):
             job_name = f"MASTER.test_job{key}"
             assert job_name in test_config.jobs, f"{job_name} in test_config.jobs"
             assert job_name in expected.jobs, f"{job_name} in test_config.jobs"
-            assert_equal(test_config.jobs[job_name], expected.jobs[job_name])
+            assert test_config.jobs[job_name] == expected.jobs[job_name]
 
         assert test_config == expected
 
@@ -913,6 +915,7 @@ class TestValidateJobs(TestCase):
                             executor='mesos',
                             cpus=4,
                             mem=300,
+                            disk=600,
                             constraints=[
                                 dict(
                                     attribute='pool',
@@ -966,6 +969,7 @@ class TestValidateJobs(TestCase):
                                 executor=schema.ExecutorTypes.mesos.value,
                                 cpus=4.0,
                                 mem=300.0,
+                                disk=600.0,
                                 constraints=(
                                     schema.ConfigConstraint(
                                         attribute='pool',
@@ -1024,6 +1028,7 @@ class TestValidMesosAction(TestCase):
             executor='mesos',
             cpus=0.2,
             mem=150,
+            disk=450,
         )
         with pytest.raises(ConfigError):
             config_parse.valid_action(config, NullConfigContext)
@@ -1034,6 +1039,7 @@ class TestValidMesosAction(TestCase):
             executor='mesos',
             cpus=0.2,
             mem=150,
+            disk=450,
         )
         with pytest.raises(ConfigError):
             config_parse.valid_action(config, NullConfigContext)

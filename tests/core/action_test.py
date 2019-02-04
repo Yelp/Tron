@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import pytest
+
 from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigConstraint
 from tron.config.schema import ConfigParameter
@@ -9,7 +11,8 @@ from tron.core.action import Action
 
 
 class TestAction:
-    def test_from_config_full(self):
+    @pytest.mark.parametrize('disk', [600., None])
+    def test_from_config_full(self, disk):
         config = ConfigAction(
             name="ted",
             command="do something",
@@ -17,6 +20,7 @@ class TestAction:
             executor="ssh",
             cpus=1,
             mem=100,
+            disk=disk,  # default: 1024.0
             constraints=[
                 ConfigConstraint(
                     attribute='pool',
@@ -50,6 +54,7 @@ class TestAction:
         assert new_action.executor == config.executor
         assert new_action.cpus == config.cpus
         assert new_action.mem == config.mem
+        assert new_action.disk == (600. if disk else 1024.)
         assert new_action.constraints == {('pool', 'LIKE', 'default')}
         assert new_action.docker_image == config.docker_image
         assert new_action.docker_parameters == {('test', 123)}

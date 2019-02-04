@@ -69,7 +69,7 @@ class EventBusTestCase(TestCase):
     def test_publish(self):
         evt = {'id': 'foo'}
         self.eventbus.publish(evt)
-        assert self.eventbus.publish_queue.pop() is evt
+        assert self.eventbus.publish_queue.pop() == evt
 
     def test_subscribe(self):
         ps = ('foo', 'bar', 'cb')

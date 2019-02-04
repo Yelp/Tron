@@ -178,6 +178,7 @@ class TestActionRunFactory:
             executor=ExecutorTypes.mesos.value,
             cpus=10,
             mem=500,
+            disk=600,
             constraints=[['pool', 'LIKE', 'default']],
             docker_image='fake-docker.com:400/image',
             docker_parameters=[{
@@ -197,6 +198,7 @@ class TestActionRunFactory:
         assert action_run.__class__ == MesosActionRun
         assert action_run.cpus == action.cpus
         assert action_run.mem == action.mem
+        assert action_run.disk == action.disk
         assert action_run.constraints == action.constraints
         assert action_run.docker_image == action.docker_image
         assert action_run.docker_parameters == action.docker_parameters
@@ -219,6 +221,7 @@ class TestActionRunFactory:
         state_data['executor'] = ExecutorTypes.mesos.value
         state_data['cpus'] = 2
         state_data['mem'] = 200
+        state_data['disk'] = 300
         state_data['constraints'] = [['pool', 'LIKE', 'default']]
         state_data['docker_image'] = 'fake-docker.com:400/image'
         state_data['docker_parameters'] = [{'key': 'test', 'value': 123}]
@@ -232,6 +235,7 @@ class TestActionRunFactory:
         assert action_run.job_run_id == state_data['job_run_id']
         assert action_run.cpus == state_data['cpus']
         assert action_run.mem == state_data['mem']
+        assert action_run.disk == state_data['disk']
         assert action_run.constraints == state_data['constraints']
         assert action_run.docker_image == state_data['docker_image']
         assert action_run.docker_parameters == state_data['docker_parameters']
@@ -1128,6 +1132,7 @@ class TestMesosActionRun:
         self.other_task_kwargs = {
             'cpus': 1,
             'mem': 50,
+            'disk': 42,
             'docker_image': 'container:v2',
             'env': {
                 'TESTING': 'true'
