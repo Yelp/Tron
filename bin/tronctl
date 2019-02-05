@@ -12,6 +12,7 @@ from urllib.parse import urljoin
 
 import argcomplete
 
+from tron import __version_info__
 from tron.commands import client
 from tron.commands import cmd_utils
 from tron.commands.cmd_utils import ExitCode
@@ -34,6 +35,7 @@ COMMAND_HELP = (
     ('move', 'Rename a job'),
     ('publish', 'Publish actionrun trigger'),
     ('discard', 'Discard existing actionrun trigger'),
+    ('version', 'Print tron client and server versions'),
 )
 
 log = logging.getLogger('tronctl')
@@ -189,12 +191,27 @@ def get_dates_for_backfill(start_date, end_date):
     return dates
 
 
+def tron_version(*args):
+    print(f"Tron client version: {__version_info__}")
+    response = client.request('/api/status')
+    if response.error:
+        print(f'Error: {response.content}')
+        return
+    version = response.content.get('version', 'unknown')
+    print(f"Tron server version: {version}")
+    if version != __version_info__:
+        print(f"Warning: client and server versions should match")
+        return
+    return True
+
+
 COMMANDS = defaultdict(
     lambda: control_objects,
     publish=event_publish,
     discard=event_discard,
     backfill=backfill,
     move=move,
+    version=tron_version,
 )
 
 
