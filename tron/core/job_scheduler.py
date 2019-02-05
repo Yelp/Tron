@@ -224,22 +224,25 @@ class JobScheduler(Observer):
 class JobSchedulerFactory(object):
     """Construct JobScheduler instances from configuration."""
 
-    def __init__(self, context, output_stream_dir, time_zone, action_runner):
+    def __init__(self, context, output_stream_dir, time_zone, action_runner, job_graph):
         self.context = context
         self.output_stream_dir = output_stream_dir
         self.time_zone = time_zone
         self.action_runner = action_runner
+        self.job_graph = job_graph
 
     def build(self, job_config):
         log.debug(f"Building new job {job_config.name}")
         output_path = filehandler.OutputPath(self.output_stream_dir)
         time_zone = job_config.time_zone or self.time_zone
         scheduler = scheduler_from_config(job_config.schedule, time_zone)
+        action_graph = self.job_graph.get_action_graph_for_job(job_config.name)
         job = Job.from_config(
             job_config=job_config,
             scheduler=scheduler,
             parent_context=self.context,
             output_path=output_path,
             action_runner=self.action_runner,
+            action_graph=action_graph,
         )
         return JobScheduler(job)

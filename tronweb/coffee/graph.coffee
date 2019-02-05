@@ -23,7 +23,7 @@ class window.GraphView extends Backbone.View
     getLinks: (data) =>
         nodes = @buildNodeMap(data)
         nested = for node in data
-            ({source: node, target: nodes[target]} for target in node.dependent)
+            ({source: nodes[dep], target: node} for dep in node.dependencies)
         _.flatten(nested)
 
     buildSvgLinks: (links) =>

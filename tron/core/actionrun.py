@@ -991,7 +991,7 @@ class ActionRunCollection(object):
         if action_run.is_done or action_run.is_active:
             return False
 
-        required_actions = self.action_graph.get_required_actions(
+        required_actions = self.action_graph.get_dependencies(
             action_run.action_name,
         )
 
