@@ -7,6 +7,7 @@ from tron.config import manager
 from tron.core.job import Job
 from tron.core.job_collection import JobCollection
 from tron.core.job_scheduler import JobSchedulerFactory
+from tron.core.jobgraph import JobGraph
 from tron.eventbus import EventBus
 from tron.mesos import MesosClusterRepository
 from tron.serialize.runstate import statemanager
@@ -87,7 +88,8 @@ class MasterControlProgram(object):
         self.state_watcher.watch(MesosClusterRepository)
 
         # TODO: unify NOTIFY_STATE_CHANGE and simplify this
-        factory = self.build_job_scheduler_factory(master_config)
+        self.job_graph = JobGraph(config_container)
+        factory = self.build_job_scheduler_factory(master_config, self.job_graph)
         self.apply_collection_config(
             config_container.get_jobs(),
             self.jobs,
@@ -100,7 +102,7 @@ class MasterControlProgram(object):
         items = collection.load_from_config(config, *args)
         self.state_watcher.watch_all(items, notify_type)
 
-    def build_job_scheduler_factory(self, master_config):
+    def build_job_scheduler_factory(self, master_config, job_graph):
         output_stream_dir = master_config.output_stream_dir or self.working_dir
         action_runner = actioncommand.create_action_runner_factory_from_config(
             master_config.action_runner,
@@ -110,6 +112,7 @@ class MasterControlProgram(object):
             output_stream_dir,
             master_config.time_zone,
             action_runner,
+            job_graph,
         )
 
     def update_state_watcher_config(self, state_config):

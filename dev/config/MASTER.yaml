@@ -1,5 +1,6 @@
+eventbus_enabled: True
 ssh_options:
-   agent: False
+   agent: True
 
 nodes:
   - hostname: localhost
@@ -12,11 +13,42 @@ mesos_options:
   dockercfg_location: file:///root/.dockercfg
 
 jobs:
-    - name: "test"
+    - name: testjob0
+      node: localhost
+      schedule: "interval 1m"
+      actions:
+        - name: zeroth
+          command: "sleep 5"
+          trigger_downstreams:
+            minutely: "{ymdhm}"
+          cpus: 1
+          mem: 100
+
+    - name: "testjob1"
       node: localhost
       schedule: "interval 1m"
       actions:
         - name: "first"
-          command: "echo 'hello world'"
+          command: "sleep 5"
           cpus: 1
           mem: 100
+        - name: "second"
+          command: "echo 'hello world'"
+          requires: [first]
+          triggered_by:
+            - "MASTER.testjob0.zeroth.minutely.{ymdhm}"
+          trigger_downstreams:
+            minutely: "{ymdhm}"
+          cpus: 1
+          mem: 100
+
+    - name: "testjob2"
+      node: localhost
+      schedule: "interval 1m"
+      actions:
+        - name: "first"
+          command: "echo 'goodbye, world'"
+          cpus: 1
+          mem: 100
+          triggered_by:
+            - "MASTER.testjob1.second.minutely.{ymdhm}"

@@ -206,7 +206,7 @@ class JobResource(resource.Resource):
             return JobRunResource(run, self.job_scheduler)
 
         job = self.job_scheduler.get_job()
-        if run_id in job.action_graph.names:
+        if run_id in job.action_graph.names():
             action_runs = job.runs.get_action_runs(run_id)
             return ActionRunHistoryResource(action_runs)
 
