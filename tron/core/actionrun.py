@@ -35,7 +35,7 @@ class ActionRunFactory(object):
 
     @classmethod
     def build_action_run_collection(cls, job_run, action_runner):
-        """Create an ActionRunGraph from an ActionGraph and JobRun."""
+        """Create an ActionRunCollection from an ActionGraph and JobRun."""
         action_run_map = {
             maybe_decode(name): cls.build_run_for_action(
                 job_run,

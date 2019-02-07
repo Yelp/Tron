@@ -58,9 +58,9 @@ class TestActionRunFactory:
         a2.name = 'act2'
         actions = [a1, a2]
         self.action_graph = actiongraph.ActionGraph(
-            actions,
-            {a.name: a
-             for a in actions},
+            {a.name: a for a in actions},
+            {'act1': set(), 'act2': set()},
+            {'act1': set(), 'act2': set()},
         )
 
         mock_node = mock.create_autospec(node.Node)
@@ -898,9 +898,9 @@ class TestActionRunCollection:
             action_graph.append(m)
 
         self.action_graph = actiongraph.ActionGraph(
-            action_graph,
-            {a.name: a
-             for a in action_graph},
+            {a.name: a for a in action_graph},
+            {'action_name': set(), 'second_name': set(), 'cleanup': set()},
+            {'action_name': set(), 'second_name': set(), 'cleanup': set()},
         )
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.command = "do command"
@@ -1061,17 +1061,19 @@ class TestActionRunCollectionIsRunBlocked:
     def setup_collection(self):
         action_names = ['action_name', 'second_name', 'cleanup']
 
-        action_graph = []
+        actions = []
         for name in action_names:
-            m = MagicMock(name=name, required_actions=[])
+            m = MagicMock()
             m.name = name
-            action_graph.append(m)
+            actions.append(m)
 
-        self.second_act = second_act = action_graph.pop(1)
-        second_act.required_actions.append(action_graph[0].name)
-        action_map = {a.name: a for a in action_graph}
-        action_map['second_name'] = second_act
-        self.action_graph = actiongraph.ActionGraph(action_graph, action_map)
+        self.second_act = actions[1]
+        action_map = {a.name: a for a in actions}
+        self.action_graph = actiongraph.ActionGraph(
+            action_map,
+            {'action_name': set(), 'second_name': {'action_name'}, 'cleanup': set()},
+            {'action_name': set(), 'second_name': set(), 'cleanup': set()},
+        )
 
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.command = "do command"
@@ -1097,9 +1099,10 @@ class TestActionRunCollectionIsRunBlocked:
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_blocked(self):
-        third_act = MagicMock(required_actions=[self.second_act.name], )
+        third_act = MagicMock()
         third_act.name = 'third_act'
         self.action_graph.action_map['third_act'] = third_act
+        self.action_graph.required_actions['third_act'] = {self.second_act.name}
         self.run_map['third_act'] = self._build_run('third_act')
 
         self.run_map['action_name'].machine.state = ActionRun.FAILED

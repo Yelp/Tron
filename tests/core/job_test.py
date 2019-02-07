@@ -81,6 +81,7 @@ class TestJob(TestCase):
             parent_context=parent_context,
             output_path=output_path,
             action_runner=self.action_runner,
+            action_graph=mock.Mock()
         )
 
         assert_equal(new_job.scheduler, scheduler)

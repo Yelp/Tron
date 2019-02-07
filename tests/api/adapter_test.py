@@ -132,23 +132,31 @@ class TestActionRunAdapter(TestCase):
 class TestActionRunGraphAdapter(TestCase):
     @setup
     def setup_adapter(self):
-        self.a1 = mock.MagicMock(action_name="a1", dependent_actions=['a2'])
-        self.a2 = mock.MagicMock(action_name="a2")
+        self.ar1 = mock.MagicMock(action_name="a1")
+        self.ar2 = mock.MagicMock(action_name="a2")
+        self.a1 = mock.MagicMock()
+        self.a2 = mock.MagicMock()
+        self.a1.name = 'a1'
+        self.a2.name = 'a2'
         self.action_runs = mock.create_autospec(
             actionrun.ActionRunCollection,
-            action_graph=actiongraph.ActionGraph([self.a1], {
-                'a1': self.a1,
-                'a2': self.a2
-            }),
+            action_graph=actiongraph.ActionGraph(
+                {
+                    'a1': self.a1,
+                    'a2': self.a2
+                },
+                {'a1': set(), 'a2': {'a1'}},
+                {'a1': set(), 'a2': set()},
+            ),
         )
         self.adapter = adapter.ActionRunGraphAdapter(self.action_runs)
-        self.action_runs.__iter__.return_value = [self.a1, self.a2]
+        self.action_runs.__iter__.return_value = [self.ar1, self.ar2]
 
     def test_get_repr(self):
         result = self.adapter.get_repr()
         assert len(result) == 2
-        assert self.a1.id == result[0]['id']
-        assert ['a2'] == result[0]['dependent']
+        assert self.ar1.id == result[0]['id']
+        assert ['a1'] == result[1]['dependencies']
 
 
 class TestJobRunAdapter(TestCase):
