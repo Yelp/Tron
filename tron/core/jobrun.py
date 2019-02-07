@@ -148,29 +148,20 @@ class JobRun(Observable, Observer):
             action_run.setup_subscriptions()
 
         self.action_runs_proxy = proxy.AttributeProxy(
-            self.action_runs,
+            run_collection,
             [
                 'queue',
                 'cancel',
                 'success',
                 'fail',
-                'is_cancelled',
-                'is_unknown',
-                'is_failed',
-                'is_succeeded',
-                'is_running',
-                'is_starting',
-                'is_queued',
-                'is_scheduled',
-                'is_skipped',
-                'is_starting',
                 'start_time',
                 'end_time',
             ],
         )
 
     def _del_action_runs(self):
-        del self._action_runs
+        self._action_runs = None
+        self.action_runs_proxy = None
 
     action_runs = property(
         _get_action_runs,
@@ -291,7 +282,7 @@ class JobRun(Observable, Observer):
         self.action_runs.cleanup()
         self.node = None
         self.action_graph = None
-        self._action_runs = None
+        self._del_action_runs()
         self.output_path.delete()
 
     def get_action_run(self, action_name):
@@ -325,9 +316,15 @@ class JobRun(Observable, Observer):
         return ActionRun.UNKNOWN
 
     def __getattr__(self, name):
-        if self.action_runs_proxy:
+        if name.startswith('is_'):
+            state_name = name[3:]
+            if state_name not in ActionRun.STATE_MACHINE.states:
+                raise RuntimeError(f"{state_name} not in ActionRun.VALID_STATES")
+            return self.state == state_name
+        elif self.action_runs_proxy:
             return self.action_runs_proxy.perform(name)
-        raise AttributeError(name)
+        else:
+            raise AttributeError(name)
 
     def __str__(self):
         return f"JobRun:{self.id}"
@@ -400,7 +397,7 @@ class JobRunCollection(object):
 
     def get_pending(self):
         """Return the job runs that are queued or scheduled."""
-        return [r for r in self.runs if r.is_scheduled or r.is_queued]
+        return [r for r in self.runs if r.state in (ActionRun.SCHEDULED, ActionRun.QUEUED)]
 
     @property
     def has_pending(self):
