@@ -220,7 +220,21 @@ class ActionRunGraphAdapter(object):
                 'dependencies': [d.name for d in dependencies]
             }
 
-        return [build(action_run) for action_run in self.action_runs]
+        def build_trigger(trigger_name):
+            graph = self.action_runs.action_graph
+            trigger = graph[trigger_name]
+            dependencies = graph.get_dependencies(trigger_name, include_triggers=True)
+            return {
+                'name': trigger.name,
+                'command': trigger.command,
+                'dependencies': [d.name for d in dependencies],
+                'state': 'unknown',
+            }
+
+        return [build(action_run) for action_run in self.action_runs] + [
+            build_trigger(trigger_name)
+            for trigger_name in self.action_runs.action_graph.all_triggers
+        ]
 
 
 class JobRunAdapter(RunAdapter):

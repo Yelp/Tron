@@ -62,8 +62,8 @@ class JobGraph(object):
             # We call this twice to build the complete DAG for the job; the first time
             # we search the forward adjacency list and the second time we search the
             # reverse adjancency list.  This ensures we don't miss any triggers
-            self._get_required_triggers(action_name, required_triggers)
-            self._get_required_triggers(action_name, required_triggers, search_up=False)
+            required_triggers = self._get_required_triggers(action_name, required_triggers)
+            required_triggers = self._get_required_triggers(action_name, required_triggers, search_up=False)
         return ActionGraph(job_action_map, required_actions, required_triggers)
 
     def _save_action(self, action_name, job_name, config):
@@ -97,3 +97,5 @@ class JobGraph(object):
                     triggers[current_action].add(next_action)
                 else:
                     triggers[next_action].add(current_action)
+
+        return triggers

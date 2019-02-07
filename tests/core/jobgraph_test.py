@@ -1,22 +1,19 @@
 from unittest import mock
 
-from testifycompat import setup
-from testifycompat import TestCase
 from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigJob
 from tron.core.jobgraph import AdjListEntry
 from tron.core.jobgraph import JobGraph
 
 
-class TestJobGraph(TestCase):
-    @setup
-    def setup_graph(self):
+class TestJobGraph:
+    def setup_method(self):
         action1 = ConfigAction(
             name='action1',
             command='do something',
         )
         action2 = ConfigAction(
-            name='action1',
+            name='action2',
             command='do something',
             requires=['action1'],
         )
@@ -31,7 +28,7 @@ class TestJobGraph(TestCase):
         action3 = ConfigAction(
             name='action3',
             command='do something',
-            triggered_by=['MASTER.job1.action2'],
+            triggered_by=['MASTER.job1.action2.shortdate.{shortdate}'],
         )
         job2_config = ConfigJob(
             name='job1',
@@ -49,7 +46,7 @@ class TestJobGraph(TestCase):
             name='action5',
             command='do something',
             requires=['action4'],
-            triggered_by=['other.job2.action3'],
+            triggered_by=['other.job2.action3.shortdate.{shortdate}'],
         )
         job3_config = ConfigJob(
             name='job1',
