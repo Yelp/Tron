@@ -207,7 +207,8 @@ class ActionRunGraphAdapter(object):
 
     def get_repr(self):
         def build(action_run):
-            action = self.action_runs.action_graph[action_run.action_name]
+            graph = self.action_runs.action_graph
+            dependencies = graph.get_dependencies(action_run.action_name, include_triggers=True)
             return {
                 'id': action_run.id,
                 'name': action_run.action_name,
@@ -216,7 +217,7 @@ class ActionRunGraphAdapter(object):
                 'state': action_run.state,
                 'start_time': action_run.start_time,
                 'end_time': action_run.end_time,
-                'dependencies': [dep for dep in action.dependent_actions],
+                'dependencies': [d.name for d in dependencies]
             }
 
         return [build(action_run) for action_run in self.action_runs]

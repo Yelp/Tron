@@ -77,7 +77,7 @@ class TestMasterControlProgram(TestCase):
         mock_cluster_repo.configure.assert_called_with(
             master_config.mesos_options,
         )
-        self.mcp.build_job_scheduler_factory(master_config)
+        self.mcp.build_job_scheduler_factory(master_config, mock.Mock())
 
     def test_update_state_watcher_config_changed(self):
         self.mcp.state_watcher.update_from_config.return_value = True

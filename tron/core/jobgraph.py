@@ -38,7 +38,9 @@ class JobGraph(object):
             cleanup_action_config = job_config.cleanup_action
             if cleanup_action_config:
                 cleanup_action = Action.from_config(cleanup_action_config)
-                self.action_map[maybe_decode(cleanup_action.name)] = cleanup_action
+                full_name = f'{job_name}.{cleanup_action.name}'
+                self._actions_for_job[job_name].append(full_name)
+                self.action_map[full_name] = cleanup_action
 
     def get_action_graph_for_job(self, job_name):
         job_action_map = {}

@@ -57,9 +57,15 @@ class ActionGraph(object):
             return self.action_map[name]
         elif name in self.all_triggers:
             return Trigger(name, 'TRIGGER')
+        else:
+            raise KeyError(f'{name} is not a valid action')
 
     def __eq__(self, other):
-        return self.graph == other.graph and self.action_map == other.action_map
+        return (
+            self.action_map == other.action_map and
+            self.required_actions == other.required_actions and
+            self.required_triggers == other.required_triggers
+        )
 
     def __ne__(self, other):
         return not self == other
