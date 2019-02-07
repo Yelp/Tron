@@ -20,6 +20,7 @@ class ActionGraph(object):
         self.all_triggers = set(self.required_triggers)
         for action_triggers in self.required_triggers.values():
             self.all_triggers |= action_triggers
+        self.all_triggers -= set(self.action_map)
 
     def get_dependencies(self, action_name, include_triggers=False):
         """Given an Action's name return the Actions (and optionally, Triggers)
