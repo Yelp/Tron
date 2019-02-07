@@ -146,7 +146,7 @@ class ActionRun(Observable):
 
     default_transitions = dict(fail=FAILED, success=SUCCEEDED)
     STATE_MACHINE = Machine(
-        'scheduled',
+        SCHEDULED,
         **{
             CANCELLED:
                 dict(skip=SKIPPED),

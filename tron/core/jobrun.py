@@ -154,16 +154,6 @@ class JobRun(Observable, Observer):
                 'cancel',
                 'success',
                 'fail',
-                'is_cancelled',
-                'is_unknown',
-                'is_failed',
-                'is_succeeded',
-                'is_running',
-                'is_starting',
-                'is_queued',
-                'is_scheduled',
-                'is_skipped',
-                'is_starting',
                 'start_time',
                 'end_time',
             ],
@@ -325,9 +315,14 @@ class JobRun(Observable, Observer):
         return ActionRun.UNKNOWN
 
     def __getattr__(self, name):
-        if self.action_runs_proxy:
+        if name[:3] == 'is_':
+            if name[3:] not in ActionRun.STATE_MACHINE.states:
+                raise RuntimeError(f"{name[3:]} not in ActionRun.VALID_STATES")
+            return self.state == name[3:]
+        elif self.action_runs_proxy:
             return self.action_runs_proxy.perform(name)
-        raise AttributeError(name)
+        else:
+            raise AttributeError(name)
 
     def __str__(self):
         return f"JobRun:{self.id}"
@@ -400,7 +395,7 @@ class JobRunCollection(object):
 
     def get_pending(self):
         """Return the job runs that are queued or scheduled."""
-        return [r for r in self.runs if r.is_scheduled or r.is_queued]
+        return [r for r in self.runs if r.state in (ActionRun.SCHEDULED, ActionRun.QUEUED)]
 
     @property
     def has_pending(self):
