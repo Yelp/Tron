@@ -148,7 +148,7 @@ class JobRun(Observable, Observer):
             action_run.setup_subscriptions()
 
         self.action_runs_proxy = proxy.AttributeProxy(
-            self.action_runs,
+            run_collection,
             [
                 'queue',
                 'cancel',
@@ -160,7 +160,8 @@ class JobRun(Observable, Observer):
         )
 
     def _del_action_runs(self):
-        del self._action_runs
+        self._action_runs = None
+        self.action_runs_proxy = None
 
     action_runs = property(
         _get_action_runs,
@@ -281,7 +282,7 @@ class JobRun(Observable, Observer):
         self.action_runs.cleanup()
         self.node = None
         self.action_graph = None
-        self._action_runs = None
+        self._del_action_runs()
         self.output_path.delete()
 
     def get_action_run(self, action_name):
@@ -315,10 +316,11 @@ class JobRun(Observable, Observer):
         return ActionRun.UNKNOWN
 
     def __getattr__(self, name):
-        if name[:3] == 'is_':
-            if name[3:] not in ActionRun.STATE_MACHINE.states:
-                raise RuntimeError(f"{name[3:]} not in ActionRun.VALID_STATES")
-            return self.state == name[3:]
+        if name.startswith('is_'):
+            state_name = name[3:]
+            if state_name not in ActionRun.STATE_MACHINE.states:
+                raise RuntimeError(f"{state_name} not in ActionRun.VALID_STATES")
+            return self.state == state_name
         elif self.action_runs_proxy:
             return self.action_runs_proxy.perform(name)
         else:

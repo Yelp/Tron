@@ -318,7 +318,7 @@ class TestJobRun(TestCase):
 
     def test__getattr__(self):
         assert self.job_run.cancel
-        assert self.job_run.is_queued
+        assert self.job_run.state == 'succeeded'
         assert self.job_run.is_succeeded
 
     def test__getattr__miss(self):
