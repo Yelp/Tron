@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 from unittest import mock
 
 from testifycompat import assert_equal
@@ -27,13 +24,35 @@ class TestActionGraph(TestCase):
             self.action_map[name].name = name
 
         self.required_actions = {
-            'dep_multi': {self.action_map['dep_one_one'], self.action_map['base_two']},
-            'dep_one_one': {self.action_map['dep_one']},
-            'dep_one': {self.action_map['base_one']},
+            'base_one': set(),
+            'base_two': set(),
+            'dep_multi': {'dep_one_one', 'base_two'},
+            'dep_one_one': {'dep_one'},
+            'dep_one': {'base_one'},
         }
-        self.required_triggers = {}
+        self.required_triggers = {
+            'base_one': {'MASTER.otherjob.first'},
+            'base_two': set(),
+            'dep_multi': set(),
+            'dep_one_one': set(),
+            'dep_one': set(),
+        }
 
         self.action_graph = actiongraph.ActionGraph(self.action_map, self.required_actions, self.required_triggers)
+
+    def test_get_dependencies(self):
+        assert self.action_graph.get_dependencies('not_in_job') == []
+        assert self.action_graph.get_dependencies('base_one') == []
+        assert self.action_graph.get_dependencies('base_one', include_triggers=True)[0].name == 'MASTER.otherjob.first'
+        assert sorted([d.name for d in self.action_graph.get_dependencies('dep_multi')]) == sorted([
+            'dep_one_one', 'base_two',
+        ])
+
+    def test_names(self):
+        assert sorted(self.action_graph.names()) == sorted(self.action_names)
+        assert sorted(self.action_graph.names(include_triggers=True)) == sorted(
+            self.action_names + ['MASTER.otherjob.first']
+        )
 
     def test__getitem__(self):
         assert_equal(

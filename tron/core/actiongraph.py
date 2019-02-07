@@ -22,8 +22,8 @@ class ActionGraph(object):
             self.all_triggers |= action_triggers
 
     def get_dependencies(self, action_name, include_triggers=False):
-        """Given an Action's name return the Actions required to run
-        before that Action.
+        """Given an Action's name return the Actions (and optionally, Triggers)
+        required to run before that Action.
         """
         if action_name not in set(self.action_map) | self.all_triggers:
             return []
@@ -56,6 +56,8 @@ class ActionGraph(object):
         if name in self.action_map:
             return self.action_map[name]
         elif name in self.all_triggers:
+            # we don't have the Trigger config to know what the real command is,
+            # so we just fill in the command with 'TRIGGER'
             return Trigger(name, 'TRIGGER')
         else:
             raise KeyError(f'{name} is not a valid action')
