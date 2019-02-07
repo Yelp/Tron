@@ -1,3 +1,12 @@
+tron (0.9.9.12) trusty; urgency=medium
+
+  * 0.9.9.12 tagged with 'make release'
+    Commit: Merge pull request #613 from Yelp/fix-jobrun-state-proxy
+    Fix inconsistency between JobRun state attribute and is_<state>
+    checks
+
+ -- root <root@a8f427620200>  Thu, 07 Feb 2019 15:14:29 +0000
+
 tron (0.9.9.11) trusty; urgency=medium
 
   * 0.9.9.11 tagged with 'make release'
