@@ -254,6 +254,9 @@ def is_job_run_exceeding_expected_runtime(job_run, job_expected_runtime):
         'state', 'unknown'
     ) == "running":
         duration_seconds = pytimeparse.parse(job_run.get('duration', ''))
+        # TODO: duration_seconds will be None for a running job if it's root
+        # action is waiting for external dependency. Maybe fix by setting
+        # job's start_time to run_time when that happens.
         if duration_seconds and duration_seconds > job_expected_runtime:
             return True
     return False
