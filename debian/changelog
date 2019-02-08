@@ -1,3 +1,11 @@
+tron (0.9.9.14) trusty; urgency=medium
+
+  * 0.9.9.14 tagged with 'make release'
+    Commit: Merge pull request #615 from Yelp/fi'-check-job-duration
+    Ignore duration=None for jobs waiting on e'ternal dependency
+
+ -- root <root@0651e12fe496>  Fri, 08 Feb 2019 12:31:54 +0000
+
 tron (0.9.9.13) trusty; urgency=medium
 
   * 0.9.9.13 tagged with 'make release'
