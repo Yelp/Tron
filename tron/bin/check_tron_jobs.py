@@ -254,7 +254,7 @@ def is_job_run_exceeding_expected_runtime(job_run, job_expected_runtime):
         'state', 'unknown'
     ) == "running":
         duration_seconds = pytimeparse.parse(job_run.get('duration', ''))
-        if duration_seconds > job_expected_runtime:
+        if duration_seconds and duration_seconds > job_expected_runtime:
             return True
     return False
 
