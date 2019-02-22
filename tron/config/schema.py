@@ -222,7 +222,7 @@ ConfigParameter = config_object_factory(
 
 
 StatePersistenceTypes = Enum(
-    'StatePersistenceTypes', dict(shelve='shelve', sql='sql', yaml='yaml')
+    'StatePersistenceTypes', dict(shelve='shelve', sql='sql', yaml='yaml', dynamodb='dynamodb')
 )
 
 ExecutorTypes = Enum('ExecutorTypes', dict(ssh='ssh', mesos='mesos'))

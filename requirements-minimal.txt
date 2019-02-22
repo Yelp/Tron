@@ -1,4 +1,5 @@
 argcomplete
+boto3
 bsddb3
 cryptography
 dataclasses
