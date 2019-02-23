@@ -1,10 +1,14 @@
 import math
 import pickle
-from collections import namedtuple
+from threading import Thread
 
 import boto3
 
-DynamoDBStateKey = namedtuple('DynamoDBStateKey', ['type', 'id'])
+from tron.serialize.runstate.shelvestore import ShelveKey
+from tron.serialize.runstate.shelvestore import ShelveStateStore
+# from collections import namedtuple
+
+# DynamoDBStateKey = namedtuple('DynamoDBStateKey', ['type', 'id'])
 OBJECT_SIZE = 400000
 REGION_NAME = 'us-west-1'
 TABLE_NAME = 'Tron_states'
@@ -15,6 +19,7 @@ class DynamoDBStateStore(object):
         self.dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
         self.client = boto3.client('dynamodb', region_name=REGION_NAME)
         self.name = name
+        self.shelve = ShelveStateStore(name)
         #create a table if it doesn't exist
         self.table = self.dynamodb.Table(TABLE_NAME)
 
@@ -23,18 +28,39 @@ class DynamoDBStateStore(object):
         It builds a unique partition key.
         """
         # TODO: build shorter keys?
-        return DynamoDBStateKey(type, iden)
+        return ShelveKey(type, iden)
 
     def restore(self, keys):
         """
         Fetch all under the same parition key(keys)
         """
-        items = zip(
-            keys,
-            (self[key] for key in keys),
-        )
-        # Filter out values that are None.
-        return dict(filter(lambda x: x[1], items))
+        def join(d1, d2):
+            for k, v in d1.items():
+                d2[k] = v
+
+        def shelve_restore(keys, res):
+            join(self.shelve.restore(keys), res)
+
+        def dynamodb_restore(keys, res):
+            items = zip(
+                keys,
+                (self[key] for key in keys),
+            )
+            join(dict(filter(lambda x: x[1], items)), res)
+
+        res1, res2 = {}, {}
+        thread1 = Thread(target = dynamodb_restore, args=(keys, res1,))
+        thread2 = Thread(target = shelve_restore, args=(keys, res2,))
+        thread1.start()
+        thread2.start()
+        thread1.join()
+        thread2.join()
+
+        # merge
+        for i, j in res1.items():
+            if i not in res2.keys():
+                res2[i] = j
+        return res2
 
     def __getitem__(self, key):
         val = bytearray()
@@ -55,9 +81,17 @@ class DynamoDBStateStore(object):
         and splice it into different parts under 400KB with different sort keys,
         and save them under the same partition key built.
         """
-        for key, val in key_value_pairs:
-            self._delete_item(key)
-            self[key] = pickle.dumps(val)
+        def dynamodb_save(key_value_pairs):
+            for key, val in key_value_pairs:
+                self._delete_item(key)
+                self[key] = pickle.dumps(val)
+
+        thread1 = Thread(target = dynamodb_save, args=(key_value_pairs,))
+        thread2 = Thread(target = self.shelve.save, args=(key_value_pairs,))
+        thread1.start()
+        thread2.start()
+        thread1.join()
+        thread2.join()
 
     def __setitem__(self, key, val):
         size = math.ceil(len(val) / OBJECT_SIZE)
@@ -97,4 +131,4 @@ class DynamoDBStateStore(object):
             return 0
 
     def cleanup(self):
-        return
+        self.shelve.cleanup()
