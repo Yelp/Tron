@@ -109,6 +109,9 @@ class TestDynamoDBStateStore(TestCase):
         for key, value in key_value_pairs:
             assert_equal(self.store[key], value)
             assert_equal(stored_data[str(key.key)], value)
+
+        for key, value in key_value_pairs:
+            self.store._delete_item(key)
         self.store.cleanup()
 
     def test_restore_from_shelve_after_dynamodb_dies(self):
