@@ -179,7 +179,7 @@ class JobRun(Observable, Observer):
 
     def start(self):
         """Start this JobRun as a scheduled run (not a manual run)."""
-        if self.action_runs.has_startable_action_runs and self._do_start():
+        if self._do_start():
             return True
 
     def _do_start(self):
@@ -306,8 +306,8 @@ class JobRun(Observable, Observer):
             return ActionRun.STARTING
         if self.action_runs.is_failed:
             return ActionRun.FAILED
-        if self.seconds_until_run_time() == 0 and self.action_runs.is_blocked_on_trigger:
-            return ActionRun.RUNNING
+        if self.action_runs.is_waiting:
+            return ActionRun.WAITING
         if self.action_runs.is_scheduled:
             return ActionRun.SCHEDULED
         if self.action_runs.is_queued:
@@ -405,7 +405,7 @@ class JobRunCollection(object):
 
     def get_active(self, node=None):
         return [
-            r for r in self.runs if (r.is_running or r.is_starting) and
+            r for r in self.runs if (r.is_running or r.is_starting or r.is_waiting) and
             (not node or r.node == node)
         ]
 

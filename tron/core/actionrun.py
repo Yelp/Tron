@@ -142,6 +142,7 @@ class ActionRun(Observable):
     SKIPPED = 'skipped'
     STARTING = 'starting'
     SUCCEEDED = 'succeeded'
+    WAITING = 'waiting'
     UNKNOWN = 'unknown'
 
     default_transitions = dict(fail=FAILED, success=SUCCEEDED)
@@ -165,9 +166,15 @@ class ActionRun(Observable):
                     schedule=SCHEDULED,
                     **default_transitions,
                 ),
+            WAITING:
+                dict(
+                    cancel=CANCELLED,
+                    start=STARTING,
+                    **default_transitions,
+                ),
             SCHEDULED:
                 dict(
-                    ready=QUEUED,
+                    ready=WAITING,
                     queue=QUEUED,
                     cancel=CANCELLED,
                     start=STARTING,
@@ -918,6 +925,7 @@ class ActionRunCollection(object):
                 proxy.attr_proxy('is_scheduled', any),
                 proxy.attr_proxy('is_cancelled', any),
                 proxy.attr_proxy('is_active', any),
+                proxy.attr_proxy('is_waiting', all),
                 proxy.attr_proxy('is_queued', all),
                 proxy.attr_proxy('is_complete', all),
                 proxy.func_proxy('queue', eager_all),
