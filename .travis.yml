@@ -9,7 +9,7 @@ python:
 
 before_install:
   - sudo apt-get install -y libdb5.3-dev
-  - export BOTO_CONFIG=/dev/null
+  - sudo rm -f /etc/boto.cfg
 
 install: pip install tox
 script: make $TARGET
