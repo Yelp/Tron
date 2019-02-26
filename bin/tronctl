@@ -12,6 +12,7 @@ from urllib.parse import urljoin
 
 import argcomplete
 
+from tron import __version_info__
 from tron.commands import client
 from tron.commands import cmd_utils
 from tron.commands.cmd_utils import ExitCode
@@ -34,6 +35,7 @@ COMMAND_HELP = (
     ('move', 'Rename a job'),
     ('publish', 'Publish actionrun trigger'),
     ('discard', 'Discard existing actionrun trigger'),
+    ('version', 'Print tron client and server versions'),
 )
 
 log = logging.getLogger('tronctl')
@@ -83,7 +85,7 @@ def parse_cli():
     )
     parser.add_argument(
         'id',
-        nargs='+',
+        nargs='*',
         help='job name, job run id, or action id',
     ).completer = cmd_utils.tron_jobs_completer
 
@@ -168,6 +170,11 @@ def backfill(args):
 
     if args.end_date is None:
         args.end_date = datetime.datetime.today()
+
+    if not args.id:
+        print(f"Error: must provide at least one id argument")
+        yield False
+
     dates = get_dates_for_backfill(
         start_date=args.start_date, end_date=args.end_date
     )
@@ -189,12 +196,28 @@ def get_dates_for_backfill(start_date, end_date):
     return dates
 
 
+def tron_version(args):
+    local_version = '.'.join(map(str, __version_info__))
+    print(f"Tron client version: {local_version}")
+    response = client.request(urljoin(args.server, "/api/status"))
+    if response.error:
+        print(f'Error: {response.content}')
+        yield
+    server_version = response.content.get('version', 'unknown')
+    print(f"Tron server version: {server_version}")
+    if server_version != local_version:
+        print(f"Warning: client and server versions should match")
+        yield
+    yield True
+
+
 COMMANDS = defaultdict(
     lambda: control_objects,
     publish=event_publish,
     discard=event_discard,
     backfill=backfill,
     move=move,
+    version=tron_version,
 )
 
 

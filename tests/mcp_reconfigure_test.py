@@ -320,8 +320,9 @@ class TestMCPReconfigure(TestCase):
         run = job_sched.job.runs.runs[0]
         assert run.is_scheduled
 
+        action_runs = run.action_runs
         self.reconfigure()
-        assert run.is_cancelled
+        assert action_runs.is_cancelled
 
         assert_equal(len(job_sched.job.runs.runs), 1)
         new_run = job_sched.job.runs.runs[0]

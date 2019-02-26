@@ -1,3 +1,27 @@
+tron (0.9.9.14) trusty; urgency=medium
+
+  * 0.9.9.14 tagged with 'make release'
+    Commit: Merge pull request #615 from Yelp/fi'-check-job-duration
+    Ignore duration=None for jobs waiting on e'ternal dependency
+
+ -- root <root@0651e12fe496>  Fri, 08 Feb 2019 12:31:54 +0000
+
+tron (0.9.9.13) trusty; urgency=medium
+
+  * 0.9.9.13 tagged with 'make release'
+    Commit: fi' disk=none error when restoring from state
+
+ -- root <root@347a7c4195b5>  Thu, 07 Feb 2019 16:18:18 +0000
+
+tron (0.9.9.12) trusty; urgency=medium
+
+  * 0.9.9.12 tagged with 'make release'
+    Commit: Merge pull request #613 from Yelp/fix-jobrun-state-proxy
+    Fix inconsistency between JobRun state attribute and is_<state>
+    checks
+
+ -- root <root@a8f427620200>  Thu, 07 Feb 2019 15:14:29 +0000
+
 tron (0.9.9.11) trusty; urgency=medium
 
   * 0.9.9.11 tagged with 'make release'

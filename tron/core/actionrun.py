@@ -146,7 +146,7 @@ class ActionRun(Observable):
 
     default_transitions = dict(fail=FAILED, success=SUCCEEDED)
     STATE_MACHINE = Machine(
-        'scheduled',
+        SCHEDULED,
         **{
             CANCELLED:
                 dict(skip=SKIPPED),
@@ -760,7 +760,7 @@ class MesosActionRun(ActionRun, Observer):
             command=self.command,
             cpus=self.cpus,
             mem=self.mem,
-            disk=self.disk,
+            disk=1024.0 if self.disk is None else self.disk,
             constraints=[[c.attribute, c.operator, c.value]
                          for c in self.constraints],
             docker_image=self.docker_image,
