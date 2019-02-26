@@ -1,5 +1,5 @@
 VERSION=$(shell python setup.py --version)
-DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw
+DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw -v $(CURDIR)/.tox-indocker:/work/.tox:rw
 UID:=$(shell id -u)
 GID:=$(shell id -g)
 
@@ -41,7 +41,7 @@ test:
 	tox -e py36
 
 test_in_docker_%: docker_%
-	$(DOCKER_RUN) tron-builder-$* python3.6 -m tox -vv --workdir .tox-docker -e py36
+	$(DOCKER_RUN) tron-builder-$* python3.6 -m tox -vv -e py36
 
 tox_%:
 	tox -e $*

@@ -52,6 +52,12 @@ tronfig -n MASTER /work/example-cluster/tronfig/MASTER.yaml
 tronfig /work/example-cluster/tronfig/MASTER.yaml
 cat /work/example-cluster/tronfig/MASTER.yaml | tronfig -n MASTER -
 
+if test -L /opt/venvs/tron/lib/python3.6/encodings/punycode.py; then
+    echo "Whoa, the tron package shouldn't have an encoding symlink!"
+    echo "Check out https://github.com/spotify/dh-virtualenv/issues/272"
+    exit 1
+fi
+
 kill -SIGTERM $TRON_PID
 wait $TRON_PID || true
 
