@@ -23,14 +23,15 @@ class DynamoDBStateStore(object):
 
     def build_key(self, type, iden):
         """
-        It builds a unique partition key.
+        It builds a unique partition key. The key could be objects with __str__ method.
         """
         # TODO: build shorter keys?
         return ShelveKey(type, iden)
 
-    def restore(self, keys):
+    def restore(self, keys) -> dict:
         """
-        Fetch all under the same parition key(keys)
+        Fetch all under the same parition key(keys).
+        ret: <dict of key to states>
         """
         def join(d1, d2):
             for k, v in d1.items():
@@ -61,6 +62,9 @@ class DynamoDBStateStore(object):
         return res2
 
     def __getitem__(self, key):
+        """
+        It returns an object which is deserialized from binary
+        """
         val = bytearray()
         for index in range(self._get_num_of_partitions(key)):
             val += bytes(self.table.get_item(
