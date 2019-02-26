@@ -10,7 +10,9 @@ python:
 before_install:
   - sudo apt-get install -y libdb5.3-dev
 
-install: pip install tox
+install:
+  - export BOTO_CONFIG=/dev/null
+  - pip install tox
 script: make $TARGET
 
 deploy:
