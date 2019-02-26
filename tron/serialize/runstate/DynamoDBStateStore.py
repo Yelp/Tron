@@ -6,29 +6,25 @@ import boto3
 
 from tron.serialize.runstate.shelvestore import ShelveKey
 from tron.serialize.runstate.shelvestore import ShelveStateStore
-# from collections import namedtuple
 
-# DynamoDBStateKey = namedtuple('DynamoDBStateKey', ['type', 'id'])
 OBJECT_SIZE = 400000
-REGION_NAME = 'us-west-1'
 
 
 class DynamoDBStateStore(object):
-    def __init__(self, name):
-        self.dynamodb = boto3.resource('dynamodb', region_name=REGION_NAME)
-        self.client = boto3.client('dynamodb', region_name=REGION_NAME)
+    def __init__(self, name, dynamodb_region) -> None:
+        self.dynamodb = boto3.resource('dynamodb', region_name=dynamodb_region)
+        self.client = boto3.client('dynamodb', region_name=dynamodb_region)
         self.name = name
         self.shelve = ShelveStateStore(name)
         self.table = self.dynamodb.Table(name.replace('/', '-'))
 
-    def build_key(self, type, iden):
+    def build_key(self, type, iden) -> ShelveKey:
         """
         It builds a unique partition key. The key could be objects with __str__ method.
         """
-        # TODO: build shorter keys?
         return ShelveKey(type, iden)
 
-    def restore(self, keys) -> dict:
+    def restore(self, keys: [ShelveKey]) -> dict:
         """
         Fetch all under the same parition key(keys).
         ret: <dict of key to states>
@@ -61,7 +57,7 @@ class DynamoDBStateStore(object):
                 res2[i] = j
         return res2
 
-    def __getitem__(self, key):
+    def __getitem__(self, key: ShelveKey) -> object:
         """
         It returns an object which is deserialized from binary
         """
@@ -77,7 +73,7 @@ class DynamoDBStateStore(object):
             )['Item']['val'].value)
         return pickle.loads(val) if val else None
 
-    def save(self, key_value_pairs):
+    def save(self, key_value_pairs: [(str, object)]) -> None:
         """
         Remove all previous data with the same partition key, examine the size of state_data,
         and splice it into different parts under 400KB with different sort keys,
@@ -95,7 +91,7 @@ class DynamoDBStateStore(object):
         thread1.join()
         thread2.join()
 
-    def __setitem__(self, key, val):
+    def __setitem__(self, key: ShelveKey, val: bytes) -> None:
         size = math.ceil(len(val) / OBJECT_SIZE)
         for index in range(size):
             self.table.put_item(
@@ -107,7 +103,7 @@ class DynamoDBStateStore(object):
                 }
             )
 
-    def _delete_item(self, key):
+    def _delete_item(self, key: ShelveKey) -> None:
         for index in range(self._get_num_of_partitions(key)):
             self.table.delete_item(
                 Key={
@@ -116,7 +112,7 @@ class DynamoDBStateStore(object):
                 }
             )
 
-    def _get_num_of_partitions(self, key) -> int:
+    def _get_num_of_partitions(self, key: ShelveKey) -> int:
         """
         Return how many parts is the item partitioned into
         """
@@ -132,5 +128,5 @@ class DynamoDBStateStore(object):
         except self.client.exceptions.ResourceNotFoundException:
             return 0
 
-    def cleanup(self):
+    def cleanup(self) -> None:
         self.shelve.cleanup()

@@ -46,7 +46,7 @@ def store():
                 'WriteCapacityUnits': 10
             }
         )
-        store = DynamoDBStateStore(filename)
+        store = DynamoDBStateStore(filename, 'us-west-1')
         store.table = table
         # Has to be yield here for moto to work
         yield store

@@ -33,6 +33,7 @@ class PersistenceManagerFactory(object):
         name = persistence_config.name
         connection_details = persistence_config.connection_details
         buffer_size = persistence_config.buffer_size
+        dynamodb_region = persistence_config.dynamodb_region
         store = None
 
         if store_type == schema.StatePersistenceTypes.shelve:
@@ -45,7 +46,7 @@ class PersistenceManagerFactory(object):
             store = YamlStateStore(name)
 
         if store_type == schema.StatePersistenceTypes.dynamodb:
-            store = DynamoDBStateStore(name)
+            store = DynamoDBStateStore(name, dynamodb_region)
 
         buffer = StateSaveBuffer(buffer_size)
         return PersistentStateManager(store, buffer)
