@@ -2,137 +2,178 @@ import os
 import pickle
 import tempfile
 
+import boto3
+import pytest
+from moto import mock_dynamodb2
+
 from testifycompat import assert_equal
-from testifycompat import run
-from testifycompat import setup
-from testifycompat import TestCase
 from tron.serialize.runstate.DynamoDBStateStore import DynamoDBStateStore
 from tron.serialize.runstate.shelvestore import Py2Shelf
 
 
-class TestDynamoDBStateStore(TestCase):
-    @setup
-    def setup_store(self):
-        self.tmpdir = tempfile.mkdtemp()
-        self.filename = os.path.join(self.tmpdir, 'state')
-        self.store = DynamoDBStateStore(self.filename)
-        self.large_object = pickle.dumps([i for i in range(100000)])
-        self.small_object = pickle.dumps({'this': 'data'})
+filename = os.path.join(tempfile.mkdtemp(), 'state')
 
-    def test_save(self):
+
+@pytest.fixture
+def store():
+    with mock_dynamodb2():
+        dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
+        table = dynamodb.create_table(
+            TableName=filename.replace('/', '-'),
+            KeySchema=[
+                {
+                    'AttributeName': 'key',
+                    'KeyType': 'HASH'  # Partition key
+                },
+                {
+                    'AttributeName': 'index',
+                    'KeyType': 'RANGE'  # Sort key
+                }
+            ],
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'key',
+                    'AttributeType': 'S'
+                },
+                {
+                    'AttributeName': 'index',
+                    'AttributeType': 'N'
+                },
+
+            ],
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 10,
+                'WriteCapacityUnits': 10
+            }
+        )
+        store = DynamoDBStateStore(filename)
+        store.table = table
+        # Has to be yield here for moto to work
+        yield store
+
+
+@pytest.fixture
+def small_object():
+    yield pickle.dumps({'this': 'data'})
+
+
+@pytest.fixture
+def large_object():
+    yield pickle.dumps([i for i in range(100000)])
+
+
+@pytest.mark.usefixtures("store", "small_object", "large_object")
+class TestDynamoDBStateStore:
+    def test_save(self, store, small_object, large_object):
         key_value_pairs = [
             (
-                self.store.build_key("DynamoDBTest", "two"),
-                self.small_object,
+                store.build_key("DynamoDBTest", "two"),
+                small_object,
             ),
             (
-                self.store.build_key("DynamoDBTest2", "four"),
-                self.small_object,
+                store.build_key("DynamoDBTest2", "four"),
+                small_object,
             ),
         ]
-        self.store.save(key_value_pairs)
+        store.save(key_value_pairs)
 
         for key, value in key_value_pairs:
-            assert_equal(self.store[key], value)
+            assert_equal(store[key], value)
 
         for key, value in key_value_pairs:
-            self.store._delete_item(key)
-        self.store.cleanup()
+            store._delete_item(key)
+        store.cleanup()
 
-    def test_save_more_than_4KB(self):
+    def test_save_more_than_4KB(self, store, small_object, large_object):
         key_value_pairs = [
             (
-                self.store.build_key("DynamoDBTest", "two"),
-                self.large_object
+                store.build_key("DynamoDBTest", "two"),
+                large_object
             )
         ]
-        self.store.save(key_value_pairs)
+        store.save(key_value_pairs)
 
         for key, value in key_value_pairs:
-            assert_equal(self.store[key], value)
+            assert_equal(store[key], value)
 
         for key, value in key_value_pairs:
-            self.store._delete_item(key)
-        self.store.cleanup()
+            store._delete_item(key)
+        store.cleanup()
 
-    def test_restore_more_than_4KB(self):
-        keys = [self.store.build_key("thing", i) for i in range(3)]
-        value = self.large_object
+    def test_restore_more_than_4KB(self, store, small_object, large_object):
+        keys = [store.build_key("thing", i) for i in range(3)]
+        value = large_object
         for key in keys:
-            self.store[key] = value
+            store[key] = value
 
-        vals = self.store.restore(keys)
+        vals = store.restore(keys)
         for key in keys:
             assert_equal(vals[key], pickle.loads(value))
 
         for key in keys:
-            self.store._delete_item(key)
-        self.store.cleanup()
+            store._delete_item(key)
+        store.cleanup()
 
-    def test_restore(self):
-        keys = [self.store.build_key("thing", i) for i in range(3)]
-        value = self.small_object
+    def test_restore(self, store, small_object, large_object):
+        keys = [store.build_key("thing", i) for i in range(3)]
+        value = small_object
         for key in keys:
-            self.store[key] = value
+            store[key] = value
 
-        vals = self.store.restore(keys)
+        vals = store.restore(keys)
         for key in keys:
             assert_equal(vals[key], pickle.loads(value))
 
         for key in keys:
-            self.store._delete_item(key)
-        self.store.cleanup()
+            store._delete_item(key)
+        store.cleanup()
 
-    def test_delete(self):
-        keys = [self.store.build_key("thing", i) for i in range(3)]
-        value = self.large_object
+    def test_delete(self, store, small_object, large_object):
+        keys = [store.build_key("thing", i) for i in range(3)]
+        value = large_object
         for key in keys:
-            self.store[key] = value
-
-        for key in keys:
-            self.store._delete_item(key)
+            store[key] = value
 
         for key in keys:
-            assert_equal(self.store._get_num_of_partitions(key), 0)
-        self.store.cleanup()
+            store._delete_item(key)
 
-    def test_saved_to_both(self):
+        for key in keys:
+            assert_equal(store._get_num_of_partitions(key), 0)
+        store.cleanup()
+
+    def test_saved_to_both(self, store, small_object, large_object):
         key_value_pairs = [
             (
-                self.store.build_key("DynamoDBTest", "two"),
-                self.large_object
+                store.build_key("DynamoDBTest", "two"),
+                large_object
             )
         ]
-        self.store.save(key_value_pairs)
+        store.save(key_value_pairs)
 
-        stored_data = Py2Shelf(self.filename)
+        stored_data = Py2Shelf(filename)
         for key, value in key_value_pairs:
-            assert_equal(self.store[key], value)
+            assert_equal(store[key], value)
             assert_equal(stored_data[str(key.key)], value)
 
         for key, value in key_value_pairs:
-            self.store._delete_item(key)
-        self.store.cleanup()
+            store._delete_item(key)
+        store.cleanup()
 
-    def test_restore_from_shelve_after_dynamodb_dies(self):
+    def test_restore_from_shelve_after_dynamodb_dies(self, store, small_object, large_object):
         key_value_pairs = [
             (
-                self.store.build_key("DynamoDBTest", "two"),
-                self.large_object
+                store.build_key("DynamoDBTest", "two"),
+                large_object
             )
         ]
-        self.store.save(key_value_pairs)
+        store.save(key_value_pairs)
 
         keys = [k for k, v in key_value_pairs]
         # This only cleans up data in dynamoDB
         for key in keys:
-            self.store._delete_item(key)
+            store._delete_item(key)
 
-        retrieved_data = self.store.restore(keys)
+        retrieved_data = store.restore(keys)
         for key in keys:
-            assert_equal(retrieved_data[key], self.large_object)
-        self.store.cleanup()
-
-
-if __name__ == "__main__":
-    run()
+            assert_equal(retrieved_data[key], large_object)
+        store.cleanup()

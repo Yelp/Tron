@@ -11,7 +11,6 @@ from tron.serialize.runstate.shelvestore import ShelveStateStore
 # DynamoDBStateKey = namedtuple('DynamoDBStateKey', ['type', 'id'])
 OBJECT_SIZE = 400000
 REGION_NAME = 'us-west-1'
-TABLE_NAME = 'Tron_states'
 
 
 class DynamoDBStateStore(object):
@@ -20,8 +19,7 @@ class DynamoDBStateStore(object):
         self.client = boto3.client('dynamodb', region_name=REGION_NAME)
         self.name = name
         self.shelve = ShelveStateStore(name)
-        #create a table if it doesn't exist
-        self.table = self.dynamodb.Table(TABLE_NAME)
+        self.table = self.dynamodb.Table(name.replace('/', '-'))
 
     def build_key(self, type, iden):
         """
