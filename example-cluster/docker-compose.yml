@@ -4,7 +4,7 @@ services:
   playground:
     build:
       context: ../
-      dockerfile: yelp_package/trusty/Dockerfile
+      dockerfile: yelp_package/xenial/Dockerfile
     volumes:
       - ../:/work
       - ./:/nail/tron
@@ -14,8 +14,7 @@ services:
   master:
     build:
       context: .
-      dockerfile: ubuntu:trusty
-      # dockerfile: images/xenial
+      dockerfile: ubuntu:xenial
     links:
       - batch1
   batch1:
