@@ -16,7 +16,7 @@ tronweb/js/cs/*.js
 tronweb_tests/spec/*.js
 tronweb_tests/lib/
 .tox
-.tox-docker
+.tox-indocker
 tron.iml
 __pycache__/
 .pytest_cache/
