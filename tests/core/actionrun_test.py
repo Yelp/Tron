@@ -269,6 +269,10 @@ class TestActionRun:
     def test_init_state(self):
         assert self.action_run.state == ActionRun.SCHEDULED
 
+    def test_ready_state(self):
+        self.action_run.ready()
+        assert self.action_run.state == ActionRun.WAITING
+
     def test_start(self):
         self.action_run.machine.transition('ready')
         assert self.action_run.start()

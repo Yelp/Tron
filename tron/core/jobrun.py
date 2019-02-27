@@ -418,15 +418,6 @@ class JobRunCollection(object):
     def get_scheduled(self):
         return [r for r in self.runs if r.state == ActionRun.SCHEDULED]
 
-    def get_next_to_finish(self, node=None):
-        """Return the most recent run which is either running or scheduled. If
-        node is not None, then only looks for runs on that node.
-        """
-        return next_or_none(
-            r for r in self.runs if (not node or r.node == node) and
-            (r.is_running or r.is_scheduled)
-        )
-
     def next_run_num(self):
         """Return the next run number to use."""
         if not self.runs:
