@@ -414,7 +414,7 @@ class TestActionRun:
         assert self.action_run.is_broken
         self.action_run.machine.state = ActionRun.FAILED
         assert self.action_run.is_broken
-        self.action_run.machine.state = ActionRun.QUEUED
+        self.action_run.machine.state = ActionRun.WAITING
         assert not self.action_run.is_broken
 
     def test__getattr__(self):
@@ -980,15 +980,16 @@ class TestActionRunCollection:
 
     def test_is_done_true_because_blocked(self):
         self.run_map['action_name'].machine.state = ActionRun.FAILED
-        self.run_map['second_name'].machine.state = ActionRun.QUEUED
+        self.run_map['second_name'].machine.state = ActionRun.WAITING
         autospec_method(self.collection._is_run_blocked)
 
-        def blocked_second_action_run(ar, ):
-            return ar == self.run_map['second_name']
-
-        self.collection._is_run_blocked.side_effect = blocked_second_action_run
+        self.collection._is_run_blocked.return_value = True
         assert self.collection.is_done
         assert self.collection.is_failed
+        self.collection._is_run_blocked.assert_called_with(
+            self.run_map['second_name'],
+            in_job_only=True,
+        )
 
     def test_is_done_true(self):
         for action_run in self.collection.action_runs_with_cleanup:
@@ -1112,8 +1113,8 @@ class TestActionRunCollectionIsRunBlocked:
         self.run_map['action_name'].machine.state = ActionRun.STARTING
         assert self.collection._is_run_blocked(self.run_map['second_name'])
 
-    def test_is_run_blocked_required_actions_queued(self):
-        self.run_map['action_name'].machine.state = ActionRun.QUEUED
+    def test_is_run_blocked_required_actions_waiting(self):
+        self.run_map['action_name'].machine.state = ActionRun.WAITING
         assert self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_failed(self):
@@ -1123,6 +1124,12 @@ class TestActionRunCollectionIsRunBlocked:
     def test_is_run_blocked_required_actions_missing(self):
         del self.run_map['action_name']
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
+
+    def test_is_run_blocked_in_job_only(self):
+        self.run_map['action_name'].machine.state = ActionRun.SKIPPED
+        self.run_map['second_name'].triggered_by = ['trigger']
+        assert not self.collection._is_run_blocked(self.run_map['second_name'], in_job_only=True)
+        assert self.collection._is_run_blocked(self.run_map['second_name'], in_job_only=False)
 
 
 class TestMesosActionRun:

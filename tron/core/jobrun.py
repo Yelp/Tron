@@ -217,8 +217,8 @@ class JobRun(Observable, Observer):
         metrics.meter(f'tron.actionrun.{event}')
 
         if event == ActionRun.NOTIFY_TRIGGER_READY:
-            if timeutils.current_timestamp() < self.run_time.timestamp():
-                log.info(f"{self} triggers are satisfied but not run_time yet")
+            if self.is_scheduled or self.is_queued:
+                log.info(f"{self} triggers are satisfied but run not started yet")
                 return
 
             started = self._start_action_runs()
@@ -247,8 +247,8 @@ class JobRun(Observable, Observer):
                 )
                 return
 
-        if self.action_runs.is_active or self.action_runs.is_scheduled:
-            log.info(f"{self} still has running or scheduled actions")
+        if not self.action_runs.is_done:
+            log.info(f"{self} still has running or waiting actions")
             return
 
         # If we can't make any progress, we're done

@@ -216,6 +216,19 @@ class TestJobRun(TestCase):
         started_runs = self.job_run._start_action_runs()
         assert_equal(started_runs, [])
 
+    def test_handler_trigger_ready_still_scheduled(self):
+        autospec_method(self.job_run._start_action_runs)
+        self.job_run.is_scheduled = True
+        self.job_run.handler(self.action_run, actionrun.ActionRun.NOTIFY_TRIGGER_READY)
+        assert not self.job_run._start_action_runs.mock_calls
+
+    def test_handler_trigger_ready_started(self):
+        autospec_method(self.job_run._start_action_runs)
+        self.job_run.is_scheduled = False
+        self.job_run.is_queued = False
+        self.job_run.handler(self.action_run, actionrun.ActionRun.NOTIFY_TRIGGER_READY)
+        assert self.job_run._start_action_runs.call_count == 1
+
     def test_handler_not_end_state_event(self):
         autospec_method(self.job_run.finalize)
         autospec_method(self.job_run._start_action_runs)
@@ -238,8 +251,8 @@ class TestJobRun(TestCase):
         startable_run.start.assert_called_with()
         assert not self.job_run.finalize.mock_calls
 
-    def test_handler_is_active(self):
-        self.job_run.action_runs.is_active = True
+    def test_handler_runs_not_done(self):
+        self.job_run.action_runs.is_done = False
         autospec_method(self.job_run._start_action_runs, return_value=[])
         autospec_method(self.job_run.finalize)
         self.job_run.handler(self.action_run, mock.Mock())
