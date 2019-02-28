@@ -1,12 +1,9 @@
-import copy
 import math
 import pickle
-from threading import Thread
 
 import boto3
 
 from tron.serialize.runstate.shelvestore import ShelveKey
-from tron.serialize.runstate.shelvestore import ShelveStateStore
 
 OBJECT_SIZE = 400000
 
@@ -16,57 +13,25 @@ class DynamoDBStateStore(object):
         self.dynamodb = boto3.resource('dynamodb', region_name=dynamodb_region)
         self.client = boto3.client('dynamodb', region_name=dynamodb_region)
         self.name = name
-        self.shelve = ShelveStateStore(name)
         self.table = self.dynamodb.Table(name.replace('/', '-'))
 
     def build_key(self, type, iden) -> ShelveKey:
         """
         It builds a unique partition key. The key could be objects with __str__ method.
         """
-        return ShelveKey(type, iden)
-
-    def isValid(self, shelve_kv_pairs: dict, dynamo_kv_pairs: dict) -> bool:
-        """
-        It checks if all keys in DynamoDB are in shelveStateStore and have the same values.
-        It is possible that some keys are in shelveStateStore but is not in DynamoDB when the
-        migration starts.
-        """
-        count = 0
-        for k, v in shelve_kv_pairs.items():
-            if k in dynamo_kv_pairs.keys():
-                count += 1
-                if pickle.dumps(dynamo_kv_pairs[k]) != pickle.dumps(shelve_kv_pairs[k]):
-                    return False
-        return count == len(dynamo_kv_pairs)
+        return f"{type} {iden}"
 
     def restore(self, keys) -> dict:
         """
         Fetch all under the same parition key(keys).
         ret: <dict of key to states>
         """
-        keys = list(keys)
+        items = zip(
+            keys,
+            (self[key] for key in keys),
+        )
 
-        def shelve_restore(keys, res):
-            res.update({k: v for k, v in self.shelve.restore(keys).items()})
-
-        def dynamodb_restore(keys, res):
-            items = zip(
-                keys,
-                (self[key] for key in keys),
-            )
-            res.update({k: v for k, v in items if v})
-
-        dynamo_kv_pairs, shelve_kv_pairs = {}, {}
-        thread1 = Thread(target = dynamodb_restore, args=(copy.deepcopy(keys), dynamo_kv_pairs,))
-        thread2 = Thread(target = shelve_restore, args=(keys, shelve_kv_pairs,))
-        thread1.start()
-        thread2.start()
-        thread1.join()
-        thread2.join()
-
-        if not self.isValid(shelve_kv_pairs, dynamo_kv_pairs):
-            self.alert()
-        return shelve_kv_pairs
+        return {k: v for k, v in items if v}
 
     def alert(self):
         import pysensu_yelp
@@ -119,19 +84,9 @@ class DynamoDBStateStore(object):
         and splice it into different parts under 400KB with different sort keys,
         and save them under the same partition key built.
         """
-        key_value_pairs = list(key_value_pairs)
-
-        def dynamodb_save(key_value_pairs):
-            for key, val in key_value_pairs:
-                self._delete_item(key)
-                self[key] = pickle.dumps(val)
-
-        thread1 = Thread(target = dynamodb_save, args=(copy.deepcopy(key_value_pairs),))
-        thread2 = Thread(target = self.shelve.save, args=(key_value_pairs,))
-        thread1.start()
-        thread2.start()
-        thread1.join()
-        thread2.join()
+        for key, val in key_value_pairs:
+            self._delete_item(key)
+            self[key] = pickle.dumps(val)
 
     def __setitem__(self, key: ShelveKey, val: bytes) -> None:
         num_partitions = math.ceil(len(val) / OBJECT_SIZE)
@@ -173,4 +128,4 @@ class DynamoDBStateStore(object):
             return 0
 
     def cleanup(self) -> None:
-        self.shelve.cleanup()
+        return
