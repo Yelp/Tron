@@ -33,6 +33,13 @@ Optional Fields
     Dictionary of key: value pairs to inform the monitoring framework on how to
     alert teams for job failures.
 
+    If you're using PaaSTA, for any monitoring fields not specified for a job,
+    Tron will default to those set in `monitoring.yaml` in your soa-configs.
+
+    You can see more about this behavior in the `PaaSTA docs`_.
+
+    .. _PaaSTA docs: https://paasta.readthedocs.io/en/latest/yelpsoa_configs.html#monitoring-yaml
+
     **team**
       Team responsible for the job. Must already be defined in the monitoring
       framework.
