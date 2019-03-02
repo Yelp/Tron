@@ -161,6 +161,7 @@ class ActionRun(Observable):
                 dict(running=RUNNING, fail_unknown=UNKNOWN, **default_transitions),
             QUEUED:
                 dict(
+                    ready=WAITING,
                     cancel=CANCELLED,
                     start=STARTING,
                     schedule=SCHEDULED,
