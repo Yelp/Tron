@@ -1,3 +1,4 @@
+import logging
 import math
 import pickle
 
@@ -6,6 +7,7 @@ import boto3
 from tron.serialize.runstate.shelvestore import ShelveKey
 
 OBJECT_SIZE = 400000
+log = logging.getLogger(__name__)
 
 
 class DynamoDBStateStore(object):
@@ -13,9 +15,96 @@ class DynamoDBStateStore(object):
         self.dynamodb = boto3.resource('dynamodb', region_name=dynamodb_region)
         self.client = boto3.client('dynamodb', region_name=dynamodb_region)
         self.name = name
-        self.table = self.dynamodb.Table(name.replace('/', '-'))
+        self.dynamodb_region = dynamodb_region
+        self._create_table_if_not_exists()
+        self.table = self.dynamodb.Table(name)
 
-    def build_key(self, type, iden) -> ShelveKey:
+    def _create_table_if_not_exists(self):
+        try:
+            self.dynamodb.create_table(
+                AttributeDefinitions=[
+                    {
+                        'AttributeName': 'key',
+                        'AttributeType': 'S',
+                    },
+                    {
+                        'AttributeName': 'index',
+                        'AttributeType': 'N',
+                    },
+                ],
+                KeySchema=[
+                    {
+                        'AttributeName': 'key',
+                        'KeyType': 'HASH',
+                    },
+                    {
+                        'AttributeName': 'index',
+                        'KeyType': 'RANGE',
+                    },
+                ],
+                ProvisionedThroughput={
+                    'ReadCapacityUnits': 10,
+                    'WriteCapacityUnits': 10,
+                },
+                TableName=self.name
+            )
+            self.client.get_waiter('table_exists').wait(TableName=self.name)
+            log.info('A new table {} is created in {}'.format(self.name, self.dynamodb_region))
+            self._enable_autoscaling()
+            # self._set_autoscaling_policy()
+        except self.client.exceptions.ResourceInUseException:
+            return
+
+    def _enable_autoscaling(self):
+        log.info('Enabling autoscaling')
+        autoscaling_client = boto3.client('application-autoscaling', region_name=self.dynamodb_region)
+        #Read capacity
+        autoscaling_client.register_scalable_target(ServiceNamespace='dynamodb',
+                                                    ResourceId='table/{}'.format(self.name),
+                                                    ScalableDimension='dynamodb:table:ReadCapacityUnits',
+                                                    MinCapacity=5,
+                                                    MaxCapacity=100)
+        #Write capacity
+        autoscaling_client.register_scalable_target(ServiceNamespace='dynamodb',
+                                                    ResourceId='table/{}'.format(self.name),
+                                                    ScalableDimension='dynamodb:table:WriteCapacityUnits',
+                                                    MinCapacity=5,
+                                                    MaxCapacity=100)
+        self._set_autoscaling_policy(autoscaling_client)
+
+    def _set_autoscaling_policy(self, autoscaling_client):
+        log.info('Setting autoscaling policy')
+        percent_of_use_to_aim_for = 70.0
+        scale_out_cooldown_in_seconds = 60
+        scale_in_cooldown_in_seconds = 60
+        autoscaling_client.put_scaling_policy(ServiceNamespace='dynamodb',
+                                              ResourceId='table/{}'.format(self.name),
+                                              PolicyType='TargetTrackingScaling',
+                                              PolicyName='ScaleDynamoDBReadCapacityUtilization',
+                                              ScalableDimension='dynamodb:table:ReadCapacityUnits',
+                                              TargetTrackingScalingPolicyConfiguration={
+                                                  'TargetValue': percent_of_use_to_aim_for,
+                                                  'PredefinedMetricSpecification': {
+                                                      'PredefinedMetricType': 'DynamoDBReadCapacityUtilization'
+                                                  },
+                                                  'ScaleOutCooldown': scale_out_cooldown_in_seconds,
+                                                  'ScaleInCooldown': scale_in_cooldown_in_seconds
+                                              })
+        autoscaling_client.put_scaling_policy(ServiceNamespace='dynamodb',
+                                              ResourceId='table/{}'.format(self.name),
+                                              PolicyType='TargetTrackingScaling',
+                                              PolicyName='ScaleDynamoDBWriteCapacityUtilization',
+                                              ScalableDimension='dynamodb:table:WriteCapacityUnits',
+                                              TargetTrackingScalingPolicyConfiguration={
+                                                  'TargetValue': percent_of_use_to_aim_for,
+                                                  'PredefinedMetricSpecification': {
+                                                      'PredefinedMetricType': 'DynamoDBWriteCapacityUtilization'
+                                                  },
+                                                  'ScaleOutCooldown': scale_out_cooldown_in_seconds,
+                                                  'ScaleInCooldown': scale_in_cooldown_in_seconds
+                                              })
+
+    def build_key(self, type, iden) -> str:
         """
         It builds a unique partition key. The key could be objects with __str__ method.
         """
@@ -26,21 +115,22 @@ class DynamoDBStateStore(object):
         Fetch all under the same parition key(keys).
         ret: <dict of key to states>
         """
+        # try:
         items = zip(
             keys,
             (self[key] for key in keys),
         )
-
+        # except Exception as e:
+        #     self.alert(str(e))
         return {k: v for k, v in items if v}
 
-    def alert(self):
+    def alert(self, msg: str):
         import pysensu_yelp
         result_dict = {
-            'check_name': 'tron_dynamoDB_synchronization_check',
+            'name': 'tron_dynamodb_check',
             'runbook': '',
             'status': 1,
-            'output': 'Data in dynamoDB is not synced to BerkleyDB. This is not critical \
-                      since only BerkleyDB is used to restore states right now',
+            'output': msg,
             'team': 'compute-infra',
             'tip': '',
             'page': None,
@@ -66,7 +156,6 @@ class DynamoDBStateStore(object):
             RequestItems={
                 table_name: {
                     'Keys': keys,
-                    'ProjectionExpression': 'val, index',
                     'ConsistentRead': True
                 },
             }
@@ -84,9 +173,12 @@ class DynamoDBStateStore(object):
         and splice it into different parts under 400KB with different sort keys,
         and save them under the same partition key built.
         """
+        # try:
         for key, val in key_value_pairs:
             self._delete_item(key)
             self[key] = pickle.dumps(val)
+        # except Exception as e:
+        #     self.alert(str(e))
 
     def __setitem__(self, key: ShelveKey, val: bytes) -> None:
         num_partitions = math.ceil(len(val) / OBJECT_SIZE)

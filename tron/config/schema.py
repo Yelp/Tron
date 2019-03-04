@@ -96,6 +96,7 @@ ConfigState = config_object_factory(
         'connection_details',
         'buffer_size',
         'dynamodb_region',
+        'table_name',
     ],
 )
 
