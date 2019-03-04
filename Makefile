@@ -7,9 +7,9 @@ GID:=$(shell id -g)
 
 -usage:
 	@echo "make test - Run tests"
-	@echo "make deb_xenial - Generate xenial deb package"
-	@echo "make itest_xenial - Run tests and integration checks"
-	@echo "make _itest_xenial - Run only integration checks"
+	@echo "make deb_trusty - Generate trusty deb package"
+	@echo "make itest_trusty - Run tests and integration checks"
+	@echo "make _itest_trusty - Run only integration checks"
 	@echo "make release - Prepare debian info for new release"
 	@echo "make clean - Get rid of scratch and byte files"
 	@echo "make dev - Get a local copy of trond running in debug mode in the foreground"
@@ -65,9 +65,9 @@ example_cluster:
 	tox -e example-cluster
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/[\x27\x22]/\\\x27/g')
-release: docker_xenial docs
-	$(DOCKER_RUN) tron-builder-xenial /bin/bash -c " \
-		dch -v $(VERSION) --distribution xenial --changelog debian/changelog \
+release: docker_trusty docs
+	$(DOCKER_RUN) tron-builder-trusty /bin/bash -c " \
+		dch -v $(VERSION) --distribution trusty --changelog debian/changelog \
 			$$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)' && \
 		chown $(UID):$(GID) debian/changelog \
 	"
