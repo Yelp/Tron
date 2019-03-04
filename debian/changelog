@@ -1,3 +1,11 @@
+tron (0.9.10.0) xenial; urgency=medium
+
+  * 0.9.10.0 tagged with 'make release'
+    Commit: Merge pull request #622 from Yelp/waiting-state  Waiting
+    state if an action is waiting for normal or cross-job dependencies
+
+ -- root <root@fbc31cafd48e>  Mon, 04 Mar 2019 19:48:20 +0000
+
 tron (0.9.9.15) xenial; urgency=medium
 
   * 0.9.9.15 tagged with 'make release'
