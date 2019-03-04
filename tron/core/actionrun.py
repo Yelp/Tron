@@ -167,14 +167,21 @@ class ActionRun(Observable):
                 ),
             QUEUED:
                 dict(
+                    ready=WAITING,
                     cancel=CANCELLED,
                     start=STARTING,
                     schedule=SCHEDULED,
                     **default_transitions,
                 ),
+            WAITING:
+                dict(
+                    cancel=CANCELLED,
+                    start=STARTING,
+                    **default_transitions,
+                ),
             SCHEDULED:
                 dict(
-                    ready=QUEUED,
+                    ready=WAITING,
                     queue=QUEUED,
                     cancel=CANCELLED,
                     start=STARTING,
@@ -925,6 +932,7 @@ class ActionRunCollection(object):
                 proxy.attr_proxy('is_scheduled', any),
                 proxy.attr_proxy('is_cancelled', any),
                 proxy.attr_proxy('is_active', any),
+                proxy.attr_proxy('is_waiting', any),
                 proxy.attr_proxy('is_queued', all),
                 proxy.attr_proxy('is_complete', all),
                 proxy.func_proxy('queue', eager_all),
@@ -979,9 +987,12 @@ class ActionRunCollection(object):
     def has_startable_action_runs(self):
         return any(self.get_startable_action_runs())
 
-    def _is_run_blocked(self, action_run):
+    def _is_run_blocked(self, action_run, in_job_only=False):
         """Returns True if the ActionRun is waiting on a required run to
         finish before it can run.
+
+        If in_job_only is True, only considers required actions in this job,
+        not triggers.
         """
         if action_run.is_done or action_run.is_active:
             return False
@@ -995,7 +1006,7 @@ class ActionRunCollection(object):
             if any(not run.is_complete for run in required_runs):
                 return True
 
-        if action_run.is_blocked_on_trigger:
+        if action_run.is_blocked_on_trigger and not in_job_only:
             return True
 
         return False
@@ -1013,7 +1024,9 @@ class ActionRunCollection(object):
             return False
 
         def done_or_blocked(action_run):
-            return action_run.is_done or self._is_run_blocked(action_run)
+            # Can't make progress if blocked by actions in the job, and other actions are done.
+            # On the other hand, not necessarily done if still waiting for cross-job dependencies.
+            return action_run.is_done or self._is_run_blocked(action_run, in_job_only=True)
 
         return all(done_or_blocked(run) for run in self.action_runs)
 

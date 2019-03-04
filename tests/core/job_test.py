@@ -109,17 +109,16 @@ class TestJob(TestCase):
         assert_equal(self.job.status, self.job.STATUS_DISABLED)
 
     def test_status_enabled(self):
-        def state_in(state):
-            return state in [ActionRun.SCHEDULED, ActionRun.QUEUED]
-
-        self.job.runs.get_run_by_state = state_in
+        self.job.runs.get_run_by_state = lambda state: MagicMock() if state == ActionRun.SCHEDULED else None
+        self.job.runs.get_active.return_value = []
         assert_equal(self.job.status, self.job.STATUS_ENABLED)
 
     def test_status_running(self):
-        self.job.runs.get_run_by_state = lambda s: MagicMock()
+        self.job.runs.get_active.return_value = [MagicMock()]
         assert_equal(self.job.status, self.job.STATUS_RUNNING)
 
     def test_status_unknown(self):
+        self.job.runs.get_active.return_value = []
         self.job.runs.get_run_by_state = lambda s: None
         assert_equal(self.job.status, self.job.STATUS_UNKNOWN)
 

@@ -179,7 +179,7 @@ class JobRun(Observable, Observer):
 
     def start(self):
         """Start this JobRun as a scheduled run (not a manual run)."""
-        if self.action_runs.has_startable_action_runs and self._do_start():
+        if self._do_start():
             return True
 
     def _do_start(self):
@@ -217,8 +217,8 @@ class JobRun(Observable, Observer):
         metrics.meter(f'tron.actionrun.{event}')
 
         if event == ActionRun.NOTIFY_TRIGGER_READY:
-            if timeutils.current_timestamp() < self.run_time.timestamp():
-                log.info(f"{self} triggers are satisfied but not run_time yet")
+            if self.is_scheduled or self.is_queued:
+                log.info(f"{self} triggers are satisfied but run not started yet")
                 return
 
             started = self._start_action_runs()
@@ -247,8 +247,8 @@ class JobRun(Observable, Observer):
                 )
                 return
 
-        if self.action_runs.is_active or self.action_runs.is_scheduled:
-            log.info(f"{self} still has running or scheduled actions")
+        if not self.action_runs.is_done:
+            log.info(f"{self} still has running or waiting actions")
             return
 
         # If we can't make any progress, we're done
@@ -306,8 +306,8 @@ class JobRun(Observable, Observer):
             return ActionRun.STARTING
         if self.action_runs.is_failed:
             return ActionRun.FAILED
-        if self.seconds_until_run_time() == 0 and self.action_runs.is_blocked_on_trigger:
-            return ActionRun.RUNNING
+        if self.action_runs.is_waiting:
+            return ActionRun.WAITING
         if self.action_runs.is_scheduled:
             return ActionRun.SCHEDULED
         if self.action_runs.is_queued:
@@ -405,7 +405,7 @@ class JobRunCollection(object):
 
     def get_active(self, node=None):
         return [
-            r for r in self.runs if (r.is_running or r.is_starting) and
+            r for r in self.runs if (r.is_running or r.is_starting or r.is_waiting) and
             (not node or r.node == node)
         ]
 
@@ -417,15 +417,6 @@ class JobRunCollection(object):
 
     def get_scheduled(self):
         return [r for r in self.runs if r.state == ActionRun.SCHEDULED]
-
-    def get_next_to_finish(self, node=None):
-        """Return the most recent run which is either running or scheduled. If
-        node is not None, then only looks for runs on that node.
-        """
-        return next_or_none(
-            r for r in self.runs if (not node or r.node == node) and
-            (r.is_running or r.is_scheduled)
-        )
 
     def next_run_num(self):
         """Return the next run number to use."""

@@ -151,7 +151,7 @@ class Job(Observable, Observer):
         """Current status."""
         if not self.enabled:
             return self.STATUS_DISABLED
-        if self.runs.get_run_by_state(ActionRun.RUNNING):
+        if self.runs.get_active():
             return self.STATUS_RUNNING
 
         if self.runs.get_run_by_state(ActionRun.SCHEDULED):
