@@ -1,3 +1,11 @@
+tron (0.9.9.15) xenial; urgency=medium
+
+  * 0.9.9.15 tagged with 'make release'
+    Commit: Merge pull request #624 from Yelp/add-waiting-state  Add
+    waiting state first for rollback safety
+
+ -- root <root@4aecdcf190e2>  Mon, 04 Mar 2019 17:53:07 +0000
+
 tron (0.9.9.14) trusty; urgency=medium
 
   * 0.9.9.14 tagged with 'make release'

@@ -455,6 +455,9 @@ Job Run States
 **FAIL**
     The run failed
 
+**WAITING**
+    The run has actions that are waiting for dependencies
+
 **QUE**
     The run is queued behind another run(s) and will start when said runs finish
 
