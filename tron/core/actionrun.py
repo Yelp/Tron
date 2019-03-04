@@ -173,12 +173,6 @@ class ActionRun(Observable):
                     schedule=SCHEDULED,
                     **default_transitions,
                 ),
-            WAITING:
-                dict(
-                    cancel=CANCELLED,
-                    start=STARTING,
-                    **default_transitions,
-                ),
             SCHEDULED:
                 dict(
                     ready=WAITING,
