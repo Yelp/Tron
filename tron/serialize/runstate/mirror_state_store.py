@@ -64,7 +64,8 @@ class MirrorStateStore():
         thread2.join()
 
         if not self.is_valid(shelve_kv_pairs, dynamo_kv_pairs):
-            self.dynamodb_store.alert()
+            self.dynamodb_store.alert('Data in dynamoDB is not synced to BerkleyDB. This is not critical \
+                                          since only BerkleyDB is used to restore states right now')
 
         return shelve_kv_pairs
 
