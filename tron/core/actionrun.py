@@ -142,6 +142,7 @@ class ActionRun(Observable):
     SKIPPED = 'skipped'
     STARTING = 'starting'
     SUCCEEDED = 'succeeded'
+    WAITING = 'waiting'
     UNKNOWN = 'unknown'
 
     default_transitions = dict(fail=FAILED, success=SUCCEEDED)
@@ -158,6 +159,12 @@ class ActionRun(Observable):
                 dict(started=RUNNING, fail=FAILED, fail_unknown=UNKNOWN),
             UNKNOWN:
                 dict(running=RUNNING, fail_unknown=UNKNOWN, **default_transitions),
+            WAITING:
+                dict(
+                    cancel=CANCELLED,
+                    start=STARTING,
+                    **default_transitions,
+                ),
             QUEUED:
                 dict(
                     cancel=CANCELLED,
