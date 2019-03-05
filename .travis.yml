@@ -3,6 +3,7 @@ language: python
 env:
   - TARGET=tox_py36
   - TARGET=debitest_xenial
+  - TARGET=debitest_trusty
   - TARGET=cluster_itests
 python:
   - 3.6

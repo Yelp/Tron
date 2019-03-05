@@ -52,7 +52,7 @@ _itest_%:
 debitest_%: deb_% _itest_%
 	@echo "Package for $* looks good"
 
-itest_%: test_in_docker_% debitest_%
+itest_%: debitest_%
 	@echo "itest $* OK"
 
 cluster_itests:
