@@ -404,8 +404,9 @@ class JobRunCollection(object):
         return any(self.get_pending())
 
     def get_active(self, node=None):
+        active_states = {ActionRun.RUNNING, ActionRun.STARTING, ActionRun.WAITING}
         return [
-            r for r in self.runs if (r.is_running or r.is_starting or r.is_waiting) and
+            r for r in self.runs if (r.state in active_states) and
             (not node or r.node == node)
         ]
 
