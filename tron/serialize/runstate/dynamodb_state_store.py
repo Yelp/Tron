@@ -115,13 +115,13 @@ class DynamoDBStateStore(object):
         Fetch all under the same parition key(keys).
         ret: <dict of key to states>
         """
-        # try:
-        items = zip(
-            keys,
-            (self[key] for key in keys),
-        )
-        # except Exception as e:
-        #     self.alert(str(e))
+        try:
+            items = zip(
+                keys,
+                (self[key] for key in keys),
+            )
+        except Exception as e:
+            self.alert(str(e))
         return {k: v for k, v in items if v}
 
     def alert(self, msg: str):
@@ -173,12 +173,12 @@ class DynamoDBStateStore(object):
         and splice it into different parts under 400KB with different sort keys,
         and save them under the same partition key built.
         """
-        # try:
-        for key, val in key_value_pairs:
-            self._delete_item(key)
-            self[key] = pickle.dumps(val)
-        # except Exception as e:
-        #     self.alert(str(e))
+        try:
+            for key, val in key_value_pairs:
+                self._delete_item(key)
+                self[key] = pickle.dumps(val)
+        except Exception as e:
+            self.alert(str(e))
 
     def __setitem__(self, key: ShelveKey, val: bytes) -> None:
         num_partitions = math.ceil(len(val) / OBJECT_SIZE)
@@ -213,6 +213,7 @@ class DynamoDBStateStore(object):
                     'key': str(key),
                     'index': 0,
                 },
+                ProjectionExpression='num_partitions',
                 ConsistentRead=True
             )
             return int(partition.get('Item', {}).get('num_partitions', 0))
