@@ -66,6 +66,12 @@
         "buffer_size": {
           "type": "number",
           "default": 1
+        },
+        "table_name": {
+          "type": "string"
+        },
+        "dynamodb_region": {
+          "type": "string"
         }
       }
     },
