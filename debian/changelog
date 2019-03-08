@@ -1,3 +1,11 @@
+tron (0.9.11.0) xenial; urgency=medium
+
+  * 0.9.11.0 tagged with 'make release'
+    Commit: Merge pull request #617 from Yelp/u/mingqiz/TRON-638-
+    migration  Migrating from Berkley DB to DynamoDB (TRON-638)
+
+ -- root <root@24e1b7483b5b>  Fri, 08 Mar 2019 17:27:53 +0000
+
 tron (0.9.10.0) xenial; urgency=medium
 
   * 0.9.10.0 tagged with 'make release'
