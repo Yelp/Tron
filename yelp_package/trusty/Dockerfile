@@ -23,12 +23,16 @@ RUN apt-get -q update && \
         libgpgme11 \
         libssl-dev \
         libyaml-dev \
-        python3.6-dev \
         python-pip \
+	python3.6-dev \
         wget \
     && apt-get -q clean
 
 RUN pip install virtualenv==15.1.0 tox-pip-extensions==1.2.1 tox==3.1.3
+
+RUN apt-get -q install --no-install-recommends \
+	libjs-underscore \
+	python-virtualenv
 
 RUN cd /tmp && \
     wget http://mirrors.kernel.org/ubuntu/pool/universe/d/dh-virtualenv/dh-virtualenv_1.0-1_all.deb && \
