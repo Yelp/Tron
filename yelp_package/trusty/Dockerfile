@@ -30,6 +30,7 @@ RUN apt-get -q update && \
 
 RUN pip install virtualenv==15.1.0 tox-pip-extensions==1.2.1 tox==3.1.3
 
+# gdebi hangs on jenkins box if these two packages are removed. It is necessary to get them in advance.
 RUN apt-get -q install --no-install-recommends \
 	libjs-underscore \
 	python-virtualenv
