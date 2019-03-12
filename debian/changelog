@@ -1,3 +1,11 @@
+tron (0.9.11.1) xenial; urgency=medium
+
+  * 0.9.11.1 tagged with 'make release'
+    Commit: Merge pull request #628 from Yelp/u/mingqiz/TRON-661  Fixed
+    trusty build
+
+ -- root <root@5270842b166b>  Tue, 12 Mar 2019 00:32:40 +0000
+
 tron (0.9.11.0) xenial; urgency=medium
 
   * 0.9.11.0 tagged with 'make release'
