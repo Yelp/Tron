@@ -141,7 +141,7 @@ class ActionRunAdapter(RunAdapter):
     @toggle_flag('job_run')
     def get_requirements(self):
         action_name = self._obj.action_name
-        required = self.job_run.action_graph.get_required_actions(action_name)
+        required = self.job_run.action_graph.get_dependencies(action_name)
         return [act.name for act in required]
 
     def _get_serializer(self):
@@ -189,14 +189,16 @@ class ActionGraphAdapter(object):
         self.action_graph = action_graph
 
     def get_repr(self):
-        def build(action):
+        def build(action_name):
+            action = self.action_graph[action_name]
+            dependencies = self.action_graph.get_dependencies(action_name, include_triggers=True)
             return {
                 'name': action.name,
                 'command': action.command,
-                'dependent': [dep for dep in action.dependent_actions],
+                'dependencies': [d.name for d in dependencies],
             }
 
-        return [build(action) for action in self.action_graph.get_actions()]
+        return [build(action) for action in self.action_graph.names(include_triggers=True)]
 
 
 class ActionRunGraphAdapter(object):
@@ -205,7 +207,8 @@ class ActionRunGraphAdapter(object):
 
     def get_repr(self):
         def build(action_run):
-            action = self.action_runs.action_graph[action_run.action_name]
+            graph = self.action_runs.action_graph
+            dependencies = graph.get_dependencies(action_run.action_name, include_triggers=True)
             return {
                 'id': action_run.id,
                 'name': action_run.action_name,
@@ -214,10 +217,24 @@ class ActionRunGraphAdapter(object):
                 'state': action_run.state,
                 'start_time': action_run.start_time,
                 'end_time': action_run.end_time,
-                'dependent': [dep for dep in action.dependent_actions],
+                'dependencies': [d.name for d in dependencies]
             }
 
-        return [build(action_run) for action_run in self.action_runs]
+        def build_trigger(trigger_name):
+            graph = self.action_runs.action_graph
+            trigger = graph[trigger_name]
+            dependencies = graph.get_dependencies(trigger_name, include_triggers=True)
+            return {
+                'name': trigger.name,
+                'command': trigger.command,
+                'dependencies': [d.name for d in dependencies],
+                'state': 'unknown',
+            }
+
+        return [build(action_run) for action_run in self.action_runs] + [
+            build_trigger(trigger_name)
+            for trigger_name in self.action_runs.action_graph.all_triggers
+        ]
 
 
 class JobRunAdapter(RunAdapter):
@@ -307,7 +324,7 @@ class JobAdapter(ReprAdapter):
         return SchedulerAdapter(self._obj.scheduler).get_repr()
 
     def get_action_names(self):
-        return self._obj.action_graph.names
+        return list(self._obj.action_graph.names())
 
     @toggle_flag('include_node_pool')
     def get_node_pool(self):

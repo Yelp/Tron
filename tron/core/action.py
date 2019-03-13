@@ -32,8 +32,6 @@ class Action:
     triggered_by: set = None
     on_upstream_rerun: str = None
     trigger_timeout: datetime.timedelta = None
-    required_actions: set = field(default_factory=set)
-    dependent_actions: set = field(default_factory=set)
 
     @property
     def is_cleanup(self):

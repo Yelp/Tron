@@ -330,6 +330,7 @@ class TestJobSchedulerFactory(TestCase):
             self.output_stream_dir,
             self.time_zone,
             self.action_runner,
+            mock.Mock(),
         )
 
     def test_build(self):

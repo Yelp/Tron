@@ -50,7 +50,6 @@ class TestAction:
         assert new_action.name == config.name
         assert new_action.command == config.command
         assert new_action.node_pool is None
-        assert new_action.required_actions == set()
         assert new_action.executor == config.executor
         assert new_action.cpus == config.cpus
         assert new_action.mem == config.mem
@@ -73,7 +72,6 @@ class TestAction:
         new_action = Action.from_config(config)
         assert new_action.name == config.name
         assert new_action.command == config.command
-        assert new_action.required_actions == set()
         assert new_action.executor == config.executor
         assert new_action.constraints == set()
         assert new_action.docker_image is None

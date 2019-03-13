@@ -2,7 +2,6 @@ import logging
 
 from tron import command_context
 from tron import node
-from tron.core import actiongraph
 from tron.core import jobrun
 from tron.core.actionrun import ActionRun
 from tron.serialize import filehandler
@@ -109,12 +108,9 @@ class Job(Observable, Observer):
         parent_context,
         output_path,
         action_runner,
+        action_graph,
     ):
         """Factory method to create a new Job instance from configuration."""
-        action_graph = actiongraph.ActionGraph.from_config(
-            job_config.actions,
-            job_config.cleanup_action,
-        )
         runs = jobrun.JobRunCollection.from_config(job_config)
         node_repo = node.NodePoolRepository.get_instance()
 

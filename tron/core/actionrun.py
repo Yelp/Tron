@@ -35,7 +35,7 @@ class ActionRunFactory(object):
 
     @classmethod
     def build_action_run_collection(cls, job_run, action_runner):
-        """Create an ActionRunGraph from an ActionGraph and JobRun."""
+        """Create an ActionRunCollection from an ActionGraph and JobRun."""
         action_run_map = {
             maybe_decode(name): cls.build_run_for_action(
                 job_run,
@@ -991,7 +991,7 @@ class ActionRunCollection(object):
         if action_run.is_done or action_run.is_active:
             return False
 
-        required_actions = self.action_graph.get_required_actions(
+        required_actions = self.action_graph.get_dependencies(
             action_run.action_name,
         )
 
