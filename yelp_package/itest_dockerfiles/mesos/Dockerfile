@@ -29,7 +29,7 @@ RUN echo "deb http://repos.mesosphere.com/ubuntu xenial main" > /etc/apt/sources
         docker.io=18.06.1-0ubuntu1.2~16.04.1 \
         libsasl2-modules \
         libstdc++6 \
-        mesos=1.7.1-2.0.1 > /dev/null && \
+        mesos=1.7.2-2.0.1 > /dev/null && \
     rm -rf /var/lib/apt/lists/*
 
 COPY mesos-secrets mesos-slave-secret /etc/
