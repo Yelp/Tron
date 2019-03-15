@@ -52,7 +52,7 @@ def mock_respond():
         'tron.api.resource.respond',
         autospec=True,
     ) as mock_respond:
-        mock_respond.side_effect = lambda _req, output, code=None: output
+        mock_respond.side_effect = lambda request, response, code=None: response
         yield mock_respond
 
 
@@ -78,8 +78,8 @@ class TestHandleCommand:
         www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
         mock_respond.assert_called_with(
-            request,
-            {'error': f"Unknown command '{command}' for '{obj}'"},
+            request=request,
+            response={'error': f"Unknown command '{command}' for '{obj}'"},
             code=http.NOT_IMPLEMENTED
         )
 
@@ -90,8 +90,8 @@ class TestHandleCommand:
         www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
         mock_respond.assert_called_with(
-            request,
-            {'result': mock_controller.handle_command.return_value},
+            request=request,
+            response={'result': mock_controller.handle_command.return_value},
         )
 
     def test_handle_command_error(self, mock_respond):
@@ -102,7 +102,7 @@ class TestHandleCommand:
         mock_controller.handle_command.side_effect = error
         www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
-        mock_respond.assert_called_with(request, {'error': mock.ANY})
+        mock_respond.assert_called_with(request=request, response={'error': mock.ANY})
 
 
 class TestActionRunResource(WWWTestCase):
@@ -285,8 +285,8 @@ class TestConfigResource:
         self.resource.render_GET(request)
         self.controller.read_config.assert_called_with(name)
         mock_respond.assert_called_with(
-            request,
-            self.resource.controller.read_config.return_value,
+            request=request,
+            response=self.resource.controller.read_config.return_value,
         )
 
     def test_render_POST_update(self, mock_respond):
@@ -298,7 +298,7 @@ class TestConfigResource:
             'status': 'Active',
             'error': self.resource.controller.update_config.return_value,
         }
-        mock_respond.assert_called_with(request, expected_response)
+        mock_respond.assert_called_with(request=request, response=expected_response)
 
     def test_render_POST_delete(self, mock_respond):
         name, config, hash = 'the_name', '', ''
@@ -309,7 +309,7 @@ class TestConfigResource:
             'status': 'Active',
             'error': self.resource.controller.delete_config.return_value,
         }
-        mock_respond.assert_called_with(request, expected_response)
+        mock_respond.assert_called_with(request=request, response=expected_response)
 
 
 class TestMetricsResource:
@@ -318,7 +318,7 @@ class TestMetricsResource:
         resource = www.MetricsResource()
         resource.render_GET(request)
         mock_respond.assert_called_with(
-            request, mock_view_metrics.return_value
+            request=request, response=mock_view_metrics.return_value
         )
 
 
