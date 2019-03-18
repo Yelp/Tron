@@ -18,9 +18,11 @@ class MirrorStateStore():
         for k, v in shelve_kv_pairs.items():
             if k in dynamo_kv_pairs.keys():
                 count += 1
-                if pformat(dynamo_kv_pairs[k]) != pformat(shelve_kv_pairs[k]):
-                    diffs.append(pformat(shelve_kv_pairs[k]))
-                    diffs.append(pformat(dynamo_kv_pairs[k]))
+                dynamo_diff = pformat(dynamo_kv_pairs[k])
+                shelve_diff = pformat(shelve_kv_pairs[k])
+                if dynamo_diff != shelve_diff:
+                    diffs.append(dynamo_diff)
+                    diffs.append(shelve_diff)
         return count == len(dynamo_kv_pairs) and not diffs
 
     def build_key(self, type, iden):
