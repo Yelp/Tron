@@ -3,7 +3,6 @@ import pickle
 import tempfile
 
 import boto3
-import mock
 import pytest
 from moto import mock_dynamodb2
 
@@ -17,41 +16,39 @@ filename = os.path.join(tempfile.mkdtemp(), 'state')
 @pytest.fixture
 def store():
     with mock_dynamodb2():
-        with mock.patch('tron.serialize.runstate.dynamodb_state_store.DynamoDBStateStore._create_table_if_not_exists',
-                        autospec=True):
-            dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
-            store = DynamoDBStateStore(filename, 'us-west-2')
-            store.table = dynamodb.create_table(
-                TableName=filename.replace('/', '-'),
-                KeySchema=[
-                    {
-                        'AttributeName': 'key',
-                        'KeyType': 'HASH'  # Partition key
-                    },
-                    {
-                        'AttributeName': 'index',
-                        'KeyType': 'RANGE'  # Sort key
-                    }
-                ],
-                AttributeDefinitions=[
-                    {
-                        'AttributeName': 'key',
-                        'AttributeType': 'S'
-                    },
-                    {
-                        'AttributeName': 'index',
-                        'AttributeType': 'N'
-                    },
-
-                ],
-                ProvisionedThroughput={
-                    'ReadCapacityUnits': 10,
-                    'WriteCapacityUnits': 10
+        dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
+        store = DynamoDBStateStore(filename, 'us-west-2')
+        store.table = dynamodb.create_table(
+            TableName=filename.replace('/', '-'),
+            KeySchema=[
+                {
+                    'AttributeName': 'key',
+                    'KeyType': 'HASH'  # Partition key
+                },
+                {
+                    'AttributeName': 'index',
+                    'KeyType': 'RANGE'  # Sort key
                 }
-            )
-            store.client = boto3.client('dynamodb', region_name='us-west-2')
-            # Has to be yield here for moto to work
-            yield store
+            ],
+            AttributeDefinitions=[
+                {
+                    'AttributeName': 'key',
+                    'AttributeType': 'S'
+                },
+                {
+                    'AttributeName': 'index',
+                    'AttributeType': 'N'
+                },
+
+            ],
+            ProvisionedThroughput={
+                'ReadCapacityUnits': 10,
+                'WriteCapacityUnits': 10
+            }
+        )
+        store.client = boto3.client('dynamodb', region_name='us-west-2')
+        # Has to be yield here for moto to work
+        yield store
 
 
 @pytest.fixture
