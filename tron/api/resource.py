@@ -42,10 +42,10 @@ class JSONEncoder(json.JSONEncoder):
         return super(JSONEncoder, self).default(o)
 
 
-def respond(request, response_dict, code=None, headers=None):
+def respond(request, response, code=None, headers=None):
     """Helper to generate a json response"""
-    if code is None:
-        code = http.INTERNAL_SERVER_ERROR if response_dict.get('error') else http.OK
+    if code is None and type(response) is dict:
+        code = http.INTERNAL_SERVER_ERROR if response.get('error') else http.OK
     request.setResponseCode(code)
     request.setHeader(b'content-type', b'application/json; charset=utf-8')
     request.setHeader(b'Access-Control-Allow-Origin', b'*')
@@ -53,9 +53,9 @@ def respond(request, response_dict, code=None, headers=None):
         request.setHeader(str(key), str(val))
 
     result = json.dumps(
-        response_dict,
+        response,
         cls=JSONEncoder,
-    ) if response_dict else ""
+    ) if response else ""
 
     if type(result) is not bytes:
         result = result.encode('utf8')
@@ -69,17 +69,17 @@ def handle_command(request, api_controller, obj, **kwargs):
     log.info("Handling '%s' request on %s", command, obj)
     try:
         response = api_controller.handle_command(command, **kwargs)
-        return respond(request, {'result': response})
+        return respond(request=request, response={'result': response})
     except controller.UnknownCommandError:
         error_msg = f"Unknown command '{command}' for '{obj}'"
         log.warning(error_msg)
         return respond(
-            request, {'error': error_msg}, code=http.NOT_IMPLEMENTED
+            request=request, response={'error': error_msg}, code=http.NOT_IMPLEMENTED
         )
     except Exception as e:
         log.exception('%r while executing command %s for %s', e, command, obj)
         trace = traceback.format_exc()
-        return respond(request, {'error': trace})
+        return respond(request=request, response={'error': trace})
 
 
 class ErrorResource(resource.Resource):
@@ -93,11 +93,11 @@ class ErrorResource(resource.Resource):
 
     @AsyncResource.bounded
     def render_GET(self, request):
-        return respond(request, {'error': self.error}, code=self.code)
+        return respond(request=request, response={'error': self.error}, code=self.code)
 
     @AsyncResource.exclusive
     def render_POST(self, request):
-        return respond(request, {'error': self.error}, code=self.code)
+        return respond(request=request, response={'error': self.error}, code=self.code)
 
     def getChild(self, chnam, request):
         """ Overrided getChild to ensure a NoResource is not returned """
@@ -133,7 +133,7 @@ class ActionRunResource(resource.Resource):
             include_stdout=requestargs.get_bool(request, 'include_stdout'),
             include_stderr=requestargs.get_bool(request, 'include_stderr'),
         )
-        return respond(request, run_adapter.get_repr())
+        return respond(request=request, response=run_adapter.get_repr())
 
     @AsyncResource.exclusive
     def render_POST(self, request):
@@ -170,7 +170,7 @@ class JobRunResource(resource.Resource):
             include_action_runs=include_runs,
             include_action_graph=include_graph,
         )
-        return respond(request, run_adapter.get_repr())
+        return respond(request=request, response=run_adapter.get_repr())
 
     @AsyncResource.exclusive
     def render_POST(self, request):
@@ -227,7 +227,7 @@ class JobResource(resource.Resource):
             include_action_graph=include_graph,
             num_runs=num_runs,
         )
-        return respond(request, job_adapter.get_repr())
+        return respond(request=request, response=job_adapter.get_repr())
 
     @AsyncResource.exclusive
     def render_POST(self, request):
@@ -251,8 +251,8 @@ class ActionRunHistoryResource(resource.Resource):
     @AsyncResource.bounded
     def render_GET(self, request):
         return respond(
-            request,
-            adapter.adapt_many(adapter.ActionRunAdapter, self.action_runs),
+            request=request,
+            response=adapter.adapt_many(adapter.ActionRunAdapter, self.action_runs),
         )
 
 
@@ -315,7 +315,7 @@ class JobCollectionResource(resource.Resource):
             'include_node_pool',
             default=True,
         )
-        output = dict(
+        response = dict(
             jobs=self.get_data(
                 include_job_runs,
                 include_action_runs,
@@ -323,7 +323,7 @@ class JobCollectionResource(resource.Resource):
                 include_node_pool,
             ),
         )
-        return respond(request, output)
+        return respond(request=request, response=response)
 
     @AsyncResource.exclusive
     def render_POST(self, request):
@@ -355,12 +355,12 @@ class ConfigResource(resource.Resource):
         config_name = requestargs.get_string(request, 'name')
         if not config_name:
             return respond(
-                request,
-                {'error': "'name' for config is required."},
+                request=request,
+                response={'error': "'name' for config is required."},
                 code=http.BAD_REQUEST,
             )
         response = self.controller.read_config(config_name)
-        return respond(request, response)
+        return respond(request=request, response=response)
 
     @AsyncResource.exclusive
     def render_POST(self, request):
@@ -371,8 +371,8 @@ class ConfigResource(resource.Resource):
 
         if not name:
             return respond(
-                request,
-                {'error': "'name' for config is required."},
+                request=request,
+                response={'error': "'name' for config is required."},
                 code=http.BAD_REQUEST,
             )
 
@@ -393,7 +393,7 @@ class ConfigResource(resource.Resource):
 
         if error:
             response['error'] = error
-        return respond(request, response)
+        return respond(request=request, response=response)
 
 
 class StatusResource(resource.Resource):
@@ -407,7 +407,7 @@ class StatusResource(resource.Resource):
     @AsyncResource.bounded
     def render_GET(self, request):
         return respond(
-            request, {
+            request=request, response={
                 'status': "I'm alive.",
                 'version': __version__,
             }
@@ -423,7 +423,7 @@ class MetricsResource(resource.Resource):
 
     @AsyncResource.exclusive
     def render_GET(self, request):
-        return respond(request, view_all_metrics())
+        return respond(request=request, response=view_all_metrics())
 
 
 class EventsResource(resource.Resource):
@@ -436,21 +436,21 @@ class EventsResource(resource.Resource):
     @AsyncResource.exclusive
     def render_GET(self, request):
         response = self.controller.info()
-        return respond(request, response)
+        return respond(request=request, response=response)
 
     @AsyncResource.bounded
     def render_POST(self, request):
         command = requestargs.get_string(request, 'command')
         if command not in self.controller.COMMANDS:
             return respond(
-                request,
-                dict(error=f'Unknown command: {command}'),
+                request=request,
+                response=dict(error=f'Unknown command: {command}'),
                 code=http.BAD_REQUEST,
             )
         event = requestargs.get_string(request, 'event')
         fn = getattr(self.controller, command)
         response = fn(event)
-        return respond(request, response)
+        return respond(request=request, response=response)
 
 
 class ApiRootResource(resource.Resource):
@@ -477,7 +477,7 @@ class ApiRootResource(resource.Resource):
             'jobs': self.children[b'jobs'].get_job_index(),
             'namespaces': self.children[b'config'].get_config_index(),
         }
-        return respond(request, response)
+        return respond(request=request, response=response)
 
 
 class RootResource(resource.Resource):
