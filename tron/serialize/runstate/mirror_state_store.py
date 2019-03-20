@@ -1,5 +1,5 @@
 import copy
-import pickle
+from pprint import pformat
 from threading import Thread
 
 
@@ -8,7 +8,7 @@ class MirrorStateStore():
         self.shelve_store = shelve_store
         self.dynamodb_store = dynamodb_store
 
-    def is_valid(self, shelve_kv_pairs: dict, dynamo_kv_pairs: dict) -> bool:
+    def is_valid(self, shelve_kv_pairs: dict, dynamo_kv_pairs: dict, diffs: list) -> bool:
         """
         It checks if all keys in DynamoDB are in shelveStateStore and have the same values.
         It is possible that some keys are in shelveStateStore but is not in DynamoDB when the
@@ -18,9 +18,12 @@ class MirrorStateStore():
         for k, v in shelve_kv_pairs.items():
             if k in dynamo_kv_pairs.keys():
                 count += 1
-                if pickle.dumps(dynamo_kv_pairs[k]) != pickle.dumps(shelve_kv_pairs[k]):
-                    return False
-        return count == len(dynamo_kv_pairs)
+                dynamo_diff = pformat(dynamo_kv_pairs[k])
+                shelve_diff = pformat(shelve_kv_pairs[k])
+                if dynamo_diff != shelve_diff:
+                    diffs.append(dynamo_diff)
+                    diffs.append(shelve_diff)
+        return count == len(dynamo_kv_pairs) and not diffs
 
     def build_key(self, type, iden):
         """
@@ -63,9 +66,12 @@ class MirrorStateStore():
         thread1.join()
         thread2.join()
 
-        if not self.is_valid(shelve_kv_pairs, dynamo_kv_pairs):
-            self.dynamodb_store.alert('Data in dynamoDB is not synced to BerkleyDB. This is not critical \
-                                          since only BerkleyDB is used to restore states right now')
+        diffs = []
+        if not self.is_valid(shelve_kv_pairs, dynamo_kv_pairs, diffs):
+            msg = 'Data in dynamoDB is not synced to BerkleyDB. This is not critical \
+                                          since only BerkleyDB is used to restore states right now'
+            msg.append('\n\n'.join(diffs))
+            self.dynamodb_store.alert(msg)
 
         return shelve_kv_pairs
 
