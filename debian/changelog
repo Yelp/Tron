@@ -1,3 +1,11 @@
+tron (0.9.12.1) xenial; urgency=medium
+
+  * 0.9.12.1 tagged with 'make release'
+    Commit: Merge pull request #631 from Yelp/u/mingqiz/TRON-638-
+    fix_validation  fixed data validation of dynamodb migration
+
+ -- root <root@62efe760e39e>  Fri, 22 Mar 2019 18:06:11 +0000
+
 tron (0.9.12.0) xenial; urgency=medium
 
   * 0.9.12.0 tagged with 'make release'
