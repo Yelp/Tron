@@ -123,7 +123,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
         status = 0
     elif last_state == State.STUCK:
         prefix = "WARN: Job exceeded expected runtime or still running when next job is scheduled"
-        status = 1
+        status = 2
     elif last_state == State.FAILED:
         prefix = "CRIT: The last job run failed!"
         status = 2
