@@ -6,7 +6,7 @@ After=network.target
 User=tron
 EnvironmentFile=/etc/default/tron
 ExecStart=/usr/bin/trond --lock-file=${LOCKFILE:-$PIDFILE} --working-dir=${WORKINGDIR} --host ${LISTEN_HOST} --port ${LISTEN_PORT} ${DAEMON_OPTS}
-TimeoutStopSec=20
+TimeoutStopSec=60
 Restart=on-failure
 
 [Install]
