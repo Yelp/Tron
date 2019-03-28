@@ -1455,33 +1455,41 @@ class TestCheckPreciousJobs(TestCase):
         assert '2018.10.14' in run_buckets
         assert run_buckets['2018.10.14'] == []
 
-    @patch('check_tron_jobs.Client', autospec=True)
-    def test_compute_check_result_for_job_not_precious(self, mock_client):
+    @patch('tron.bin.check_tron_jobs.guess_realert_every', mock.Mock(return_value=1), autospec=None)
+    @patch('tron.bin.check_tron_jobs.Client', autospec=True)
+    @patch('tron.bin.check_tron_jobs.compute_check_result_for_job_runs', autospec=True)
+    @patch('tron.bin.check_tron_jobs.get_object_type_from_identifier', autospec=True)
+    def test_compute_check_result_for_job_not_precious(
+        self,
+        mock_get_obj_type,
+        mock_check_job_runs,
+        mock_client,
+    ):
         client = mock_client('fake_server')
         del self.job['monitoring'][check_tron_jobs.PRECIOUS_JOB_ATTR]
-        check_tron_jobs.guess_realert_every = mock.Mock(return_value=1)
-        check_tron_jobs.get_object_type_from_identifier = \
-            mock.Mock(return_value=mock.Mock())
         client.job = mock.Mock(return_value=self.job)
-        check_tron_jobs.compute_check_result_for_job_runs = mock.Mock(
-            return_value={
-                'output': 'fake_output',
-                'status': 'fake_status'
-            }
-        )
+        mock_check_job_runs.return_value = {
+            'output': 'fake_output',
+            'status': 'fake_status'
+        }
 
         results = check_tron_jobs.compute_check_result_for_job(
             client, self.job
         )
 
+        # make sure all job runs for a job are included by not incl count arg
+        assert client.job.call_args_list == [mock.call(
+            mock_get_obj_type.return_value.url,
+            include_action_runs=True,
+        )]
         assert len(results) == 1
         assert results[0]['name'] == 'check_tron_job.fake_job'
-        assert check_tron_jobs.compute_check_result_for_job_runs.call_count == 1
+        assert mock_check_job_runs.call_count == 1
 
-    @patch('check_tron_jobs.Client', autospec=True)
+    @patch('tron.bin.check_tron_jobs.guess_realert_every', mock.Mock(return_value=1), autospec=None)
+    @patch('tron.bin.check_tron_jobs.Client', autospec=True)
     def test_compute_check_result_for_job_disabled(self, mock_client):
         client = mock_client('fake_server')
-        check_tron_jobs.guess_realert_every = mock.Mock(return_value=1)
         self.job['status'] = 'disabled'
 
         results = check_tron_jobs.compute_check_result_for_job(
@@ -1493,26 +1501,34 @@ class TestCheckPreciousJobs(TestCase):
         assert results[0]['output'] == \
             "OK: fake_job is disabled and won't be checked."
 
+    @patch('tron.bin.check_tron_jobs.guess_realert_every', mock.Mock(return_value=1), autospec=None)
     @patch('time.time', mock.Mock(return_value=1539460800.0), autospec=None)
-    @patch('check_tron_jobs.Client', autospec=True)
-    def test_compute_check_result_for_job_enabled(self, mock_client):
+    @patch('tron.bin.check_tron_jobs.Client', autospec=True)
+    @patch('tron.bin.check_tron_jobs.compute_check_result_for_job_runs', autospec=True)
+    @patch('tron.bin.check_tron_jobs.get_object_type_from_identifier', autospec=True)
+    def test_compute_check_result_for_job_enabled(
+        self,
+        mock_get_obj_type,
+        mock_check_job_runs,
+        mock_client,
+    ):
         client = mock_client('fake_server')
         self.job['monitoring']['check_every'] = 500
-        check_tron_jobs.guess_realert_every = mock.Mock(return_value=1)
-        check_tron_jobs.get_object_type_from_identifier = \
-            mock.Mock(return_value=mock.Mock())
         client.job = mock.Mock(return_value=self.job)
-        check_tron_jobs.compute_check_result_for_job_runs = mock.Mock(
-            return_value={
-                'output': 'fake_output',
-                'status': 'fake_status'
-            }
-        )
+        mock_check_job_runs.return_value = {
+            'output': 'fake_output',
+            'status': 'fake_status'
+        }
 
         results = check_tron_jobs.compute_check_result_for_job(
             client, self.job
         )
 
+        # make sure all job runs for a job are included by not incl count arg
+        assert client.job.call_args_list == [mock.call(
+            mock_get_obj_type.return_value.url,
+            include_action_runs=True,
+        )]
         assert len(results) == 4
         assert set([res['name'] for res in results]) == set([
             'check_tron_job.fake_job-2018.10.10',
