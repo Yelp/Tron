@@ -284,6 +284,11 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
     def test_bad_date_format(self):
         assert DateArithmetic.parse('~~') is None
 
+    def test_round_day(self):
+        start = datetime.datetime(2019, 3, 30)
+        delta = timeutils.macro_timedelta(start, months=-1)
+        assert (start + delta).day == 28
+
 
 class DateArithmeticYMDHTest(TestCase):
     def test_ym_plus(self):
@@ -341,6 +346,11 @@ class DateArithmeticYMDHTest(TestCase):
 
         assert_equal(parse(2018, 1, 1, 1, 2), '2018-01-01T01:01')
         assert_equal(parse(2018, 1, 1, 0, 0), '2017-12-31T23:59')
+
+    def test_ym_minus_round(self):
+        dt = datetime.datetime(2019, 3, 30)
+        s = timeutils.DateArithmetic.parse('ym-1', dt=dt)
+        assert s == '2019-02'
 
 
 class TestDateArithmeticWithTimezone(DateArithmeticTestCase):
