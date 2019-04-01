@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import unicode_literals
 
+import calendar
 import datetime
 import re
 
@@ -37,11 +38,17 @@ def macro_timedelta(start_date, years=0, months=0, days=0, hours=0, minutes=0):
     while new_month < 1:
         new_month += 12
         years -= 1
+    new_year = start_date.year + years
+
+    # TRON-1045: round day to the max days in a given month if the day doesn't
+    # exist for that month. (e.g. Feb 30 rounds to Feb 28 in a non-leap year)
+    _, days_in_month = calendar.monthrange(new_year, new_month)
+    new_day = min(start_date.day, days_in_month)
 
     end_date = datetime.datetime(
-        start_date.year + years,
+        new_year,
         new_month,
-        start_date.day,
+        new_day,
         start_date.hour,
         start_date.minute,
     )
