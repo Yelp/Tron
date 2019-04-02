@@ -1,3 +1,10 @@
+tron (0.9.12.2) xenial; urgency=medium
+
+  * 0.9.12.2 tagged with 'make release'
+    Commit: tron/__init__.py
+
+ -- root <root@f0ee26eb2d46>  Tue, 02 Apr 2019 18:10:28 +0000
+
 tron (0.9.12.1) xenial; urgency=medium
 
   * 0.9.12.1 tagged with 'make release'
