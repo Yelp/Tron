@@ -1,3 +1,11 @@
+tron (0.9.12.3) xenial; urgency=medium
+
+  * 0.9.12.3 tagged with 'make release'
+    Commit: Merge pull request #639 from Yelp/u/mingqiz/TRON-1041-
+    open_file_limit  changed max number of open files to 10000
+
+ -- root <root@8634a3efac61>  Wed, 03 Apr 2019 00:39:28 +0000
+
 tron (0.9.12.2) xenial; urgency=medium
 
   * 0.9.12.2 tagged with 'make release'
