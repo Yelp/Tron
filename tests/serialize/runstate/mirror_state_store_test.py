@@ -1,6 +1,7 @@
 import os
 import pickle
 import tempfile
+from pprint import pformat
 
 import boto3
 import pytest
@@ -78,14 +79,12 @@ class TestDynamoDBStateStore:
         store.save(key_value_pairs)
         # Retreive from both and check if equal
         stored_data = Py2Shelf(filename)
+        keys = [store.build_key("DynamoDBTest", "two")]
+        vals = store.restore(keys)
 
         for key, value in key_value_pairs:
-            assert_equal(store.dynamodb_store[key], value)
+            assert_equal(pformat(vals[key]), pformat(value))
             assert_equal(stored_data[str(key.key)], value)
-
-        # Clean up
-        for key, value in key_value_pairs:
-            store.dynamodb_store._delete_item(key)
         store.cleanup()
 
     def test_restore_from_shelve_after_dynamodb_dies(self, store, small_object, large_object):
@@ -99,8 +98,6 @@ class TestDynamoDBStateStore:
         store.save(key_value_pairs)
         # This only cleans up data in dynamoDB
         keys = [k for k, v in key_value_pairs]
-        for key in keys:
-            store.dynamodb_store._delete_item(key)
         # Check if retrievd data is valid
         retrieved_data = store.restore(keys)
         for key in keys:
