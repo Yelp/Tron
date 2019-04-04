@@ -35,6 +35,7 @@ class DynamoDBStateStore(object):
             first_items = self._get_first_items(keys)
             remaining_items = self._get_remaining_items(first_items)
             items = self._merge_items(first_items, remaining_items)
+            #TODO: remove this after berkleyDB is removed.
             for key in keys:
                 if str(key) in items:
                     tranlated_items[key] = items[str(key)]
