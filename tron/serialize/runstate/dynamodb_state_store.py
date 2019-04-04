@@ -31,15 +31,15 @@ class DynamoDBStateStore(object):
         ret: <dict of key to states>
         """
         tranlated_items = {}
-        # try:
-        first_items = self._get_first_items(keys)
-        remaining_items = self._get_remaining_items(first_items)
-        items = self._merge_items(first_items, remaining_items)
-        for key in keys:
-            if str(key) in items:
-                tranlated_items[key] = items[str(key)]
-        # except Exception as e:
-        #     self.alert(str(e))
+        try:
+            first_items = self._get_first_items(keys)
+            remaining_items = self._get_remaining_items(first_items)
+            items = self._merge_items(first_items, remaining_items)
+            for key in keys:
+                if str(key) in items:
+                    tranlated_items[key] = items[str(key)]
+        except Exception as e:
+            self.alert(str(e))
         return tranlated_items
 
     def alert(self, msg: str):
