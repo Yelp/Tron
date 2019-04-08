@@ -9,6 +9,7 @@ ExecStart=/usr/bin/trond --lock-file=${LOCKFILE:-$PIDFILE} --working-dir=${WORKI
 TimeoutStopSec=20
 Restart=on-failure
 LimitNOFILE=10000
+StandardOutput=syslog
 
 [Install]
 WantedBy=multi-user.target
