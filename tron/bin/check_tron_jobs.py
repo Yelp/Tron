@@ -397,7 +397,6 @@ def compute_check_result_for_job(client, job):
         job_content = pmap(
             client.job(
                 tron_id.url,
-                count=20,
                 include_action_runs=True,
             )
         )
