@@ -30,18 +30,18 @@ class DynamoDBStateStore(object):
         Fetch all under the same parition key(keys).
         ret: <dict of key to states>
         """
-        tranlated_items = {}
+        translated_items = {}
         try:
-            first_items = self._get_first_items(keys)
-            remaining_items = self._get_remaining_items(first_items)
+            first_items = self._get_first_partitions(keys)
+            remaining_items = self._get_remaining_partitions(first_items)
             items = self._merge_items(first_items, remaining_items)
             #TODO: remove this after berkleyDB is removed.
             for key in keys:
                 if str(key) in items:
-                    tranlated_items[key] = items[str(key)]
+                    translated_items[key] = items[str(key)]
         except Exception as e:
             self.alert(str(e))
-        return tranlated_items
+        return translated_items
 
     def alert(self, msg: str):
         import pysensu_yelp
@@ -78,14 +78,16 @@ class DynamoDBStateStore(object):
             items.extend(vals)
         return items
 
-    def _get_first_items(self, keys: list):
+    def _get_first_partitions(self, keys: list):
         new_keys = [{'key': {'S': str(key)}, 'index': {'N': '0'}} for key in keys]
         return self._get_items(new_keys)
 
-    def _get_remaining_items(self, items: list):
+    def _get_remaining_partitions(self, items: list):
         keys_for_remaining_items = []
         for item in items:
-            keys_for_remaining_items.extend([{'key': {'S': str(item['key']['S'])}, 'index': {'N': str(i)}} for i in range(1, int(item['num_partitions']['N']))])
+            remaining_items = [{'key': {'S': str(item['key']['S'])}, 'index': {'N': str(i)}}
+                               for i in range(1, int(item['num_partitions']['N']))]
+            keys_for_remaining_items.extend(remaining_items)
         return self._get_items(keys_for_remaining_items)
 
     def _merge_items(self, first_items, remaining_items) -> dict:
