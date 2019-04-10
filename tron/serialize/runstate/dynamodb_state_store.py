@@ -119,6 +119,19 @@ class DynamoDBStateStore(object):
         except Exception as e:
             self.alert(str(e))
 
+    def __setitem__(self, key: ShelveKey, val: bytes) -> None:
+        num_partitions = math.ceil(len(val) / OBJECT_SIZE)
+        with self.table.batch_writer() as batch:
+            for index in range(num_partitions):
+                batch.put_item(
+                    Item={
+                        'key': str(key),
+                        'index': index,
+                        'val': val[index * OBJECT_SIZE:min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],
+                        'num_partitions': num_partitions,
+                    }
+                )
+
     def _delete_item(self, key: ShelveKey) -> None:
         with self.table.batch_writer() as batch:
             for index in range(self._get_num_of_partitions(key)):
@@ -145,19 +158,6 @@ class DynamoDBStateStore(object):
             return int(partition.get('Item', {}).get('num_partitions', 0))
         except self.client.exceptions.ResourceNotFoundException:
             return 0
-
-    def __setitem__(self, key: ShelveKey, val: bytes) -> None:
-        num_partitions = math.ceil(len(val) / OBJECT_SIZE)
-        with self.table.batch_writer() as batch:
-            for index in range(num_partitions):
-                batch.put_item(
-                    Item={
-                        'key': str(key),
-                        'index': index,
-                        'val': val[index * OBJECT_SIZE:min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],
-                        'num_partitions': num_partitions,
-                    }
-                )
 
     def cleanup(self) -> None:
         return
