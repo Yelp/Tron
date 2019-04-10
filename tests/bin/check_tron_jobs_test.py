@@ -955,8 +955,10 @@ class TestCheckJobs(TestCase):
         )
         assert_equal(actual["id"], "MASTER.test.1.action2")
 
-    # These tests test job has no scheduled run scenarios
     def test_no_job_scheduled_or_queuing(self):
+        """ If the past 2 runs succeeded but no future job is scheuled,
+        we should consider the job to have suceeded.
+        """
         job_runs = {
             'status':
                 'succeeded',
@@ -1000,43 +1002,7 @@ class TestCheckJobs(TestCase):
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.2')
-        assert_equal(state, State.NOT_SCHEDULED)
-
-    def test_get_relevant_action_for_not_scheduled_state(self):
-        action_runs = [
-            {
-                'id':
-                    'MASTER.test.1.2',
-                'state':
-                    'succeeded',
-                'end_time':
-                    time.strftime(
-                        '%Y-%m-%d %H:%M:%S',
-                        time.localtime(time.time() - 600),
-                    ),
-            },
-            {
-                'id':
-                    'MASTER.test.1.1',
-                'state':
-                    'succeeded',
-                'end_time':
-                    time.strftime(
-                        '%Y-%m-%d %H:%M:%S',
-                        time.localtime(time.time() - 1200),
-                    ),
-            },
-        ]
-        actual = check_tron_jobs.get_relevant_action(
-            action_runs=action_runs,
-            last_state=State.NOT_SCHEDULED,
-            actions_expected_runtime={
-                'action1': 86400.0,
-                'action2': 86400.0,
-                'action3': 86400.0,
-            }
-        )
-        assert_equal(actual["id"], "MASTER.test.1.1")
+        assert_equal(state, State.SUCCEEDED)
 
     # These tests test job without succeeded/failed run scenarios
     def test_job_no_runs_to_check(self):
@@ -1407,24 +1373,6 @@ class TestCheckPreciousJobs(TestCase):
             'monitoring': self.monitoring,
             'runs': self.runs,
         }
-
-    def test_get_relevant_run_and_state_not_scheduled(self):
-        self.job['monitoring'][check_tron_jobs.PRECIOUS_JOB_ATTR] = False
-
-        latest_run, state = check_tron_jobs.get_relevant_run_and_state(
-            self.job
-        )
-
-        assert latest_run['run_num'] == 5
-        assert state == check_tron_jobs.State.NOT_SCHEDULED
-
-    def test_get_relevant_run_and_state_ignore_not_scheduled(self):
-        latest_run, state = check_tron_jobs.get_relevant_run_and_state(
-            self.job
-        )
-
-        assert latest_run['run_num'] == 5
-        assert state == check_tron_jobs.State.SUCCEEDED
 
     @patch('time.time', mock.Mock(return_value=1539460800.0), autospec=None)
     def test_sort_runs_by_interval_day(self):

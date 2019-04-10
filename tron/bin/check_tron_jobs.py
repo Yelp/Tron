@@ -29,7 +29,6 @@ class State(Enum):
     FAILED = "failed"
     STUCK = "stuck"
     NO_RUN_YET = "no_run_yet"
-    NOT_SCHEDULED = "not_scheduled"
     NO_RUNS_TO_CHECK = "no_runs_to_check"
     UNKNOWN = "unknown"
     SKIPPED = "skipped"
@@ -127,9 +126,6 @@ def compute_check_result_for_job_runs(client, job, job_content):
     elif last_state == State.FAILED:
         prefix = "CRIT: The last job run failed!"
         status = 2
-    elif last_state == State.NOT_SCHEDULED:
-        prefix = "CRIT: Job is not scheduled at all!"
-        status = 2
     elif last_state == State.UNKNOWN:
         prefix = "CRIT: Job has gone 'unknown' and might need manual intervention"
         status = 2
@@ -182,13 +178,7 @@ def get_relevant_run_and_state(job_content):
     )
     if len(job_runs) == 0:
         return None, State.NO_RUN_YET
-    run = is_job_scheduled(job_runs)
-    # If runs are precious, then it is possible for a day to have no scheduled
-    # run if it already had a successful one. Thus, we do not want to return a
-    # NOT_SCHEDULED state, but a SUCCEEDED.
-    if run is None and not job_content['monitoring'
-                                       ].get(PRECIOUS_JOB_ATTR, False):
-        return job_runs[0], State.NOT_SCHEDULED
+
     job_expected_runtime = job_content.get('expected_runtime', None)
     actions_expected_runtime = job_content.get('actions_expected_runtime', {})
     run = is_job_stuck(
@@ -215,13 +205,6 @@ def is_action_failed_or_unknown(job_run):
         if run.get('state', None) in ["failed", "unknown"]:
             return State(run.get('state'))
     return State.SUCCEEDED
-
-
-def is_job_scheduled(job_runs):
-    for job_run in job_runs:
-        if job_run.get('state', 'unknown') in ["scheduled", "queued"]:
-            return job_run
-    return None
 
 
 def is_job_stuck(
