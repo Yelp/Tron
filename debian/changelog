@@ -1,3 +1,11 @@
+tron (0.9.12.4) xenial; urgency=medium
+
+  * 0.9.12.4 tagged with 'make release'
+    Commit: Merge pull request #640 from Yelp/u/mingqiz/TRON-638-
+    improve_read_speed  Improve dynamodb read/write speed
+
+ -- root <root@0e05cd00bd1c>  Wed, 10 Apr 2019 22:59:47 +0000
+
 tron (0.9.12.3) xenial; urgency=medium
 
   * 0.9.12.3 tagged with 'make release'
