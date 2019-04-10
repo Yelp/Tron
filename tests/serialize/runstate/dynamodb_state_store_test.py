@@ -76,11 +76,10 @@ class TestDynamoDBStateStore:
         ]
         store.save(key_value_pairs)
 
+        keys = [store.build_key("DynamoDBTest", "two"), store.build_key("DynamoDBTest2", "four")]
+        vals = store.restore(keys)
         for key, value in key_value_pairs:
-            assert_equal(store[key], value)
-
-        for key, value in key_value_pairs:
-            store._delete_item(key)
+            assert_equal(vals[key], value)
 
     def test_save_more_than_4KB(self, store, small_object, large_object):
         key_value_pairs = [
@@ -91,11 +90,10 @@ class TestDynamoDBStateStore:
         ]
         store.save(key_value_pairs)
 
+        keys = [store.build_key("DynamoDBTest", "two")]
+        vals = store.restore(keys)
         for key, value in key_value_pairs:
-            assert_equal(store[key], value)
-
-        for key, value in key_value_pairs:
-            store._delete_item(key)
+            assert_equal(vals[key], value)
 
     def test_restore_more_than_4KB(self, store, small_object, large_object):
         keys = [store.build_key("thing", i) for i in range(3)]
@@ -107,9 +105,6 @@ class TestDynamoDBStateStore:
         for key in keys:
             assert_equal(pickle.dumps(vals[key]), large_object)
 
-        for key in keys:
-            store._delete_item(key)
-
     def test_restore(self, store, small_object, large_object):
         keys = [store.build_key("thing", i) for i in range(3)]
         value = pickle.loads(small_object)
@@ -120,17 +115,13 @@ class TestDynamoDBStateStore:
         for key in keys:
             assert_equal(pickle.dumps(vals[key]), small_object)
 
-        for key in keys:
-            store._delete_item(key)
-
     def test_delete(self, store, small_object, large_object):
-        keys = [store.build_key("thing", i) for i in range(3)]
-        value = large_object
-        for key in keys:
-            store[key] = value
+        pairs = [(store.build_key("thing", i), large_object) for i in range(3)]
 
-        for key in keys:
+        store.save(pairs)
+
+        for key in pairs:
             store._delete_item(key)
 
-        for key in keys:
+        for key in pairs:
             assert_equal(store._get_num_of_partitions(key), 0)
