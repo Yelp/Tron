@@ -114,9 +114,37 @@ class DynamoDBStateStore(object):
         """
         try:
             for key, val in key_value_pairs:
+                self._delete_item(key)
                 self[key] = pickle.dumps(val)
         except Exception as e:
             self.alert(str(e))
+
+    def _delete_item(self, key: ShelveKey) -> None:
+        with self.table.batch_writer() as batch:
+            for index in range(self._get_num_of_partitions(key)):
+                batch.delete_item(
+                    Key={
+                        'key': str(key),
+                        'index': index,
+                    }
+                )
+
+    def _get_num_of_partitions(self, key: ShelveKey) -> int:
+        """
+        Return how many parts is the item partitioned into
+        """
+        try:
+            partition = self.table.get_item(
+                Key={
+                    'key': str(key),
+                    'index': 0,
+                },
+                ProjectionExpression='num_partitions',
+                ConsistentRead=True
+            )
+            return int(partition.get('Item', {}).get('num_partitions', 0))
+        except self.client.exceptions.ResourceNotFoundException:
+            return 0
 
     def __setitem__(self, key: ShelveKey, val: bytes) -> None:
         num_partitions = math.ceil(len(val) / OBJECT_SIZE)

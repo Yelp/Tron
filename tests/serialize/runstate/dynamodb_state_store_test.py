@@ -114,3 +114,14 @@ class TestDynamoDBStateStore:
         vals = store.restore(keys)
         for key in keys:
             assert_equal(pickle.dumps(vals[key]), small_object)
+
+    def test_delete(self, store, small_object, large_object):
+        pairs = [(store.build_key("thing", i), large_object) for i in range(3)]
+
+        store.save(pairs)
+
+        for key in pairs:
+            store._delete_item(key)
+
+        for key in pairs:
+            assert_equal(store._get_num_of_partitions(key), 0)
