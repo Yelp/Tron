@@ -181,14 +181,12 @@ def get_relevant_run_and_state(job_content):
 
     job_expected_runtime = job_content.get('expected_runtime', None)
     actions_expected_runtime = job_content.get('actions_expected_runtime', {})
-    run = is_job_stuck(
+    stuck_run = is_job_stuck(
         job_runs=job_runs,
         job_expected_runtime=job_expected_runtime,
         actions_expected_runtime=actions_expected_runtime,
         allow_overlap=job_content.get('allow_overlap'),
     )
-    if run is not None:
-        return run, State.STUCK
     for run in job_runs:
         state = run.get('state', 'unknown')
         if state in ["failed", "succeeded", "unknown", "skipped"]:
@@ -197,6 +195,8 @@ def get_relevant_run_and_state(job_content):
             action_state = is_action_failed_or_unknown(run)
             if action_state != State.SUCCEEDED:
                 return run, action_state
+            elif stuck_run is not None:
+                return stuck_run, State.STUCK
     return job_runs[0], State.NO_RUNS_TO_CHECK
 
 

@@ -723,7 +723,7 @@ class TestCheckJobs(TestCase):
                             duration='0:10:01.883601',
                         ),
                         dict(
-                            id='MASTER.test.1.action1',
+                            id='MASTER.test.2.action1',
                             state='running',
                             action_name='action1',
                             start_time=time.strftime(
@@ -752,6 +752,55 @@ class TestCheckJobs(TestCase):
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.2')
         assert_equal(state, State.STUCK)
+
+    def test_job_running_action_exceeds_expected_runtime_and_other_action_failed(self):
+        job_runs = {
+            'status':
+                'running',
+            'next_run':
+                None,
+            'actions_expected_runtime': {
+                'action1': 720.0,
+                'action2': 480.0
+            },
+            'runs': [
+                dict(
+                    id='MASTER.test.1',
+                    state='running',
+                    run_time=time.strftime(
+                        '%Y-%m-%d %H:%M:%S',
+                        time.localtime(time.time() - 600),
+                    ),
+                    end_time=None,
+                    duration='0:10:01.883601',
+                    runs=[
+                        dict(
+                            id='MASTER.test.1.action2',
+                            state='failed',
+                            action_name='action2',
+                            start_time=time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 600),
+                            ),
+                            duration='0:10:01.883601',
+                        ),
+                        dict(
+                            id='MASTER.test.1.action1',
+                            state='running',
+                            action_name='action1',
+                            start_time=time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 600),
+                            ),
+                            duration='0:10:01.885401',
+                        ),
+                    ],
+                ),
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run['id'], 'MASTER.test.1')
+        assert_equal(state, State.FAILED)
 
     def test_job_stuck_when_runtime_not_sorted(self):
         job_runs = {
