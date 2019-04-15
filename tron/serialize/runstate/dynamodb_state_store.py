@@ -9,6 +9,10 @@ from tron.serialize.runstate.shelvestore import ShelveKey
 
 OBJECT_SIZE = 400000
 log = logging.getLogger(__name__)
+# Set boto3 logging level to warning
+for name in logging.Logger.manager.loggerDict.keys():
+    if ('boto' in name):
+        logging.getLogger(name).setLevel(logging.WARNING)
 
 
 class DynamoDBStateStore(object):
