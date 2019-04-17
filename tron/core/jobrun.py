@@ -23,11 +23,11 @@ log = logging.getLogger(__name__)
 state_logger = logging.getLogger(f'{__name__}.state_changes')
 
 
-def log_run_state(obj):
+def log_run_state(obj, state=None):
     data = {
         'id': str(obj.id),
         'type': str(obj.__class__.__name__),
-        'state': str(obj.state),
+        'state': state or str(obj.state),
         'timestamp': time.time(),
     }
     state_logger.info(json.dumps(data))
@@ -192,6 +192,7 @@ class JobRun(Observable, Observer):
 
     def start(self):
         """Start this JobRun as a scheduled run (not a manual run)."""
+        log_run_state(self, 'start')
         if self._do_start():
             return True
 
