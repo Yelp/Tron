@@ -254,6 +254,7 @@ random time delta.
 Interval
 ^^^^^^^^
 .. deprecated:: 0.9.12.6
+   Use cron instead. This is deprecated because a job does not run as expected occasionaly.
 
 Run the job every X seconds, minutes, hours, or days. The time expression
 is ``<interval> days|hours|minutes|seconds``, where the units can be
