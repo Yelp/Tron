@@ -12,6 +12,7 @@ import time
 from collections import OrderedDict
 from subprocess import PIPE
 from subprocess import Popen
+from threading import Lock
 
 from tron.utils import maybe_encode
 
@@ -36,12 +37,13 @@ class FileHandleWrapper(object):
     access time and metadata.  These objects should only be created
     by FileHandleManager. Do not instantiate them on their own.
     """
-    __slots__ = ['manager', 'name', 'last_accessed', '_fh']
+    __slots__ = ['manager', 'name', 'last_accessed', '_fh_lock', '_fh']
 
     def __init__(self, manager, name):
         self.manager = manager
         self.name = name
         self.last_accessed = time.time()
+        self._fh_lock = Lock()
         self._fh = NullFileHandle
 
     def close(self):
@@ -50,21 +52,23 @@ class FileHandleWrapper(object):
 
     def close_wrapped(self):
         """Close only the underlying file handle."""
-        self._fh.close()
-        self._fh = NullFileHandle
+        with self._fh_lock:
+            self._fh.close()
+            self._fh = NullFileHandle
 
     def write(self, content):
         """Write content to the fh. Re-open if necessary."""
-        if self._fh == NullFileHandle:
-            try:
-                self._fh = open(self.name, 'ab')
-            except IOError as e:
-                log.error("Failed to open %s: %s", self.name, e)
-                return
+        with self._fh_lock:
+            if self._fh == NullFileHandle:
+                try:
+                    self._fh = open(self.name, 'ab')
+                except IOError as e:
+                    log.error("Failed to open %s: %s", self.name, e)
+                    return
 
-        self.last_accessed = time.time()
-        self._fh.write(maybe_encode(content))
-        self.manager.update(self)
+            self.last_accessed = time.time()
+            self._fh.write(maybe_encode(content))
+            self.manager.update(self)
 
     def __enter__(self):
         return self
