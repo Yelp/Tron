@@ -80,7 +80,7 @@ class TestFileHandleWrapper(TestCase):
     def test_context_manager(self):
         with self.fh_wrapper as fh:
             fh.write("123")
-        assert fh._fh.closed
+        assert fh._fh is None
         with open(self.file.name) as fh:
             assert_equal(fh.read(), "123")
 

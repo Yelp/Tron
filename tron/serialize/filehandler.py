@@ -12,7 +12,7 @@ import time
 from collections import OrderedDict
 from subprocess import PIPE
 from subprocess import Popen
-from threading import Lock
+from threading import RLock
 
 from tron.utils import maybe_encode
 
@@ -43,7 +43,7 @@ class FileHandleWrapper(object):
         self.manager = manager
         self.name = name
         self.last_accessed = time.time()
-        self._fh_lock = Lock()
+        self._fh_lock = RLock()
         self._fh = NullFileHandle
 
     def close(self):
@@ -53,28 +53,32 @@ class FileHandleWrapper(object):
     def close_wrapped(self):
         """Close only the underlying file handle."""
         with self._fh_lock:
-            self._fh.close()
-            self._fh = NullFileHandle
+            if self._fh is not None:
+                self._fh.close()
+                self._fh = NullFileHandle
 
     def write(self, content):
         """Write content to the fh. Re-open if necessary."""
         with self._fh_lock:
-            if self._fh == NullFileHandle:
-                try:
-                    self._fh = open(self.name, 'ab')
-                except IOError as e:
-                    log.error("Failed to open %s: %s", self.name, e)
-                    return
+            if self._fh is not None:
+                if self._fh == NullFileHandle:
+                    try:
+                        self._fh = open(self.name, 'ab')
+                    except IOError as e:
+                        log.error("Failed to open %s: %s", self.name, e)
+                        return
 
-            self.last_accessed = time.time()
-            self._fh.write(maybe_encode(content))
-            self.manager.update(self)
+                self.last_accessed = time.time()
+                self._fh.write(maybe_encode(content))
+                self.manager.update(self)
 
     def __enter__(self):
         return self
 
     def __exit__(self, _exc_type, _exc_val, _exc_tb):
-        self.close()
+        with self._fh_lock:
+            self.close()
+            self._fh = None
 
 
 class FileHandleManager(object):
