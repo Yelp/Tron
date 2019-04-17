@@ -253,7 +253,7 @@ random time delta.
 
 Interval
 ^^^^^^^^
-.. deprecated:: 0.12.9.6
+.. deprecated:: 0.9.12.6
 
 Run the job every X seconds, minutes, hours, or days. The time expression
 is ``<interval> days|hours|minutes|seconds``, where the units can be
