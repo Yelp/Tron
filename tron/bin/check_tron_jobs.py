@@ -191,7 +191,7 @@ def get_relevant_run_and_state(job_content):
         state = run.get('state', 'unknown')
         if state in ["failed", "succeeded", "unknown", "skipped"]:
             return run, State(state)
-        elif state in ["running"]:
+        elif state in ["running", "waiting"]:
             action_state = is_action_failed_or_unknown(run)
             if action_state != State.SUCCEEDED:
                 return run, action_state

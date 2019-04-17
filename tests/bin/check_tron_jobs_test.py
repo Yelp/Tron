@@ -1209,6 +1209,71 @@ class TestCheckJobs(TestCase):
         assert_equal(run['id'], 'MASTER.test.2')
         assert_equal(state, State.UNKNOWN)
 
+    def test_job_waiting_but_action_unknown_already(self):
+        job_runs = {
+            'status':
+                'waiting',
+            'next_run':
+                None,
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.3',
+                    'state':
+                        'scheduled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() + 600),
+                        ),
+                    'end_time':
+                        None,
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'waiting',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                    'end_time':
+                        None,
+                    'runs': [
+                        {
+                            'id': 'MASTER.test.2.action2',
+                            'state': 'waiting',
+                        },
+                        {
+                            'id': 'MASTER.test.1.action1',
+                            'state': 'unknown',
+                        },
+                    ],  # noqa: E122
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1700),
+                        ),
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run['id'], 'MASTER.test.2')
+        assert_equal(state, State.UNKNOWN)
+
     # These tests test guess realert feature
     def test_guess_realert_every(self):
         job_runs = {
