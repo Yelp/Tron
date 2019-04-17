@@ -1,7 +1,9 @@
 """
  Classes to manage job runs.
 """
+import json
 import logging
+import time
 from collections import deque
 
 import tron.metrics as metrics
@@ -18,6 +20,17 @@ from tron.utils.observer import Observable
 from tron.utils.observer import Observer
 
 log = logging.getLogger(__name__)
+state_logger = logging.getLogger(f'{__name__}.state_changes')
+
+
+def log_run_state(obj):
+    data = {
+        'id': str(obj.id),
+        'type': str(obj.__class__.__name__),
+        'state': str(obj.state),
+        'timestamp': time.time(),
+    }
+    state_logger.info(json.dumps(data))
 
 
 class Error(Exception):
@@ -231,6 +244,7 @@ class JobRun(Observable, Observer):
 
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
+        log_run_state(action_run)
 
         if not action_run.is_done:
             return
@@ -274,6 +288,7 @@ class JobRun(Observable, Observer):
 
         # Notify Job that this JobRun is complete
         self.notify(self.NOTIFY_DONE)
+        log_run_state(self)
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
