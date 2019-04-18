@@ -51,7 +51,7 @@ class TestMCPReconfigure(TestCase):
             dict(
                 name='test_remove',
                 node='node1',
-                schedule=dict(interval='20s'),
+                schedule= {'type': 'cron', 'value': '* * * * *'},
                 actions=[
                     dict(
                         name='action_remove',
@@ -63,7 +63,7 @@ class TestMCPReconfigure(TestCase):
             dict(
                 name='test_change',
                 node='nodePool',
-                schedule=dict(interval='20s'),
+                schedule= {'type': 'cron', 'value': '* * * * *'},
                 actions=[
                     dict(
                         name='action_change',
@@ -90,7 +90,7 @@ class TestMCPReconfigure(TestCase):
             dict(
                 name='test_action_added',
                 node='node0',
-                schedule=dict(interval='10s'),
+                schedule= {'type': 'cron', 'value': '* * * * *'},
                 actions=[
                     dict(name='action_first', command='command_do_it'),
                 ],
@@ -149,7 +149,7 @@ class TestMCPReconfigure(TestCase):
             dict(
                 name='test_new',
                 node='nodePool',
-                schedule=dict(interval='20s'),
+                schedule= {'type': 'cron', 'value': '* * * * *'},
                 actions=[dict(
                     name='action_new',
                     command='command_new',
@@ -158,7 +158,7 @@ class TestMCPReconfigure(TestCase):
             dict(
                 name='test_action_added',
                 node='node0',
-                schedule=dict(interval='10s'),
+                schedule= {'type': 'cron', 'value': '* * * * *'},
                 actions=[
                     dict(name='action_first', command='command_do_it'),
                     dict(name='action_second', command='command_ok'),

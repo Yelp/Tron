@@ -40,8 +40,7 @@ jobs:
     -   name: interval_job0
         run_limit: 3
         node: localhost
-        schedule:
-            interval: 13s
+        schedule: "cron * * * * *"
         actions:
             -   name: "task0"
                 command: "%(ECHO)s %(actionname)s"
@@ -52,7 +51,7 @@ jobs:
     # IntervalScheduler dependent successful Actions, node pool
     -   name: interval_job1
         node: pool0
-        schedule: "interval 27seconds"
+        schedule: "cron * * * * *"
         actions:
             -   name: task1
                 command: "%(ECHO)s %(actionname)s"
@@ -64,7 +63,7 @@ jobs:
     # IntervalScheduler dependent failure Actions
     -   name: interval_job2
         node: box1_box2
-        schedule: "interval 22s"
+        schedule: "cron * * * * *"
         actions:
             -   name: task1
                 command: "%(ECHO)s %(actionname)s"
@@ -75,7 +74,7 @@ jobs:
     # Multiple dependent failure Actions
     -   name: interval_job3
         node: box1_box2
-        schedule: "interval 22s"
+        schedule: "cron * * * * *"
         actions:
             -   name: task0
                 command: "%(ECHO)s %(actionname)s && sleep 7 && false"
@@ -92,7 +91,7 @@ jobs:
     # Multiple dependent failure Actions with cleanup
     -   name: interval_job4
         node: box2
-        schedule: "interval 34s"
+        schedule: "cron * * * * *"
         actions:
             -   name: task0
                 command: "%(ECHO)s %(actionname)s && sleep 7 && false"
@@ -111,8 +110,7 @@ jobs:
     # No failures, with cleanup, different node for action
     -   name: interval_job5
         node: box1
-        schedule:
-            interval: 13s
+        schedule: "cron * * * * *"
         actions:
             -   name: "task0"
                 command: "%(ECHO)s %(actionname)s"
@@ -151,7 +149,7 @@ jobs:
     # all_nodes Job
     -   name: allnodes_job8
         node: pool2
-        schedule: "interval 15s"
+        schedule: "cron * * * * *"
         all_nodes: true
         actions:
             -   name: "task0"
@@ -180,8 +178,7 @@ jobs:
     # Overlapping, queueing
     -   name: overlap_cancel
         node: pool2
-        schedule:
-            interval: 20s
+        schedule: "cron * * * * *"
         queueing: false
         actions:
             -   name: "task0"

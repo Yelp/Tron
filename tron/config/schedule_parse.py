@@ -34,11 +34,6 @@ ConfigDailyScheduler = namedtuple(
 
 ConfigConstantScheduler = namedtuple('ConfigConstantScheduler', [])
 
-ConfigIntervalScheduler = namedtuple(
-    'ConfigIntervalScheduler',
-    'timedelta jitter',
-)
-
 
 class ScheduleParseError(ConfigError):
     pass
@@ -73,10 +68,6 @@ def validate_generic_schedule_config(config, config_context):
 # TODO: remove in 0.7
 def schedule_config_from_legacy_dict(schedule, config_context):
     """Support old style schedules as dicts."""
-    if 'interval' in schedule:
-        config = ConfigGenericSchedule('interval', schedule['interval'], None)
-        return valid_interval_scheduler(config, config_context)
-
     if 'start_time' in schedule or 'days' in schedule:
         start_time = schedule.get('start_time', '00:00:00')
         days = schedule.get('days', '')
@@ -131,25 +122,6 @@ def valid_daily_scheduler(config, config_context):
         time_spec.second,
         weekdays,
         jitter=config.jitter,
-    )
-
-
-# Shortcut values for intervals
-TIME_INTERVAL_SHORTCUTS = {
-    'hourly': datetime.timedelta(hours=1),
-}
-
-
-def valid_interval_scheduler(config, config_context):
-    def build_config(delta):
-        return ConfigIntervalScheduler(timedelta=delta, jitter=config.jitter)
-
-    interval_key = config.value.strip()
-    if interval_key in TIME_INTERVAL_SHORTCUTS:
-        return build_config(TIME_INTERVAL_SHORTCUTS[interval_key])
-
-    return build_config(
-        config_utils.valid_time_delta(config.value, config_context),
     )
 
 
@@ -338,7 +310,6 @@ def valid_cron_scheduler(config, config_context):
 schedulers = {
     'constant': valid_constant_scheduler,
     'daily': valid_daily_scheduler,
-    'interval': valid_interval_scheduler,
     'cron': valid_cron_scheduler,
     'groc daily': parse_groc_expression,
 }
