@@ -32,7 +32,6 @@ from tron.config.config_parse import valid_output_stream_dir
 from tron.config.config_parse import validate_fragment
 from tron.config.config_utils import NullConfigContext
 from tron.config.schedule_parse import ConfigConstantScheduler
-from tron.config.schedule_parse import ConfigIntervalScheduler
 from tron.config.schema import MASTER_NAMESPACE
 
 BASE_CONFIG = dict(
@@ -161,10 +160,7 @@ def make_master_jobs():
         'MASTER.test_job0':
             make_job(
                 name='MASTER.test_job0',
-                schedule=schedule_parse.ConfigIntervalScheduler(
-                    timedelta=datetime.timedelta(0, 20),
-                    jitter=None,
-                ),
+                schedule=ConfigConstantScheduler(),
                 expected_runtime=datetime.timedelta(1)
             ),
         'MASTER.test_job1':
@@ -314,7 +310,7 @@ class ConfigTestCase(TestCase):
             dict(
                 name="test_job0",
                 node='node0',
-                schedule="interval 20s",
+                schedule="constant",
                 actions=[dict(name="action", command="command")],
                 cleanup_action=dict(command="command"),
             ),
@@ -430,10 +426,7 @@ class TestNamedConfig(TestCase):
                     make_job(
                         name="test_job",
                         namespace='test_namespace',
-                        schedule=ConfigIntervalScheduler(
-                            timedelta=datetime.timedelta(0, 20),
-                            jitter=None,
-                        ),
+                        schedule=ConfigConstantScheduler(),
                         expected_runtime=datetime.timedelta(1),
                     )
             }
@@ -446,7 +439,7 @@ class TestNamedConfig(TestCase):
                         name="test_job",
                         namespace='test_namespace',
                         node="node0",
-                        schedule="interval 20s",
+                        schedule="constant",
                         actions=[dict(name="action", command="command")],
                         cleanup_action=dict(command="command"),
                     )
@@ -462,10 +455,7 @@ class TestNamedConfig(TestCase):
                     make_job(
                         name="test_namespace.test_job",
                         namespace="test_namespace",
-                        schedule=ConfigIntervalScheduler(
-                            timedelta=datetime.timedelta(0, 20),
-                            jitter=None,
-                        ),
+                        schedule=ConfigConstantScheduler(),
                         expected_runtime=datetime.timedelta(1),
                     )
             }
@@ -488,7 +478,7 @@ class TestNamedConfig(TestCase):
                         name="test_job",
                         namespace='test_namespace',
                         node="node0",
-                        schedule="interval 20s",
+                        schedule="constant",
                         actions=[dict(name="action", command="command")],
                         cleanup_action=dict(command="command"),
                     )
@@ -511,7 +501,7 @@ class TestNamedConfig(TestCase):
                     name="test_job",
                     namespace='test_namespace',
                     node="node1",
-                    schedule="interval 20s",
+                    schedule="constant",
                     actions=[dict(name="action", command="command")],
                     cleanup_action=dict(command="command"),
                 )
@@ -544,7 +534,7 @@ class TestNamedConfig(TestCase):
                     name="test_job",
                     namespace='test_namespace',
                     node="node0",
-                    schedule="interval 20s",
+                    schedule="constant",
                     actions=
                     [dict(name="action", node="nodepool1", command="command")],
                     cleanup_action=dict(command="command"),
@@ -567,7 +557,7 @@ class TestJobConfig(TestCase):
     def test_no_actions(self):
         test_config = dict(
             jobs=[
-                dict(name='test_job0', node='node0', schedule='interval 20s')
+                dict(name='test_job0', node='node0', schedule='constant')
             ],
             **BASE_CONFIG
         )
@@ -586,7 +576,7 @@ class TestJobConfig(TestCase):
                 dict(
                     name='test_job0',
                     node='node0',
-                    schedule='interval 20s',
+                    schedule='constant',
                     actions=None
                 )
             ],
@@ -607,7 +597,7 @@ class TestJobConfig(TestCase):
                 dict(
                     name='test_job0',
                     node='node0',
-                    schedule='interval 20s',
+                    schedule='constant',
                     actions=[
                         dict(name='action', command='cmd'),
                         dict(name='action', command='cmd'),
@@ -631,13 +621,13 @@ class TestJobConfig(TestCase):
                 dict(
                     name='test_job0',
                     node='node0',
-                    schedule='interval 20s',
+                    schedule='constant',
                     actions=[dict(name='action', command='cmd')]
                 ),
                 dict(
                     name='test_job1',
                     node='node0',
-                    schedule='interval 20s',
+                    schedule='constant',
                     actions=[
                         dict(
                             name='action1', command='cmd', requires=['action']
@@ -665,7 +655,7 @@ class TestJobConfig(TestCase):
                 dict(
                     name='test_job0',
                     node='node0',
-                    schedule='interval 20s',
+                    schedule='constant',
                     actions=[
                         dict(
                             name='action1',
@@ -697,7 +687,7 @@ class TestJobConfig(TestCase):
                 dict(
                     name='test_job0',
                     node='node0',
-                    schedule='interval 20s',
+                    schedule='constant',
                     actions=[
                         dict(name=CLEANUP_ACTION_NAME, command='cmd'),
                     ]
@@ -719,7 +709,7 @@ class TestJobConfig(TestCase):
                 dict(
                     name='test_job0',
                     node='node0',
-                    schedule='interval 20s',
+                    schedule='constant',
                     actions=[
                         dict(name='action', command='cmd'),
                     ],
@@ -743,7 +733,7 @@ class TestJobConfig(TestCase):
                 dict(
                     name='test_job0',
                     node='node0',
-                    schedule='interval 20s',
+                    schedule='constant',
                     actions=[
                         dict(name='action', command='cmd'),
                     ],
@@ -811,7 +801,7 @@ class TestNodeConfig(TestCase):
                 dict(
                     name='test_job0',
                     node='unknown_node',
-                    schedule='interval 20s',
+                    schedule='constant',
                     actions=[dict(name='action', command='cmd')]
                 )
             ],
@@ -840,7 +830,7 @@ class TestNodeConfig(TestCase):
                 dict(
                     name='test_job0',
                     node='pool1',
-                    schedule='interval 20s',
+                    schedule='constant',
                     actions=[dict(name='action', command='cmd')]
                 )
             ]
@@ -868,7 +858,7 @@ class TestNodeConfig(TestCase):
                 dict(
                     name='test_job0',
                     node='pool1',
-                    schedule='interval 20s',
+                    schedule='constant',
                     actions=[dict(name='action', command='cmd')]
                 )
             ]
@@ -901,7 +891,7 @@ class TestValidateJobs(TestCase):
                 dict(
                     name="test_job0",
                     node='node0',
-                    schedule="interval 20s",
+                    schedule='constant',
                     expected_runtime="20m",
                     actions=[
                         dict(
@@ -954,10 +944,7 @@ class TestValidateJobs(TestCase):
             'MASTER.test_job0':
                 make_job(
                     name='MASTER.test_job0',
-                    schedule=ConfigIntervalScheduler(
-                        timedelta=datetime.timedelta(0, 20),
-                        jitter=None,
-                    ),
+                    schedule=ConfigConstantScheduler(),
                     actions={
                         'action':
                             make_action(

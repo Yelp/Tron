@@ -22,7 +22,7 @@ mesos_options:
 jobs:
     - name: testjob0
       node: localhost
-      schedule: "interval 1m"
+      schedule: "cron * * * * *"
       actions:
         - name: zeroth
           command: "sleep 5"
@@ -33,7 +33,7 @@ jobs:
 
     - name: "testjob1"
       node: localhost
-      schedule: "interval 1m"
+      schedule: "cron * * * * *"
       actions:
         - name: "first"
           command: "sleep 5"
@@ -51,7 +51,7 @@ jobs:
 
     - name: "testjob2"
       node: localhost
-      schedule: "interval 1m"
+      schedule: "cron * * * * *"
       actions:
         - name: "first"
           command: "echo 'goodbye, world'"

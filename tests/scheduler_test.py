@@ -14,7 +14,6 @@ from testifycompat import assert_lt
 from testifycompat import assert_lte
 from testifycompat import run
 from testifycompat import setup
-from testifycompat import setup_teardown
 from testifycompat import TestCase
 from tests import testingutils
 from tron import scheduler
@@ -387,60 +386,6 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
 
         assert_gt(next_run_date, self.now)
         assert_equal(next_run_date.month, 7)
-
-
-class TestIntervalScheduler(TestCase):
-
-    now = datetime.datetime(2012, 3, 14)
-
-    @setup_teardown
-    def patch_time(self):
-        with mock.patch(
-            'tron.scheduler.timeutils.current_time',
-            autospec=True,
-        ) as self.mock_now:
-            self.mock_now.return_value = self.now
-            yield
-
-    @setup
-    def build_scheduler(self):
-        self.seconds = 7
-        self.interval = datetime.timedelta(seconds=self.seconds)
-        self.scheduler = scheduler.IntervalScheduler(
-            interval=self.interval,
-            jitter=None,
-            time_zone=None,
-        )
-
-    def test_next_run_time_no_jitter(self):
-        prev_run_time = datetime.datetime(2011, 5, 21)
-        run_time = self.scheduler.next_run_time(prev_run_time)
-        assert_equal(prev_run_time + self.interval, run_time)
-
-    def test_next_run_time_no_last_run_time_no_jitter(self):
-        run_time = self.scheduler.next_run_time(None)
-        assert_equal(self.now + self.interval, run_time)
-
-    @mock.patch('tron.scheduler.random', autospec=True)
-    def test_next_run_time_with_jitter(self, mock_random):
-        jitter = datetime.timedelta(seconds=234)
-        mock_random.randint.return_value = random_jitter = -200
-        random_delta = datetime.timedelta(seconds=random_jitter)
-        prev_run_time = datetime.datetime(2011, 5, 21)
-        interval_sched = scheduler.IntervalScheduler(
-            interval=self.interval,
-            jitter=jitter,
-            time_zone=None,
-        )
-        run_time = interval_sched.next_run_time(prev_run_time)
-        assert_equal(run_time, prev_run_time + random_delta + self.interval)
-
-    def test__str__(self):
-        assert_equal(str(self.scheduler), "interval %s" % self.interval)
-
-    def test__str__with_jitter(self):
-        self.scheduler.jitter = datetime.timedelta(seconds=300)
-        assert_equal(str(self.scheduler), "interval 0:00:07 (+/- 0:05:00)")
 
 
 if __name__ == '__main__':

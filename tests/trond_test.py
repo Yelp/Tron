@@ -31,7 +31,7 @@ SINGLE_ECHO_CONFIG = BASIC_CONFIG + """
 jobs:
   - name: "echo_job"
     node: local
-    schedule: "interval 1 hour"
+    schedule: "cron 0 * * * *"
     actions:
       - name: "echo_action"
         command: "echo 'Echo!'" """
@@ -45,7 +45,7 @@ ALT_NAMESPACED_ECHO_CONFIG = """
 jobs:
   - name: "echo_job"
     node: local
-    schedule: "interval 1 hour"
+    schedule: "cron 0 * * * *"
     actions:
       - name: "echo_action"
         command: "echo 'Echo!'" """
@@ -125,7 +125,7 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
             jobs:
                 - name: a_job
                   node: local
-                  schedule: "interval 1s"
+                  schedule: "cron * * * * *"
                   actions:
                     - name: first_action
                       command: "echo something"
@@ -172,7 +172,7 @@ class TronCommandsTestCase(sandbox.SandboxTestCase):
         self.start_with_config(SINGLE_ECHO_CONFIG)
         expected = """\nServices:\nNo Services\n\n\nJobs:
             Name       State       Scheduler           Last Success
-            MASTER.echo_job   enabled     interval 1:00:00    None
+            MASTER.echo_job   enabled     cron 1:00:00    None
             """
 
         def remove_line_space(s):
@@ -365,7 +365,7 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
             """
             jobs:
                 -   name: "cancel_overlap"
-                    schedule: "interval 1s"
+                    schedule: "cron * * * * *"
                     queueing: False
                     node: local
                     actions:
@@ -443,7 +443,7 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
             jobs:
                 - name: complex_job
                   node: local
-                  schedule: interval 10min
+                  schedule: cron * * * * *
                   actions:
                     - name: first_act
                       command: sleep 20 && echo "I'm waiting"
