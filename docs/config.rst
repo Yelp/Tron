@@ -31,7 +31,7 @@ Basic Example
     jobs:
       - name: "getting_node_info"
         node: local
-        schedule: "interval 10 mins"
+        schedule: "cron */10 * * * *"
         actions:
           - name: "uname"
             command: "uname -a"

@@ -45,13 +45,13 @@ each of which is responsible for a single job::
     jobs:
       - name: "job0"
         node: node1
-        schedule: "interval 20s"
+        schedule: "cron * * * * *"
         actions:
           - name: "batch1action"
             command: "sleep 3; echo asdfasdf"
       - name: "job1"
         node: node2
-        schedule: "interval 20s"
+        schedule: "cron * * * * *"
         actions:
           - name: "batch2action"
             command: "cat big.txt; sleep 10"
@@ -81,7 +81,7 @@ Nodes can be grouped into *pools*. To continue the previous example::
         # ...
         - name: "job2"
           node: pool
-          schedule: "interval 5s"
+          schedule: "cron * * * * *"
           actions:
             - name: "pool_action"
               command: "ls /; sleep 1"
