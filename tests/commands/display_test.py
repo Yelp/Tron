@@ -182,21 +182,5 @@ class TestDisplayNode(TestCase):
         assert_equal(result, 'name (1 node(s))')
 
 
-# class TestDisplayScheduler(TestCase):
-#     def test_display_scheduler_no_jitter(self):
-#         source = {'value': '5 minutes', 'type': 'cron', 'jitter': ''}
-#         result = display.display_scheduler(source)
-#         assert_equal(result, 'interval 5 minutes')
-
-#     def test_display_scheduler_with_jitter(self):
-#         source = {
-#             'value': '5 minutes',
-#             'type': 'interval',
-#             'jitter': ' (+/- 2 min)',
-#         }
-#         result = display.display_scheduler(source)
-#         assert_equal(result, 'interval 5 minutes%s' % (source['jitter']))
-
-
 if __name__ == "__main__":
     run()
