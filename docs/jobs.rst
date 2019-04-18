@@ -251,32 +251,6 @@ support a jitter parameter that allows them to vary their runtime by a
 random time delta.
 
 
-Interval
-^^^^^^^^
-**removed since 0.9.12.6**
-    Use cron instead. This is removed because it does not schedule jobs as expected occasionaly.
-
-Run the job every X seconds, minutes, hours, or days. The time expression
-is ``<interval> days|hours|minutes|seconds``, where the units can be
-abbreviated.
-
-Short form::
-
-    schedule: "interval 20s"
-
-Long form::
-
-    schedule:
-        type:   "interval"
-        value:  "5 mins"
-        jitter: "10 seconds"        # Optional
-
-With alias::
-
-    schedule:
-        type:   "interval"
-        value:  "hourly"
-
 Daily
 ^^^^^
 
