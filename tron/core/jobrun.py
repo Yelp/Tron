@@ -299,11 +299,13 @@ class JobRun(Observable, Observer):
     def log_state_update(self, state, action_name=None):
         if action_name is None:
             state = f'job_{state}'
+        else:
+            action_name = str(action_name)
 
         data = {
             'job_name': str(self.job_name),
             'run_num': str(self.run_num),
-            'action_name': str(action_name),
+            'action_name': action_name,
             'state': str(state),
             'timestamp': time.time(),
         }
