@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import mock
+
 from testifycompat import assert_equal
 from testifycompat import assert_raises
 from testifycompat import run
@@ -29,6 +31,20 @@ class TestParseCrontab(TestCase):
         assert_equal(actual['minutes'], None)
         assert_equal(actual['hours'], None)
         assert_equal(actual['months'], None)
+
+    @mock.patch('tron.utils.crontab.MinuteFieldParser.parse', autospec=True)
+    @mock.patch('tron.utils.crontab.HourFieldParser.parse', autospec=True)
+    @mock.patch('tron.utils.crontab.MonthdayFieldParser.parse', autospec=True)
+    @mock.patch('tron.utils.crontab.MonthFieldParser.parse', autospec=True)
+    @mock.patch('tron.utils.crontab.WeekdayFieldParser.parse', autospec=True)
+    def test_parse(self, mock_dow, mock_month, mock_monthday, mock_hour, mock_min):
+        line = '* * * * *'
+        actual = crontab.parse_crontab(line)
+        assert_equal(actual['minutes'], mock_min.return_value)
+        assert_equal(actual['hours'], mock_hour.return_value)
+        assert_equal(actual['monthdays'], mock_monthday.return_value)
+        assert_equal(actual['months'], mock_month.return_value)
+        assert_equal(actual['weekdays'], mock_dow.return_value)
 
 
 class TestMinuteFieldParser(TestCase):
