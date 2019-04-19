@@ -23,16 +23,6 @@ log = logging.getLogger(__name__)
 state_logger = logging.getLogger(f'{__name__}.state_changes')
 
 
-def log_run_state(obj, state=None):
-    data = {
-        'id': str(obj.id),
-        'type': str(obj.__class__.__name__),
-        'state': state or str(obj.state),
-        'timestamp': time.time(),
-    }
-    state_logger.info(json.dumps(data))
-
-
 class Error(Exception):
     pass
 
@@ -191,8 +181,7 @@ class JobRun(Observable, Observer):
         return max(0, timeutils.delta_total_seconds(run_time - now))
 
     def start(self):
-        """Start this JobRun as a scheduled run (not a manual run)."""
-        log_run_state(self, 'start')
+        self.log_state_update(state='start')
         if self._do_start():
             return True
 
@@ -245,7 +234,10 @@ class JobRun(Observable, Observer):
 
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
-        log_run_state(action_run)
+        self.log_state_update(
+            state=action_run.state,
+            action_name=action_run.name,
+        )
 
         if not action_run.is_done:
             return
@@ -289,7 +281,7 @@ class JobRun(Observable, Observer):
 
         # Notify Job that this JobRun is complete
         self.notify(self.NOTIFY_DONE)
-        log_run_state(self)
+        self.log_state_update(state=self.state)
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
@@ -303,6 +295,19 @@ class JobRun(Observable, Observer):
 
     def get_action_run(self, action_name):
         return self.action_runs.get(action_name)
+
+    def log_state_update(self, state, action_name=None):
+        if action_name is None:
+            state = f'job_{state}'
+
+        data = {
+            'job_name': str(self.job_name),
+            'run_num': str(self.run_num),
+            'action_name': str(action_name),
+            'state': str(state),
+            'timestamp': time.time(),
+        }
+        state_logger.info(json.dumps(data))
 
     @property
     def state(self):
