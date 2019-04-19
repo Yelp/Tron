@@ -1,3 +1,11 @@
+tron (0.9.12.6) xenial; urgency=medium
+
+  * 0.9.12.6 tagged with 'make release'
+    Commit: Merge pull request #648 from Yelp/u/mingqiz/TRON-1088-bin
+    Removed interval scheduler
+
+ -- root <root@265b3f04ba55>  Fri, 19 Apr 2019 18:11:18 +0000
+
 tron (0.9.12.5) xenial; urgency=medium
 
   * 0.9.12.5 tagged with 'make release'
