@@ -286,14 +286,17 @@ def guess_realert_every(job):
             return -1
         job_runs = job.get('runs', [])
         job_runs_started = [
-            run for run in job_runs if run['start_time'] is not None
+            run['start_time'] for run in job_runs if run['start_time'] is not None
         ]
+        if len(job_runs_started) == 0:
+            job_runs_started = [
+                run['run_time'] for run in job_runs if run.get('run_time', None) is not None
+            ]
         if len(job_runs_started) == 0:
             return -1
         job_previous_run = max(
-            job_runs_started,
-            key=lambda k: k['start_time'],
-        ).get('start_time')
+            job_runs_started
+        )
         time_diff = (
             time.mktime(_timestamp_to_timeobj(job_next_run)) -
             time.mktime(_timestamp_to_timeobj(job_previous_run))
