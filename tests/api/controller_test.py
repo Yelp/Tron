@@ -191,17 +191,18 @@ class TestConfigController:
         self.mcp.reconfigure.assert_called_with()
 
     def test_update_config_failure(self):
-        name, content, config_hash = None, mock.Mock(), mock.Mock()
+        name, content, old_content, config_hash = None, mock.Mock(), mock.Mock(), mock.Mock()
         self.manager.get_hash.return_value = config_hash
-        self.manager.write_config.side_effect = ConfigError("It broke")
+        self.manager.write_config.side_effect = [ConfigError("It broke"), None]
+        self.controller.read_config = mock.Mock(return_value={'config': old_content})
         error = self.controller.update_config(
             name,
             content,
             config_hash,
         )
         assert error == "It broke"
-        self.manager.write_config.assert_called_with(name, content)
-        assert not self.mcp.reconfigure.call_count
+        self.manager.write_config.call_args_list = [(name, content), (name, old_content)]
+        assert self.mcp.reconfigure.call_count == 1
 
     def test_update_config_hash_mismatch(self):
         name, content, config_hash = None, mock.Mock(), mock.Mock()
