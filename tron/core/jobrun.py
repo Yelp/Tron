@@ -1,7 +1,9 @@
 """
  Classes to manage job runs.
 """
+import json
 import logging
+import time
 from collections import deque
 
 import tron.metrics as metrics
@@ -18,6 +20,7 @@ from tron.utils.observer import Observable
 from tron.utils.observer import Observer
 
 log = logging.getLogger(__name__)
+state_logger = logging.getLogger(f'{__name__}.state_changes')
 
 
 class Error(Exception):
@@ -178,7 +181,7 @@ class JobRun(Observable, Observer):
         return max(0, timeutils.delta_total_seconds(run_time - now))
 
     def start(self):
-        """Start this JobRun as a scheduled run (not a manual run)."""
+        self.log_state_update(state='start')
         if self._do_start():
             return True
 
@@ -231,6 +234,10 @@ class JobRun(Observable, Observer):
 
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
+        self.log_state_update(
+            state=action_run.state,
+            action_name=action_run.name,
+        )
 
         if not action_run.is_done:
             return
@@ -274,6 +281,7 @@ class JobRun(Observable, Observer):
 
         # Notify Job that this JobRun is complete
         self.notify(self.NOTIFY_DONE)
+        self.log_state_update(state=self.state)
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
@@ -287,6 +295,21 @@ class JobRun(Observable, Observer):
 
     def get_action_run(self, action_name):
         return self.action_runs.get(action_name)
+
+    def log_state_update(self, state, action_name=None):
+        if action_name is None:
+            state = f'job_{state}'
+        else:
+            action_name = str(action_name)
+
+        data = {
+            'job_name': str(self.job_name),
+            'run_num': str(self.run_num),
+            'action_name': action_name,
+            'state': str(state),
+            'timestamp': time.time(),
+        }
+        state_logger.info(json.dumps(data))
 
     @property
     def state(self):

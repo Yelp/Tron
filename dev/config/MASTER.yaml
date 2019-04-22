@@ -1,5 +1,5 @@
 state_persistence:
-  name: "/tmp/tron_state"
+  name: "tron_state"
   table_name: "-tmp-tron_state"
   store_type: "dynamodb"
   buffer_size: 10

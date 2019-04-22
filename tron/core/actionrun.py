@@ -293,6 +293,10 @@ class ActionRun(Observable):
     def id(self):
         return f"{self.job_run_id}.{self.action_name}"
 
+    @property
+    def name(self):
+        return self.action_name
+
     @classmethod
     def from_state(
         cls,
