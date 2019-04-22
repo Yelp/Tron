@@ -158,7 +158,7 @@ class WeekdayFieldParser(FieldParser):
 minute_parser = MinuteFieldParser()
 hour_parser = HourFieldParser()
 monthday_parser = MonthdayFieldParser()
-month_parser = MonthdayFieldParser()
+month_parser = MonthFieldParser()
 weekday_parser = WeekdayFieldParser()
 
 
