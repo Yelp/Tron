@@ -310,6 +310,7 @@ class module.JobRunListView extends Backbone.View
                     <th>Node</th>
                     <th>Start</th>
                     <th>End</th>
+                    <th>Duration</th>
                 </tr>
             </thead>
             <tbody class="jobruns">
@@ -387,6 +388,7 @@ class JobRunListEntryView extends ClickableListEntry
         <td><%= displayNode(node) %></td>
         <td><%= dateFromNow(start_time || run_time, "Unknown") %></td>
         <td><%= dateFromNow(end_time, "") %></td>
+        <td><%= duration %></td>
         """
 
     render: ->
@@ -436,6 +438,9 @@ class window.JobRunView extends Backbone.View
                     <tr><td>End</td>
                         <td><%= dateFromNow(end_time, '') %></td>
                     </tr>
+                    <tr><td>Duration</td>
+                        <td><%= duration %></td>
+                    </tr>
                 </table>
                 </div>
             </div>
@@ -464,6 +469,7 @@ class window.JobRunView extends Backbone.View
                             <th>Node</th>
                             <th>Start</th>
                             <th>End</th>
+                            <th>Duration</th>
                         </tr>
                     </thead>
                     <tbody class="actionruns">

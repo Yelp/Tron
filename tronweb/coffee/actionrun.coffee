@@ -121,6 +121,7 @@ class module.ActionRunListEntryView extends ClickableListEntry
         <td><%= displayNode(node) %></td>
         <td><%= dateFromNow(start_time, "None") %></td>
         <td><%= dateFromNow(end_time, "") %></td>
+        <td><%= duration %></td>
         """
 
     render: ->
@@ -196,7 +197,7 @@ class module.ActionRunView extends Backbone.View
                     <tr><td>End time</td>
                         <td><%= dateFromNow(end_time, 'Unknown') %></td></tr>
                     <tr><td>Duration</td>
-                        <td><%= formatDuration(duration) %></td></tr>
+                        <td><%= duration %></td></tr>
                     <tr><td>Waits for triggers</td>
                         <td><%= triggered_by %></td></tr>
                     <tr><td>Publishes triggers</td>
@@ -259,6 +260,7 @@ class module.ActionRunHistoryView extends Backbone.View
                 <th>Exit</th>
                 <th>Start</th>
                 <th>End</th>
+                <th>Duration</th>
               </tr>
             </thead>
             <tbody>
