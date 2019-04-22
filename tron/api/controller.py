@@ -2,7 +2,6 @@
 Web Controllers for the API.
 """
 import logging
-from copy import copy
 
 from tron import yaml
 from tron.eventbus import EventBus
@@ -175,7 +174,7 @@ class ConfigController(object):
         if self.config_manager.get_hash(name) != config_hash:
             return "Configuration has changed. Please try again."
 
-        old_config = copy(self.read_config(name)['config'])
+        old_config = self.read_config(name)['config']
         try:
             self.config_manager.write_config(name, content)
             self.mcp.reconfigure()
