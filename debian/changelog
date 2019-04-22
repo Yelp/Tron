@@ -1,3 +1,11 @@
+tron (0.9.13.0) xenial; urgency=medium
+
+  * 0.9.13.0 tagged with 'make release'
+    Commit: Merge pull request #649 from Yelp/drmorr/TRON-
+    1095/add_duration_to_tronweb  duration field added to tronweb
+
+ -- root <root@d03d1d3762a0>  Mon, 22 Apr 2019 23:16:52 +0000
+
 tron (0.9.12.6) xenial; urgency=medium
 
   * 0.9.12.6 tagged with 'make release'
