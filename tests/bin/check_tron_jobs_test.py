@@ -1337,11 +1337,15 @@ class TestCheckJobs(TestCase):
                         'MASTER.test.2',
                     'state':
                         'failed',
-                    'start_time': None,
-                    'run_time':
+                    'start_time':
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
+                        ),
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 200),
                         ),
                 },
                 {
