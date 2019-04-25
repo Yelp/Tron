@@ -1345,7 +1345,7 @@ class TestCheckJobs(TestCase):
                     'run_time':
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 200),
+                            time.localtime(time.time() - 100),
                         ),
                 },
                 {
@@ -1357,13 +1357,13 @@ class TestCheckJobs(TestCase):
                     'run_time':
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1800),
+                            time.localtime(time.time() - 200),
                         ),
                 },
             ],  # noqa: E122
         }
         realert_every = check_tron_jobs.guess_realert_every(job_runs)
-        assert_equal(realert_every, 4)
+        assert_equal(realert_every, 2)
 
     def test_guess_realert_every_queue_job(self):
         job_runs = {
