@@ -42,7 +42,7 @@ def build_request(**kwargs):
 
 
 @pytest.fixture
-def request():
+def mock_request():
     return build_request()
 
 
@@ -60,6 +60,19 @@ def mock_respond():
 class WWWTestCase:
     """Patch www.response to not json encode."""
     pass
+
+
+@pytest.mark.parametrize('response,code,expected_code', [
+    ('a_string', None, 200),
+    ([{'a': 'list'}], None, 200),
+    ({'a': 'dict'}, None, 200),
+    ({'a': 'dict'}, 501, 501),
+    ({'error': 'something went wrong'}, None, 500),
+])
+def test_respond(response, code, expected_code):
+    request = build_request()
+    www.respond(request, response, code=code)
+    request.setResponseCode.assert_called_once_with(expected_code)
 
 
 class TestHandleCommand:
@@ -125,8 +138,8 @@ class TestJobrunResource(WWWTestCase):
         self.job_scheduler = mock.Mock()
         self.resource = www.JobRunResource(self.job_run, self.job_scheduler)
 
-    def test_render_GET(self, request):
-        response = self.resource.render_GET(request)
+    def test_render_GET(self, mock_request):
+        response = self.resource.render_GET(mock_request)
         assert response['id'] == self.job_run.id
 
 
@@ -230,8 +243,8 @@ class TestJobResource(WWWTestCase):
         self.job_scheduler.get_job_runs.return_value = self.job_runs
         self.resource = www.JobResource(self.job_scheduler)
 
-    def test_render_GET(self, request):
-        result = self.resource.render_GET(request)
+    def test_render_GET(self, mock_request):
+        result = self.resource.render_GET(mock_request)
         assert result['name'] == self.job_scheduler.get_job().get_name()
 
     def test_get_run_from_identifier_HEAD(self):
