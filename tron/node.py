@@ -607,9 +607,6 @@ class Node(object):
         if not self._is_run_id_tracked(run):
             log.warning("Run %s no longer tracked (_run_started)", run.id)
             return
-        assert self.run_states[run.id].state == RUN_STATE_STARTING
-        self.run_states[run.id].state = RUN_STATE_RUNNING
-
         run.started()
 
     def _run_start_error(self, result, run):

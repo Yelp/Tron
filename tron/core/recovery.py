@@ -54,6 +54,9 @@ def recover_action_run(action_run, action_runner):
     recovery_action_command.write_stdout(
         "recovering action run %s" % action_run.id,
     )
+    # Put action command in "running" state so if it fails to connect
+    # and exits with no exit code, the real action run will not retry.
+    recovery_action_command.started()
 
     # this line is where the magic happens.
     # the action run watches another actioncommand,
