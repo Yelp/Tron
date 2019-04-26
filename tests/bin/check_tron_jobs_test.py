@@ -1317,6 +1317,54 @@ class TestCheckJobs(TestCase):
         realert_every = check_tron_jobs.guess_realert_every(job_runs)
         assert_equal(realert_every, 4)
 
+    def test_guess_realert_every_no_action_run_starts(self):
+        job_runs = {
+            'status':
+                'running',
+            'next_run':
+                time.strftime(
+                    '%Y-%m-%d %H:%M:%S',
+                    time.localtime(time.time() + 600),
+                ),
+            'runs': [
+                {
+                    'id': 'MASTER.test.3',
+                    'state': 'scheduled',
+                    'start_time': None,
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'failed',
+                    'start_time': None,
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 200),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'start_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                },
+            ],  # noqa: E122
+        }
+        realert_every = check_tron_jobs.guess_realert_every(job_runs)
+        assert_equal(realert_every, 2)
+
     def test_guess_realert_every_queue_job(self):
         job_runs = {
             'status':
