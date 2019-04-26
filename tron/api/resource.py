@@ -44,8 +44,11 @@ class JSONEncoder(json.JSONEncoder):
 
 def respond(request, response, code=None, headers=None):
     """Helper to generate a json response"""
-    if code is None and type(response) is dict:
-        code = http.INTERNAL_SERVER_ERROR if response.get('error') else http.OK
+    if code is None:
+        if type(response) is dict and response.get('error'):
+            code = http.INTERNAL_SERVER_ERROR
+        else:
+            code = http.OK
     request.setResponseCode(code)
     request.setHeader(b'content-type', b'application/json; charset=utf-8')
     request.setHeader(b'Access-Control-Allow-Origin', b'*')
