@@ -1328,7 +1328,7 @@ class TestCheckJobs(TestCase):
                 ),
             'runs': [
                 {
-                    'id': 'MASTER.test.3',
+                    'id': 'MASTER.test.1',
                     'state': 'scheduled',
                     'start_time': None,
                 },
@@ -1337,6 +1337,18 @@ class TestCheckJobs(TestCase):
                         'MASTER.test.2',
                     'state':
                         'failed',
+                    'start_time': None,
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 200),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.3',
+                    'state':
+                        'succeeded',
                     'start_time':
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
@@ -1345,19 +1357,7 @@ class TestCheckJobs(TestCase):
                     'run_time':
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 100),
-                        ),
-                },
-                {
-                    'id':
-                        'MASTER.test.1',
-                    'state':
-                        'succeeded',
-                    'start_time': None,
-                    'run_time':
-                        time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 200),
+                            time.localtime(time.time() - 600),
                         ),
                 },
             ],  # noqa: E122
