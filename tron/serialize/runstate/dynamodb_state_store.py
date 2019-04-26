@@ -5,8 +5,6 @@ from collections import defaultdict
 
 import boto3
 
-from tron.serialize.runstate.shelvestore import ShelveKey
-
 OBJECT_SIZE = 400000
 log = logging.getLogger(__name__)
 
@@ -30,18 +28,13 @@ class DynamoDBStateStore(object):
         Fetch all under the same parition key(keys).
         ret: <dict of key to states>
         """
-        translated_items = {}
         try:
             first_items = self._get_first_partitions(keys)
             remaining_items = self._get_remaining_partitions(first_items)
             items = self._merge_items(first_items, remaining_items)
-            #TODO: remove this after berkleyDB is removed.
-            for key in keys:
-                if str(key) in items:
-                    translated_items[key] = items[str(key)]
         except Exception as e:
             self.alert(str(e))
-        return translated_items
+        return items
 
     def alert(self, msg: str):
         import pysensu_yelp
@@ -79,7 +72,7 @@ class DynamoDBStateStore(object):
         return items
 
     def _get_first_partitions(self, keys: list):
-        new_keys = [{'key': {'S': str(key)}, 'index': {'N': '0'}} for key in keys]
+        new_keys = [{'key': {'S': key}, 'index': {'N': '0'}} for key in keys]
         return self._get_items(new_keys)
 
     def _get_remaining_partitions(self, items: list):
@@ -119,37 +112,37 @@ class DynamoDBStateStore(object):
         except Exception as e:
             self.alert(str(e))
 
-    def __setitem__(self, key: ShelveKey, val: bytes) -> None:
+    def __setitem__(self, key: str, val: bytes) -> None:
         num_partitions = math.ceil(len(val) / OBJECT_SIZE)
         with self.table.batch_writer() as batch:
             for index in range(num_partitions):
                 batch.put_item(
                     Item={
-                        'key': str(key),
+                        'key': key,
                         'index': index,
                         'val': val[index * OBJECT_SIZE:min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],
                         'num_partitions': num_partitions,
                     }
                 )
 
-    def _delete_item(self, key: ShelveKey) -> None:
+    def _delete_item(self, key: str) -> None:
         with self.table.batch_writer() as batch:
             for index in range(self._get_num_of_partitions(key)):
                 batch.delete_item(
                     Key={
-                        'key': str(key),
+                        'key': key,
                         'index': index,
                     }
                 )
 
-    def _get_num_of_partitions(self, key: ShelveKey) -> int:
+    def _get_num_of_partitions(self, key: str) -> int:
         """
         Return how many parts is the item partitioned into
         """
         try:
             partition = self.table.get_item(
                 Key={
-                    'key': str(key),
+                    'key': key,
                     'index': 0,
                 },
                 ProjectionExpression='num_partitions',

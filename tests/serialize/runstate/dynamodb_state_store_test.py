@@ -116,8 +116,9 @@ class TestDynamoDBStateStore:
             assert_equal(pickle.dumps(vals[key]), small_object)
 
     def test_delete(self, store, small_object, large_object):
-        pairs = [(store.build_key("thing", i), large_object) for i in range(3)]
-
+        keys = [store.build_key("thing", i) for i in range(3)]
+        value = pickle.loads(large_object)
+        pairs = zip(keys, (value for i in range(len(keys))))
         store.save(pairs)
 
         for key in pairs:
