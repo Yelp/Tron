@@ -1328,7 +1328,7 @@ class TestCheckJobs(TestCase):
                 ),
             'runs': [
                 {
-                    'id': 'MASTER.test.1',
+                    'id': 'MASTER.test.3',
                     'state': 'scheduled',
                     'start_time': None,
                 },
@@ -1346,7 +1346,7 @@ class TestCheckJobs(TestCase):
                 },
                 {
                     'id':
-                        'MASTER.test.3',
+                        'MASTER.test.1',
                     'state':
                         'succeeded',
                     'start_time':
