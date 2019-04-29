@@ -100,7 +100,7 @@ class DynamoDBStateStore(object):
             key = item['key']['S']
             items[key].append(item)
         for key, item in items.items():
-            item.sort(key=lambda x: x['index']['N'])
+            item.sort(key=lambda x: int(x['index']['N']))
             for val in item:
                 raw_items[key] += bytes(val['val']['B'])
         deserialized_items = {k: pickle.loads(v) for k, v in raw_items.items()}
