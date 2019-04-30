@@ -36,6 +36,7 @@ example-cluster/_events/
 *.stderr
 dev/manhole.sock.lock
 dev/tron.pid
+dev/_events/
 
 # Generated debian artifacts
 debian/tron

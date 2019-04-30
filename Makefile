@@ -59,7 +59,7 @@ cluster_itests:
 	tox -e cluster_itests
 
 dev:
-	.tox/py36/bin/trond --debug --working-dir=dev -l logging.conf --host=$(shell hostname -f)
+	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py36/bin/trond --debug --working-dir=dev -l logging.conf --host=$(shell hostname -f)
 
 example_cluster:
 	tox -e example-cluster
