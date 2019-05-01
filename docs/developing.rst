@@ -17,9 +17,8 @@ setup using `virtualenvwrapper
     $ mkvirtualenv tron --distribute --no-site-packages
     $ pip install -r dev/req_dev.txt
 
-``req_dev.txt`` contains a list of packages required for development, including:
-`Testify <https://github.com/yelp/testify>`_ to run the tests and `Sphinx
-<http://sphinx.pocoo.org/>`_ to build the documentation.
+``req_dev.txt`` contains a list of packages required for development,
+to run the tests, and `Sphinx <http://sphinx.pocoo.org/>`_ to build the documentation.
 
 Coding Standards
 ----------------
@@ -45,16 +44,7 @@ of Tron create a working directory and start
 
 Running the Tests
 -----------------
-Tron uses the `Testify <https://github.com/Yelp/Testify>`_ unit testing
-framework.
-
-
-Run the tests using ``make tests`` or ``testify tests``.  If you're using a
-virtualenv you may want to run ``python `which testify` test`` to have it
-use the correct environment.
-
-This package also includes a ``.pyautotest`` file which can be used with
-https://github.com/dnephin/PyAutoTest to auto run tests when you save a file.
+Run the tests using ``make test``.
 
 Contributing
 ------------

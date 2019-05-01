@@ -25,17 +25,17 @@ node_pools:
     nodes: [node1, node2]
 
 jobs:
-  - name: "job0"
+  "job0":
     node: pool
     all_nodes: True
     schedule:
         start_time: 04:00:00
     queueing: False
     actions:
-      - name: verify_logs_present
+      "verify_logs_present":
         command: >
             ls /var/log/app/log_{shortdate-1}.txt
-      - name: convert_logs
+      "convert_logs":
         command: >
             convert_logs /var/log/app/log_{shortdate-1}.txt \
                 /var/log/app_converted/log_{shortdate-1}.txt
@@ -44,10 +44,10 @@ jobs:
     cleanup_action:
         command: "rm /{TMPDIR}/random_temp_file"
 
-  - name: "job1"
+  "job1":
     node: node
     schedule: "every monday at 09:00"
     queueing: False
     actions:
-      - name: "actionAlone"
+      "actionAlone":
         command: "cat big.txt; sleep 10"
