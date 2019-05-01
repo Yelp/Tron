@@ -29,13 +29,13 @@ Basic Example
         hostname: 'localhost'
 
     jobs:
-      - name: "getting_node_info"
+      "getting_node_info":
         node: local
         schedule: "cron */10 * * * *"
         actions:
-          - name: "uname"
+          "uname":
             command: "uname -a"
-          - name: "cpu_info"
+          "cpu_info":
             command: "cat /proc/cpuinfo"
             requires: [uname]
 
@@ -50,14 +50,14 @@ inserted at runtime. The **command context** is populated both by Tron (see
 example::
 
     jobs:
-        - name: "command_context_demo"
-          node: local
-          schedule: "1st monday in june"
-          actions:
-            - name: "print_run_id"
-              # prints 'command_context_demo.1' on the first run,
-              # 'command_context_demo.2' on the second, etc.
-              command: "echo {runid}"
+     "command_context_demo":
+       node: local
+       schedule: "1st monday in june"
+       actions:
+         "print_run_id":
+           # prints 'command_context_demo.1' on the first run,
+           # 'command_context_demo.2' on the second, etc.
+           command: "echo {runid}"
 
 SSH
 ---

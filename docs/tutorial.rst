@@ -72,14 +72,13 @@ file. Edit your file to be something like this::
         hostname: 'localhost'
 
     jobs:
-      - name: "getting_node_info"
+      "getting_node_info":
         node: local
         schedule: "cron */10 * * * *"
         actions:
-          - name: "uname"
+          "uname":
             command: "uname -a"
-          -
-            name: "cpu_info"
+          "cpu_info":
             command: "cat /proc/cpuinfo"
             requires: [uname]
 

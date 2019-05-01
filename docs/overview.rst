@@ -43,17 +43,17 @@ each of which is responsible for a single job::
         hostname: 'batch2'
 
     jobs:
-      - name: "job0"
+      "job0":
         node: node1
         schedule: "cron * * * * *"
         actions:
-          - name: "batch1action"
+          "batch1action":
             command: "sleep 3; echo asdfasdf"
-      - name: "job1"
+      "job1":
         node: node2
         schedule: "cron * * * * *"
         actions:
-          - name: "batch2action"
+          "batch2action":
             command: "cat big.txt; sleep 10"
 
 
@@ -78,15 +78,15 @@ Nodes can be grouped into *pools*. To continue the previous example::
           nodes: [node1, node2]
 
     jobs:
-        # ...
-        - name: "job2"
-          node: pool
-          schedule: "cron * * * * *"
-          actions:
-            - name: "pool_action"
-              command: "ls /; sleep 1"
-          cleanup_action:
-            command: "echo 'all done'"
+      # ...
+      "job2":
+        node: pool
+        schedule: "cron * * * * *"
+        actions:
+          "pool_action":
+            command: "ls /; sleep 1"
+        cleanup_action:
+          command: "echo 'all done'"
 
 ``job2``'s action will be run on a random node from ``pool`` every 5 seconds.
 When ``pool_action`` is complete, ``cleanup_action`` will run on the same node.

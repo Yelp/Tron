@@ -6,10 +6,9 @@ nodes:
     hostname: 'localhost'
 
 jobs:
-    -
-       name: "uptime_job"
-       node: node0
-       schedule: "cron */10 * * * *"
-       actions:
-         - name: "uptimer"
-           command: "uptime"
+  "uptime_job":
+    node: node0
+    schedule: "cron */10 * * * *"
+    actions:
+      "uptimer":
+        command: "uptime"

@@ -12,8 +12,16 @@ with a nonzero status, the job has failed.
 Required Fields
 ---------------
 
-**name**
-    Name of the job. Used in :command:`tronview` and :command:`tronctl`.
+Jobs are defined in the form of a dictionary, where the **name** is the key.
+The Name of the job is used in :command:`tronview` and :command:`tronctl`. Here is an example::
+
+  jobs:
+    "foo":
+      "schedule": ...
+      "command": ...
+      "actions":
+        "run_first":
+          "command": ...
 
 **node**
     Reference to the node or pool to run the job in. If a pool, the job is
@@ -154,7 +162,7 @@ Optional Fields
 Actions
 -------
 
-Actions consist primarily of a **name** and **command**. An action's command is
+Actions consist primarily of a **command**. An action's command is
 executed as soon as its dependencies (specified by **requires**) are satisfied.
 So if your job has 10 actions, 1 of which depends on the other 9, then Tron
 will launch the first 9 actions in parallel and run the last one when all have
@@ -167,14 +175,12 @@ actions which do not depend on the failed action.
 Required Fields
 ^^^^^^^^^^^^^^^
 
-**name**
-    Name of the action. Used in :command:`tronview` and :command:`tronctl`.
+Actions are defined as a dictionary, where the Name of the action is the key.
+The Name is used in :command:`tronview` and :command:`tronctl`.
 
 **command**
-    Command to run on the specified node. A common mistake here is to use
-    shell expansions or expressions in your command. Commands are run using
-    ``exec`` so bash (or other shell) expressions will not work, and could
-    cause the job to fail.
+    Command to run. Commands are run using ``/bin/sh`` so bash
+    expressions will not work, and could cause the job to fail.
 
 Optional Fields
 ^^^^^^^^^^^^^^^
@@ -230,16 +236,16 @@ Example Actions
 ::
 
     jobs:
-        - name: convert_logs
-          node: node1
-          schedule:
-            start_time: 04:00:00
-          actions:
-            - name: verify_logs_present
-              command: "ls /var/log/app/log_{shortdate-1}.txt"
-            - name: convert_logs
-              command: "convert_logs /var/log/app/log_{shortdate-1}.txt /var/log/app_converted/log_{shortdate-1}.txt"
-              requires: [verify_logs_present]
+      "convert_logs":
+        node: node1
+        schedule:
+          start_time: 04:00:00
+        actions:
+          "verify_logs_present":
+            command: "ls /var/log/app/log_{shortdate-1}.txt"
+          "convert_logs":
+            command: "convert_logs /var/log/app/log_{shortdate-1}.txt /var/log/app_converted/log_{shortdate-1}.txt"
+            requires: [verify_logs_present]
 
 .. _job_scheduling:
 
@@ -441,15 +447,6 @@ Job Run States
     The run was scheduled, but later cancelled.
 
 **UNKWN**
-    The run is in and unknown state.  This state occurs when tron restores a
-    job that was running at the time of shutdown.
-
-
-Action States
-^^^^^^^^^^^^^
-
-Job states are derived from the aggregate state of their actions.  The following
-is a state diagram for an action.
-
-.. image:: images/action.png
-    :width: 680px
+    The run is in an unknown state. This state could indicate a bug in Tron, or
+    an exceptional situation with the infrastructure that requires manual inspection.
+    Actions for this job may in fact still be running, but Tron cannot reach them.
