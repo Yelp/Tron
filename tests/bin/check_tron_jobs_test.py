@@ -1289,6 +1289,11 @@ class TestCheckJobs(TestCase):
                     'id': 'MASTER.test.3',
                     'state': 'scheduled',
                     'start_time': None,
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() + 600),
+                        ),
                 },
                 {
                     'id':
