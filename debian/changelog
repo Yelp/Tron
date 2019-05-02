@@ -1,3 +1,11 @@
+tron (0.9.13.2) xenial; urgency=medium
+
+  * 0.9.13.2 tagged with 'make release'
+    Commit: fix guess_realert when next_run is the same as previous_run
+    (#658)  fix guess_realert when next_run is the same as previous_run
+
+ -- root <root@b58ae690f313>  Thu, 02 May 2019 17:48:01 +0000
+
 tron (0.9.13.1) xenial; urgency=medium
 
   * 0.9.13.1 tagged with 'make release'
