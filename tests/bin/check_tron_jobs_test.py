@@ -1289,6 +1289,11 @@ class TestCheckJobs(TestCase):
                     'id': 'MASTER.test.3',
                     'state': 'scheduled',
                     'start_time': None,
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() + 600),
+                        ),
                 },
                 {
                     'id':
@@ -1310,44 +1315,6 @@ class TestCheckJobs(TestCase):
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 1800),
-                        ),
-                },
-            ],  # noqa: E122
-        }
-        realert_every = check_tron_jobs.guess_realert_every(job_runs)
-        assert_equal(realert_every, 4)
-
-    def test_guess_realert_every_same_next_run_and_prev_run_time(self):
-        job_runs = {
-            'status':
-                'running',
-            'next_run':
-                time.strftime(
-                    '%Y-%m-%d %H:%M:%S',
-                    time.localtime(time.time() + 600),
-                ),
-            'runs': [
-                {
-                    'id':
-                        'MASTER.test.2',
-                    'state':
-                        'failed',
-                    'start_time': None,
-                    'run_time':
-                        time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() + 600),
-                        ),
-                },
-                {
-                    'id':
-                        'MASTER.test.1',
-                    'state':
-                        'succeeded',
-                    'start_time':
-                        time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 600),
                         ),
                 },
             ],  # noqa: E122

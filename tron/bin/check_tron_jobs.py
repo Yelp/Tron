@@ -286,9 +286,8 @@ def guess_realert_every(job):
             return -1
         job_runs = job.get('runs', [])
         job_runs_started = [
-            run.get('start_time') or run.get('run_time') for run in job_runs if run.get('start_time') 
-            or run.get('run_time') 
-            and run.get('run_time') != job_next_run
+            run.get('start_time') or run.get('run_time') for run in job_runs
+            if run.get('start_time') or run.get('run_time') and run.get('run_time') != job_next_run
         ]
         if len(job_runs_started) == 0:
             return -1
