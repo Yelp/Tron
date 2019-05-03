@@ -1,6 +1,7 @@
 import logging
 import math
 import pickle
+import time
 from collections import defaultdict
 
 import boto3
@@ -28,21 +29,18 @@ class DynamoDBStateStore(object):
         Fetch all under the same parition key(keys).
         ret: <dict of key to states>
         """
-        try:
-            first_items = self._get_first_partitions(keys)
-            remaining_items = self._get_remaining_partitions(first_items)
-            items = self._merge_items(first_items, remaining_items)
-        except Exception as e:
-            self.alert(str(e))
-        return items
+        first_items = self._get_first_partitions(keys)
+        remaining_items = self._get_remaining_partitions(first_items)
+        vals = self._merge_items(first_items, remaining_items)
+        return vals
 
-    def alert(self, msg: str):
+    def alert(self, name: str, msg: str, error: str):
         import pysensu_yelp
         result_dict = {
-            'name': 'tron_dynamodb_check',
+            'name': name,
             'runbook': '',
             'status': 1,
-            'output': msg,
+            'output': '\n'.join(msg, error),
             'team': 'compute-infra',
             'tip': '',
             'page': None,
@@ -58,17 +56,26 @@ class DynamoDBStateStore(object):
 
     def _get_items(self, keys: list) -> object:
         items = []
-        table_name = self.name.replace('/', '-')
         for i in range(0, len(keys), 100):
-            vals = self.client.batch_get_item(
-                RequestItems={
-                    table_name: {
-                        'Keys': keys[i:min(len(keys), i + 100)],
-                        'ConsistentRead': True
-                    },
-                }
-            )['Responses'][table_name]
-            items.extend(vals)
+            count = 0
+            cand_keys = keys[i:min(len(keys), i + 100)]
+            while True:
+                resp = self.client.batch_get_item(
+                    RequestItems={
+                        self.name: {
+                            'Keys': cand_keys,
+                            'ConsistentRead': True
+                        },
+                    }
+                )
+                items.extend(resp['Responses'][self.name])
+                if resp['UnprocessedKeys'].get(self.name) and count < 10:
+                    cand_keys = resp['UnprocessedKeys'].get(self.name)
+                    count += 1
+                elif count >= 10:
+                    raise Exception('failed to retrieve items from dynamodb\n{}'.format(resp))
+                else:
+                    break
         return items
 
     def _get_first_partitions(self, keys: list):
@@ -110,30 +117,78 @@ class DynamoDBStateStore(object):
                 self._delete_item(key)
                 self[key] = pickle.dumps(val)
         except Exception as e:
-            self.alert(str(e))
+            log.error(str(e))
+            self.alert(
+                'tron_dynamodb_restore_save',
+                'tron failed to save for unknown reason with keys {}'.format(str(key_value_pairs.keys())),
+                str(e)
+            )
 
     def __setitem__(self, key: str, val: bytes) -> None:
+        """
+        Partition the item and write up to 10 partitions atomically.
+        Retry up to 3 times on failure
+        """
         num_partitions = math.ceil(len(val) / OBJECT_SIZE)
-        with self.table.batch_writer() as batch:
-            for index in range(num_partitions):
-                batch.put_item(
-                    Item={
-                        'key': key,
-                        'index': index,
-                        'val': val[index * OBJECT_SIZE:min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],
-                        'num_partitions': num_partitions,
-                    }
-                )
+        items = []
+        for index in range(num_partitions):
+            item = {
+                'Put': {
+                    'Item': {
+                        'key': {
+                            'S': key,
+                        },
+                        'index': {
+                            'N': str(index),
+                        },
+                        'val': {
+                            'B': val[index * OBJECT_SIZE:min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],
+                        },
+                        'num_partitions': {
+                            'N': str(num_partitions),
+                        }
+                    },
+                    'TableName': self.name,
+                },
+            }
+            count = 0
+            items.append(item)
+            # Only up to 10 items are allowed per transactions
+            while len(items) == 10 or index == num_partitions - 1:
+                try:
+                    resp = self.client.transact_write_items(TransactItems=items)
+                    items = []
+                    break  # exit the while loop on successful writing
+                except Exception as e:
+                    count += 1
+                    if count > 3:
+                        log.error(str(e))
+                        self.alert(
+                            'tron_dynamodb_save_failure',
+                            'tron failed to save due to transact_write_items failure with key {}\n{}'.format(key, resp),
+                            str(e)
+                        )
+                        time.sleep(1)
+                        break
 
     def _delete_item(self, key: str) -> None:
-        with self.table.batch_writer() as batch:
-            for index in range(self._get_num_of_partitions(key)):
-                batch.delete_item(
-                    Key={
-                        'key': key,
-                        'index': index,
-                    }
-                )
+        try:
+            with self.table.batch_writer() as batch:
+                for index in range(self._get_num_of_partitions(key)):
+                    batch.delete_item(
+                        Key={
+                            'key': key,
+                            'index': index,
+                        }
+                    )
+        except Exception as e:
+            msg = 'Tron would work normally but redundant data might not be deleted if this is not resolved'
+            log.error(str(e))
+            self.alert(
+                'tron_dynamodb_save_failure',
+                'tron failed to delete for unknown reason {}\n{}'.format(key, msg),
+                str(e)
+            )
 
     def _get_num_of_partitions(self, key: str) -> int:
         """
