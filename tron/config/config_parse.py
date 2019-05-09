@@ -613,7 +613,6 @@ class ValidateStatePersistence(Validator):
     config_class = schema.ConfigState
     defaults = {
         'buffer_size': 1,
-        'connection_details': None,
     }
 
     validators = {
@@ -621,8 +620,6 @@ class ValidateStatePersistence(Validator):
             valid_string,
         'store_type':
             config_utils.build_real_enum_validator(schema.StatePersistenceTypes),
-        'connection_details':
-            valid_string,
         'buffer_size':
             valid_int,
     }

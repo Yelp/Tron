@@ -168,23 +168,13 @@ State Persistence
         Valid options are:
             **shelve** - uses the `shelve` module and saves to a local file
 
-            **sql** - uses `sqlalchemy <http://www.sqlalchemy.org/>`_ to save to a database (tested with version 0.7).
-
             **yaml** - uses `yaml` and saves to a local file (this is not recommend and is provided to be backwards compatible with previous versions of Tron).
 
         You will need the appropriate python module for the option you choose.
 
     **name**
         The name of this store. This will be the filename for a **shelve** or
-        **yaml** store. It is just a label when used with an **sql** store.
-
-    **connection_details**
-        Ignored by **shelve** and **yaml** stores.
-
-        A connection string (see `sqlalchemy engine configuration <http://docs.sqlalchemy.org/en/latest/core/engines.html>`_) when using an **sql** store.
-
-        Valid keys are: hostname, port, username, password.
-        Example: ``"hostname=localhost&port=5555"``
+        **yaml** store.
 
     **buffer_size**
         The number of save calls to buffer before writing the state.  Defaults to 1,
@@ -194,10 +184,8 @@ State Persistence
 Example::
 
     state_persistence:
-        store_type: sql
-        name: local_sqlite
-        connection_details: "sqlite:///dest_state.db"
-        buffer_size: 1 # No buffer
+        store_type: shelve
+        name: tron_store
 
 
 .. _action_runners:

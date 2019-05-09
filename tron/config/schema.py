@@ -93,7 +93,6 @@ ConfigState = config_object_factory(
         'store_type',
     ],
     optional=[
-        'connection_details',
         'buffer_size',
         'dynamodb_region',
         'table_name',
@@ -224,7 +223,7 @@ ConfigParameter = config_object_factory(
 
 
 StatePersistenceTypes = Enum(
-    'StatePersistenceTypes', dict(shelve='shelve', sql='sql', yaml='yaml', dynamodb='dynamodb')
+    'StatePersistenceTypes', dict(shelve='shelve', yaml='yaml', dynamodb='dynamodb')
 )
 
 ExecutorTypes = Enum('ExecutorTypes', dict(ssh='ssh', mesos='mesos'))

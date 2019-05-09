@@ -34,7 +34,6 @@ class TestPersistenceManagerFactory(TestCase):
                 store_type='shelve',
                 name=fname,
                 buffer_size=0,
-                connection_details=None,
             )
             manager = PersistenceManagerFactory.from_config(config)
             store = manager._impl
