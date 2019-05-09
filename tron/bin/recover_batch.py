@@ -35,12 +35,36 @@ def parse_args():
 
 def notify(notify_queue, ignored, filepath, mask):
     with open(filepath.path) as f:
-        last_entry = f.readlines()[-1]
-        x = yaml.load(last_entry)
-        return_code = x.get('return_code')
+        last_line = f.readlines()[-1]
+        entries = yaml.load(last_line)
+
+        pid = entries.get('runner_pid')
+        return_code = entries.get('return_code')
+        exit_code, error_msg = None, None
+
         if return_code is not None:
+            if return_code < 0:
+                # from the subprocess docs on the return code of a process:
+                # "A negative value -N indicates that the child was terminated by signal N (POSIX only)."
+                # We should always exit with a positive code, so we take the absolute value of the return code
+                exit_code = abs(return_code)
+                error_msg = (
+                    'Action run killed by signal '
+                    f'{signal.Signals(exit_code).name}'
+                )
+            else:
+                exit_code = return_code
+
+        elif not psutil.pid_exists(pid):
+            exit_code = 1
+            error_msg = (
+                f'Action runner pid {pid} no longer running; '
+                'unable to recover it'
+            )
+
+        if exit_code is not None:
             reactor.stop()
-            notify_queue.put(return_code)
+            notify_queue.put((exit_code, error_msg))
 
 
 def get_key_from_last_line(filepath, key):
@@ -52,35 +76,32 @@ def get_key_from_last_line(filepath, key):
         return None
 
 
-if __name__ == "__main__":
-    args = parse_args()
-    existing_return_code = get_key_from_last_line(args.filepath, 'return_code')
+def run(fpath):
+    existing_return_code = get_key_from_last_line(fpath, 'return_code')
     if existing_return_code is not None:
         sys.exit(existing_return_code)
 
-    runner_pid = get_key_from_last_line(args.filepath, 'runner_pid')
+    runner_pid = get_key_from_last_line(fpath, 'runner_pid')
     if not psutil.pid_exists(runner_pid):
         log.warning(
-            "action_runner pid %d no longer running; unable to recover batch" %
-            runner_pid
+            f"Action runner pid {runner_pid} no longer running; "
+            "unable to recover it"
         )
         #TODO: should we kill the process here?
         sys.exit(1)
 
-    exit_code_queue = Queue()
-    watcher = StatusFileWatcher(
-        args.filepath,
-        lambda *args, **kwargs: notify(exit_code_queue, *args, **kwargs)
+    notify_queue = Queue()
+    StatusFileWatcher(
+        fpath,
+        lambda *args, **kwargs: notify(notify_queue, *args, **kwargs)
     )
     reactor.run()
-    exit_code = exit_code_queue.get()
-    assert type(exit_code) == int
-    if exit_code < 0:
-        # from the subprocess docs on the return code of a process:
-        # "A negative value -N indicates that the child was terminated by signal N (POSIX only)."
-        # We should always exit with a positive code, so we take the absolute value of the returncode
-        log.warning(
-            f'action run killed by signal {signal.Signals(abs(exit_code)).name}'
-        )
-        exit_code = abs(exit_code)
+    exit_code, error_msg = notify_queue.get()
+    if error_msg is not None:
+        log.warning(error_msg)
     sys.exit(exit_code)
+
+
+if __name__ == "__main__":
+    args = parse_args()
+    run(args.filepath)
