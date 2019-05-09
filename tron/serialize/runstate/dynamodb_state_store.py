@@ -70,10 +70,16 @@ class DynamoDBStateStore(object):
                 )
                 items.extend(resp['Responses'][self.name])
                 if resp['UnprocessedKeys'].get(self.name) and count < 10:
-                    cand_keys = resp['UnprocessedKeys'].get(self.name)
+                    cand_keys = resp['UnprocessedKeys'][self.name]['Keys']
                     count += 1
                 elif count >= 10:
-                    raise Exception('failed to retrieve items from dynamodb\n{}'.format(resp))
+                    error = Exception('failed to retrieve items from dynamodb\n{}'.format(resp))
+                    self.alert(
+                        'tron_dynamodb_restore_failure',
+                        'tron failed to restore for unknown reason with keys {}'.format(cand_keys),
+                        str(error)
+                    )
+                    raise error
                 else:
                     break
         return items
@@ -119,7 +125,7 @@ class DynamoDBStateStore(object):
         except Exception as e:
             log.error(str(e))
             self.alert(
-                'tron_dynamodb_restore_save',
+                'tron_dynamodb_save_failure',
                 'tron failed to save for unknown reason with keys {}'.format(str(key_value_pairs.keys())),
                 str(e)
             )
@@ -152,6 +158,7 @@ class DynamoDBStateStore(object):
                 },
             }
             count = 0
+            resp = None
             items.append(item)
             # Only up to 10 items are allowed per transactions
             while len(items) == 10 or index == num_partitions - 1:

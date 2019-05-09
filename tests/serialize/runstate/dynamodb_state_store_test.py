@@ -11,6 +11,11 @@ from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
 
 
 def mock_transact_write_items(self):
+    """
+    This mocks moto.dynamodb2.responses.DynamoHandler.transact_write_items,
+    which is used to mock dynamodb client. This function calls put_item,
+    update_item, and delete_item based on the arguments of transact_write_item.
+    """
 
     def put_item(item):
         name = item['TableName']
@@ -46,9 +51,12 @@ def mock_transact_write_items(self):
     return dynamo_json_dump({})
 
 
-@pytest.fixture
+@pytest.fixture(autouse=True)
 def store():
-    with mock_dynamodb2():
+    with mock.patch(
+        'moto.dynamodb2.responses.DynamoHandler.transact_write_items',
+        new=mock_transact_write_items, create=True
+    ), mock_dynamodb2():
         dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
         table_name = 'tmp'
         store = DynamoDBStateStore(table_name, 'us-west-2')
@@ -97,8 +105,6 @@ def large_object():
 
 @pytest.mark.usefixtures("store", "small_object", "large_object")
 class TestDynamoDBStateStore:
-    @mock.patch('moto.dynamodb2.responses.DynamoHandler.transact_write_items',
-                new=mock_transact_write_items, create=True)
     def test_save(self, store, small_object, large_object):
         key_value_pairs = [
             (
@@ -117,8 +123,6 @@ class TestDynamoDBStateStore:
         for key, value in key_value_pairs:
             assert_equal(vals[key], value)
 
-    @mock.patch('moto.dynamodb2.responses.DynamoHandler.transact_write_items',
-                new=mock_transact_write_items, create=True)
     def test_save_more_than_4KB(self, store, small_object, large_object):
         key_value_pairs = [
             (
@@ -133,8 +137,6 @@ class TestDynamoDBStateStore:
         for key, value in key_value_pairs:
             assert_equal(vals[key], value)
 
-    @mock.patch('moto.dynamodb2.responses.DynamoHandler.transact_write_items',
-                new=mock_transact_write_items, create=True)
     def test_restore_more_than_4KB(self, store, small_object, large_object):
         keys = [store.build_key("thing", i) for i in range(3)]
         value = pickle.loads(large_object)
@@ -145,8 +147,6 @@ class TestDynamoDBStateStore:
         for key in keys:
             assert_equal(pickle.dumps(vals[key]), large_object)
 
-    @mock.patch('moto.dynamodb2.responses.DynamoHandler.transact_write_items',
-                new=mock_transact_write_items, create=True)
     def test_restore(self, store, small_object, large_object):
         keys = [store.build_key("thing", i) for i in range(3)]
         value = pickle.loads(small_object)
@@ -157,8 +157,6 @@ class TestDynamoDBStateStore:
         for key in keys:
             assert_equal(pickle.dumps(vals[key]), small_object)
 
-    @mock.patch('moto.dynamodb2.responses.DynamoHandler.transact_write_items',
-                new=mock_transact_write_items, create=True)
     def test_delete(self, store, small_object, large_object):
         keys = [store.build_key("thing", i) for i in range(3)]
         value = pickle.loads(large_object)
@@ -170,3 +168,58 @@ class TestDynamoDBStateStore:
 
         for key in pairs:
             assert_equal(store._get_num_of_partitions(key), 0)
+
+    def test_retry_saving(self, store, small_object, large_object):
+        with mock.patch(
+            'moto.dynamodb2.responses.DynamoHandler.transact_write_items',
+            side_effect=KeyError('foo')
+        ) as mock_failed_write, mock.patch(
+            'tron.serialize.runstate.dynamodb_state_store.DynamoDBStateStore.alert'
+        ) as mock_alert:
+            keys = [store.build_key("thing", i) for i in range(1)]
+            value = pickle.loads(small_object)
+            pairs = zip(keys, (value for i in range(len(keys))))
+            try:
+                store.save(pairs)
+            except Exception:
+                assert_equal(mock_failed_write.call_count, 3)
+                assert_equal(mock_alert.call_count, 1)
+
+    def test_retry_reading(self, store, small_object, large_object):
+        unprocessed_value = {
+            'Responses': {
+                store.name: [
+                    {
+                        'index': {'N': '0'},
+                        'key': {'S': 'thing 0'}
+                    }
+                ]
+            },
+            'UnprocessedKeys':
+            {
+                store.name: {
+                    'ConsistentRead': True,
+                    'Keys': [{
+                        'index': {'N': '0'},
+                        'key': {'S': 'thing 0'}
+                    }]
+                }
+            },
+            'ResponseMetadata': {}
+        }
+        keys = [store.build_key("thing", i) for i in range(1)]
+        value = pickle.loads(small_object)
+        pairs = zip(keys, (value for i in range(len(keys))))
+        store.save(pairs)
+        with mock.patch.object(
+            store.client,
+            'batch_get_item',
+            return_value=unprocessed_value
+        ) as mock_failed_read, mock.patch(
+            'tron.serialize.runstate.dynamodb_state_store.DynamoDBStateStore.alert'
+        ) as mock_alert:
+            try:
+                store.restore(keys)
+            except Exception:
+                assert_equal(mock_failed_read.call_count, 11)
+                assert_equal(mock_alert.call_count, 1)
