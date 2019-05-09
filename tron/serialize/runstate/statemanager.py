@@ -8,7 +8,6 @@ from tron.core import job
 from tron.mesos import MesosClusterRepository
 from tron.serialize import runstate
 from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
-from tron.serialize.runstate.mirror_state_store import MirrorStateStore
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
 from tron.serialize.runstate.yamlstore import YamlStateStore
@@ -32,10 +31,8 @@ class PersistenceManagerFactory(object):
     def from_config(cls, persistence_config):
         store_type = schema.StatePersistenceTypes(persistence_config.store_type)
         name = persistence_config.name
-        table_name = persistence_config.table_name
         connection_details = persistence_config.connection_details
         buffer_size = persistence_config.buffer_size
-        dynamodb_region = persistence_config.dynamodb_region
         store = None
 
         if store_type == schema.StatePersistenceTypes.shelve:
@@ -48,7 +45,9 @@ class PersistenceManagerFactory(object):
             store = YamlStateStore(name)
 
         if store_type == schema.StatePersistenceTypes.dynamodb:
-            store = MirrorStateStore(ShelveStateStore(name), DynamoDBStateStore(table_name, dynamodb_region))
+            table_name = persistence_config.table_name
+            dynamodb_region = persistence_config.dynamodb_region
+            store = DynamoDBStateStore(table_name, dynamodb_region)
 
         buffer = StateSaveBuffer(buffer_size)
         return PersistentStateManager(store, buffer)

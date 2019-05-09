@@ -46,7 +46,7 @@ class TestSQLAlchmeyStateStore(TestCase):
         self.store.save(items)
 
         rows = self.store.engine.execute(self.store.job_table.select())
-        assert_equal(rows.fetchone(), ('stars', "{docs: blocks}\n"))
+        assert_equal(rows.fetchone(), ('stars', 'docs: blocks\n'))
 
     def test_restore_missing(self):
         key = sqlalchemystore.SQLStateKey(self.store.job_table, 'stars')
