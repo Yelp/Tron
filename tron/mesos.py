@@ -240,6 +240,14 @@ class MesosTask(ActionCommand):
         elif mesos_type == 'finished':
             self.exited(0)
         elif mesos_type == 'lost':
+            self.log.warning("Mesos does not know anything about this task, it is LOST")
+            self.log.warning("This can happen for any number of reasons, and Tron can't know if the task ran or not at all!")
+            self.log.warning("If you want Tron to RUN it (again) anyway, retry it with:")
+            self.log.warning(f"    tronctl retry {self.id}")
+            self.log.warning("If you want Tron to NOT run it and consider it as a success, skip it with:")
+            self.log.warning(f"    tronctl skip {self.id}")
+            self.log.warning("If you want Tron to NOT run it and consider it as a failure, fail it with:")
+            self.log.warning(f"    tronctl fail {self.id}")
             self.exited(None)
         elif mesos_type in self.ERROR_STATES:
             self.exited(1)
@@ -247,11 +255,11 @@ class MesosTask(ActionCommand):
             pass
         else:
             self.log.info(
-                'Did not handle unknown type of event: {}'.format(event),
+                'Did not handle unknown mesos event type: {}'.format(event),
             )
 
         if event.terminal:
-            self.log.info('Event was terminal, closing task')
+            self.log.info('This Mesos event was terminal, ending this action')
             self.report_resources(decrement=True)
 
             exit_code = int(not getattr(event, 'success', False))
@@ -375,7 +383,7 @@ class MesosCluster:
 
         mesos_task_id = task.get_mesos_id()
         self.tasks[mesos_task_id] = task
-        task.log.info('Reconciling state for this task from Mesos')
+        task.log.info('TRON RESTARTED! Starting recovery procedure by reconciling state for this task from Mesos')
         task.started()
         self.runner.reconcile(task.get_config())
         task.report_resources()
