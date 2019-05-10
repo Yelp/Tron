@@ -1,10 +1,11 @@
 import logging
 import math
 import pickle
-import time
 from collections import defaultdict
 
 import boto3
+
+from tron.serialize.runstate.shelvestore import ShelveKey
 
 OBJECT_SIZE = 400000
 log = logging.getLogger(__name__)
@@ -29,18 +30,26 @@ class DynamoDBStateStore(object):
         Fetch all under the same parition key(keys).
         ret: <dict of key to states>
         """
-        first_items = self._get_first_partitions(keys)
-        remaining_items = self._get_remaining_partitions(first_items)
-        vals = self._merge_items(first_items, remaining_items)
-        return vals
+        translated_items = {}
+        try:
+            first_items = self._get_first_partitions(keys)
+            remaining_items = self._get_remaining_partitions(first_items)
+            items = self._merge_items(first_items, remaining_items)
+            #TODO: remove this after berkleyDB is removed.
+            for key in keys:
+                if str(key) in items:
+                    translated_items[key] = items[str(key)]
+        except Exception as e:
+            self.alert(str(e))
+        return translated_items
 
-    def alert(self, name: str, msg: str, error: str):
+    def alert(self, msg: str):
         import pysensu_yelp
         result_dict = {
-            'name': name,
+            'name': 'tron_dynamodb_check',
             'runbook': '',
             'status': 1,
-            'output': '\n'.join(msg, error),
+            'output': msg,
             'team': 'compute-infra',
             'tip': '',
             'page': None,
@@ -56,36 +65,21 @@ class DynamoDBStateStore(object):
 
     def _get_items(self, keys: list) -> object:
         items = []
+        table_name = self.name.replace('/', '-')
         for i in range(0, len(keys), 100):
-            count = 0
-            cand_keys = keys[i:min(len(keys), i + 100)]
-            while True:
-                resp = self.client.batch_get_item(
-                    RequestItems={
-                        self.name: {
-                            'Keys': cand_keys,
-                            'ConsistentRead': True
-                        },
-                    }
-                )
-                items.extend(resp['Responses'][self.name])
-                if resp['UnprocessedKeys'].get(self.name) and count < 10:
-                    cand_keys = resp['UnprocessedKeys'][self.name]['Keys']
-                    count += 1
-                elif count >= 10:
-                    error = Exception('failed to retrieve items from dynamodb\n{}'.format(resp))
-                    self.alert(
-                        'tron_dynamodb_restore_failure',
-                        'tron failed to restore for unknown reason with keys {}'.format(cand_keys),
-                        str(error)
-                    )
-                    raise error
-                else:
-                    break
+            vals = self.client.batch_get_item(
+                RequestItems={
+                    table_name: {
+                        'Keys': keys[i:min(len(keys), i + 100)],
+                        'ConsistentRead': True
+                    },
+                }
+            )['Responses'][table_name]
+            items.extend(vals)
         return items
 
     def _get_first_partitions(self, keys: list):
-        new_keys = [{'key': {'S': key}, 'index': {'N': '0'}} for key in keys]
+        new_keys = [{'key': {'S': str(key)}, 'index': {'N': '0'}} for key in keys]
         return self._get_items(new_keys)
 
     def _get_remaining_partitions(self, items: list):
@@ -123,88 +117,39 @@ class DynamoDBStateStore(object):
                 self._delete_item(key)
                 self[key] = pickle.dumps(val)
         except Exception as e:
-            log.error(str(e))
-            self.alert(
-                'tron_dynamodb_save_failure',
-                'tron failed to save for unknown reason with keys {}'.format(str(key_value_pairs.keys())),
-                str(e)
-            )
+            self.alert(str(e))
 
-    def __setitem__(self, key: str, val: bytes) -> None:
-        """
-        Partition the item and write up to 10 partitions atomically.
-        Retry up to 3 times on failure
-        """
+    def __setitem__(self, key: ShelveKey, val: bytes) -> None:
         num_partitions = math.ceil(len(val) / OBJECT_SIZE)
-        items = []
-        for index in range(num_partitions):
-            item = {
-                'Put': {
-                    'Item': {
-                        'key': {
-                            'S': key,
-                        },
-                        'index': {
-                            'N': str(index),
-                        },
-                        'val': {
-                            'B': val[index * OBJECT_SIZE:min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],
-                        },
-                        'num_partitions': {
-                            'N': str(num_partitions),
-                        }
-                    },
-                    'TableName': self.name,
-                },
-            }
-            count = 0
-            resp = None
-            items.append(item)
-            # Only up to 10 items are allowed per transactions
-            while len(items) == 10 or index == num_partitions - 1:
-                try:
-                    resp = self.client.transact_write_items(TransactItems=items)
-                    items = []
-                    break  # exit the while loop on successful writing
-                except Exception as e:
-                    count += 1
-                    if count > 3:
-                        log.error(str(e))
-                        self.alert(
-                            'tron_dynamodb_save_failure',
-                            'tron failed to save due to transact_write_items failure with key {}\n{}'.format(key, resp),
-                            str(e)
-                        )
-                        time.sleep(1)
-                        break
+        with self.table.batch_writer() as batch:
+            for index in range(num_partitions):
+                batch.put_item(
+                    Item={
+                        'key': str(key),
+                        'index': index,
+                        'val': val[index * OBJECT_SIZE:min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],
+                        'num_partitions': num_partitions,
+                    }
+                )
 
-    def _delete_item(self, key: str) -> None:
-        try:
-            with self.table.batch_writer() as batch:
-                for index in range(self._get_num_of_partitions(key)):
-                    batch.delete_item(
-                        Key={
-                            'key': key,
-                            'index': index,
-                        }
-                    )
-        except Exception as e:
-            msg = 'Tron would work normally but redundant data might not be deleted if this is not resolved'
-            log.error(str(e))
-            self.alert(
-                'tron_dynamodb_save_failure',
-                'tron failed to delete for unknown reason {}\n{}'.format(key, msg),
-                str(e)
-            )
+    def _delete_item(self, key: ShelveKey) -> None:
+        with self.table.batch_writer() as batch:
+            for index in range(self._get_num_of_partitions(key)):
+                batch.delete_item(
+                    Key={
+                        'key': str(key),
+                        'index': index,
+                    }
+                )
 
-    def _get_num_of_partitions(self, key: str) -> int:
+    def _get_num_of_partitions(self, key: ShelveKey) -> int:
         """
         Return how many parts is the item partitioned into
         """
         try:
             partition = self.table.get_item(
                 Key={
-                    'key': key,
+                    'key': str(key),
                     'index': 0,
                 },
                 ProjectionExpression='num_partitions',
