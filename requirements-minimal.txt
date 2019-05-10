@@ -1,5 +1,5 @@
 argcomplete
-boto3
+boto3<=1.6
 bsddb3
 cryptography
 dataclasses
@@ -7,7 +7,7 @@ humanize
 ipdb
 ipython
 lockfile
-moto
+moto<=1.3
 psutil
 pyasn1
 pyformance
