@@ -9,7 +9,7 @@ of speeding up Tronview and Tronweb.
 import argparse
 import os
 
-import yaml
+from tron import yaml
 
 
 def parse_args():

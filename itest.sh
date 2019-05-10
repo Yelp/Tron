@@ -21,8 +21,8 @@ tronfig --help
 /opt/venvs/tron/bin/python --version | grep -q '3\.6'
 
 /opt/venvs/tron/bin/python - <<EOF
-from yaml import CSafeLoader
-from yaml import CSafeDumper
+from yaml import CLoader
+from yaml import CDumper
 EOF
 
 export TRON_WORKDIR=/nail/tron

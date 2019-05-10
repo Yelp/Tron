@@ -686,7 +686,11 @@ def validate_jobs(config, config_context):
     config_utils.unique_names(fmt_string, config['jobs'])
 
 
-DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
+DEFAULT_STATE_PERSISTENCE = ConfigState(
+    name='tron_state',
+    store_type='shelve',
+    buffer_size=1,
+)
 DEFAULT_NODE = ValidateNode().do_shortcut(node='localhost')
 
 

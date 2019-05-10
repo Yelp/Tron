@@ -6,10 +6,11 @@ import sys
 from queue import Queue
 
 import psutil
-import yaml
 from twisted.internet import inotify
 from twisted.internet import reactor
 from twisted.python import filepath
+
+from tron import yaml
 
 log = logging.getLogger('tron.recover_batch')
 
