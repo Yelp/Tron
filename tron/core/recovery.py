@@ -25,34 +25,31 @@ def filter_action_runs_needing_recovery(action_runs):
 
 
 def build_recovery_command(recovery_binary, path):
-    return "%s %s" % (recovery_binary, path)
+    return f"{recovery_binary} {path}"
 
 
 def recover_action_run(action_run, action_runner):
-    log.info("creating recovery run for actionrun %s" % action_run.id)
+    log.info(f"Creating recovery run for actionrun {action_run.id}")
     if type(action_runner) == NoActionRunnerFactory:
         log.info(
-            "unable to recover action_run %s: action_run has no action_runner"
-            % action_run.id,
+            f"Unable to recover action_run {action_run.id}: "
+            "action_run has no action_runner"
         )
         return None
 
     recovery_run = SSHActionRun(
         job_run_id=action_run.job_run_id,
-        name="recovery-%s" % action_run.id,
+        name=f"recovery-{action_run.id}",
         node=action_run.node,
         bare_command=build_recovery_command(
-            recovery_binary="%s/recover_batch.py" % (action_runner.exec_path),
-            path="%s/%s/status" % (
-                action_runner.status_path,
-                action_run.id,
-            ),
+            recovery_binary=f"{action_runner.exec_path}/recover_batch.py",
+            path=f"{action_runner.status_path}/{action_run.id}/status",
         ),
         output_path=action_run.output_path,
     )
     recovery_action_command = recovery_run.build_action_command()
     recovery_action_command.write_stdout(
-        "recovering action run %s" % action_run.id,
+        f"Recovering action run {action_run.id}",
     )
     # Put action command in "running" state so if it fails to connect
     # and exits with no exit code, the real action run will not retry.
@@ -65,8 +62,8 @@ def recover_action_run(action_run, action_runner):
 
     if not action_run.machine.check('running'):
         log.error(
-            'unable to transition action run %s from %s to start' %
-            (action_run.id, action_run.machine.state)
+            f'Unable to transition action run {action_run.id} '
+            f'from {action_run.machine.state} to start'
         )
     else:
         action_run.exit_status = None
@@ -74,14 +71,12 @@ def recover_action_run(action_run, action_runner):
         action_run.machine.transition('running')
 
     log.info(
-        "submitting recovery job with command %s to node %s" % (
-            recovery_action_command.command,
-            recovery_run.node,
-        )
+        f"Submitting recovery job with command {recovery_action_command.command} "
+        f"to node {recovery_run.node}"
     )
     deferred = recovery_run.node.submit_command(recovery_action_command)
     deferred.addCallback(
-        lambda x: log.info("completed recovery run %s" % recovery_run.id)
+        lambda x: log.info(f"Completed recovery run {recovery_run.id}")
     )
     return deferred
 
