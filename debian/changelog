@@ -1,3 +1,11 @@
+tron (0.9.13.4) xenial; urgency=medium
+
+  * 0.9.13.4 tagged with 'make release'
+    Commit: Merge pull request #667 from Yelp/revert-665-revert-654-
+    u/mingqiz/disable_shelvestore  removed mirror store
+
+ -- root <root@c5eb8fe59bbf>  Tue, 14 May 2019 23:09:44 +0000
+
 tron (0.9.13.3) xenial; urgency=medium
 
   * 0.9.13.3 tagged with 'make release'
