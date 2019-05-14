@@ -2,6 +2,7 @@ import datetime
 from unittest.mock import MagicMock
 
 import mock
+import pytest
 import pytz
 
 from testifycompat import assert_equal
@@ -14,6 +15,7 @@ from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron import node
+from tron.core import action
 from tron.core import actiongraph
 from tron.core import actionrun
 from tron.core import job
@@ -676,3 +678,249 @@ class TestJobRunCollection(TestCase):
         assert_equal(runs, expected)
         for job_run in job_runs:
             job_run.get_action_run.assert_called_with(action_name)
+
+
+class TestJobRunStateTransitions:
+    """Integration test for the state of a job run when actions change state in various ways."""
+
+    @pytest.fixture
+    def mock_event_bus(self):
+        with mock.patch(
+            'tron.core.actionrun.EventBus',
+            autospec=True,
+        ) as mock_event_bus:
+            mock_event_bus.has_event.return_value = True
+            yield mock_event_bus
+
+    @pytest.fixture
+    def job_run(self, tmpdir, mock_event_bus):
+        action_foo = action.Action('foo', 'command', None)
+        action_after_foo = action.Action('after_foo', 'command', None)
+        action_bar = action.Action('bar', 'command', None, triggered_by={'trigger'})
+        action_graph = actiongraph.ActionGraph(
+            action_map={
+                'foo': action_foo,
+                'after_foo': action_after_foo,
+                'bar': action_bar,
+            },
+            required_actions={'foo': set(), 'after_foo': {'foo'}, 'bar': set()},
+            required_triggers={'foo': set(), 'after_foo': set(), 'bar': {'trigger'}},
+        )
+        mock_job = mock.Mock(
+            output_path=filehandler.OutputPath(tmpdir),
+            action_graph=action_graph,
+            action_runner=actioncommand.NoActionRunnerFactory,
+        )
+        job_run = jobrun.JobRun.for_job(
+            mock_job,
+            run_num=1,
+            run_time=datetime.datetime.now(),
+            node=mock.Mock(),
+            manual=False,
+        )
+        return job_run
+
+    def test_success_path(self, job_run):
+        # Check expected states as actions run normally and succeed.
+        foo = job_run.get_action_run('foo')
+        after_foo = job_run.get_action_run('after_foo')
+        bar = job_run.get_action_run('bar')
+
+        # Run is initially SCHEDULED
+        assert job_run.state == actionrun.ActionRun.SCHEDULED
+
+        # After starting, both actions without dependencies start.
+        # Run is STARTING
+        job_run.start()
+        assert foo.is_starting
+        assert bar.is_starting
+        assert job_run.state == actionrun.ActionRun.STARTING
+
+        # Commands start successfully, run is RUNNING.
+        foo.action_command.started()
+        bar.action_command.started()
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # Still RUNNING after one of two running actions succeeds
+        bar.action_command.exited(0)
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # after_foo starts after its dependency succeeds
+        foo.action_command.exited(0)
+        assert after_foo.is_starting
+        after_foo.action_command.started()
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # SUCCEEDED after all actions succeed
+        after_foo.action_command.exited(0)
+        assert job_run.state == actionrun.ActionRun.SUCCEEDED
+
+    def test_one_action_fails(self, job_run):
+        foo = job_run.get_action_run('foo')
+        after_foo = job_run.get_action_run('after_foo')
+        bar = job_run.get_action_run('bar')
+
+        # bar action fails, job is RUNNING because foo is still running
+        job_run.start()
+        foo.action_command.started()
+        bar.action_command.started()
+        bar.action_command.exited(1)
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # after_foo still starts after its dependency succeeds
+        foo.action_command.exited(0)
+        assert after_foo.is_starting
+        after_foo.action_command.started()
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # After running actions finish, run enters FAILED terminal state
+        after_foo.action_command.exited(0)
+        assert job_run.state == actionrun.ActionRun.FAILED
+
+        # If we skip the failed action, run becomes SUCCEEDED
+        bar.skip()
+        assert job_run.state == actionrun.ActionRun.SUCCEEDED
+
+    def test_one_action_unknown(self, job_run):
+        foo = job_run.get_action_run('foo')
+        after_foo = job_run.get_action_run('after_foo')
+        bar = job_run.get_action_run('bar')
+
+        # bar action becomes unknown, job is RUNNING because foo is still running
+        job_run.start()
+        foo.action_command.started()
+        bar.action_command.started()
+        bar.action_command.exited(None)
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # after_foo still starts after its dependency succeeds
+        foo.action_command.exited(0)
+        assert after_foo.is_starting
+        after_foo.action_command.started()
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # UNKNOWN after running actions finish
+        after_foo.action_command.exited(0)
+        assert job_run.state == actionrun.ActionRun.UNKNOWN
+
+    def test_both_unknown_and_failed(self, job_run):
+        foo = job_run.get_action_run('foo')
+        after_foo = job_run.get_action_run('after_foo')
+        bar = job_run.get_action_run('bar')
+
+        # bar action becomes unknown, job is RUNNING because foo is still running
+        job_run.start()
+        foo.action_command.started()
+        bar.action_command.started()
+        bar.action_command.exited(None)
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # after_foo still starts after its dependency succeeds
+        foo.action_command.exited(0)
+        assert after_foo.is_starting
+        after_foo.action_command.started()
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # A different action fails
+        # Overall run is FAILED
+        after_foo.action_command.exited(1)
+        assert job_run.state == actionrun.ActionRun.FAILED
+
+    def test_required_action_fails(self, job_run):
+        foo = job_run.get_action_run('foo')
+        after_foo = job_run.get_action_run('after_foo')
+        bar = job_run.get_action_run('bar')
+
+        # An action (foo) required by another action fails
+        # Run is RUNNING while the other action, bar, is running
+        job_run.start()
+        foo.action_command.started()
+        bar.action_command.started()
+        foo.action_command.exited(1)
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # bar action succeeds
+        # after_foo cannot run because its required action failed
+        # So run is FAILED even though after_foo is waiting
+        bar.action_command.exited(0)
+        assert after_foo.is_waiting
+        assert job_run.state == actionrun.ActionRun.FAILED
+
+        # Pretend we reconfigured and after_foo doesn't depend on foo anymore
+        # Run should not be WAITING
+        # Ideally it would still be FAILED, but for now it's UNKNOWN in this case
+        job_run.action_runs.action_graph.required_actions['after_foo'] = {}
+        assert job_run.state == actionrun.ActionRun.UNKNOWN
+
+    def test_required_action_unknown(self, job_run):
+        foo = job_run.get_action_run('foo')
+        after_foo = job_run.get_action_run('after_foo')
+        bar = job_run.get_action_run('bar')
+
+        # An action (foo) required by another action becomes unknown
+        # Run is RUNNING while the other action, bar, is running
+        job_run.start()
+        foo.action_command.started()
+        bar.action_command.started()
+        foo.action_command.exited(None)
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # Other action succeeds
+        # after_foo cannot run because its required action is unknown
+        # So run is UNKNOWN even though after_foo is waiting
+        bar.action_command.exited(0)
+        assert after_foo.is_waiting
+        assert job_run.state == actionrun.ActionRun.UNKNOWN
+
+        # Pretend we reconfigured and after_foo doesn't depend on foo anymore
+        # Run should not be waiting
+        job_run.action_runs.action_graph.required_actions['after_foo'] = {}
+        assert job_run.state == actionrun.ActionRun.UNKNOWN
+
+    def test_with_trigger(self, job_run, mock_event_bus):
+        foo = job_run.get_action_run('foo')
+        after_foo = job_run.get_action_run('after_foo')
+        bar = job_run.get_action_run('bar')
+
+        # Start without trigger for bar
+        # Only foo is able to start
+        mock_event_bus.has_event.return_value = False
+        job_run.start()
+        assert foo.is_starting
+        assert bar.is_waiting
+        assert job_run.state == actionrun.ActionRun.STARTING
+
+        foo.action_command.started()
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # after_foo runs normally after foo succeeds
+        foo.action_command.exited(0)
+        assert after_foo.is_starting
+        after_foo.action_command.started()
+        assert job_run.state == actionrun.ActionRun.RUNNING
+
+        # After after_foo succeeds, run is not done
+        # WAITING because bar is still waiting for a trigger
+        after_foo.action_command.exited(0)
+        assert job_run.state == actionrun.ActionRun.WAITING
+
+        # After trigger is available, job run finishes as normal
+        mock_event_bus.has_event.return_value = True
+        bar.trigger_notify()
+        assert bar.is_starting
+        bar.action_command.started()
+        bar.action_command.exited(0)
+        assert job_run.state == actionrun.ActionRun.SUCCEEDED
+
+    def test_queued(self, job_run):
+        assert job_run.state == actionrun.ActionRun.SCHEDULED
+        job_run.queue()
+        assert job_run.state == actionrun.ActionRun.QUEUED
+        job_run.start()
+        assert job_run.state == actionrun.ActionRun.STARTING
+
+    def test_cancel_one(self, job_run):
+        job_run.start()
+        assert job_run.state == actionrun.ActionRun.STARTING
+        job_run.get_action_run('after_foo').cancel()
+        assert job_run.state == actionrun.ActionRun.CANCELLED
