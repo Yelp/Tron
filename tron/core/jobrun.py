@@ -329,7 +329,7 @@ class JobRun(Observable, Observer):
             return ActionRun.STARTING
         if self.action_runs.is_failed:
             return ActionRun.FAILED
-        if self.action_runs.is_blocked_on_trigger:
+        if self.action_runs.is_waiting and self.action_runs.is_blocked_on_trigger:
             return ActionRun.WAITING
         if self.action_runs.is_scheduled:
             return ActionRun.SCHEDULED
