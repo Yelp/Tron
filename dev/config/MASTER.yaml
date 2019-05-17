@@ -1,7 +1,7 @@
 state_persistence:
   name: "tron_state"
   table_name: "-tmp-tron_state"
-  store_type: "dynamodb"
+  store_type: "shelve"
   buffer_size: 10
   dynamodb_region: us-west-1
 

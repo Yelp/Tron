@@ -38,7 +38,7 @@ class DynamoDBStateStore(object):
         import pysensu_yelp
         result_dict = {
             'name': name,
-            'runbook': '',
+            'runbook': 'http://y/rb-tron',
             'status': 1,
             'output': '\n'.join(msg, error),
             'team': 'compute-infra',
