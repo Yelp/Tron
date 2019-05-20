@@ -39,12 +39,13 @@ dev/tron.pid
 dev/_events/
 
 # Generated debian artifacts
-debian/tron
-debian/tron.preinst.debhelper
+debian/.debhelper/
+debian/debhelper-build-stamp
 debian/files
-debian/tron.substvars
+debian/tron
 debian/tron.debhelper.log
 debian/tron.postinst.debhelper
 debian/tron.postrm.debhelper
+debian/tron.preinst.debhelper
 debian/tron.prerm.debhelper
-debian/debhelper-build-stamp
+debian/tron.substvars
