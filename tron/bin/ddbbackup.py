@@ -98,7 +98,7 @@ def main():
         max_backups = args.max_backups
         ddb = boto3.client('dynamodb', region_name=region_name)
         #create backup and remove old ones
-        create_backup(ddb, table_name, max_backups)
+        create_backup(ddb, table_name)
         delete_old_backups(ddb, table_name, max_backups)
 
 
