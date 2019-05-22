@@ -85,7 +85,7 @@ def read_config(args):
 
 
 def main():
-    # Fetch configs. Arguments are passed from systemctl. You can find them in loggging.conf
+    # Fetch configs. You can find the arguments in puppet.
     args = parse_cli()
     persistence_config = read_config(args)
 
