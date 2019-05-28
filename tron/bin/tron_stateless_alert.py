@@ -90,14 +90,14 @@ def alert(check_every, stateless_for_mins):
         'name': 'tron_stateless_alert',
         'runbook': 'y/rb-tron',
         'status': 1,
-        'output': 'DynamoDB has not been updated for {stateless_for_mins} mins'.format(),
+        'output': 'DynamoDB has not been updated for {} mins'.format(stateless_for_mins),
         'team': 'compute-infra',
         'tip': '',
         'page': False,
         'notification_email': 'mingqiz@yelp.com',
         'irc_channels': None,
         'slack_channels': None,
-        'check_every': check_every
+        'check_every': '{}s'.format(check_every * 60)
     }
     pysensu_yelp.send_event(**result_dict)
 
