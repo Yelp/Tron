@@ -84,13 +84,13 @@ def calc_time_diff(last_run_time, now):
     return time_diff / 60
 
 
-def alert(check_every, stateless_for_mins):
+def alert(check_every, msg):
     import pysensu_yelp
     result_dict = {
         'name': 'tron_stateless_alert',
         'runbook': 'y/rb-tron',
         'status': 1,
-        'output': 'DynamoDB has not been updated for {} mins'.format(stateless_for_mins),
+        'output': msg,
         'team': 'compute-infra',
         'tip': '',
         'page': False,
@@ -116,7 +116,14 @@ def main():
         # Fetch job state from dynamodb
         store = DynamoDBStateStore(table_name, dynamodb_region)
         key = store.build_key('job_state', '{}'.format(job_for_stateless_alert))
-        job = store.restore([key])[key]
+        try:
+            job = store.restore([key])
+        except Exception as e:
+            alert(
+                args.alert_after,
+                'Failed to retreive status for job {} due to {}'.format(job_for_stateless_alert, str(e))
+            )
+
         # Alert if timestamp is not updated after alert_after mins
         # Skip the check if the job never runs. This is because the intended job used as
         # timestamp is paasta-contract-monitor, which alerts if it does not run
@@ -124,7 +131,10 @@ def main():
         if last_run_time:
             stateless_for_mins = calc_time_diff(last_run_time, time.time())
             if stateless_for_mins > args.alert_after:
-                alert(args.alert_after, stateless_for_mins)
+                alert(
+                    args.alert_after,
+                    'DynamoDB has not been updated for {} mins'.format(stateless_for_mins)
+                )
 
 
 if __name__ == '__main__':
