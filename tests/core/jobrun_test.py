@@ -786,6 +786,8 @@ class TestJobRunStateTransitions:
         after_foo = job_run.get_action_run('after_foo')
         bar = job_run.get_action_run('bar')
 
+        assert job_run.state == actionrun.ActionRun.SCHEDULED
+
         # bar action becomes unknown, job is RUNNING because foo is still running
         job_run.start()
         foo.action_command.started()
@@ -830,6 +832,8 @@ class TestJobRunStateTransitions:
         foo = job_run.get_action_run('foo')
         after_foo = job_run.get_action_run('after_foo')
         bar = job_run.get_action_run('bar')
+
+        assert job_run.state == actionrun.ActionRun.SCHEDULED
 
         # An action (foo) required by another action fails
         # Run is RUNNING while the other action, bar, is running
@@ -883,8 +887,11 @@ class TestJobRunStateTransitions:
         bar = job_run.get_action_run('bar')
 
         # Start without trigger for bar
-        # Only foo is able to start
         mock_event_bus.has_event.return_value = False
+        # Job should still start in scheduled state
+        assert job_run.state == actionrun.ActionRun.SCHEDULED
+
+        # Only foo is able to start
         job_run.start()
         assert foo.is_starting
         assert bar.is_waiting
@@ -920,6 +927,7 @@ class TestJobRunStateTransitions:
         assert job_run.state == actionrun.ActionRun.STARTING
 
     def test_cancel_one(self, job_run):
+        assert job_run.state == actionrun.ActionRun.SCHEDULED
         job_run.start()
         assert job_run.state == actionrun.ActionRun.STARTING
         job_run.get_action_run('after_foo').cancel()
