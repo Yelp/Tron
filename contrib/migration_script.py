@@ -8,8 +8,7 @@ import time
 from urllib.parse import urljoin
 from urllib.parse import urlparse
 
-import yaml
-
+from tron import yaml
 from tron.commands import client
 
 

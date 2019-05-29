@@ -10,7 +10,7 @@ import optparse
 import re
 import sys
 
-import yaml
+from tron import yaml
 
 YAML_TAG_RE = re.compile(r'!\w+\b')
 

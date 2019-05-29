@@ -5,10 +5,10 @@ import signal
 import tempfile
 
 import mock
-import yaml
 
 from testifycompat import setup_teardown
 from testifycompat import TestCase
+from tron import yaml
 from tron.bin import action_status
 
 
