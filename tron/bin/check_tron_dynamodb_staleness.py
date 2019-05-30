@@ -2,6 +2,7 @@
 import argparse
 import logging
 import os
+import sys
 import time
 
 from tron.config import manager
@@ -11,7 +12,7 @@ from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
 # Default values for arguments
 DEFAULT_WORKING_DIR = '/var/lib/tron/'
 DEFAULT_CONF_PATH = 'config/'
-DEFAULT_ALERT_AFTER = 30
+DEFAULT_STALENESS_THRESHOLD = 30
 log = logging.getLogger('tron_stateless_alert')
 
 
@@ -49,8 +50,8 @@ def parse_cli():
         help="The job name to read timestamp from",
     )
     parser.add_argument(
-        "--alert-after",
-        default=DEFAULT_ALERT_AFTER,
+        "--staleness-threshold",
+        default=DEFAULT_STALENESS_THRESHOLD,
         help="how long (in mins) to wait to alert after the last timestamp of the job",
     )
     args = parser.parse_args()
@@ -66,42 +67,6 @@ def read_config(args):
     return manager.ConfigManager(args.config_path).load().get_master().state_persistence
 
 
-def calc_time_diff(last_run_time, now):
-    def trim_nanoseconds(timestamp):
-        index = timestamp.find('.')
-        if index != -1:
-            timestamp = timestamp[:index]
-        return timestamp
-
-    def _timestamp_to_timeobj(timestamp):
-        return time.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
-
-    time_diff = (
-        now -
-        time.mktime(_timestamp_to_timeobj(trim_nanoseconds(str(last_run_time))))
-    )
-    # secs to mins
-    return time_diff / 60
-
-
-def alert(check_every, msg):
-    import pysensu_yelp
-    result_dict = {
-        'name': 'tron_stateless_alert',
-        'runbook': 'y/rb-tron',
-        'status': 1,
-        'output': msg,
-        'team': 'compute-infra',
-        'tip': '',
-        'page': False,
-        'notification_email': 'mingqiz@yelp.com',
-        'irc_channels': None,
-        'slack_channels': None,
-        'check_every': '{}s'.format(check_every * 60)
-    }
-    pysensu_yelp.send_event(**result_dict)
-
-
 def main():
     # Fetch configs. You can find the arguments in puppet.
     args = parse_cli()
@@ -109,32 +74,36 @@ def main():
     store_type = schema.StatePersistenceTypes(persistence_config.store_type)
     job_for_stateless_alert = args.job_for_stateless_alert
 
-    # Make sure datastore is dynamodb
+    # Alert for DynamoDB
     if store_type == schema.StatePersistenceTypes.dynamodb:
+        # Fetch job state from dynamodb
         dynamodb_region = persistence_config.dynamodb_region
         table_name = persistence_config.table_name
-        # Fetch job state from dynamodb
         store = DynamoDBStateStore(table_name, dynamodb_region)
         key = store.build_key('job_state', '{}'.format(job_for_stateless_alert))
         try:
-            job = store.restore([key])
+            job = store.restore([key])[key]
         except Exception as e:
-            alert(
-                args.alert_after,
-                'Failed to retreive status for job {} due to {}'.format(job_for_stateless_alert, str(e))
-            )
+            logging.error(f'Failed to retreive status for job {job_for_stateless_alert} due to {str(e)}')
+            sys.exit(1)
 
-        # Alert if timestamp is not updated after alert_after mins
-        # Skip the check if the job never runs. This is because the intended job used as
-        # timestamp is paasta-contract-monitor, which alerts if it does not run
+        # Exit if the job never runs.
         last_run_time = get_last_run_time(job)
-        if last_run_time:
-            stateless_for_mins = calc_time_diff(last_run_time, time.time())
-            if stateless_for_mins > args.alert_after:
-                alert(
-                    args.alert_after,
-                    'DynamoDB has not been updated for {} mins'.format(stateless_for_mins)
-                )
+        if not last_run_time:
+            logging.error(f'No last run for {key} found. If the job was just added, it might take some time for it to run')
+            sys.exit(1)
+
+        # Alert if timestamp is not updated after staleness_threshold
+        stateless_for_secs = time.time() - last_run_time.timestamp()
+        if stateless_for_secs > args.staleness_threshold:
+            logging.error(f'DynamoDB has not been updated for {stateless_for_secs} mins')
+            sys.exit(1)
+    # Alert for BerkeleyDB
+    elif store_type == schema.StatePersistenceTypes.shelve:
+        os.execl('/usr/lib/nagios/plugins/check_file_age', '/nail/tron/tron_state', '-w', '1800', '-c', '1800')
+
+    logging.info(f"DynamoDB is up to date. It's last updated at {str(last_run_time)}")
+    sys.exit(0)
 
 
 if __name__ == '__main__':
