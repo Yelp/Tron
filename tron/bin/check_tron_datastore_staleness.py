@@ -5,6 +5,8 @@ import os
 import sys
 import time
 
+import pytz
+
 from tron.config import manager
 from tron.config import schema
 from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
@@ -52,7 +54,7 @@ def parse_cli():
     parser.add_argument(
         "--staleness-threshold",
         default=DEFAULT_STALENESS_THRESHOLD,
-        help="how long (in mins) to wait to alert after the last timestamp of the job",
+        help="how long (in seconds) to wait to alert after the last timestamp of the job",
     )
     args = parser.parse_args()
     args.working_dir = os.path.abspath(args.working_dir)
@@ -80,11 +82,11 @@ def main():
         dynamodb_region = persistence_config.dynamodb_region
         table_name = persistence_config.table_name
         store = DynamoDBStateStore(table_name, dynamodb_region)
-        key = store.build_key('job_state', '{}'.format(job_for_stateless_alert))
+        key = store.build_key('job_state', job_for_stateless_alert)
         try:
             job = store.restore([key])[key]
         except Exception as e:
-            logging.error(f'Failed to retreive status for job {job_for_stateless_alert} due to {str(e)}')
+            logging.error(f'Failed to retreive status for job {job_for_stateless_alert} due to {e}')
             sys.exit(1)
 
         # Exit if the job never runs.
@@ -94,15 +96,15 @@ def main():
             sys.exit(1)
 
         # Alert if timestamp is not updated after staleness_threshold
-        stateless_for_secs = time.time() - last_run_time.timestamp()
+        stateless_for_secs = time.time() - last_run_time.astimezone(pytz.utc).timestamp()
         if stateless_for_secs > args.staleness_threshold:
-            logging.error(f'DynamoDB has not been updated for {stateless_for_secs} mins')
+            logging.error(f'{key} has not been updated in DynamoDB for {stateless_for_secs} seconds')
             sys.exit(1)
+        logging.info(f"DynamoDB is up to date. It's last updated at {str(last_run_time)}")
     # Alert for BerkeleyDB
     elif store_type == schema.StatePersistenceTypes.shelve:
         os.execl('/usr/lib/nagios/plugins/check_file_age', '/nail/tron/tron_state', '-w', '1800', '-c', '1800')
 
-    logging.info(f"DynamoDB is up to date. It's last updated at {str(last_run_time)}")
     sys.exit(0)
 
 
