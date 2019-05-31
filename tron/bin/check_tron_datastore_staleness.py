@@ -14,8 +14,8 @@ from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
 # Default values for arguments
 DEFAULT_WORKING_DIR = '/var/lib/tron/'
 DEFAULT_CONF_PATH = 'config/'
-DEFAULT_STALENESS_THRESHOLD = 30
-log = logging.getLogger('tron_stateless_alert')
+DEFAULT_STALENESS_THRESHOLD = 1800
+log = logging.getLogger('check_tron_datastore_staleness')
 
 
 def get_last_run_time(job):
@@ -28,8 +28,7 @@ def get_last_run_time(job):
         for action in run['runs']:
             if action.get('start_time') and action.get('state') != 'scheduled':
                 timestamps.append(action.get('start_time'))
-    timestamps.sort()
-    return timestamps[-1] if timestamps else None
+    return max(timestamps) if timestamps else None
 
 
 def parse_cli():
@@ -47,7 +46,7 @@ def parse_cli():
         help="File path to the Tron configuration file",
     )
     parser.add_argument(
-        "--job-for-stateless-alert",
+        "--job-name",
         required=True,
         help="The job name to read timestamp from",
     )
@@ -74,7 +73,7 @@ def main():
     args = parse_cli()
     persistence_config = read_config(args)
     store_type = schema.StatePersistenceTypes(persistence_config.store_type)
-    job_for_stateless_alert = args.job_for_stateless_alert
+    job_name = args.job_name
 
     # Alert for DynamoDB
     if store_type == schema.StatePersistenceTypes.dynamodb:
@@ -82,11 +81,11 @@ def main():
         dynamodb_region = persistence_config.dynamodb_region
         table_name = persistence_config.table_name
         store = DynamoDBStateStore(table_name, dynamodb_region)
-        key = store.build_key('job_state', job_for_stateless_alert)
+        key = store.build_key('job_state', job_name)
         try:
             job = store.restore([key])[key]
         except Exception as e:
-            logging.error(f'Failed to retreive status for job {job_for_stateless_alert} due to {e}')
+            logging.exception(f'Failed to retreive status for job {job_name} due to {e}')
             sys.exit(1)
 
         # Exit if the job never runs.
@@ -100,10 +99,10 @@ def main():
         if stateless_for_secs > args.staleness_threshold:
             logging.error(f'{key} has not been updated in DynamoDB for {stateless_for_secs} seconds')
             sys.exit(1)
-        logging.info(f"DynamoDB is up to date. It's last updated at {str(last_run_time)}")
+        logging.info(f"DynamoDB is up to date. It's last updated at {last_run_time}")
     # Alert for BerkeleyDB
     elif store_type == schema.StatePersistenceTypes.shelve:
-        os.execl('/usr/lib/nagios/plugins/check_file_age', '/nail/tron/tron_state', '-w', '1800', '-c', '1800')
+        os.execl('/usr/lib/nagios/plugins/check_file_age', '/nail/tron/tron_state', '-w', str(args.staleness_threshold), '-c', str(args.staleness_threshold))
 
     sys.exit(0)
 
