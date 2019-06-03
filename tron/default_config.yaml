@@ -14,7 +14,6 @@ ssh_options:
     ## Configuration for how to store Tron state data
     # name: 'shelve'
     # store_type: 'tron_State.shelve'
-    # connection_details:
     # buffer_size:
 
 nodes:

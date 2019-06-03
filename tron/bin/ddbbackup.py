@@ -13,7 +13,7 @@ from tron.config import schema
 DEFAULT_WORKING_DIR = '/var/lib/tron/'
 DEFAULT_CONF_PATH = 'config/'
 MAX_BACKUPS = 5
-log = logging.getLogger(__name__)
+log = logging.getLogger('ddbbackup')
 
 
 def create_backup(ddb, table_name):

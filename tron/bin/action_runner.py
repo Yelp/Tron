@@ -11,7 +11,7 @@ import sys
 import threading
 import time
 
-import yaml
+from tron import yaml
 
 STATUS_FILE = 'status'
 

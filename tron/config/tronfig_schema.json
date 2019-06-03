@@ -60,9 +60,6 @@
         "name": {
           "type": "string"
         },
-        "connection_details": {
-          "type": "string"
-        },
         "buffer_size": {
           "type": "number",
           "default": 1
