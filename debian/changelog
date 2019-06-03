@@ -1,3 +1,10 @@
+tron (0.9.14.1) xenial; urgency=medium
+
+  * 0.9.14.1 tagged with 'make release'
+    Commit: Merge branch 'master' of github.com:Yelp/Tron
+
+ -- root <root@c66730966e5d>  Mon, 03 Jun 2019 19:01:33 +0000
+
 tron (0.9.14.0) xenial; urgency=medium
 
   * 0.9.14.0 tagged with 'make release'
