@@ -173,9 +173,7 @@ class TestDynamoDBStateStore:
         with mock.patch(
             'moto.dynamodb2.responses.DynamoHandler.transact_write_items',
             side_effect=KeyError('foo')
-        ) as mock_failed_write, mock.patch(
-            'tron.serialize.runstate.dynamodb_state_store.DynamoDBStateStore.alert'
-        ) as mock_alert:
+        ) as mock_failed_write:
             keys = [store.build_key("thing", i) for i in range(1)]
             value = pickle.loads(small_object)
             pairs = zip(keys, (value for i in range(len(keys))))
@@ -183,7 +181,6 @@ class TestDynamoDBStateStore:
                 store.save(pairs)
             except Exception:
                 assert_equal(mock_failed_write.call_count, 3)
-                assert_equal(mock_alert.call_count, 1)
 
     def test_retry_reading(self, store, small_object, large_object):
         unprocessed_value = {
@@ -215,11 +212,8 @@ class TestDynamoDBStateStore:
             store.client,
             'batch_get_item',
             return_value=unprocessed_value
-        ) as mock_failed_read, mock.patch(
-            'tron.serialize.runstate.dynamodb_state_store.DynamoDBStateStore.alert'
-        ) as mock_alert:
+        ) as mock_failed_read:
             try:
                 store.restore(keys)
             except Exception:
                 assert_equal(mock_failed_read.call_count, 11)
-                assert_equal(mock_alert.call_count, 1)
