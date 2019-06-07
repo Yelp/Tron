@@ -53,7 +53,7 @@ class DynamoDBStateStore(object):
                     cand_keys = resp['UnprocessedKeys'][self.name]['Keys']
                     count += 1
                 elif count >= 10:
-                    error = Exception(f'tron_dynamodb_restore_failure: failed to retrieve items with keys {cand_keys} from dynamodb\n{resp}')
+                    error = Exception(f'tron_dynamodb_restore_failure: failed to retrieve items with keys \n{cand_keys}\n from dynamodb\n{resp}')
                     raise error
                 else:
                     break
@@ -139,7 +139,7 @@ class DynamoDBStateStore(object):
                 except Exception as e:
                     count += 1
                     if count > 3:
-                        error = f'tron_dynamodb_save_failure: failed to save due to transact_write_items failure with key \n{key}\nto DynamoDB \n{repr(e)}'
+                        error = f'tron_dynamodb_save_failure: failed to save due to transact_write_items failure with key {key} to DynamoDB \n{repr(e)}'
                         log.error(error)
                         time.sleep(1)
                         break
