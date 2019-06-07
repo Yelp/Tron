@@ -49,11 +49,11 @@ class JobScheduler(Observer):
             return
 
         self.job.enabled = True
-        self.create_and_schedule_runs(ignore_last_run_time=True)
+        self.create_and_schedule_runs(next_run_time=None)
 
-    def create_and_schedule_runs(self, ignore_last_run_time=False):
-        for job_run in self.get_runs_to_schedule(ignore_last_run_time):
-            self._set_callback(job_run)
+    def create_and_schedule_runs(self, next_run_time=None):
+        for r in self.get_runs_to_schedule(next_run_time):
+            self._set_callback(r)
         # Eagerly save new runs in case tron gets restarted
         self.job.notify(Job.NOTIFY_STATE_CHANGE)
 
@@ -73,9 +73,17 @@ class JobScheduler(Observer):
     def schedule_reconfigured(self):
         """Remove the pending run and create new runs with the new JobScheduler.
         """
-        if self.job.enabled:
-            self.job.runs.remove_pending()
-            self.create_and_schedule_runs(ignore_last_run_time=True)
+        if not self.job.enabled:
+            return
+
+        # when reconfiguring, preserve the latest scheduled run's time
+        pending_run_times = [j.run_time for j in list(self.job.runs.get_pending())]
+        if len(pending_run_times) != 1:
+            log.warning(f'{self.job} has {len(pending_run_times)} pending runs, not 1')
+        next_run_time = None if len(pending_run_times) == 0 else pending_run_times[0]
+
+        self.job.runs.remove_pending()
+        self.create_and_schedule_runs(next_run_time=next_run_time)
 
     def schedule(self):
         """Schedule the next run for this job by setting a callback to fire
@@ -83,7 +91,9 @@ class JobScheduler(Observer):
         """
         if not self.job.enabled:
             return
-        self.create_and_schedule_runs()
+        last_run = self.job.runs.get_newest(include_manual=False)
+        last_run_time = last_run.run_time if last_run else None
+        self.create_and_schedule_runs(next_run_time=last_run_time)
 
     def update_from_job_scheduler(self, job_scheduler):
         """ Update a job scheduler by copying another. """
@@ -181,18 +191,14 @@ class JobScheduler(Observer):
 
     handler = handle_job_events
 
-    def get_runs_to_schedule(self, ignore_last_run_time):
+    def get_runs_to_schedule(self, next_run_time):
         """Build and return the runs to schedule."""
         if self.job.runs.has_pending:
             log.info(f"{self.job} has pending runs, can't schedule more.")
             return []
 
-        if ignore_last_run_time:
-            last_run_time = None
-        else:
-            last_run = self.job.runs.get_newest(include_manual=False)
-            last_run_time = last_run.run_time if last_run else None
-        next_run_time = self.job.scheduler.next_run_time(last_run_time)
+        if next_run_time is None:
+            next_run_time = self.job.scheduler.next_run_time(None)
         return self.job.build_new_runs(next_run_time)
 
     def update_name(self, name):

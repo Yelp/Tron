@@ -30,48 +30,28 @@ class TestJobSchedulerGetRunsToSchedule(TestCase):
         self.job.runs.get_pending.return_value = False
         self.scheduler.queue_overlapping = True
 
-    def test_get_runs_to_schedule_no_queue_with_pending(self):
+    def test_get_runs_to_schedule_with_pending(self):
         self.scheduler.queue_overlapping = False
         self.job.runs.has_pending = True
-        job_runs = self.job_scheduler.get_runs_to_schedule(False)
+        job_runs = self.job_scheduler.get_runs_to_schedule(None)
         assert_length(job_runs, 0)
 
-    def test_get_runs_to_schedule_queue_with_pending(self):
-        job_runs = list(self.job_scheduler.get_runs_to_schedule(False))
+    def test_get_runs_to_schedule_guess(self):
+        job_runs = list(self.job_scheduler.get_runs_to_schedule(None))
 
-        self.job.runs.get_newest.assert_called_with(include_manual=False)
-        self.job.scheduler.next_run_time.assert_called_once_with(
-            self.job.runs.get_newest.return_value.run_time,
-        )
+        assert self.job.scheduler.next_run_time.call_args_list == [mock.call(None)]
         assert_length(job_runs, 1)
         # This should return a JobRun which has the job attached as an observer
         job_runs[0].attach.assert_any_call(True, self.job)
 
-    def test_get_runs_to_schedule_no_pending(self):
-        job_runs = list(self.job_scheduler.get_runs_to_schedule(False))
+    def test_get_runs_to_schedule_given(self):
+        now = datetime.datetime.now()
+        job_runs = list(self.job_scheduler.get_runs_to_schedule(now))
 
-        self.job.runs.get_newest.assert_called_with(include_manual=False)
-        self.job.scheduler.next_run_time.assert_called_once_with(
-            self.job.runs.get_newest.return_value.run_time,
-        )
+        assert self.job.scheduler.next_run_time.call_count == 0
         assert_length(job_runs, 1)
         # This should return a JobRun which has the job attached as an observer
         job_runs[0].attach.assert_any_call(True, self.job)
-
-    def test_get_runs_to_schedule_no_last_run(self):
-        self.job.runs.get_newest.return_value = None
-
-        job_runs = list(self.job_scheduler.get_runs_to_schedule(False))
-        self.job.scheduler.next_run_time.assert_called_once_with(None)
-        assert_length(job_runs, 1)
-        # This should return a JobRun which has the job attached as an observer
-        job_runs[0].attach.assert_any_call(True, self.job)
-
-    def test_get_runs_to_schedule_ignore_last(self):
-        job_runs = list(self.job_scheduler.get_runs_to_schedule(True))
-        self.job.scheduler.next_run_time.assert_called_once_with(None)
-        assert_length(job_runs, 1)
-        self.scheduler.next_run_time.assert_called_once_with(None)
 
 
 class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):

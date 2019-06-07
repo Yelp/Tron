@@ -272,14 +272,48 @@ class TestJobScheduler(TestCase):
             calls = [mock.call(mock_runs[i]) for i in range(0, len(mock_runs))]
             self.job.watch.assert_has_calls(calls)
 
+    def test_create_and_schedule_runs_specific_time(self):
+        self.job_scheduler.get_runs_to_schedule = mock.Mock(return_value=[mock.Mock()])
+        self.job_scheduler._set_callback = mock.Mock()
+        self.job_scheduler.create_and_schedule_runs(next_run_time='a_datetime')
+        assert self.job_scheduler.get_runs_to_schedule.call_args_list == [mock.call('a_datetime')]
+
+    def test_create_and_schedule_runs_guess(self):
+        self.job_scheduler.get_runs_to_schedule = mock.Mock(return_value=[mock.Mock()])
+        self.job_scheduler._set_callback = mock.Mock()
+        self.job_scheduler.create_and_schedule_runs(next_run_time=None)
+        assert self.job_scheduler.get_runs_to_schedule.call_args_list == [mock.call(None)]
+
     def test_disable(self):
         self.job_scheduler.disable()
         assert self.job_scheduler.job.enabled is False
         self.job_scheduler.job.runs.cancel_pending.assert_called_once()
 
     def test_schedule_reconfigured(self):
+        job_run = mock.Mock()
+        job_run.run_time = 'a_run_time'
+        self.job.runs.get_pending.return_value = [job_run]
+        self.job_scheduler.create_and_schedule_runs = mock.Mock()
+
         self.job_scheduler.schedule_reconfigured()
-        self.job.runs.remove_pending.assert_called_once()
+
+        self.job.runs.remove_pending.call_count == 1
+        self.job_scheduler.create_and_schedule_runs.call_args_list == [mock.call(
+            next_run_time='a_run_time',
+        )]
+
+    def test_schedule(self):
+        self.job.enabled = True
+        last_run = mock.Mock()
+        last_run.run_time = 'a_run_time'
+        self.job.runs.get_newest = mock.Mock(return_value=last_run)
+        self.job_scheduler.create_and_schedule_runs = mock.Mock()
+
+        self.job_scheduler.schedule()
+
+        self.job_scheduler.create_and_schedule_runs.call_args_list == [
+            mock.call(next_run_time='a_run_time'),
+        ]
 
     def test_run_job(self):
         self.job_scheduler.schedule = mock.Mock(autospec=True)
