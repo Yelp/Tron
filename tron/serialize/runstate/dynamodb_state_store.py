@@ -34,26 +34,6 @@ class DynamoDBStateStore(object):
         vals = self._merge_items(first_items, remaining_items)
         return vals
 
-    def alert(self, name: str, msg: str, error: str):
-        import pysensu_yelp
-        result_dict = {
-            'name': name,
-            'runbook': '',
-            'status': 1,
-            'output': '\n'.join(msg, error),
-            'team': 'compute-infra',
-            'tip': '',
-            'page': None,
-            'notification_email': 'mingqiz@yelp.com',
-            'irc_channels': None,
-            'slack_channels': None,
-            'alert_after': '1m',
-            'check_every': '10m',
-            'realert_every': -1,
-            'ttl': None
-        }
-        pysensu_yelp.send_event(**result_dict)
-
     def _get_items(self, keys: list) -> object:
         items = []
         for i in range(0, len(keys), 100):
@@ -73,12 +53,7 @@ class DynamoDBStateStore(object):
                     cand_keys = resp['UnprocessedKeys'][self.name]['Keys']
                     count += 1
                 elif count >= 10:
-                    error = Exception('failed to retrieve items from dynamodb\n{}'.format(resp))
-                    self.alert(
-                        'tron_dynamodb_restore_failure',
-                        'tron failed to restore for unknown reason with keys {}'.format(cand_keys),
-                        str(error)
-                    )
+                    error = Exception(f'tron_dynamodb_restore_failure: failed to retrieve items with keys \n{cand_keys}\n from dynamodb\n{resp}')
                     raise error
                 else:
                     break
@@ -123,12 +98,8 @@ class DynamoDBStateStore(object):
                 self._delete_item(key)
                 self[key] = pickle.dumps(val)
         except Exception as e:
-            log.error(str(e))
-            self.alert(
-                'tron_dynamodb_save_failure',
-                'tron failed to save for unknown reason with keys {}'.format(str(key_value_pairs.keys())),
-                str(e)
-            )
+            error = f'tron_dynamodb_save_failure: failed to save items with keys \n{key_value_pairs.keys()}\n to dynamodb\n{repr(e)}'
+            log.error(error)
 
     def __setitem__(self, key: str, val: bytes) -> None:
         """
@@ -158,23 +129,18 @@ class DynamoDBStateStore(object):
                 },
             }
             count = 0
-            resp = None
             items.append(item)
             # Only up to 10 items are allowed per transactions
             while len(items) == 10 or index == num_partitions - 1:
                 try:
-                    resp = self.client.transact_write_items(TransactItems=items)
+                    self.client.transact_write_items(TransactItems=items)
                     items = []
                     break  # exit the while loop on successful writing
                 except Exception as e:
                     count += 1
                     if count > 3:
-                        log.error(str(e))
-                        self.alert(
-                            'tron_dynamodb_save_failure',
-                            'tron failed to save due to transact_write_items failure with key {}\n{}'.format(key, resp),
-                            str(e)
-                        )
+                        error = f'tron_dynamodb_save_failure: failed to save due to transact_write_items failure with key {key} to DynamoDB \n{repr(e)}'
+                        log.error(error)
                         time.sleep(1)
                         break
 
@@ -189,13 +155,8 @@ class DynamoDBStateStore(object):
                         }
                     )
         except Exception as e:
-            msg = 'Tron would work normally but redundant data might not be deleted if this is not resolved'
-            log.error(str(e))
-            self.alert(
-                'tron_dynamodb_save_failure',
-                'tron failed to delete for unknown reason {}\n{}'.format(key, msg),
-                str(e)
-            )
+            msg = f'tron_dynamodb_save_failure: failed to delete {key} for unknown reason \n {repr(e)}'
+            log.error(msg)
 
     def _get_num_of_partitions(self, key: str) -> int:
         """
