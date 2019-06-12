@@ -70,7 +70,7 @@ s3transfer==0.2.0
 setuptools==41.0.1
 six==1.12.0
 task-processing==0.1.5
-Twisted==19.2.0
+Twisted==19.2.1
 urllib3==1.24.3
 wcwidth==0.1.7
 websocket-client==0.56.0
