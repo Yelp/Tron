@@ -114,24 +114,30 @@ def compute_check_result_for_job_runs(client, job, job_content):
     if last_state == State.SUCCEEDED:
         prefix = "OK: The last job run succeeded"
         status = 0
+        stderr = ""
     elif last_state == State.NO_RUNS_TO_CHECK:
         prefix = "OK: The job is 'new' and/or has no runs to check"
         status = 0
+        stderr = ""
     elif last_state == State.SKIPPED:
         prefix = "OK: The last job run was skipped"
         status = 0
+        stderr = ""
     elif last_state == State.STUCK:
         prefix = "WARN: Job exceeded expected runtime or still running when next job is scheduled"
         status = 1
+        stderr = relevant_job_run['stderr']
     elif last_state == State.FAILED:
         prefix = "CRIT: The last job run failed!"
-        status = 2
+        stderr = relevant_job_run['stderr']
     elif last_state == State.UNKNOWN:
         prefix = "CRIT: Job has gone 'unknown' and might need manual intervention"
         status = 2
+        stderr = ""
     else:
         prefix = "UNKNOWN: The job is in a state that check_tron_jobs doesn't understand"
         status = 3
+        stderr = ""
 
     precious_runs_note = ''
     if job['monitoring'].get(PRECIOUS_JOB_ATTR, False) and status != 0:
@@ -139,7 +145,8 @@ def compute_check_result_for_job_runs(client, job, job_content):
 
     kwargs["output"] = (
         f"{prefix}\n"
-        f"{job['name']}'s latest run for {relevant_job_run_date} ({relevant_job_run['id']}) {relevant_job_run['state']}\n"
+        f"{stderr}\n"
+        f"The latest run, {relevant_job_run['id']} {relevant_job_run['state']}\n"
         f"{precious_runs_note}"
         "\nHere is the last action:\n"
         f"{pretty_print_actions(action_run_details)}\n\n"
