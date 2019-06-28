@@ -409,9 +409,10 @@ class Node(object):
 
         def connect_fail(result):
             log.warning(
-                "Cannot run %s, Failed to connect to %s",
+                "Cannot run %s, Failed to connect to %s: %s",
                 run,
                 self.hostname,
+                repr(result)
             )
             self.connection_defer = None
             self._fail_run(
@@ -491,6 +492,7 @@ class Node(object):
         create_defer = client_creator.connectTCP(
             self.hostname,
             self.config.port,
+            timeout=self.node_settings.connect_timeout,
         )
 
         # We're going to create a deferred, returned to the caller, that will
@@ -597,7 +599,7 @@ class Node(object):
 
         We don't actually know if the run succeeded
         """
-        log.error("Failure waiting on channel completion: %s", str(result))
+        log.error("Failure waiting on channel completion: %s", repr(result))
         self._fail_run(run, failure.Failure(exc_value=ResultError()))
 
     def _run_started(self, channel, run):
@@ -618,7 +620,7 @@ class Node(object):
             "Error running %s, disconnecting from %s: %s",
             run.id,
             self.hostname,
-            str(result),
+            repr(result),
         )
 
         # We clear out the deferred that likely called us because there are
