@@ -1,3 +1,11 @@
+tron (0.9.14.2) xenial; urgency=medium
+
+  * 0.9.14.2 tagged with 'make release'
+    Commit: Merge pull request #678 from Yelp/ssh-timeouts  Improve
+    logging for deferred errors and apply timeout config to trans…
+
+ -- root <root@182fad930a3e>  Fri, 05 Jul 2019 20:32:44 +0000
+
 tron (0.9.14.1) xenial; urgency=medium
 
   * 0.9.14.1 tagged with 'make release'
