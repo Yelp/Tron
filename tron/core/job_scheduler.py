@@ -93,7 +93,8 @@ class JobScheduler(Observer):
             return
         last_run = self.job.runs.get_newest(include_manual=False)
         last_run_time = last_run.run_time if last_run else None
-        self.create_and_schedule_runs(next_run_time=last_run_time)
+        next_run_time = self.job.scheduler.next_run_time(last_run_time)
+        self.create_and_schedule_runs(next_run_time=next_run_time)
 
     def update_from_job_scheduler(self, job_scheduler):
         """ Update a job scheduler by copying another. """

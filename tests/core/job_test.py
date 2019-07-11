@@ -14,7 +14,6 @@ from tests.assertions import assert_length
 from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron import node
-from tron import scheduler
 from tron.core import job
 from tron.core import jobrun
 from tron.core.actionrun import ActionRun
@@ -236,7 +235,6 @@ class TestJob(TestCase):
 class TestJobScheduler(TestCase):
     @setup
     def setup_job(self):
-        self.scheduler = scheduler.ConstantScheduler()
         mock_graph = mock.Mock(autospec=True)
         mock_graph.get_action_map.return_value = {}
         mock_graph.action_map = {}
@@ -290,15 +288,15 @@ class TestJobScheduler(TestCase):
         self.job_scheduler.job.runs.cancel_pending.assert_called_once()
 
     def test_schedule_reconfigured(self):
-        job_run = mock.Mock()
-        job_run.run_time = 'a_run_time'
-        self.job.runs.get_pending.return_value = [job_run]
+        pending_run = mock.Mock()
+        pending_run.run_time = 'a_run_time'
+        self.job.runs.get_pending.return_value = [pending_run]
         self.job_scheduler.create_and_schedule_runs = mock.Mock()
 
         self.job_scheduler.schedule_reconfigured()
 
-        self.job.runs.remove_pending.call_count == 1
-        self.job_scheduler.create_and_schedule_runs.call_args_list == [mock.call(
+        assert self.job.runs.remove_pending.call_count == 1
+        assert self.job_scheduler.create_and_schedule_runs.call_args_list == [mock.call(
             next_run_time='a_run_time',
         )]
 
@@ -311,19 +309,20 @@ class TestJobScheduler(TestCase):
 
         self.job_scheduler.schedule()
 
-        self.job_scheduler.create_and_schedule_runs.call_args_list == [
-            mock.call(next_run_time='a_run_time'),
+        self.job.scheduler.next_run_time.assert_called_once_with('a_run_time')
+        assert self.job_scheduler.create_and_schedule_runs.call_args_list == [
+            mock.call(next_run_time=self.job.scheduler.next_run_time.return_value),
         ]
 
     def test_run_job(self):
         self.job_scheduler.schedule = mock.Mock(autospec=True)
-        self.scheduler.schedule_on_complete = False
+        self.job.scheduler.schedule_on_complete = False
         self.job.runs.get_active = lambda n: []
         job_run = mock.Mock(autospec=True)
         job_run.is_cancelled = False
         self.job_scheduler.run_job(job_run)
-        assert job_run.start.called_once()
-        assert self.job_scheduler.schedule.called_once()
+        job_run.start.assert_called_once()
+        self.job_scheduler.schedule.assert_called_once()
 
     def test_run_job_job_disabled(self):
         self.job_scheduler.schedule = MagicMock()
@@ -382,7 +381,7 @@ class TestJobScheduler(TestCase):
 
     def test_run_job_schedule_on_complete(self):
         self.job_scheduler.schedule = MagicMock()
-        self.scheduler.schedule_on_complete = True
+        self.job.scheduler.schedule_on_complete = True
         self.job.runs.get_active = lambda s: []
         job_run = MagicMock(is_cancelled=False)
         self.job_scheduler.run_job(job_run)
