@@ -26,7 +26,7 @@ RUN echo "deb http://repos.mesosphere.com/ubuntu xenial main" > /etc/apt/sources
     apt-key adv --keyserver keyserver.ubuntu.com --recv 81026D0004C44CF7EF55ADF8DF7D54CBE56151BF && \
     apt-get update > /dev/null && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        docker.io=18.06.1-0ubuntu1.2~16.04.1 \
+        docker.io=18.09.7-0ubuntu1~16.04.4 \
         libsasl2-modules \
         libstdc++6 \
         mesos=1.7.2-2.0.1 > /dev/null && \

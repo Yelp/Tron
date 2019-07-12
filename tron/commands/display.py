@@ -94,8 +94,9 @@ class TableDisplay(object):
 
     header_color = 'hgray'
 
-    def __init__(self):
+    def __init__(self, sort_index=0):
         self.out = []
+        self.sort_index = sort_index
 
     def banner(self):
         if not self.title:
@@ -155,7 +156,7 @@ class TableDisplay(object):
     def rows(self):
         return sorted(
             self.data,
-            key=itemgetter(self.fields[0]),
+            key=itemgetter(self.fields[self.sort_index]),
             reverse=self.reversed,
         )
 
@@ -383,9 +384,6 @@ class DisplayActionRuns(TableDisplay):
     def store_data(self, data):
         self.data = data['runs']
         self.job_run = data
-
-    def rows(self):
-        return self.data
 
 
 def display_node(source, _=None):
