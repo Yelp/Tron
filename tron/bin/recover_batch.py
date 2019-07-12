@@ -56,7 +56,7 @@ def notify(notify_queue, ignored, filepath, mask):
             else:
                 exit_code = return_code
 
-        elif not psutil.pid_exists(pid):
+        elif pid is None or not psutil.pid_exists(pid):
             exit_code = 1
             error_msg = (
                 f'Action runner pid {pid} no longer running; '
@@ -83,7 +83,7 @@ def run(fpath):
         sys.exit(existing_return_code)
 
     runner_pid = get_key_from_last_line(fpath, 'runner_pid')
-    if not psutil.pid_exists(runner_pid):
+    if runner_pid is None or not psutil.pid_exists(runner_pid):
         log.warning(
             f"Action runner pid {runner_pid} no longer running; "
             "unable to recover it"
