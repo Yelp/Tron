@@ -126,10 +126,11 @@ def compute_check_result_for_job_runs(client, job, job_content):
     elif last_state == State.STUCK:
         prefix = "WARN: Job exceeded expected runtime or still running when next job is scheduled"
         status = 1
-        stderr = relevant_job_run['stderr']
+        stderr = action_run_details.get('stderr', "(No stderr available)")
     elif last_state == State.FAILED:
         prefix = "CRIT: The last job run failed!"
-        stderr = relevant_job_run['stderr']
+        status = 2
+        stderr = action_run_details.get('stderr', "(No stderr available)")
     elif last_state == State.UNKNOWN:
         prefix = "CRIT: Job has gone 'unknown' and might need manual intervention"
         status = 2
