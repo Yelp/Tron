@@ -1,3 +1,11 @@
+tron (0.9.14.4) xenial; urgency=medium
+
+  * 0.9.14.4 tagged with 'make release'
+    Commit: Merge pull request #682 from Yelp/stderr_fix  Fix stderr
+    output on check_tron_jobs
+
+ -- root <root@88db47311341>  Fri, 12 Jul 2019 16:56:55 +0000
+
 tron (0.9.14.3) xenial; urgency=medium
 
   * 0.9.14.3 tagged with 'make release'
