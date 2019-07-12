@@ -234,7 +234,7 @@ class MesosTask(ActionCommand):
         if mesos_type == 'staging':
             pass
         elif mesos_type == 'starting':
-            pass
+            self.started()
         elif mesos_type == 'running':
             self.started()
         elif mesos_type == 'finished':
