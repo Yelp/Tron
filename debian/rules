@@ -4,7 +4,7 @@
 PIP_INDEX_URL ?= https://pypi.python.org/simple
 
 %:
-	dh $@ --with python-virtualenv
+	dh $@ --with python-virtualenv --with=systemd
 
 # do not call `make clean` as part of packaging
 override_dh_auto_clean:

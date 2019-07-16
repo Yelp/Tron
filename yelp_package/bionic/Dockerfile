@@ -5,6 +5,7 @@ RUN apt-get -q update && \
         coffeescript \
         debhelper \
         devscripts \
+        dh-systemd \
         dh-virtualenv \
         dpkg-dev \
         gcc \

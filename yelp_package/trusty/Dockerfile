@@ -10,6 +10,7 @@ RUN apt-get -q update && \
         coffeescript \
         debhelper \
         devscripts \
+        dh-systemd \
         dpkg-dev \
         wget \
         faketime \
