@@ -56,7 +56,7 @@ def test_run_not_running():
     assert exc_info.value.code == 1
 
 
-@mock.patch.object(recover_batch, 'get_key_from_last_line', mock.Mock(side_effect=[None, None]))
+@mock.patch.object(recover_batch, 'get_key_from_last_line', mock.Mock(side_effect=[None, 0]))
 @mock.patch('psutil.pid_exists', mock.Mock(return_value=True), autospec=None)
 @mock.patch.object(recover_batch, 'Queue', autospec=True)
 @mock.patch.object(recover_batch, 'StatusFileWatcher', mock.Mock())
