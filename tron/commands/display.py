@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 
 import contextlib
 from functools import partial
+from operator import itemgetter
 
 from tron.core import actionrun
 from tron.core import job
@@ -155,7 +156,7 @@ class TableDisplay(object):
     def rows(self):
         return sorted(
             self.data,
-            key=lambda x: str(x[self.fields[self.sort_index]]),
+            key=itemgetter(self.fields[self.sort_index]),
             reverse=self.reversed,
         )
 
@@ -387,6 +388,16 @@ class DisplayActionRuns(TableDisplay):
     def store_data(self, data):
         self.data = data['runs']
         self.job_run = data
+
+    def rows(self):
+        # Action runs need a sort order that sorts by date
+        # and that can handle situations where it is None, or
+        # othere weird things, so we str()
+        return sorted(
+            self.data,
+            key=lambda x: str(x[self.fields[self.sort_index]]),
+            reverse=self.reversed,
+        )
 
 
 def display_node(source, _=None):
