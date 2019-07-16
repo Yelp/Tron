@@ -136,7 +136,7 @@ class TestMesosTask(TestCase):
             platform_type='starting',
         )
         self.task.handle_event(event)
-        assert self.task.state == MesosTask.PENDING
+        assert self.task.state == MesosTask.RUNNING
 
     def test_handle_running(self):
         event = mock_task_event(
@@ -232,6 +232,12 @@ class TestMesosTask(TestCase):
             mock_task_event(
                 task_id=self.task_id,
                 platform_type='staging',
+            )
+        )
+        self.task.handle_event(
+            mock_task_event(
+                task_id=self.task_id,
+                platform_type='starting',
             )
         )
         self.task.handle_event(
