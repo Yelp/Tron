@@ -6,7 +6,6 @@ from __future__ import unicode_literals
 
 import contextlib
 from functools import partial
-from operator import itemgetter
 
 from tron.core import actionrun
 from tron.core import job
@@ -156,7 +155,7 @@ class TableDisplay(object):
     def rows(self):
         return sorted(
             self.data,
-            key=itemgetter(self.fields[self.sort_index]),
+            key=lambda x: str(x[self.fields[self.sort_index]]),
             reverse=self.reversed,
         )
 
@@ -362,6 +361,10 @@ class DisplayActionRuns(TableDisplay):
         'state': add_color_for_state,
         'command': partial(Color.set, 'gray'),
     }
+
+    def __init__(self):
+        # Action runs need to be storted by start time, which is index 2
+        super().__init__(sort_index=2)
 
     def banner(self):
         self.out.append(format_fields(DisplayJobRuns, self.job_run))

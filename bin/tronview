@@ -105,8 +105,7 @@ def view_job(args, job_id, client):
 
 def view_job_run(args, job_run_id, client):
     actions = client.job_runs(job_run_id.url)
-    # sort_index 2 is the start time for an action
-    display_action = display.DisplayActionRuns(sort_index=2)
+    display_action = display.DisplayActionRuns()
     return display_action.format(actions)
 
 

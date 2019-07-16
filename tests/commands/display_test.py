@@ -3,8 +3,6 @@ from __future__ import unicode_literals
 
 import mock
 
-from testifycompat import assert_equal
-from testifycompat import run
 from testifycompat import setup
 from testifycompat import setup_teardown
 from testifycompat import TestCase
@@ -47,7 +45,7 @@ class TestDisplayJobRuns(TestCase):
     def test_format(self):
         out = DisplayJobRuns().format(self.data)
         lines = out.split('\n')
-        assert_equal(len(lines), 7)
+        assert len(lines) == 7
 
 
 class TestDisplayJobs(TestCase):
@@ -75,7 +73,7 @@ class TestDisplayJobs(TestCase):
 
     def test_format(self):
         lines = self.do_format()
-        assert_equal(len(lines), 5)
+        assert len(lines) == 5
 
 
 class TestDisplayActions(TestCase):
@@ -101,7 +99,7 @@ class TestDisplayActions(TestCase):
             'runs': [
                 dict(
                     id='something.23.run_other_thing',
-                    state='UNKWN',
+                    state='unknown',
                     start_time='2012-01-23 10:10:10.123456',
                     end_time='',
                     duration='',
@@ -109,7 +107,7 @@ class TestDisplayActions(TestCase):
                 ),
                 dict(
                     id='something.1.run_foo',
-                    state='FAIL',
+                    state='failed',
                     start_time='2012-01-23 10:10:10.123456',
                     end_time='2012-01-23 10:40:10.123456',
                     duration='1234.123456',
@@ -117,11 +115,33 @@ class TestDisplayActions(TestCase):
                 ),
                 dict(
                     id='something.23.run_other_thing',
-                    state='QUE',
+                    state='queued',
                     start_time='2012-01-23 10:10:10.123456',
                     end_time='',
                     duration='',
                     run_time='sometime',
+                ),
+                dict(
+                    id='something.42.weird_run',
+                    state='unknown',
+                    start_time=None,
+                    end_time=None,
+                    duration="",
+                    run_time=None,
+                ),
+                dict(
+                    id='something.43.skipped',
+                    state='skipped',
+                    start_time="2019-07-15 18:12:05",
+                    end_time="2019-07-16 01:31:50",
+                    duration="7:19:44.506211",
+                ),
+                dict(
+                    id='something.43.running',
+                    state='running',
+                    start_time="2019-07-15 18:12:05",
+                    end_time=None,
+                    duration="7:19:44.506211",
                 ),
             ],
         }
@@ -142,7 +162,7 @@ class TestDisplayActions(TestCase):
 
     def test_format(self):
         lines = self.format_lines()
-        assert_equal(len(lines), 13)
+        assert len(lines) == 16, "\n".join(lines)
 
 
 class TestAddColorForState(TestCase):
@@ -174,13 +194,9 @@ class TestDisplayNode(TestCase):
 
     def test_display_node(self):
         result = display.display_node(self.node_source)
-        assert_equal(result, 'username@hostname')
+        assert result == 'username@hostname'
 
     def test_display_node_pool(self):
         source = {'name': 'name', 'nodes': [self.node_source]}
         result = display.display_node_pool(source)
-        assert_equal(result, 'name (1 node(s))')
-
-
-if __name__ == "__main__":
-    run()
+        assert result == 'name (1 node(s))'
