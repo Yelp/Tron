@@ -1,3 +1,10 @@
+tron (0.9.14.5) xenial; urgency=medium
+
+  * 0.9.14.5 tagged with 'make release'
+    Commit: Released 0.9.14.4 via make release
+
+ -- root <root@aeda6aa81577>  Tue, 16 Jul 2019 18:23:28 +0000
+
 tron (0.9.14.4) xenial; urgency=medium
 
   * 0.9.14.4 tagged with 'make release'
