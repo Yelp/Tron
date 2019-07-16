@@ -1,6 +1,14 @@
 tron (0.9.14.4) xenial; urgency=medium
 
   * 0.9.14.4 tagged with 'make release'
+    Commit: Merge pull request #687 from Yelp/fix_tron_sorting  Fix
+    sorting for DisplayActionRuns when fields are None
+
+ -- root <root@73cada4088c5>  Tue, 16 Jul 2019 18:21:47 +0000
+
+tron (0.9.14.4) xenial; urgency=medium
+
+  * 0.9.14.4 tagged with 'make release'
     Commit: Merge pull request #682 from Yelp/stderr_fix  Fix stderr
     output on check_tron_jobs
 
