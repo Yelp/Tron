@@ -29,8 +29,7 @@ Tron development is specifically targeting Yelp's needs and not designed to be
 a general solution for other companies.
 
 * <= v0.6.2 - Stable version, recommended for non-Yelp installations.
-* >= v0.7.x - Development version. Many features removed and experimental
-  features added.
+* >= v1.0.0 - Stable mesos-based version
 
 Contributing
 ------------
