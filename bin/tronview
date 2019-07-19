@@ -153,31 +153,32 @@ def main():
     display.Color.toggle(args.display_color)
     client = Client(args.server)
 
-    if args.events:
-        try:
+    try:
+        if args.events:
             response = client.request("/api/events")
             error = response.get('error')
             if not error:
                 for evt in response.get('response', ['* no recorded events *']):
                     print(evt)
                 sys.exit(ExitCode.success)
-        except RequestError as err:
-            error = str(err)
-        raise SystemExit(f"Error: {error}")
 
-    if not args.name:
-        output = view_all(args, client)
-    else:
-        output = get_view_output(args.name, args, client)
+        if not args.name:
+            output = view_all(args, client)
+        else:
+            output = get_view_output(args.name, args, client)
 
-    if not output:
-        print("Unrecognized identifier: %s" % args.name, file=sys.stderr)
+        if not output:
+            print("Unrecognized identifier: %s" % args.name, file=sys.stderr)
+            sys.exit(ExitCode.fail)
+
+        if sys.stdout.isatty() and len(output.split('\n')) > console_height():
+            display.view_with_less(output, args.display_color)
+        else:
+            print(output)
+
+    except RequestError as err:
+        print(f"Error connecting to the tron server ({args.server}): {err}", file=sys.stderr)
         sys.exit(ExitCode.fail)
-
-    if sys.stdout.isatty() and len(output.split('\n')) > console_height():
-        display.view_with_less(output, args.display_color)
-    else:
-        print(output)
 
 
 if __name__ == '__main__':

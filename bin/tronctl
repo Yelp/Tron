@@ -15,6 +15,7 @@ import argcomplete
 from tron import __version_info__
 from tron.commands import client
 from tron.commands import cmd_utils
+from tron.commands.client import RequestError
 from tron.commands.cmd_utils import ExitCode
 from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
@@ -227,9 +228,13 @@ def main():
     cmd_utils.setup_logging(args)
     cmd_utils.load_config(args)
     cmd = COMMANDS[args.command]
-    for ret in cmd(args):
-        if not ret:
-            sys.exit(ExitCode.fail)
+    try:
+        for ret in cmd(args):
+            if not ret:
+                sys.exit(ExitCode.fail)
+    except RequestError as err:
+        print(f"Error connecting to the tron server ({args.server}): {err}", file=sys.stderr)
+        sys.exit(ExitCode.fail)
 
 
 if __name__ == '__main__':
