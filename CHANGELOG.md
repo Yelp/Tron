@@ -1,10 +1,493 @@
 # Change Log
 
-## [0.9.3.0](https://github.com/Yelp/Tron/tree/0.9.3.0) (2018-08-24)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.2.1...0.9.3.0)
+## [v0.9.14.6](https://github.com/Yelp/Tron/tree/v0.9.14.6) (2019-07-16)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.14.5...v0.9.14.6)
 
 **Merged pull requests:**
 
+- Make string sorting only in ActionRun displaying. [\#688](https://github.com/Yelp/Tron/pull/688) ([solarkennedy](https://github.com/solarkennedy))
+
+## [v0.9.14.5](https://github.com/Yelp/Tron/tree/v0.9.14.5) (2019-07-16)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.14.4...v0.9.14.5)
+
+**Merged pull requests:**
+
+- Fix sorting for DisplayActionRuns when fields are None [\#687](https://github.com/Yelp/Tron/pull/687) ([solarkennedy](https://github.com/solarkennedy))
+- Use newlines for the stderr array in check\_tron\_jobs [\#686](https://github.com/Yelp/Tron/pull/686) ([solarkennedy](https://github.com/solarkennedy))
+- Use starting update from Mesos [\#684](https://github.com/Yelp/Tron/pull/684) ([qui](https://github.com/qui))
+- Determine that runner is not running anymore if pid is none for recover\_batch [\#683](https://github.com/Yelp/Tron/pull/683) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+
+## [v0.9.14.4](https://github.com/Yelp/Tron/tree/v0.9.14.4) (2019-07-12)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.14.3...v0.9.14.4)
+
+**Merged pull requests:**
+
+- Fix stderr output on check\_tron\_jobs [\#682](https://github.com/Yelp/Tron/pull/682) ([solarkennedy](https://github.com/solarkennedy))
+- Sort action\_runs by start\_time in tronview [\#680](https://github.com/Yelp/Tron/pull/680) ([solarkennedy](https://github.com/solarkennedy))
+
+## [v0.9.14.3](https://github.com/Yelp/Tron/tree/v0.9.14.3) (2019-07-11)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.14.2...v0.9.14.3)
+
+**Merged pull requests:**
+
+- Use last run time to get next run time before scheduling [\#681](https://github.com/Yelp/Tron/pull/681) ([qui](https://github.com/qui))
+
+## [v0.9.14.2](https://github.com/Yelp/Tron/tree/v0.9.14.2) (2019-07-05)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.14.1...v0.9.14.2)
+
+**Merged pull requests:**
+
+- Bump parso [\#679](https://github.com/Yelp/Tron/pull/679) ([keymone](https://github.com/keymone))
+- Improve logging for deferred errors and apply timeout config to trans… [\#678](https://github.com/Yelp/Tron/pull/678) ([qui](https://github.com/qui))
+- Put stderr at the front of the check\_tron\_jobs notification [\#677](https://github.com/Yelp/Tron/pull/677) ([solarkennedy](https://github.com/solarkennedy))
+- Bump Twisted and Jinja [\#676](https://github.com/Yelp/Tron/pull/676) ([keymone](https://github.com/keymone))
+- clean up alerts and ddbbackup [\#675](https://github.com/Yelp/Tron/pull/675) ([EmanekaT](https://github.com/EmanekaT))
+- Preserve last run's scheduled time when reconfiguring [\#674](https://github.com/Yelp/Tron/pull/674) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+
+## [v0.9.14.1](https://github.com/Yelp/Tron/tree/v0.9.14.1) (2019-06-03)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.14.0...v0.9.14.1)
+
+**Merged pull requests:**
+
+- Add tron\_stateless\_alert for dynamodb [\#673](https://github.com/Yelp/Tron/pull/673) ([EmanekaT](https://github.com/EmanekaT))
+- Set up periodic backup for DynamoDB [\#671](https://github.com/Yelp/Tron/pull/671) ([EmanekaT](https://github.com/EmanekaT))
+- fixed make dev [\#670](https://github.com/Yelp/Tron/pull/670) ([EmanekaT](https://github.com/EmanekaT))
+- Build for bionic [\#663](https://github.com/Yelp/Tron/pull/663) ([jvperrin](https://github.com/jvperrin))
+- Bump dependencies [\#661](https://github.com/Yelp/Tron/pull/661) ([keymone](https://github.com/keymone))
+
+## [v0.9.14.0](https://github.com/Yelp/Tron/tree/v0.9.14.0) (2019-05-16)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.13.4...v0.9.14.0)
+
+**Merged pull requests:**
+
+- Runs with triggers should start in scheduled state [\#668](https://github.com/Yelp/Tron/pull/668) ([qui](https://github.com/qui))
+
+## [v0.9.13.4](https://github.com/Yelp/Tron/tree/v0.9.13.4) (2019-05-14)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.13.3...v0.9.13.4)
+
+**Merged pull requests:**
+
+- Revert "Revert "removed mirror store"" [\#667](https://github.com/Yelp/Tron/pull/667) ([EmanekaT](https://github.com/EmanekaT))
+
+## [v0.9.13.3](https://github.com/Yelp/Tron/tree/v0.9.13.3) (2019-05-14)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.13.2...v0.9.13.3)
+
+**Merged pull requests:**
+
+- Make recovery batch script also check if action runner suddenly goes away [\#666](https://github.com/Yelp/Tron/pull/666) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+- Revert "removed mirror store" [\#665](https://github.com/Yelp/Tron/pull/665) ([EmanekaT](https://github.com/EmanekaT))
+- Prevent job runs from incorrectly getting stuck in WAITING [\#664](https://github.com/Yelp/Tron/pull/664) ([qui](https://github.com/qui))
+- Split the tab completion file [\#662](https://github.com/Yelp/Tron/pull/662) ([tzhu-yelp](https://github.com/tzhu-yelp))
+- Place the bash completion script in the completion dir [\#660](https://github.com/Yelp/Tron/pull/660) ([tzhu-yelp](https://github.com/tzhu-yelp))
+- Added lots more task logging for unknown events [\#659](https://github.com/Yelp/Tron/pull/659) ([solarkennedy](https://github.com/solarkennedy))
+- removed mirror store [\#654](https://github.com/Yelp/Tron/pull/654) ([EmanekaT](https://github.com/EmanekaT))
+
+## [v0.9.13.2](https://github.com/Yelp/Tron/tree/v0.9.13.2) (2019-05-02)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.13.1...v0.9.13.2)
+
+**Merged pull requests:**
+
+- fix guess\_realert when next\_run is the same as previous\_run [\#658](https://github.com/Yelp/Tron/pull/658) ([EmanekaT](https://github.com/EmanekaT))
+- Some doc updates [\#657](https://github.com/Yelp/Tron/pull/657) ([solarkennedy](https://github.com/solarkennedy))
+
+## [v0.9.13.1](https://github.com/Yelp/Tron/tree/v0.9.13.1) (2019-04-30)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.13.0...v0.9.13.1)
+
+**Merged pull requests:**
+
+- Changed dynamodb partition index to int so it is sorted correctly [\#656](https://github.com/Yelp/Tron/pull/656) ([EmanekaT](https://github.com/EmanekaT))
+- Prevent a connection error in the recovery action from failing the action [\#655](https://github.com/Yelp/Tron/pull/655) ([qui](https://github.com/qui))
+- Return 200 if no code is passed and the response is not a dict [\#653](https://github.com/Yelp/Tron/pull/653) ([qui](https://github.com/qui))
+- Fixed guess\_realert\_every [\#652](https://github.com/Yelp/Tron/pull/652) ([EmanekaT](https://github.com/EmanekaT))
+
+## [v0.9.13.0](https://github.com/Yelp/Tron/tree/v0.9.13.0) (2019-04-22)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.12.6...v0.9.13.0)
+
+**Merged pull requests:**
+
+- reload old config if new config fails [\#651](https://github.com/Yelp/Tron/pull/651) ([drmorr0](https://github.com/drmorr0))
+- Use correct parser for months in cron [\#650](https://github.com/Yelp/Tron/pull/650) ([qui](https://github.com/qui))
+- duration field added to tronweb [\#649](https://github.com/Yelp/Tron/pull/649) ([drmorr0](https://github.com/drmorr0))
+- Log state changes [\#646](https://github.com/Yelp/Tron/pull/646) ([qui](https://github.com/qui))
+
+## [v0.9.12.6](https://github.com/Yelp/Tron/tree/v0.9.12.6) (2019-04-19)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.12.5...v0.9.12.6)
+
+**Merged pull requests:**
+
+-  Removed interval scheduler [\#648](https://github.com/Yelp/Tron/pull/648) ([EmanekaT](https://github.com/EmanekaT))
+- "Remove" interval scheduler from documentation [\#647](https://github.com/Yelp/Tron/pull/647) ([EmanekaT](https://github.com/EmanekaT))
+- Workaround for trond segfaults [\#645](https://github.com/Yelp/Tron/pull/645) ([vkhromov](https://github.com/vkhromov))
+- Check for failed or unknown action if a run is waiting [\#644](https://github.com/Yelp/Tron/pull/644) ([qui](https://github.com/qui))
+
+## [v0.9.12.5](https://github.com/Yelp/Tron/tree/v0.9.12.5) (2019-04-15)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.12.4...v0.9.12.5)
+
+**Merged pull requests:**
+
+- alert on failed actions before stuck runs [\#642](https://github.com/Yelp/Tron/pull/642) ([drmorr0](https://github.com/drmorr0))
+
+## [v0.9.12.4](https://github.com/Yelp/Tron/tree/v0.9.12.4) (2019-04-10)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.12.3...v0.9.12.4)
+
+**Merged pull requests:**
+
+- check\_tron\_jobs no longer alerts if job is not scheduled [\#641](https://github.com/Yelp/Tron/pull/641) ([acoover](https://github.com/acoover))
+- Improve dynamodb read/write speed [\#640](https://github.com/Yelp/Tron/pull/640) ([EmanekaT](https://github.com/EmanekaT))
+- Make check\_tron\_jobs look at entire history by removing count arg [\#636](https://github.com/Yelp/Tron/pull/636) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+- Just get run state once to reduce iterating on deque [\#627](https://github.com/Yelp/Tron/pull/627) ([qui](https://github.com/qui))
+
+## [v0.9.12.3](https://github.com/Yelp/Tron/tree/v0.9.12.3) (2019-04-03)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.12.2...v0.9.12.3)
+
+**Merged pull requests:**
+
+- changed max number of open files to 10000 [\#639](https://github.com/Yelp/Tron/pull/639) ([EmanekaT](https://github.com/EmanekaT))
+- Bump taskproc to 0.1.5 to include fix that restarts driver on error [\#638](https://github.com/Yelp/Tron/pull/638) ([qui](https://github.com/qui))
+
+## [v0.9.12.2](https://github.com/Yelp/Tron/tree/v0.9.12.2) (2019-04-02)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.12.1...v0.9.12.2)
+
+**Merged pull requests:**
+
+- Make macro\_timedelta round days if day \> a month's days [\#637](https://github.com/Yelp/Tron/pull/637) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+- fixed a bug in dynamodb validation function [\#635](https://github.com/Yelp/Tron/pull/635) ([EmanekaT](https://github.com/EmanekaT))
+- Handle starting state from Mesos [\#632](https://github.com/Yelp/Tron/pull/632) ([qui](https://github.com/qui))
+
+## [v0.9.12.1](https://github.com/Yelp/Tron/tree/v0.9.12.1) (2019-03-22)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.12.0...v0.9.12.1)
+
+**Merged pull requests:**
+
+- fixed data validation of dynamodb migration  [\#631](https://github.com/Yelp/Tron/pull/631) ([EmanekaT](https://github.com/EmanekaT))
+- Allow the tron api get response to handle lists as well as dicts. [\#630](https://github.com/Yelp/Tron/pull/630) ([solarkennedy](https://github.com/solarkennedy))
+- use mesos 1.7.2 in itests [\#629](https://github.com/Yelp/Tron/pull/629) ([stug](https://github.com/stug))
+
+## [v0.9.12.0](https://github.com/Yelp/Tron/tree/v0.9.12.0) (2019-03-13)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.11.1...v0.9.12.0)
+
+## [v0.9.11.1](https://github.com/Yelp/Tron/tree/v0.9.11.1) (2019-03-12)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.11.0...v0.9.11.1)
+
+**Merged pull requests:**
+
+- Fixed trusty build [\#628](https://github.com/Yelp/Tron/pull/628) ([EmanekaT](https://github.com/EmanekaT))
+
+## [v0.9.11.0](https://github.com/Yelp/Tron/tree/v0.9.11.0) (2019-03-08)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.10.0...v0.9.11.0)
+
+**Merged pull requests:**
+
+- Added back a trusty target to the travis matrix and not duplicate running unit tests. [\#626](https://github.com/Yelp/Tron/pull/626) ([solarkennedy](https://github.com/solarkennedy))
+- Migrating from Berkley DB to DynamoDB \(TRON-638\) [\#617](https://github.com/Yelp/Tron/pull/617) ([EmanekaT](https://github.com/EmanekaT))
+
+## [v0.9.10.0](https://github.com/Yelp/Tron/tree/v0.9.10.0) (2019-03-04)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.15...v0.9.10.0)
+
+**Merged pull requests:**
+
+- Waiting state if an action is waiting for normal or cross-job dependencies [\#622](https://github.com/Yelp/Tron/pull/622) ([qui](https://github.com/qui))
+
+## [v0.9.9.15](https://github.com/Yelp/Tron/tree/v0.9.9.15) (2019-03-04)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.14...v0.9.9.15)
+
+**Merged pull requests:**
+
+- Add waiting state first for rollback safety [\#624](https://github.com/Yelp/Tron/pull/624) ([qui](https://github.com/qui))
+- use mesos 1.7.1 in itests [\#623](https://github.com/Yelp/Tron/pull/623) ([stug](https://github.com/stug))
+- Add docs for monitoring defaults [\#621](https://github.com/Yelp/Tron/pull/621) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+- Removed trusty support [\#620](https://github.com/Yelp/Tron/pull/620) ([solarkennedy](https://github.com/solarkennedy))
+- Don't upgrade all the things when building a package [\#619](https://github.com/Yelp/Tron/pull/619) ([solarkennedy](https://github.com/solarkennedy))
+
+## [v0.9.9.14](https://github.com/Yelp/Tron/tree/v0.9.9.14) (2019-02-08)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.13...v0.9.9.14)
+
+**Merged pull requests:**
+
+- Ignore duration=None for jobs waiting on external dependency [\#615](https://github.com/Yelp/Tron/pull/615) ([keymone](https://github.com/keymone))
+
+## [v0.9.9.13](https://github.com/Yelp/Tron/tree/v0.9.9.13) (2019-02-07)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.12...v0.9.9.13)
+
+**Merged pull requests:**
+
+- Add tronctl version subcommand [\#612](https://github.com/Yelp/Tron/pull/612) ([keymone](https://github.com/keymone))
+
+## [v0.9.9.12](https://github.com/Yelp/Tron/tree/v0.9.9.12) (2019-02-07)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.11...v0.9.9.12)
+
+**Merged pull requests:**
+
+- Fix inconsistency between JobRun state attribute and is\_\<state\> checks [\#613](https://github.com/Yelp/Tron/pull/613) ([keymone](https://github.com/keymone))
+
+## [v0.9.9.11](https://github.com/Yelp/Tron/tree/v0.9.9.11) (2019-02-04)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.10...v0.9.9.11)
+
+**Merged pull requests:**
+
+- Added disk support to tron on mesos [\#610](https://github.com/Yelp/Tron/pull/610) ([solarkennedy](https://github.com/solarkennedy))
+
+## [v0.9.9.10](https://github.com/Yelp/Tron/tree/v0.9.9.10) (2019-01-31)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.9...v0.9.9.10)
+
+**Merged pull requests:**
+
+- Fix job appearing pending when waiting on trigger requirement [\#611](https://github.com/Yelp/Tron/pull/611) ([keymone](https://github.com/keymone))
+- Bump pysensu-yelp to pull in JIRA priority support [\#609](https://github.com/Yelp/Tron/pull/609) ([jvperrin](https://github.com/jvperrin))
+- Add ym format [\#608](https://github.com/Yelp/Tron/pull/608) ([keymone](https://github.com/keymone))
+- Tron 231 [\#607](https://github.com/Yelp/Tron/pull/607) ([EmanekaT](https://github.com/EmanekaT))
+
+## [v0.9.9.9](https://github.com/Yelp/Tron/tree/v0.9.9.9) (2019-01-07)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.8...v0.9.9.9)
+
+**Merged pull requests:**
+
+- Don't pass in task id when submitting retries of mesos actions [\#605](https://github.com/Yelp/Tron/pull/605) ([qui](https://github.com/qui))
+- Use the correct date option for tronctl backfill [\#604](https://github.com/Yelp/Tron/pull/604) ([solarkennedy](https://github.com/solarkennedy))
+- Remove less useful stuff [\#584](https://github.com/Yelp/Tron/pull/584) ([keymone](https://github.com/keymone))
+
+## [v0.9.9.8](https://github.com/Yelp/Tron/tree/v0.9.9.8) (2018-12-20)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.7...v0.9.9.8)
+
+**Merged pull requests:**
+
+- Skip job runs with no action runs during recovery [\#603](https://github.com/Yelp/Tron/pull/603) ([qui](https://github.com/qui))
+
+## [v0.9.9.7](https://github.com/Yelp/Tron/tree/v0.9.9.7) (2018-12-18)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.6...v0.9.9.7)
+
+**Merged pull requests:**
+
+- convert volumes to dict when recovering [\#602](https://github.com/Yelp/Tron/pull/602) ([Rob-Johnson](https://github.com/Rob-Johnson))
+- Only recover unknown Mesos actions that have no end time [\#598](https://github.com/Yelp/Tron/pull/598) ([qui](https://github.com/qui))
+
+## [v0.9.9.6](https://github.com/Yelp/Tron/tree/v0.9.9.6) (2018-12-06)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.5...v0.9.9.6)
+
+**Merged pull requests:**
+
+- Fixes for inactive framework [\#601](https://github.com/Yelp/Tron/pull/601) ([qui](https://github.com/qui))
+
+## [v0.9.9.5](https://github.com/Yelp/Tron/tree/v0.9.9.5) (2018-12-04)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.4...v0.9.9.5)
+
+**Merged pull requests:**
+
+- Don't try to use an ssh-agent for the default config [\#600](https://github.com/Yelp/Tron/pull/600) ([solarkennedy](https://github.com/solarkennedy))
+- Allow passing extra options to systemd-based distros. [\#599](https://github.com/Yelp/Tron/pull/599) ([solarkennedy](https://github.com/solarkennedy))
+- Set an end time if and only if the action should not be recovered [\#597](https://github.com/Yelp/Tron/pull/597) ([qui](https://github.com/qui))
+- job should not be rescheduled when reconfiguration if it is disabled [\#596](https://github.com/Yelp/Tron/pull/596) ([chlgit](https://github.com/chlgit))
+- Mesos action run should fail if it gets an offer timeout event [\#595](https://github.com/Yelp/Tron/pull/595) ([qui](https://github.com/qui))
+- Trigger attribute docs [\#594](https://github.com/Yelp/Tron/pull/594) ([keymone](https://github.com/keymone))
+- Add consistency check on Tron startup [\#593](https://github.com/Yelp/Tron/pull/593) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+
+## [v0.9.9.4](https://github.com/Yelp/Tron/tree/v0.9.9.4) (2018-11-20)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.3...v0.9.9.4)
+
+**Merged pull requests:**
+
+- Fix signal handling in tron daemon [\#592](https://github.com/Yelp/Tron/pull/592) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+- Log more information from terminal Mesos events [\#590](https://github.com/Yelp/Tron/pull/590) ([qui](https://github.com/qui))
+
+## [v0.9.9.3](https://github.com/Yelp/Tron/tree/v0.9.9.3) (2018-11-15)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.2...v0.9.9.3)
+
+**Merged pull requests:**
+
+- Don't schedule jobs if they are disabled when renaming namespace [\#588](https://github.com/Yelp/Tron/pull/588) ([chlgit](https://github.com/chlgit))
+- Removed spaces in action run html [\#587](https://github.com/Yelp/Tron/pull/587) ([solarkennedy](https://github.com/solarkennedy))
+
+## [v0.9.9.2](https://github.com/Yelp/Tron/tree/v0.9.9.2) (2018-11-12)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.1...v0.9.9.2)
+
+**Merged pull requests:**
+
+- Workaround existing rendered commands that are bytes instead of str [\#586](https://github.com/Yelp/Tron/pull/586) ([keymone](https://github.com/keymone))
+- Fix start bug [\#585](https://github.com/Yelp/Tron/pull/585) ([qui](https://github.com/qui))
+- Add cluster option to metrics script [\#583](https://github.com/Yelp/Tron/pull/583) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+- Added --job flag to migrate only a single job between namespaces [\#582](https://github.com/Yelp/Tron/pull/582) ([jordanleex13](https://github.com/jordanleex13))
+- Allow TASK\_LOST updates to retry automatically [\#581](https://github.com/Yelp/Tron/pull/581) ([qui](https://github.com/qui))
+- Don't display actions/jobs in sorted order in tronview [\#579](https://github.com/Yelp/Tron/pull/579) ([solarkennedy](https://github.com/solarkennedy))
+- Trigger timeout attribute [\#578](https://github.com/Yelp/Tron/pull/578) ([keymone](https://github.com/keymone))
+- Allow tron to run after unclean shutdown [\#573](https://github.com/Yelp/Tron/pull/573) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+
+## [v0.9.9.1](https://github.com/Yelp/Tron/tree/v0.9.9.1) (2018-10-30)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.9.0...v0.9.9.1)
+
+**Merged pull requests:**
+
+- modify action\_id during job migration [\#580](https://github.com/Yelp/Tron/pull/580) ([chlgit](https://github.com/chlgit))
+
+## [v0.9.9.0](https://github.com/Yelp/Tron/tree/v0.9.9.0) (2018-10-30)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.8.4...v0.9.9.0)
+
+**Merged pull requests:**
+
+- Pin requirements again [\#577](https://github.com/Yelp/Tron/pull/577) ([keymone](https://github.com/keymone))
+- Combine DST code into one place [\#572](https://github.com/Yelp/Tron/pull/572) ([qui](https://github.com/qui))
+- Add get\_tron\_metrics script and tests [\#571](https://github.com/Yelp/Tron/pull/571) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+- Tronctl publish/discard events [\#564](https://github.com/Yelp/Tron/pull/564) ([keymone](https://github.com/keymone))
+
+## [v0.9.8.4](https://github.com/Yelp/Tron/tree/v0.9.8.4) (2018-10-26)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.8.3...v0.9.8.4)
+
+## [v0.9.8.3](https://github.com/Yelp/Tron/tree/v0.9.8.3) (2018-10-26)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.8.2...v0.9.8.3)
+
+**Merged pull requests:**
+
+- yapf -rip [\#576](https://github.com/Yelp/Tron/pull/576) ([keymone](https://github.com/keymone))
+- Pin and cleanup dependencies [\#570](https://github.com/Yelp/Tron/pull/570) ([keymone](https://github.com/keymone))
+
+## [v0.9.8.2](https://github.com/Yelp/Tron/tree/v0.9.8.2) (2018-10-25)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.8.1...v0.9.8.2)
+
+**Merged pull requests:**
+
+- rename all job\_name after migration [\#574](https://github.com/Yelp/Tron/pull/574) ([chlgit](https://github.com/chlgit))
+- add migration namespace script [\#568](https://github.com/Yelp/Tron/pull/568) ([chlgit](https://github.com/chlgit))
+- ensure systemd restarts on failure [\#565](https://github.com/Yelp/Tron/pull/565) ([Rob-Johnson](https://github.com/Rob-Johnson))
+
+## [v0.9.8.1](https://github.com/Yelp/Tron/tree/v0.9.8.1) (2018-10-23)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.8.0...v0.9.8.1)
+
+**Merged pull requests:**
+
+- Don't log other signals [\#569](https://github.com/Yelp/Tron/pull/569) ([qui](https://github.com/qui))
+
+## [v0.9.8.0](https://github.com/Yelp/Tron/tree/v0.9.8.0) (2018-10-23)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.7.0...v0.9.8.0)
+
+**Merged pull requests:**
+
+- Fix check\_tron\_jobs to discard instead of remove precioius attr [\#567](https://github.com/Yelp/Tron/pull/567) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+- If runs are allowed to overlap, don't consider that case stuck [\#566](https://github.com/Yelp/Tron/pull/566) ([qui](https://github.com/qui))
+- Prevent Pymesos thread abort from interrupting main thread [\#560](https://github.com/Yelp/Tron/pull/560) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+- Initial metrics endpoint [\#559](https://github.com/Yelp/Tron/pull/559) ([qui](https://github.com/qui))
+- Add option for alerting every job in check\_tron\_jobs [\#552](https://github.com/Yelp/Tron/pull/552) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+
+## [v0.9.7.0](https://github.com/Yelp/Tron/tree/v0.9.7.0) (2018-10-17)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.6.5...v0.9.7.0)
+
+**Merged pull requests:**
+
+- Convert action deps to list in repr adapter [\#563](https://github.com/Yelp/Tron/pull/563) ([keymone](https://github.com/keymone))
+- \[wip\] systemd unit file [\#557](https://github.com/Yelp/Tron/pull/557) ([Rob-Johnson](https://github.com/Rob-Johnson))
+
+## [v0.9.6.5](https://github.com/Yelp/Tron/tree/v0.9.6.5) (2018-10-16)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.6.4...v0.9.6.5)
+
+**Merged pull requests:**
+
+- Fix actiongraph adapter failing to render dependent actions [\#561](https://github.com/Yelp/Tron/pull/561) ([keymone](https://github.com/keymone))
+
+## [v0.9.6.4](https://github.com/Yelp/Tron/tree/v0.9.6.4) (2018-10-15)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.6.3...v0.9.6.4)
+
+## [v0.9.6.3](https://github.com/Yelp/Tron/tree/v0.9.6.3) (2018-10-15)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v...v0.9.6.3)
+
+## [v](https://github.com/Yelp/Tron/tree/v) (2018-10-12)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.6.2...v)
+
+**Merged pull requests:**
+
+- Triggers in tronweb [\#558](https://github.com/Yelp/Tron/pull/558) ([keymone](https://github.com/keymone))
+- Handle non-Mesos events from taskproc [\#556](https://github.com/Yelp/Tron/pull/556) ([qui](https://github.com/qui))
+- add tronctl move command [\#555](https://github.com/Yelp/Tron/pull/555) ([chlgit](https://github.com/chlgit))
+- create pidfile for manhole socket [\#554](https://github.com/Yelp/Tron/pull/554) ([chlgit](https://github.com/chlgit))
+- update docs using format string [\#553](https://github.com/Yelp/Tron/pull/553) ([chlgit](https://github.com/chlgit))
+- Fix constraints passing incorrectly in actionrun [\#551](https://github.com/Yelp/Tron/pull/551) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+- External dependencies in tronview [\#550](https://github.com/Yelp/Tron/pull/550) ([keymone](https://github.com/keymone))
+- Move bin/\*.py to tron/bin to fix tests [\#549](https://github.com/Yelp/Tron/pull/549) ([keymone](https://github.com/keymone))
+- Fetch 20 jobs of history instead of 10 for check\_tron\_jobs [\#547](https://github.com/Yelp/Tron/pull/547) ([solarkennedy](https://github.com/solarkennedy))
+- Change tronfig updates to include the enabled attribute [\#545](https://github.com/Yelp/Tron/pull/545) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+- Remove http stacktraces from tronview and tronctl error messages [\#541](https://github.com/Yelp/Tron/pull/541) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+
+## [v0.9.6.2](https://github.com/Yelp/Tron/tree/v0.9.6.2) (2018-10-02)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.6.1...v0.9.6.2)
+
+**Merged pull requests:**
+
+- Skip state diagram in docs [\#548](https://github.com/Yelp/Tron/pull/548) ([keymone](https://github.com/keymone))
+- Better date arithmetic [\#546](https://github.com/Yelp/Tron/pull/546) ([keymone](https://github.com/keymone))
+- Convert Action to dataclass [\#544](https://github.com/Yelp/Tron/pull/544) ([keymone](https://github.com/keymone))
+- \[fix\] Eventbus reload [\#543](https://github.com/Yelp/Tron/pull/543) ([keymone](https://github.com/keymone))
+- \[cleanup/refactoring\] Move some stuff out of tron.core.job [\#542](https://github.com/Yelp/Tron/pull/542) ([keymone](https://github.com/keymone))
+- Remove to\_timestamp method in favor of datetime.timestamp\(\) [\#540](https://github.com/Yelp/Tron/pull/540) ([qui](https://github.com/qui))
+- Allow actions to be a dict instead of a list [\#536](https://github.com/Yelp/Tron/pull/536) ([qui](https://github.com/qui))
+- Simpler state machine [\#535](https://github.com/Yelp/Tron/pull/535) ([keymone](https://github.com/keymone))
+- Actionrun external deps [\#532](https://github.com/Yelp/Tron/pull/532) ([keymone](https://github.com/keymone))
+- Make eventbus a global object [\#531](https://github.com/Yelp/Tron/pull/531) ([keymone](https://github.com/keymone))
+
+## [v0.9.6.1](https://github.com/Yelp/Tron/tree/v0.9.6.1) (2018-09-21)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.6.0...v0.9.6.1)
+
+**Merged pull requests:**
+
+- fix format string bugs [\#538](https://github.com/Yelp/Tron/pull/538) ([chlgit](https://github.com/chlgit))
+- Add handlers check in MesosTask logger to prevent duplicate log lines [\#537](https://github.com/Yelp/Tron/pull/537) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+
+## [v0.9.6.0](https://github.com/Yelp/Tron/tree/v0.9.6.0) (2018-09-20)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.5.1...v0.9.6.0)
+
+**Merged pull requests:**
+
+- remove percent string support [\#534](https://github.com/Yelp/Tron/pull/534) ([chlgit](https://github.com/chlgit))
+- replace colon by pound for format string [\#530](https://github.com/Yelp/Tron/pull/530) ([chlgit](https://github.com/chlgit))
+- Make fail final and move retries and exit logic out [\#529](https://github.com/Yelp/Tron/pull/529) ([qui](https://github.com/qui))
+- Cross-job deps: fixes in  config  parsing and eventbus [\#528](https://github.com/Yelp/Tron/pull/528) ([keymone](https://github.com/keymone))
+- Cross-job deps: Actionrun triggers upon completion [\#527](https://github.com/Yelp/Tron/pull/527) ([keymone](https://github.com/keymone))
+- Removed tronfig header code, as part of removing autogenerated comments [\#521](https://github.com/Yelp/Tron/pull/521) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+
+## [v0.9.5.1](https://github.com/Yelp/Tron/tree/v0.9.5.1) (2018-09-10)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.5.0...v0.9.5.1)
+
+**Fixed bugs:**
+
+- Gracefully reconfigure service on node change [\#228](https://github.com/Yelp/Tron/issues/228)
+
+**Closed issues:**
+
+- tronview/tronctl should give autocorrect hints [\#98](https://github.com/Yelp/Tron/issues/98)
+- Use utcnow\(\) instead of now\(\) [\#83](https://github.com/Yelp/Tron/issues/83)
+- Support date range for --run-date [\#64](https://github.com/Yelp/Tron/issues/64)
+
+**Merged pull requests:**
+
+- Fix: restarting tron will restore outdated scheduled jobs [\#525](https://github.com/Yelp/Tron/pull/525) ([keymone](https://github.com/keymone))
+- Scheme optional for Mesos master address [\#524](https://github.com/Yelp/Tron/pull/524) ([qui](https://github.com/qui))
+- Fix colors on tronweb [\#523](https://github.com/Yelp/Tron/pull/523) ([solarkennedy](https://github.com/solarkennedy))
+- Better feedback on killing Mesos actions if not running [\#522](https://github.com/Yelp/Tron/pull/522) ([qui](https://github.com/qui))
+
+## [v0.9.5.0](https://github.com/Yelp/Tron/tree/v0.9.5.0) (2018-09-05)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.4.0...v0.9.5.0)
+
+**Merged pull requests:**
+
+- Increase upstart timeout [\#520](https://github.com/Yelp/Tron/pull/520) ([qui](https://github.com/qui))
+- Remove enableall and disableall from JobCollections in tron controller [\#519](https://github.com/Yelp/Tron/pull/519) ([kawaiwanyelp](https://github.com/kawaiwanyelp))
+- Deprecate --nodaemon option [\#518](https://github.com/Yelp/Tron/pull/518) ([keymone](https://github.com/keymone))
+
+## [v0.9.4.0](https://github.com/Yelp/Tron/tree/v0.9.4.0) (2018-09-04)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.3.0...v0.9.4.0)
+
+**Merged pull requests:**
+
+- Safer eventbus log saving [\#517](https://github.com/Yelp/Tron/pull/517) ([keymone](https://github.com/keymone))
+- Safer shutdown behavior [\#516](https://github.com/Yelp/Tron/pull/516) ([keymone](https://github.com/keymone))
+- Eventbus sync shutdown [\#515](https://github.com/Yelp/Tron/pull/515) ([keymone](https://github.com/keymone))
+- Yapfify [\#514](https://github.com/Yelp/Tron/pull/514) ([keymone](https://github.com/keymone))
+- Recover unknown mesos actions on startup [\#512](https://github.com/Yelp/Tron/pull/512) ([qui](https://github.com/qui))
+- Add eventbus and cross-job dep related config attributes [\#511](https://github.com/Yelp/Tron/pull/511) ([keymone](https://github.com/keymone))
+- add string format support [\#490](https://github.com/Yelp/Tron/pull/490) ([chlgit](https://github.com/chlgit))
+
+## [v0.9.3.0](https://github.com/Yelp/Tron/tree/v0.9.3.0) (2018-08-24)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.2.1...v0.9.3.0)
+
+**Merged pull requests:**
+
+- make master address optional [\#513](https://github.com/Yelp/Tron/pull/513) ([chlgit](https://github.com/chlgit))
 - move mesos address to mesos option section only [\#509](https://github.com/Yelp/Tron/pull/509) ([chlgit](https://github.com/chlgit))
 - Added the prototype of the tronctl backfill command [\#507](https://github.com/Yelp/Tron/pull/507) ([solarkennedy](https://github.com/solarkennedy))
 - Added mesos framework authentication to itests [\#506](https://github.com/Yelp/Tron/pull/506) ([solarkennedy](https://github.com/solarkennedy))
@@ -468,512 +951,6 @@
 - dont assume the USER env var [\#328](https://github.com/Yelp/Tron/pull/328) ([Rob-Johnson](https://github.com/Rob-Johnson))
 - Issues 306 & 326  [\#327](https://github.com/Yelp/Tron/pull/327) ([Rob-Johnson](https://github.com/Rob-Johnson))
 
-## [v0.7.0.0](https://github.com/Yelp/Tron/tree/v0.7.0.0) (2017-08-25)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.6.2.0...v0.7.0.0)
-
-**Merged pull requests:**
-
-- create a make target for releasing [\#325](https://github.com/Yelp/Tron/pull/325) ([Rob-Johnson](https://github.com/Rob-Johnson))
-- \[wip\] use dh-virtualenv to package tron [\#324](https://github.com/Yelp/Tron/pull/324) ([Rob-Johnson](https://github.com/Rob-Johnson))
-- \[wip\] start working on a docker env [\#322](https://github.com/Yelp/Tron/pull/322) ([Rob-Johnson](https://github.com/Rob-Johnson))
-- Use tox for running tests [\#320](https://github.com/Yelp/Tron/pull/320) ([solarkennedy](https://github.com/solarkennedy))
-- only keep last buffer from ssh connection [\#319](https://github.com/Yelp/Tron/pull/319) ([yyejun](https://github.com/yyejun))
-
-## [v0.6.2.0](https://github.com/Yelp/Tron/tree/v0.6.2.0) (2016-08-08)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.6.1.12...v0.6.2.0)
-
-**Merged pull requests:**
-
-- Add 'hour' to the command context [\#318](https://github.com/Yelp/Tron/pull/318) ([solarkennedy](https://github.com/solarkennedy))
-
-## [v0.6.1.12](https://github.com/Yelp/Tron/tree/v0.6.1.12) (2016-01-07)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.6.1.5...v0.6.1.12)
-
-**Closed issues:**
-
-- Problem with first start trond [\#308](https://github.com/Yelp/Tron/issues/308)
-- tron job 'open failed' errors [\#302](https://github.com/Yelp/Tron/issues/302)
-
-**Merged pull requests:**
-
-- extra cleanup after twisted ssh channel close [\#317](https://github.com/Yelp/Tron/pull/317) ([yyejun](https://github.com/yyejun))
-- fix event memory leak [\#316](https://github.com/Yelp/Tron/pull/316) ([yyejun](https://github.com/yyejun))
-- Remove non-JSON output [\#314](https://github.com/Yelp/Tron/pull/314) ([pkoch](https://github.com/pkoch))
-- More bells and whistles on find\_forgotten\_procs.py [\#313](https://github.com/Yelp/Tron/pull/313) ([pkoch](https://github.com/pkoch))
-- Introduce find\_forgotten\_procs.py [\#312](https://github.com/Yelp/Tron/pull/312) ([pkoch](https://github.com/pkoch))
-- Fixing build failure [\#311](https://github.com/Yelp/Tron/pull/311) ([tsheasha](https://github.com/tsheasha))
-- Add job and service support fields: owner, summary, notes. [\#310](https://github.com/Yelp/Tron/pull/310) ([mikepea](https://github.com/mikepea))
-- Vagrant 'development playground' environment [\#304](https://github.com/Yelp/Tron/pull/304) ([mikepea](https://github.com/mikepea))
-- Service monitor task should be requeued before notify [\#301](https://github.com/Yelp/Tron/pull/301) ([yyejun](https://github.com/yyejun))
-- optimize dashboard fetch api [\#299](https://github.com/Yelp/Tron/pull/299) ([yyejun](https://github.com/yyejun))
-- Fix exceptions [\#298](https://github.com/Yelp/Tron/pull/298) ([yyejun](https://github.com/yyejun))
-- Fix service restore [\#297](https://github.com/Yelp/Tron/pull/297) ([yyejun](https://github.com/yyejun))
-- Redo pull 288 [\#296](https://github.com/Yelp/Tron/pull/296) ([yyejun](https://github.com/yyejun))
-- Do not raise on duplicated run id [\#295](https://github.com/Yelp/Tron/pull/295) ([yyejun](https://github.com/yyejun))
-- Ignore error in start task [\#288](https://github.com/Yelp/Tron/pull/288) ([yyejun](https://github.com/yyejun))
-
-## [v0.6.1.5](https://github.com/Yelp/Tron/tree/v0.6.1.5) (2014-07-03)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.6.1.2...v0.6.1.5)
-
-**Closed issues:**
-
-- Skipping an action causes dependant actions to run before scheduled time [\#279](https://github.com/Yelp/Tron/issues/279)
-
-**Merged pull requests:**
-
-- Fix monitor task requeue [\#293](https://github.com/Yelp/Tron/pull/293) ([yyejun](https://github.com/yyejun))
-- Fix a but in service monitor failure [\#291](https://github.com/Yelp/Tron/pull/291) ([yyejun](https://github.com/yyejun))
-- increase channel start timeout [\#290](https://github.com/Yelp/Tron/pull/290) ([yyejun](https://github.com/yyejun))
-- Fix incorrect failure handling [\#287](https://github.com/Yelp/Tron/pull/287) ([yyejun](https://github.com/yyejun))
-- report queued job as unknown [\#284](https://github.com/Yelp/Tron/pull/284) ([yyejun](https://github.com/yyejun))
-- fix tests failure caused by new default monitor\_retries config [\#283](https://github.com/Yelp/Tron/pull/283) ([yyejun](https://github.com/yyejun))
-- Fix more reconnection bug in node service stop [\#282](https://github.com/Yelp/Tron/pull/282) ([yyejun](https://github.com/yyejun))
-- Update action\_run state change handling to avoid starting actions before... [\#281](https://github.com/Yelp/Tron/pull/281) ([kesre](https://github.com/kesre))
-- fix setup.py packages [\#280](https://github.com/Yelp/Tron/pull/280) ([yyejun](https://github.com/yyejun))
-
-## [v0.6.1.2](https://github.com/Yelp/Tron/tree/v0.6.1.2) (2014-01-14)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.6.1.1...v0.6.1.2)
-
-**Fixed bugs:**
-
-- Changing count of a service in tronfig requires tronctl start [\#266](https://github.com/Yelp/Tron/issues/266)
-- KeyError in 0.6.1 release [\#256](https://github.com/Yelp/Tron/issues/256)
-- Service state uses node hostname [\#252](https://github.com/Yelp/Tron/issues/252)
-- incorrect tronctl command results in a traceback [\#248](https://github.com/Yelp/Tron/issues/248)
-
-**Closed issues:**
-
-- tron.serialize.filehandler ERROR Could not tail, Cannot allocate memory [\#276](https://github.com/Yelp/Tron/issues/276)
-- Add a make task for style checking [\#255](https://github.com/Yelp/Tron/issues/255)
-
-**Merged pull requests:**
-
-- Handle service node not responding to monitor [\#277](https://github.com/Yelp/Tron/pull/277) ([yyejun](https://github.com/yyejun))
-- Fix to service count reconfiguration [\#273](https://github.com/Yelp/Tron/pull/273) ([Codeacious](https://github.com/Codeacious))
-- Quick fix to JSON Serialization [\#267](https://github.com/Yelp/Tron/pull/267) ([Codeacious](https://github.com/Codeacious))
-- Fixed SSHAuthOptions to compare against something that Twisted won't touch [\#265](https://github.com/Yelp/Tron/pull/265) ([Codeacious](https://github.com/Codeacious))
-- Fix to configuration loads with %\(month\[+\-\]\[1-12\]\)s that go out of range [\#264](https://github.com/Yelp/Tron/pull/264) ([Codeacious](https://github.com/Codeacious))
-- Made service reconfiguration slightly better [\#263](https://github.com/Yelp/Tron/pull/263) ([Codeacious](https://github.com/Codeacious))
-- ServiceInstanceMonitorTask.fail fix [\#262](https://github.com/Yelp/Tron/pull/262) ([Codeacious](https://github.com/Codeacious))
-- A simple Makefile task for PEP8/PyFlakes checking [\#261](https://github.com/Yelp/Tron/pull/261) ([Codeacious](https://github.com/Codeacious))
-- Fixed service data to use node.name, with backwards compatibility [\#260](https://github.com/Yelp/Tron/pull/260) ([Codeacious](https://github.com/Codeacious))
-- ssh reconnecting, fix to keyerrors [\#259](https://github.com/Yelp/Tron/pull/259) ([Codeacious](https://github.com/Codeacious))
-- Implemented \#221, called tronstore [\#258](https://github.com/Yelp/Tron/pull/258) ([Codeacious](https://github.com/Codeacious))
-- First pass at refactoring the Job class structure [\#253](https://github.com/Yelp/Tron/pull/253) ([Codeacious](https://github.com/Codeacious))
-
-## [v0.6.1.1](https://github.com/Yelp/Tron/tree/v0.6.1.1) (2013-07-10)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.6.0.2...v0.6.1.1)
-
-**Closed issues:**
-
-- Attempting to run tron on Illumos-based system [\#246](https://github.com/Yelp/Tron/issues/246)
-- tronview should accept a --namespace argument [\#236](https://github.com/Yelp/Tron/issues/236)
-- ActionRun history view for tronweb [\#231](https://github.com/Yelp/Tron/issues/231)
-- twisted 13.0.0 incompatible with current version of tron [\#227](https://github.com/Yelp/Tron/issues/227)
-- cleanup interface for tron.commands.client.Client [\#222](https://github.com/Yelp/Tron/issues/222)
-- Ensure Tron follows FHS with its default directory names [\#181](https://github.com/Yelp/Tron/issues/181)
-- tronview should accept negative run numbers for most recents [\#173](https://github.com/Yelp/Tron/issues/173)
-- Incorrect job end\_time while job is running [\#164](https://github.com/Yelp/Tron/issues/164)
-- Add support for a max\_runtime [\#155](https://github.com/Yelp/Tron/issues/155)
-- Add jitter parameter to schedulers [\#136](https://github.com/Yelp/Tron/issues/136)
-- Split tron.web from main repo [\#117](https://github.com/Yelp/Tron/issues/117)
-- Generate a timeline report in image or text format [\#97](https://github.com/Yelp/Tron/issues/97)
-- Job status filters [\#85](https://github.com/Yelp/Tron/issues/85)
-- Need support for killing a running job [\#31](https://github.com/Yelp/Tron/issues/31)
-
-**Merged pull requests:**
-
-- Fix dev docs [\#254](https://github.com/Yelp/Tron/pull/254) ([dnephin](https://github.com/dnephin))
-- Implemented the --namespace argument for tronview \(\#236\) [\#251](https://github.com/Yelp/Tron/pull/251) ([Codeacious](https://github.com/Codeacious))
-- Update API urls [\#242](https://github.com/Yelp/Tron/pull/242) ([dnephin](https://github.com/dnephin))
-- Fix default config filename, and add a test. [\#241](https://github.com/Yelp/Tron/pull/241) ([dnephin](https://github.com/dnephin))
-- Additional end to end tests around state restore [\#240](https://github.com/Yelp/Tron/pull/240) ([dnephin](https://github.com/dnephin))
-- Node run error on service instance [\#239](https://github.com/Yelp/Tron/pull/239) ([dnephin](https://github.com/dnephin))
-- tronweb - timeline graph and style [\#238](https://github.com/Yelp/Tron/pull/238) ([dnephin](https://github.com/dnephin))
-- Tronfig cleanup [\#237](https://github.com/Yelp/Tron/pull/237) ([dnephin](https://github.com/dnephin))
-- JS Unit testing and more tronweb UI [\#234](https://github.com/Yelp/Tron/pull/234) ([dnephin](https://github.com/dnephin))
-- tronweb re-style [\#230](https://github.com/Yelp/Tron/pull/230) ([dnephin](https://github.com/dnephin))
-- force kill service [\#229](https://github.com/Yelp/Tron/pull/229) ([dnephin](https://github.com/dnephin))
-- command client interface [\#226](https://github.com/Yelp/Tron/pull/226) ([dnephin](https://github.com/dnephin))
-- Services with monitoring instances are still up. [\#225](https://github.com/Yelp/Tron/pull/225) ([dnephin](https://github.com/dnephin))
-- max runtime for jobs [\#224](https://github.com/Yelp/Tron/pull/224) ([dnephin](https://github.com/dnephin))
-- negative numbers for job run [\#220](https://github.com/Yelp/Tron/pull/220) ([dnephin](https://github.com/dnephin))
-- Move some ssh option constants to the config [\#219](https://github.com/Yelp/Tron/pull/219) ([dnephin](https://github.com/dnephin))
-- The new tronweb - Yelp hackathon 10 [\#218](https://github.com/Yelp/Tron/pull/218) ([dnephin](https://github.com/dnephin))
-- Kill a running action [\#214](https://github.com/Yelp/Tron/pull/214) ([dnephin](https://github.com/dnephin))
-- scheduler jitter [\#213](https://github.com/Yelp/Tron/pull/213) ([dnephin](https://github.com/dnephin))
-- correct end\_time for running jobs. [\#212](https://github.com/Yelp/Tron/pull/212) ([dnephin](https://github.com/dnephin))
-
-## [v0.6.0.2](https://github.com/Yelp/Tron/tree/v0.6.0.2) (2013-04-04)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.5.2.3...v0.6.0.2)
-
-**Fixed bugs:**
-
-- Cancelling a JobRun can trigger some actions to run [\#202](https://github.com/Yelp/Tron/issues/202)
-- Service state can be UP even when no instances are active [\#139](https://github.com/Yelp/Tron/issues/139)
-- Failure during reconfig could cause inconsistent service state [\#38](https://github.com/Yelp/Tron/issues/38)
-
-**Closed issues:**
-
-- Support host key verification [\#199](https://github.com/Yelp/Tron/issues/199)
-- Connection failure error message should be recorded in stderr [\#184](https://github.com/Yelp/Tron/issues/184)
-- Some docs still refer to succeed [\#175](https://github.com/Yelp/Tron/issues/175)
-- Refactor event module [\#142](https://github.com/Yelp/Tron/issues/142)
-- Provide a read-only REST interface [\#110](https://github.com/Yelp/Tron/issues/110)
-- Services can get stuck in STOPPING [\#96](https://github.com/Yelp/Tron/issues/96)
-- Improve service view from tronview [\#51](https://github.com/Yelp/Tron/issues/51)
-
-**Merged pull requests:**
-
-- 0.6.0.2, better handling for service instance monitoring [\#215](https://github.com/Yelp/Tron/pull/215) ([dnephin](https://github.com/dnephin))
-- Release 0.6.0.1 bug fixes [\#211](https://github.com/Yelp/Tron/pull/211) ([dnephin](https://github.com/dnephin))
-- debugging and testing [\#210](https://github.com/Yelp/Tron/pull/210) ([dnephin](https://github.com/dnephin))
-- 0.6 replace reactor with eventloop [\#209](https://github.com/Yelp/Tron/pull/209) ([dnephin](https://github.com/dnephin))
-- Verify Host Key and SSH config options [\#207](https://github.com/Yelp/Tron/pull/207) ([dnephin](https://github.com/dnephin))
-- node pool and event cleanup [\#206](https://github.com/Yelp/Tron/pull/206) ([dnephin](https://github.com/dnephin))
-- Log an informative error when we're missing a local channel. [\#205](https://github.com/Yelp/Tron/pull/205) ([dnephin](https://github.com/dnephin))
-- Cleanup around API responses, scheduler config, etc [\#204](https://github.com/Yelp/Tron/pull/204) ([dnephin](https://github.com/dnephin))
-- Resolve \#202 and add a unit test and acceptance test. [\#203](https://github.com/Yelp/Tron/pull/203) ([dnephin](https://github.com/dnephin))
-- JobCollection and additional details in tronview [\#201](https://github.com/Yelp/Tron/pull/201) ([dnephin](https://github.com/dnephin))
-- Update docs and pull out some logic from tron.api.www [\#200](https://github.com/Yelp/Tron/pull/200) ([dnephin](https://github.com/dnephin))
-- Service Refactor [\#197](https://github.com/Yelp/Tron/pull/197) ([dnephin](https://github.com/dnephin))
-
-## [v0.5.2.3](https://github.com/Yelp/Tron/tree/v0.5.2.3) (2013-02-15)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.5.2.2...v0.5.2.3)
-
-**Closed issues:**
-
-- Separate view and control APIs [\#147](https://github.com/Yelp/Tron/issues/147)
-- Maximum queue length job config option [\#130](https://github.com/Yelp/Tron/issues/130)
-- Retry failed jobs [\#86](https://github.com/Yelp/Tron/issues/86)
-
-**Merged pull requests:**
-
-- Support other users [\#198](https://github.com/Yelp/Tron/pull/198) ([dnephin](https://github.com/dnephin))
-
-## [v0.5.2.2](https://github.com/Yelp/Tron/tree/v0.5.2.2) (2013-02-12)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.5.1...v0.5.2.2)
-
-**Fixed bugs:**
-
-- Reconfigure after disable/enable can result in incorrect run time for scheduled job [\#195](https://github.com/Yelp/Tron/issues/195)
-
-**Closed issues:**
-
-- Preserve config format/comments on tronfig [\#189](https://github.com/Yelp/Tron/issues/189)
-- disabling queueing should not immediately schedule all queued jobs [\#187](https://github.com/Yelp/Tron/issues/187)
-- Separate Tron unit tests from functional testing, using mocks where appropriate [\#182](https://github.com/Yelp/Tron/issues/182)
-- A job consists of a list of actions,could I run actions in different nodes? [\#176](https://github.com/Yelp/Tron/issues/176)
-- rescheduling a job schedules a run for the wrong time [\#174](https://github.com/Yelp/Tron/issues/174)
-- Updating configs should be event-driven [\#80](https://github.com/Yelp/Tron/issues/80)
-- Allow for Tron to use multiple config files [\#30](https://github.com/Yelp/Tron/issues/30)
-
-**Merged pull requests:**
-
-- 195 scheduling after reconfigure [\#196](https://github.com/Yelp/Tron/pull/196) ([dnephin](https://github.com/dnephin))
-- 0.5.2 state watcher for reconfigure [\#194](https://github.com/Yelp/Tron/pull/194) ([dnephin](https://github.com/dnephin))
-- State migration tools [\#193](https://github.com/Yelp/Tron/pull/193) ([dnephin](https://github.com/dnephin))
-- Always initliaze a state machine to it's initial state [\#192](https://github.com/Yelp/Tron/pull/192) ([dnephin](https://github.com/dnephin))
-- Add a config hash [\#191](https://github.com/Yelp/Tron/pull/191) ([dnephin](https://github.com/dnephin))
-- Support multiple config files [\#190](https://github.com/Yelp/Tron/pull/190) ([dnephin](https://github.com/dnephin))
-- Updates to changelog and whats-new files, to reflect a new minor version update [\#188](https://github.com/Yelp/Tron/pull/188) ([y-trobinso](https://github.com/y-trobinso))
-- Fix job config docs [\#186](https://github.com/Yelp/Tron/pull/186) ([dnephin](https://github.com/dnephin))
-- Add the ability to reconcile configuration fragments to Tron [\#185](https://github.com/Yelp/Tron/pull/185) ([y-trobinso](https://github.com/y-trobinso))
-- Adds "make build" and the concept of usernames to node.py [\#183](https://github.com/Yelp/Tron/pull/183) ([y-trobinso](https://github.com/y-trobinso))
-- Remove a reference to old config style in docs [\#179](https://github.com/Yelp/Tron/pull/179) ([irskep](https://github.com/irskep))
-- Fix exceptions in tronweb [\#178](https://github.com/Yelp/Tron/pull/178) ([Bklyn](https://github.com/Bklyn))
-- Red header and footer for docs [\#177](https://github.com/Yelp/Tron/pull/177) ([irskep](https://github.com/irskep))
-- Some general cleanup. [\#172](https://github.com/Yelp/Tron/pull/172) ([dnephin](https://github.com/dnephin))
-
-## [v0.5.1](https://github.com/Yelp/Tron/tree/v0.5.1) (2012-07-25)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.5.0.2...v0.5.1)
-
-**Closed issues:**
-
-- Support cron syntax for schedules [\#28](https://github.com/Yelp/Tron/issues/28)
-
-**Merged pull requests:**
-
-- Cron Scheduler [\#169](https://github.com/Yelp/Tron/pull/169) ([dnephin](https://github.com/dnephin))
-
-## [v0.5.0.2](https://github.com/Yelp/Tron/tree/v0.5.0.2) (2012-07-18)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.5.0.1...v0.5.0.2)
-
-**Fixed bugs:**
-
-- Prevent starting individual actions [\#158](https://github.com/Yelp/Tron/issues/158)
-
-**Closed issues:**
-
-- jobs should not automatically re-enable with config updates [\#160](https://github.com/Yelp/Tron/issues/160)
-- Remove deprecated config options [\#140](https://github.com/Yelp/Tron/issues/140)
-- Stop using twistd [\#119](https://github.com/Yelp/Tron/issues/119)
-- Graceful shutdown [\#113](https://github.com/Yelp/Tron/issues/113)
-- Unify various directory/location command line switches [\#112](https://github.com/Yelp/Tron/issues/112)
-- Store state in sqlite [\#111](https://github.com/Yelp/Tron/issues/111)
-- Let jobs overlap if user says so [\#43](https://github.com/Yelp/Tron/issues/43)
-
-**Merged pull requests:**
-
-- Fix reactor in daemon [\#170](https://github.com/Yelp/Tron/pull/170) ([dnephin](https://github.com/dnephin))
-- Allow jobs to overlap [\#168](https://github.com/Yelp/Tron/pull/168) ([dnephin](https://github.com/dnephin))
-- Do not allow actions to be manually started if their job run is still scheduled [\#166](https://github.com/Yelp/Tron/pull/166) ([dnephin](https://github.com/dnephin))
-- Preserve job enabled. [\#165](https://github.com/Yelp/Tron/pull/165) ([dnephin](https://github.com/dnephin))
-
-## [v0.5.0.1](https://github.com/Yelp/Tron/tree/v0.5.0.1) (2012-06-19)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.5.0...v0.5.0.1)
-
-**Merged pull requests:**
-
-- Support legacy state files. [\#163](https://github.com/Yelp/Tron/pull/163) ([dnephin](https://github.com/dnephin))
-- State serialization and tron daemon [\#148](https://github.com/Yelp/Tron/pull/148) ([dnephin](https://github.com/dnephin))
-
-## [v0.5.0](https://github.com/Yelp/Tron/tree/v0.5.0) (2012-06-19)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.4.1.1...v0.5.0)
-
-**Closed issues:**
-
-- Remove pending on reconfigure fails [\#161](https://github.com/Yelp/Tron/issues/161)
-
-**Merged pull requests:**
-
-- Fix for missing format specifier [\#162](https://github.com/Yelp/Tron/pull/162) ([ninsen](https://github.com/ninsen))
-
-## [v0.4.1.1](https://github.com/Yelp/Tron/tree/v0.4.1.1) (2012-05-31)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.4.1...v0.4.1.1)
-
-## [v0.4.1](https://github.com/Yelp/Tron/tree/v0.4.1) (2012-05-30)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.4.0...v0.4.1)
-
-**Closed issues:**
-
-- time monkeypatching should be done under tests/ [\#141](https://github.com/Yelp/Tron/issues/141)
-- Fix testing sandbox [\#125](https://github.com/Yelp/Tron/issues/125)
-
-**Merged pull requests:**
-
-- Manually cancelled jobs should still continue to schedule new runs. [\#159](https://github.com/Yelp/Tron/pull/159) ([dnephin](https://github.com/dnephin))
-- Fix testing sandbox [\#157](https://github.com/Yelp/Tron/pull/157) ([dnephin](https://github.com/dnephin))
-- Release 0.4.1 [\#156](https://github.com/Yelp/Tron/pull/156) ([dnephin](https://github.com/dnephin))
-- Enabled should not be part of job equality test. [\#154](https://github.com/Yelp/Tron/pull/154) ([dnephin](https://github.com/dnephin))
-- Handle no tty size gracefully. [\#152](https://github.com/Yelp/Tron/pull/152) ([dnephin](https://github.com/dnephin))
-- Release 0.4.0.2 [\#151](https://github.com/Yelp/Tron/pull/151) ([dnephin](https://github.com/dnephin))
-- Fix state restore from old state files. [\#150](https://github.com/Yelp/Tron/pull/150) ([dnephin](https://github.com/dnephin))
-- fix debian/changelog formatting [\#149](https://github.com/Yelp/Tron/pull/149) ([Roguelazer](https://github.com/Roguelazer))
-
-## [v0.4.0](https://github.com/Yelp/Tron/tree/v0.4.0) (2012-05-14)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.3.3...v0.4.0)
-
-**Fixed bugs:**
-
-- Actions not dependent on a failed action should still run [\#118](https://github.com/Yelp/Tron/issues/118)
-- error on shutdown [\#114](https://github.com/Yelp/Tron/issues/114)
-- Re-enabling a disabled daily job unexpectedly schedules it [\#36](https://github.com/Yelp/Tron/issues/36)
-
-**Closed issues:**
-
-- Date alias for last successful action run [\#122](https://github.com/Yelp/Tron/issues/122)
-
-**Merged pull requests:**
-
-- Update the docs and changed the docs theme [\#146](https://github.com/Yelp/Tron/pull/146) ([dnephin](https://github.com/dnephin))
-- Action Dependency Diagram [\#145](https://github.com/Yelp/Tron/pull/145) ([dnephin](https://github.com/dnephin))
-- Bug fixes for job refactor [\#144](https://github.com/Yelp/Tron/pull/144) ([dnephin](https://github.com/dnephin))
-- alter debian packaging to handle logging.conf better [\#137](https://github.com/Yelp/Tron/pull/137) ([Roguelazer](https://github.com/Roguelazer))
-- Job Scheduling Refactor [\#134](https://github.com/Yelp/Tron/pull/134) ([dnephin](https://github.com/dnephin))
-
-## [v0.3.3](https://github.com/Yelp/Tron/tree/v0.3.3) (2012-04-19)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.3.2...v0.3.3)
-
-**Fixed bugs:**
-
-- Strange behavior for stuck jobs after reconfig [\#40](https://github.com/Yelp/Tron/issues/40)
-
-**Closed issues:**
-
-- Resolve warnings on \(re\)config about working directory [\#131](https://github.com/Yelp/Tron/issues/131)
-- Config file convert script 0.2.x -\> 0.3.x [\#109](https://github.com/Yelp/Tron/issues/109)
-- File system resources [\#26](https://github.com/Yelp/Tron/issues/26)
-
-**Merged pull requests:**
-
-- Configuration migration from 0.2 to 0.3 [\#133](https://github.com/Yelp/Tron/pull/133) ([dnephin](https://github.com/dnephin))
-- 131 resolve wd warning [\#132](https://github.com/Yelp/Tron/pull/132) ([dnephin](https://github.com/dnephin))
-- Release 0.3.2 [\#129](https://github.com/Yelp/Tron/pull/129) ([dnephin](https://github.com/dnephin))
-
-## [v0.3.2](https://github.com/Yelp/Tron/tree/v0.3.2) (2012-04-12)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.3.1...v0.3.2)
-
-**Fixed bugs:**
-
-- Problems after upgrade to 0.3.0/0.3.1 [\#127](https://github.com/Yelp/Tron/issues/127)
-
-**Closed issues:**
-
-- Support only logging to syslog [\#115](https://github.com/Yelp/Tron/issues/115)
-
-**Merged pull requests:**
-
-- Additional node pool validation [\#128](https://github.com/Yelp/Tron/pull/128) ([dnephin](https://github.com/dnephin))
-- 115 move logging to config file [\#126](https://github.com/Yelp/Tron/pull/126) ([dnephin](https://github.com/dnephin))
-
-## [v0.3.1](https://github.com/Yelp/Tron/tree/v0.3.1) (2012-03-27)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.3.0...v0.3.1)
-
-**Closed issues:**
-
-- Let command context variables use built-in interpolations [\#101](https://github.com/Yelp/Tron/issues/101)
-- Look into making CommandContext more like django contexts [\#33](https://github.com/Yelp/Tron/issues/33)
-
-**Merged pull requests:**
-
-- Run all actions, even if a non-dependent action fails [\#124](https://github.com/Yelp/Tron/pull/124) ([dnephin](https://github.com/dnephin))
-- Fix cleanup actions. [\#123](https://github.com/Yelp/Tron/pull/123) ([dnephin](https://github.com/dnephin))
-- State diagrams [\#121](https://github.com/Yelp/Tron/pull/121) ([dnephin](https://github.com/dnephin))
-- Remove req.txt [\#116](https://github.com/Yelp/Tron/pull/116) ([dnephin](https://github.com/dnephin))
-
-## [v0.3.0](https://github.com/Yelp/Tron/tree/v0.3.0) (2012-03-21)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.2.10...v0.3.0)
-
-**Fixed bugs:**
-
-- Cleanup actions break IntervalScheduler [\#91](https://github.com/Yelp/Tron/issues/91)
-
-**Closed issues:**
-
-- Failed to connect to host [\#95](https://github.com/Yelp/Tron/issues/95)
-- No-op scheduler [\#88](https://github.com/Yelp/Tron/issues/88)
-- Cannot restart failed actions [\#87](https://github.com/Yelp/Tron/issues/87)
-- Nodes and node pools should be in separate lists [\#69](https://github.com/Yelp/Tron/issues/69)
-- Action.requires should accept strings in the list as well as pointers [\#61](https://github.com/Yelp/Tron/issues/61)
-- support a global /etc/tron [\#60](https://github.com/Yelp/Tron/issues/60)
-- 'tronctl succeed' should allow FAIL -\> SUCC [\#45](https://github.com/Yelp/Tron/issues/45)
-- Jobs, actions, nodes, etc. should support string identifiers alongside YAML references [\#44](https://github.com/Yelp/Tron/issues/44)
-- retry\_count config option [\#27](https://github.com/Yelp/Tron/issues/27)
-
-**Merged pull requests:**
-
-- Docs and make [\#108](https://github.com/Yelp/Tron/pull/108) ([dnephin](https://github.com/dnephin))
-- Tronview tests and bugs fixes [\#107](https://github.com/Yelp/Tron/pull/107) ([dnephin](https://github.com/dnephin))
-- Fds should be closed [\#106](https://github.com/Yelp/Tron/pull/106) ([dnephin](https://github.com/dnephin))
-- Job can be configured disabled [\#105](https://github.com/Yelp/Tron/pull/105) ([dnephin](https://github.com/dnephin))
-- Tronview cleanup [\#104](https://github.com/Yelp/Tron/pull/104) ([dnephin](https://github.com/dnephin))
-- Config rewrite [\#103](https://github.com/Yelp/Tron/pull/103) ([dnephin](https://github.com/dnephin))
-- Config rewrite [\#90](https://github.com/Yelp/Tron/pull/90) ([irskep](https://github.com/irskep))
-
-## [v0.2.10](https://github.com/Yelp/Tron/tree/v0.2.10) (2012-02-17)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.2.9...v0.2.10)
-
-**Closed issues:**
-
-- Bug? unsupported format character [\#84](https://github.com/Yelp/Tron/issues/84)
-- Failed service starts should show output somewhere [\#37](https://github.com/Yelp/Tron/issues/37)
-- Revisit Action "requires" field [\#29](https://github.com/Yelp/Tron/issues/29)
-
-**Merged pull requests:**
-
-- Cleanup actions don't disable job on interval scheduler when an action fails [\#94](https://github.com/Yelp/Tron/pull/94) ([irskep](https://github.com/irskep))
-- Remove old man [\#93](https://github.com/Yelp/Tron/pull/93) ([dnephin](https://github.com/dnephin))
-- Support skipping of failed actions [\#92](https://github.com/Yelp/Tron/pull/92) ([dnephin](https://github.com/dnephin))
-- Pyflakes cleanup [\#89](https://github.com/Yelp/Tron/pull/89) ([dnephin](https://github.com/dnephin))
-
-## [v0.2.9](https://github.com/Yelp/Tron/tree/v0.2.9) (2012-02-06)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.2.8.1...v0.2.9)
-
-**Fixed bugs:**
-
-- Failed first action of two-action job stops scheduler [\#77](https://github.com/Yelp/Tron/issues/77)
-- Syslog reconfig doesn't take effect until daemon restart [\#66](https://github.com/Yelp/Tron/issues/66)
-- Tron and DST do not get along [\#59](https://github.com/Yelp/Tron/issues/59)
-
-**Closed issues:**
-
-- tronweb is broken [\#75](https://github.com/Yelp/Tron/issues/75)
-- Working TronWeb UI \(for viewing jobs\) [\#72](https://github.com/Yelp/Tron/issues/72)
-- Handle dependencies and failures between dependencies better [\#67](https://github.com/Yelp/Tron/issues/67)
-
-**Merged pull requests:**
-
-- Jobs no longer stop scheduling when non-final action fails after next scheduled run [\#79](https://github.com/Yelp/Tron/pull/79) ([irskep](https://github.com/irskep))
-- Kill reactor so test suite can exit [\#76](https://github.com/Yelp/Tron/pull/76) ([irskep](https://github.com/irskep))
-- Tronweb 72 [\#74](https://github.com/Yelp/Tron/pull/74) ([mowings-iseatz](https://github.com/mowings-iseatz))
-- Daylight Saving Time Awareness \(\#59\) \(fixed target branch\) [\#71](https://github.com/Yelp/Tron/pull/71) ([irskep](https://github.com/irskep))
-- Comments and style [\#68](https://github.com/Yelp/Tron/pull/68) ([irskep](https://github.com/irskep))
-
-## [v0.2.8.1](https://github.com/Yelp/Tron/tree/v0.2.8.1) (2011-12-21)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.2.8...v0.2.8.1)
-
-**Fixed bugs:**
-
-- Update incorrect documentation [\#50](https://github.com/Yelp/Tron/issues/50)
-
-**Closed issues:**
-
-- Unified HTML documentation [\#49](https://github.com/Yelp/Tron/issues/49)
-- System for emailing job failures [\#34](https://github.com/Yelp/Tron/issues/34)
-
-**Merged pull requests:**
-
-- Prebuilt man pages [\#65](https://github.com/Yelp/Tron/pull/65) ([irskep](https://github.com/irskep))
-- better formatting when logging to syslog [\#63](https://github.com/Yelp/Tron/pull/63) ([Roguelazer](https://github.com/Roguelazer))
-
-## [v0.2.8](https://github.com/Yelp/Tron/tree/v0.2.8) (2011-11-28)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.2.7...v0.2.8)
-
-**Fixed bugs:**
-
-- tron exception [\#46](https://github.com/Yelp/Tron/issues/46)
-- NameError in www.py [\#22](https://github.com/Yelp/Tron/issues/22)
-
-**Closed issues:**
-
-- Scheduled Time seem inconsistent [\#54](https://github.com/Yelp/Tron/issues/54)
-- tronfig should disallow putting Jobs in the services list [\#47](https://github.com/Yelp/Tron/issues/47)
-- support logging to syslog [\#41](https://github.com/Yelp/Tron/issues/41)
-- Add a "zap" command for services [\#39](https://github.com/Yelp/Tron/issues/39)
-- trond silently fails when run as non-root user  [\#13](https://github.com/Yelp/Tron/issues/13)
-
-**Merged pull requests:**
-
-- Docs and more [\#62](https://github.com/Yelp/Tron/pull/62) ([irskep](https://github.com/irskep))
-- Logging to syslog \(\#41\) [\#58](https://github.com/Yelp/Tron/pull/58) ([irskep](https://github.com/irskep))
-- more fixen [\#57](https://github.com/Yelp/Tron/pull/57) ([Roguelazer](https://github.com/Roguelazer))
-- make config parsing better [\#55](https://github.com/Yelp/Tron/pull/55) ([Roguelazer](https://github.com/Roguelazer))
-- Zap command for services \(\#39\) [\#53](https://github.com/Yelp/Tron/pull/53) ([irskep](https://github.com/irskep))
-- Make tronview more resilient to bad tronfigs [\#48](https://github.com/Yelp/Tron/pull/48) ([Roguelazer](https://github.com/Roguelazer))
-- added missing import and fixed import ordering [\#24](https://github.com/Yelp/Tron/pull/24) ([tobywaite](https://github.com/tobywaite))
-- Cleanup actions [\#16](https://github.com/Yelp/Tron/pull/16) ([irskep](https://github.com/irskep))
-
-## [v0.2.7](https://github.com/Yelp/Tron/tree/v0.2.7) (2011-09-14)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.2.6...v0.2.7)
-
-## [v0.2.6](https://github.com/Yelp/Tron/tree/v0.2.6) (2011-09-14)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.2.5...v0.2.6)
-
-**Closed issues:**
-
-- Failure actions for jobs [\#14](https://github.com/Yelp/Tron/issues/14)
-
-**Merged pull requests:**
-
-- Functional testing improvements [\#21](https://github.com/Yelp/Tron/pull/21) ([irskep](https://github.com/irskep))
-- Fancy new scheduler based on Google App Engine's [\#20](https://github.com/Yelp/Tron/pull/20) ([irskep](https://github.com/irskep))
-- TronTestCase: functional testing! [\#18](https://github.com/Yelp/Tron/pull/18) ([irskep](https://github.com/irskep))
-- Added context variables for year, month, day [\#17](https://github.com/Yelp/Tron/pull/17) ([irskep](https://github.com/irskep))
-
-## [v0.2.5](https://github.com/Yelp/Tron/tree/v0.2.5) (2011-06-23)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.2.4...v0.2.5)
-
-## [v0.2.4](https://github.com/Yelp/Tron/tree/v0.2.4) (2011-04-12)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.2.0...v0.2.4)
-
-## [v0.2.0](https://github.com/Yelp/Tron/tree/v0.2.0) (2011-02-25)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.1.10...v0.2.0)
-
-## [v0.1.10](https://github.com/Yelp/Tron/tree/v0.1.10) (2011-02-03)
-[Full Changelog](https://github.com/Yelp/Tron/compare/0.1.9...v0.1.10)
-
-## [0.1.9](https://github.com/Yelp/Tron/tree/0.1.9) (2010-12-14)
 
 
 \* *This Change Log was automatically generated by [github_changelog_generator](https://github.com/skywinder/Github-Changelog-Generator)*
