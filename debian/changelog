@@ -1,3 +1,11 @@
+tron (1.0.1) xenial; urgency=medium
+
+  * 1.0.1 tagged with 'make release'
+    Commit: Merge pull request #692 from Yelp/taskproc_bump  Bump
+    taskproc to handle weird staging offers
+
+ -- root <root@f6149bf8cd6c>  Wed, 07 Aug 2019 13:37:07 +0000
+
 tron (1.0.0) xenial; urgency=medium
 
   * 1.0.0 tagged with 'make release'
