@@ -45,9 +45,10 @@ class StatusFile(object):
                 explicit_start=True,
                 width=1000000,
             )
-            try:
-                yield
-            finally:
+        try:
+            yield
+        finally:
+            with open(self.filename, 'a') as fh:
                 yaml.safe_dump(
                     self.get_content(
                         run_id=run_id,
