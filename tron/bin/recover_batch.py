@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.6
 import argparse
 import logging
+import os
 import signal
 import sys
 from queue import Queue
@@ -34,11 +35,23 @@ def parse_args():
     return parser.parse_args()
 
 
-def notify(notify_queue, ignored, filepath, mask):
+def is_file_empty(filepath):
+    return os.stat(filepath).st_size == 0
+
+
+def load_last_status_file_entries(filepath):
     with open(filepath.path) as f:
         last_line = f.readlines()[-1]
         entries = yaml.load(last_line)
+    return entries
 
+
+def notify(notify_queue, ignored, filepath, mask):
+    if is_file_empty(filepath.path):
+        exit_code = 1
+        error_msg = f"{filepath} was an empty file. Unable to recover."
+    else:
+        entries = load_last_status_file_entries(filepath.path)
         pid = entries.get('runner_pid')
         return_code = entries.get('return_code')
         exit_code, error_msg = None, None
@@ -55,17 +68,21 @@ def notify(notify_queue, ignored, filepath, mask):
                 )
             else:
                 exit_code = return_code
-
-        elif pid is None or not psutil.pid_exists(pid):
+        elif pid is None:
+            exit_code = 1
+            error_msg = (
+                f'No Action runner pid to recover (None): unable to recover it'
+            )
+        elif not psutil.pid_exists(pid):
             exit_code = 1
             error_msg = (
                 f'Action runner pid {pid} no longer running; '
                 'unable to recover it'
             )
 
-        if exit_code is not None:
-            reactor.stop()
-            notify_queue.put((exit_code, error_msg))
+    if exit_code is not None:
+        reactor.stop()
+        notify_queue.put((exit_code, error_msg))
 
 
 def get_key_from_last_line(filepath, key):

@@ -6,6 +6,7 @@ import pytest
 from tron.bin import recover_batch
 
 
+@mock.patch('tron.bin.recover_batch.is_file_empty', autospec=True, return_value=False)
 @mock.patch('builtins.open', autospec=True)
 @mock.patch.object(recover_batch, 'reactor', autospec=True)
 @pytest.mark.parametrize('line,exit_code,error_msg', [
@@ -23,7 +24,7 @@ from tron.bin import recover_batch
         'Action runner pid 12345 no longer running; unable to recover it'
     )
 ])
-def test_notify(mock_reactor, mock_open, line, exit_code, error_msg):
+def test_notify(mock_is_file_empty, mock_reactor, mock_open, line, exit_code, error_msg):
     fake_path = mock.MagicMock()
     mock_open.return_value.__enter__.return_value.readlines.return_value = [line]
     q = Queue()
