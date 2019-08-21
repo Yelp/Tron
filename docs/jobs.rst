@@ -134,9 +134,7 @@ Optional Fields
     See :ref:`job_cleanup_actions`.
 
 **enabled** (default **True**)
-    If **False** the job will not be scheduled to run. This configuration option
-    is only relevant when a Job is first added to the configuration, after
-    which this value will be ignored.
+    If **False** the job will not be scheduled to run.
 
 **max_runtime** (default **None**)
     A time interval (ex: "2 hours") that limits the duration of each job run.
