@@ -85,26 +85,29 @@ def main():
         try:
             job = store.restore([key])[key]
         except Exception as e:
-            logging.exception(f'Failed to retreive status for job {job_name} due to {e}')
-            sys.exit(1)
+            logging.exception(f'UNKN: Failed to retreive status for job {job_name} due to {e}')
+            sys.exit(3)
 
         # Exit if the job never runs.
         last_run_time = get_last_run_time(job)
         if not last_run_time:
-            logging.error(f'No last run for {key} found. If the job was just added, it might take some time for it to run')
+            logging.error(f'WARN: No last run for {key} found. If the job was just added, it might take some time for it to run')
             sys.exit(1)
 
         # Alert if timestamp is not updated after staleness_threshold
         stateless_for_secs = time.time() - last_run_time.astimezone(pytz.utc).timestamp()
         if stateless_for_secs > args.staleness_threshold:
-            logging.error(f'{key} has not been updated in DynamoDB for {stateless_for_secs} seconds')
-            sys.exit(1)
-        logging.info(f"DynamoDB is up to date. It's last updated at {last_run_time}")
+            logging.error(f'CRIT: {key} has not been updated in DynamoDB for {stateless_for_secs} seconds')
+            sys.exit(2)
+        else:
+            logging.info(f"OK: DynamoDB is up to date. It's last updated at {last_run_time}")
+            sys.exit(0)
     # Alert for BerkeleyDB
     elif store_type == schema.StatePersistenceTypes.shelve:
         os.execl('/usr/lib/nagios/plugins/check_file_age', '/nail/tron/tron_state', '-w', str(args.staleness_threshold), '-c', str(args.staleness_threshold))
-
-    sys.exit(0)
+    else:
+        logging.exception(f'UNKN: Not designed to check this type of datastore: {store_type}')
+        sys.exit(3)
 
 
 if __name__ == '__main__':
