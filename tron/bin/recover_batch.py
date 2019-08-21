@@ -34,38 +34,42 @@ def parse_args():
     return parser.parse_args()
 
 
-def notify(notify_queue, ignored, filepath, mask):
-    with open(filepath.path) as f:
+def read_last_yaml_entries(filename):
+    with open(filename) as f:
         last_line = f.readlines()[-1]
         entries = yaml.load(last_line)
+    return entries
 
-        pid = entries.get('runner_pid')
-        return_code = entries.get('return_code')
-        exit_code, error_msg = None, None
 
-        if return_code is not None:
-            if return_code < 0:
-                # from the subprocess docs on the return code of a process:
-                # "A negative value -N indicates that the child was terminated by signal N (POSIX only)."
-                # We should always exit with a positive code, so we take the absolute value of the return code
-                exit_code = abs(return_code)
-                error_msg = (
-                    'Action run killed by signal '
-                    f'{signal.Signals(exit_code).name}'
-                )
-            else:
-                exit_code = return_code
+def notify(notify_queue, ignored, filepath, mask):
+    entries = read_last_yaml_entries(filepath.path)
+    pid = entries.get('runner_pid')
+    return_code = entries.get('return_code')
+    exit_code, error_msg = None, None
 
-        elif pid is None or not psutil.pid_exists(pid):
-            exit_code = 1
+    if return_code is not None:
+        if return_code < 0:
+            # from the subprocess docs on the return code of a process:
+            # "A negative value -N indicates that the child was terminated by signal N (POSIX only)."
+            # We should always exit with a positive code, so we take the absolute value of the return code
+            exit_code = abs(return_code)
             error_msg = (
-                f'Action runner pid {pid} no longer running; '
-                'unable to recover it'
+                'Action run killed by signal '
+                f'{signal.Signals(exit_code).name}'
             )
+        else:
+            exit_code = return_code
 
-        if exit_code is not None:
-            reactor.stop()
-            notify_queue.put((exit_code, error_msg))
+    elif pid is None or not psutil.pid_exists(pid):
+        exit_code = 1
+        error_msg = (
+            f'Action runner pid {pid} no longer running; '
+            'unable to recover it'
+        )
+
+    if exit_code is not None:
+        reactor.stop()
+        notify_queue.put((exit_code, error_msg))
 
 
 def get_key_from_last_line(filepath, key):
