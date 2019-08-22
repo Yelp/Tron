@@ -34,9 +34,6 @@ log = logging.getLogger(__name__)
 
 def scheduler_from_config(config, time_zone):
     """A factory for creating a scheduler from a configuration object."""
-    if isinstance(config, schedule_parse.ConfigConstantScheduler):
-        return ConstantScheduler()
-
     if isinstance(config, schedule_parse.ConfigGrocScheduler):
         return GeneralScheduler(
             time_zone=time_zone,
@@ -76,32 +73,6 @@ def scheduler_from_config(config, time_zone):
             original=config.original,
             jitter=config.jitter,
         )
-
-
-class ConstantScheduler(object):
-    """The constant scheduler schedules a new job immediately."""
-    schedule_on_complete = True
-
-    def next_run_time(self, _):
-        return timeutils.current_time()
-
-    def __str__(self):
-        return self.get_name()
-
-    def __eq__(self, other):
-        return isinstance(other, ConstantScheduler)
-
-    def __ne__(self, other):
-        return not self == other
-
-    def get_jitter(self):
-        pass
-
-    def get_name(self):
-        return 'constant'
-
-    def get_value(self):
-        return ''
 
 
 def get_jitter(time_delta):

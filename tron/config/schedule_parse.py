@@ -32,8 +32,6 @@ ConfigDailyScheduler = namedtuple(
     'original hour minute second days jitter',
 )
 
-ConfigConstantScheduler = namedtuple('ConfigConstantScheduler', [])
-
 
 class ScheduleParseError(ConfigError):
     pass
@@ -88,11 +86,6 @@ def valid_schedule(schedule, config_context):
 
     schedule = ScheduleValidator().validate(schedule, config_context)
     return validate_generic_schedule_config(schedule, config_context)
-
-
-def valid_constant_scheduler(_config, _context):
-    """Adapter for validation interface and constant scheduler."""
-    return ConfigConstantScheduler()
 
 
 def valid_daily_scheduler(config, config_context):
@@ -308,7 +301,6 @@ def valid_cron_scheduler(config, config_context):
 
 
 schedulers = {
-    'constant': valid_constant_scheduler,
     'daily': valid_daily_scheduler,
     'cron': valid_cron_scheduler,
     'groc daily': parse_groc_expression,
