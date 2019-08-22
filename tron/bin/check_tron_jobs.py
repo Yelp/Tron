@@ -75,9 +75,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
     url_index = client.index()
     kwargs = {}
     if job_content is None:
-        kwargs["output"] = "OK: {} was just added and hasn't run yet.".format(
-            job['name'],
-        )
+        kwargs["output"] = f"OK: {job['name']} was just added and hasn't run yet."
         kwargs["status"] = 0
         return kwargs
 
@@ -112,31 +110,31 @@ def compute_check_result_for_job_runs(client, job, job_content):
     action_run_details = client.action_runs(action_run_id.url, num_lines=10)
 
     if last_state == State.SUCCEEDED:
-        prefix = "OK: The last job run succeeded"
+        prefix = f"OK: The last job ({job_run_id}) run succeeded. Will watch future or in progress runs for the next failure"
         status = 0
         stderr = ""
     elif last_state == State.NO_RUNS_TO_CHECK:
-        prefix = "OK: The job is 'new' and/or has no runs to check"
+        prefix = f"OK: The job {job['name']} is new and/or has no runs to check"
         status = 0
         stderr = ""
     elif last_state == State.SKIPPED:
-        prefix = "OK: The last job run was skipped"
+        prefix = f"OK: The last job ({job_run_id}) run was skipped. Will watch future or in progress runs for the next failure"
         status = 0
         stderr = ""
     elif last_state == State.STUCK:
-        prefix = "WARN: Job exceeded expected runtime or still running when next job is scheduled"
+        prefix = f"WARN: Job {job_run_id} exceeded expected runtime or still running when next job is scheduled"
         status = 1
         stderr = '\n'.join(action_run_details.get('stderr', ["(No stderr available)"]))
     elif last_state == State.FAILED:
-        prefix = "CRIT: The last job run failed!"
+        prefix = f"CRIT: The last job run ({job_run_id}) failed!"
         status = 2
         stderr = '\n'.join(action_run_details.get('stderr', ["(No stderr available)"]))
     elif last_state == State.UNKNOWN:
-        prefix = "CRIT: Job has gone 'unknown' and might need manual intervention"
+        prefix = f"CRIT: Job {job_run_id} has gone 'unknown' and might need manual intervention"
         status = 2
         stderr = ""
     else:
-        prefix = "UNKNOWN: The job is in a state that check_tron_jobs doesn't understand"
+        prefix = f"UNKNOWN: Job {job_run_id} is in a state that check_tron_jobs doesn't understand"
         status = 3
         stderr = ""
 
@@ -308,7 +306,7 @@ def guess_realert_every(job):
         )
         realert_every = max(int(time_diff / _run_interval), 1)
     except Exception as e:
-        log.warning("guess_realert_every failed: {}".format(e))
+        log.warning(f"guess_realert_every failed: {e}")
         return -1
     return realert_every
 
@@ -358,7 +356,7 @@ def sort_runs_by_interval(job_content, interval='day', until=None):
 
 def compute_check_result_for_job(client, job):
     kwargs = m(
-        name="check_tron_job.{}".format(job['name']),
+        name=f"check_tron_job.{job['name']}",
         source="tron",
     )
     if 'realert_every' not in kwargs:
@@ -377,7 +375,7 @@ def compute_check_result_for_job(client, job):
     if job["status"] == "disabled":
         kwargs = kwargs.set(
             'output',
-            "OK: {} is disabled and won't be checked.".format(job['name'], )
+            f"OK: {job['name']} is disabled and won't be checked."
         )
         kwargs = kwargs.set('status', 0)
         kwargs_list.append(kwargs)
@@ -415,16 +413,12 @@ def compute_check_result_for_job(client, job):
 
 def check_job(job, client):
     if job.get('monitoring', {}) == {}:
-        log.debug(
-            "Not checking {}, no monitoring metadata setup.".format(
-                job['name'],
-            )
-        )
+        log.debug(f"Not checking {job['name']}, no monitoring metadata setup.")
         return
     if job.get('monitoring').get('team', None) is None:
-        log.debug("Not checking {}, no team specified".format(job['name']))
+        log.debug(f"Not checking {job['name']}, no team specified")
         return
-    log.info("Checking {}".format(job['name']))
+    log.info(f"Checking {job['name']}")
     return compute_check_result_for_job(job=job, client=client)
 
 
@@ -438,7 +432,7 @@ def check_job_result(job, client, dry_run):
             log.info("Would have sent this event to sensu: ")
             log.info(pprint.pformat(result))
         else:
-            log.debug("Sending event: {}".format(pprint.pformat(result)))
+            log.debug(f"Sending event: {pprint.pformat(result)}")
             if 'runbook' not in result:
                 result[
                     'runbook'
@@ -461,12 +455,7 @@ def main():
             try:
                 check_job_result(job=job, client=client, dry_run=args.dry_run)
             except Exception as e:
-                log.warning(
-                    "check job result fails for job {}: {}".format(
-                        job.get('name', ''),
-                        e,
-                    )
-                )
+                log.warning(f"check job result fails for job {job.get('name', '')}: {e}")
                 error_code = 1
     else:
         job_url = client.get_url(args.job)
