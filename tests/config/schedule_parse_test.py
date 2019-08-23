@@ -53,12 +53,6 @@ class TestScheduleConfigFromString(TestCase):
         )
         mock_parse_groc.assert_called_with(generic_config, context)
 
-    def test_constant_config(self):
-        schedule = 'constant'
-        context = config_utils.NullConfigContext
-        config = schedule_parse.schedule_config_from_string(schedule, context)
-        assert_equal(config, schedule_parse.ConfigConstantScheduler())
-
 
 class TestValidScheduler(TestCase):
     @mock.patch('tron.config.schedule_parse.schedulers', autospec=True)

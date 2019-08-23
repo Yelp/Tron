@@ -234,7 +234,7 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         jobs:
           - name: "failjob"
             node: local
-            schedule: "constant"
+            schedule: "daily 04:20"
             actions:
               - name: "failaction"
                 command: "failplz"
@@ -265,7 +265,7 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         jobs:
           - name: "multi_step_job"
             node: local
-            schedule: "constant"
+            schedule: "daily 04:20"
             actions:
               - name: "broken"
                 command: "failingcommand"
@@ -306,7 +306,7 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
                 -   name: "random_failure_job"
                     node: local
                     queueing: true
-                    schedule: "constant"
+                    schedule: "daily 04:20"
                     actions:
                         -   name: "fa"
                             command: "sleep 0.1; failplz"
@@ -408,7 +408,7 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
            jobs:
               - name: fast_job
                 node: local
-                schedule: constant
+                schedule: daily 04:20
                 actions:
                   - name: single_act
                     command: "sleep 20 && echo good"

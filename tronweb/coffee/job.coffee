@@ -348,7 +348,6 @@ formatInterval = (interval) ->
 
 window.formatScheduler = (scheduler) ->
     [icon, value] = switch scheduler.type
-        when 'constant' then ['icon-repeatone', 'constant']
         when 'interval' then ['icon-time', formatInterval(scheduler.value)]
         when 'groc'     then ['icon-calendarthree', scheduler.value]
         when 'daily'    then ['icon-notestasks', scheduler.value]

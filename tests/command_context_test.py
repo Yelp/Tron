@@ -135,7 +135,7 @@ class TestJobContext(TestCase):
     @setup
     def setup_job(self):
         self.last_success = mock.Mock(run_time=datetime.datetime(2012, 3, 14))
-        mock_scheduler = mock.create_autospec(scheduler.ConstantScheduler)
+        mock_scheduler = mock.create_autospec(scheduler.GeneralScheduler)
         run_collection = mock.create_autospec(
             JobRunCollection,
             last_success=self.last_success,

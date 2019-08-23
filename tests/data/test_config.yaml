@@ -122,30 +122,6 @@ jobs:
             command: "%(ECHO)s %(actionname)s %(cleanup_job_status)s"
 
 
-    # ConstantScheduler successful
-    -   name: constant_job6
-        node: box2
-        schedule: "constant"
-        actions:
-            -   name: task0
-                command: "%(ECHO)s %(actionname)s"
-            -   name: task1
-                command: "%(ECHO)s %(actionname)s && sleep 10"
-                requires: [task0]
-
-
-    # ConstantScheduler failure
-    -   name: constant_job7
-        node: localhost
-        schedule: "constant"
-        actions:
-            -   name: task0
-                command: "%(ECHO)s %(actionname)s && sleep 7 && false"
-            -   name: task1
-                command: "%(ECHO)s %(actionname)s"
-                requires: [task0]
-
-
     # all_nodes Job
     -   name: allnodes_job8
         node: pool2

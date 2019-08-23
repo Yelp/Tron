@@ -51,22 +51,6 @@ class TestSchedulerFromConfig(TestCase):
         assert_equal(str(sched), "daily 17:32 MWF")
 
 
-class ConstantSchedulerTest(testingutils.MockTimeTestCase):
-
-    now = datetime.datetime(2012, 3, 14)
-
-    @setup
-    def build_scheduler(self):
-        self.scheduler = scheduler.ConstantScheduler()
-
-    def test_next_run_time(self):
-        scheduled_time = self.scheduler.next_run_time(None)
-        assert_equal(scheduled_time, self.now)
-
-    def test__str__(self):
-        assert_equal(str(self.scheduler), 'constant')
-
-
 class GeneralSchedulerTestCase(testingutils.MockTimeTestCase):
 
     now = datetime.datetime.now().replace(hour=15, minute=0)
