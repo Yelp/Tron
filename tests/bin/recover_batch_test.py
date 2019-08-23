@@ -2,11 +2,12 @@ from queue import Queue
 
 import mock
 import pytest
+import yaml
 
 from tron.bin import recover_batch
 
 
-@mock.patch('builtins.open', autospec=True)
+@mock.patch('tron.bin.recover_batch.read_last_yaml_entries', autospec=True)
 @mock.patch.object(recover_batch, 'reactor', autospec=True)
 @pytest.mark.parametrize('line,exit_code,error_msg', [
     (  # action runner finishes successfully
@@ -23,9 +24,9 @@ from tron.bin import recover_batch
         'Action runner pid 12345 no longer running; unable to recover it'
     )
 ])
-def test_notify(mock_reactor, mock_open, line, exit_code, error_msg):
+def test_notify(mock_reactor, mock_read_last_yaml_entries, line, exit_code, error_msg):
     fake_path = mock.MagicMock()
-    mock_open.return_value.__enter__.return_value.readlines.return_value = [line]
+    mock_read_last_yaml_entries.return_value = yaml.safe_load(line)
     q = Queue()
 
     recover_batch.notify(q, 'some_ignored', fake_path, 'a_mask')
