@@ -104,15 +104,28 @@ class ClientConnection(connection.SSHConnection):
     service_start_defer = None
     service_stop_defer = None
 
+    def setToFromStrings(self):
+        try:
+            self.from_string = f"{self.transport.getHost().address.host}:{self.transport.getHost().address.port}"
+        except Exception as e:
+            log.debug(e)
+            self.to_string = "(unknown tcp source)"
+        try:
+            self.to_string = f"{self.transport.getPeer().address.host}:{self.transport.getPeer().address.port}"
+        except Exception as e:
+            log.debug(e)
+            self.to_string = "(unknown tcp destination)"
+
     def serviceStarted(self):
-        log.info("Service started")
         connection.SSHConnection.serviceStarted(self)
+        self.setToFromStrings()
+        log.info(f"Started SSH connection from {self.from_string} to {self.to_string}")
         if not self.service_stop_defer.called:
             self.service_start_defer.callback(self)
 
     def serviceStopped(self):
-        log.info("Service stopped")
         connection.SSHConnection.serviceStopped(self)
+        log.info(f"Stopped SSH connection from {self.from_string} to {self.to_string}")
         if not self.service_stop_defer.called:
             self.service_stop_defer.callback(self)
 

@@ -442,7 +442,7 @@ class Node(object):
             return
         self.connection = None
 
-        log.info("Service to %s stopped", self.hostname)
+        log.info(f"Service to node {self.hostname} stopped")
 
         for run_id, run in self.run_states.items():
             if run.state == RUN_STATE_CONNECTING:
