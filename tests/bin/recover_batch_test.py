@@ -21,7 +21,7 @@ from tron.bin import recover_batch
     ), (  # action runner is somehow no longer running
         'runner_pid: 12345',
         1,
-        'Action runner pid 12345 no longer running; unable to recover it'
+        'Action runner pid 12345 no longer running. Assuming an exit of 1.'
     )
 ])
 def test_notify(mock_reactor, mock_read_last_yaml_entries, line, exit_code, error_msg):
@@ -35,37 +35,3 @@ def test_notify(mock_reactor, mock_read_last_yaml_entries, line, exit_code, erro
     assert actual_exit_code == exit_code
     assert actual_error_msg == error_msg
     assert mock_reactor.stop.call_count == 1
-
-
-@mock.patch.object(recover_batch, 'get_key_from_last_line', mock.Mock(return_value=234))
-def test_run_already_returned():
-    with pytest.raises(SystemExit) as exc_info:
-        recover_batch.run('a_path')
-
-    assert exc_info.value.code == 234
-
-
-@mock.patch.object(recover_batch, 'get_key_from_last_line', mock.Mock(side_effect=[
-    None,  # return_code
-    'a_pid',
-]))
-@mock.patch('psutil.pid_exists', mock.Mock(return_value=False), autospec=None)
-def test_run_not_running():
-    with pytest.raises(SystemExit) as exc_info:
-        recover_batch.run('a_path')
-
-    assert exc_info.value.code == 1
-
-
-@mock.patch.object(recover_batch, 'get_key_from_last_line', mock.Mock(side_effect=[None, 0]))
-@mock.patch('psutil.pid_exists', mock.Mock(return_value=True), autospec=None)
-@mock.patch.object(recover_batch, 'Queue', autospec=True)
-@mock.patch.object(recover_batch, 'StatusFileWatcher', mock.Mock())
-@mock.patch.object(recover_batch, 'reactor', mock.Mock())
-def test_run_end_after_notify(mock_queue):
-    mock_queue.return_value.get.return_value = (42, 'a_message')
-
-    with pytest.raises(SystemExit) as exc_info:
-        recover_batch.run('a_path')
-
-    assert exc_info.value.code == 42
