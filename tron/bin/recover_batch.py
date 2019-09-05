@@ -1,6 +1,7 @@
 #!/usr/bin/env python3.6
 import argparse
 import logging
+import os
 import signal
 import sys
 from queue import Queue
@@ -53,48 +54,41 @@ def notify(notify_queue, ignored, filepath, mask):
             # "A negative value -N indicates that the child was terminated by signal N (POSIX only)."
             # We should always exit with a positive code, so we take the absolute value of the return code
             exit_code = abs(return_code)
-            error_msg = (
-                'Action run killed by signal '
-                f'{signal.Signals(exit_code).name}'
-            )
+            error_msg = f'Action run killed by signal {signal.Signals(exit_code).name}'
         else:
             exit_code = return_code
-
-    elif pid is None or not psutil.pid_exists(pid):
+    elif pid is None:
+        log.warning(f"Status file {filepath.path} didn't have a PID. Will watch the file for updates.")
+    elif not psutil.pid_exists(pid):
         exit_code = 1
-        error_msg = (
-            f'Action runner pid {pid} no longer running; '
-            'unable to recover it'
-        )
+        error_msg = f'Action runner pid {pid} no longer running. Assuming an exit of 1.'
 
     if exit_code is not None:
         reactor.stop()
         notify_queue.put((exit_code, error_msg))
 
 
+def file_is_empty(filepath):
+    return os.stat(filepath).st_size == 0
+
+
 def get_key_from_last_line(filepath, key):
-    with open(filepath) as f:
-        lines = f.readlines()
-        if lines:
-            content = yaml.load(lines[-1])
-            return content.get(key)
+    if file_is_empty(filepath):
+        log.warning(f"status file {filepath} is empty")
+        return None
+    try:
+        with open(filepath) as f:
+            lines = f.readlines()
+            if lines:
+                content = yaml.load(lines[-1])
+                return content.get(key)
+            return None
+    except Exception as e:
+        log.warning(f"Exception encountered when inspecting {filepath}: {e}")
         return None
 
 
 def run(fpath):
-    existing_return_code = get_key_from_last_line(fpath, 'return_code')
-    if existing_return_code is not None:
-        sys.exit(existing_return_code)
-
-    runner_pid = get_key_from_last_line(fpath, 'runner_pid')
-    if runner_pid is None or not psutil.pid_exists(runner_pid):
-        log.warning(
-            f"Action runner pid {runner_pid} no longer running; "
-            "unable to recover it"
-        )
-        #TODO: should we kill the process here?
-        sys.exit(1)
-
     notify_queue = Queue()
     StatusFileWatcher(
         fpath,
