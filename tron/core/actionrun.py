@@ -421,8 +421,14 @@ class ActionRun(Observable):
         """Invoked externally (via API) when action needs to be re-tried
         manually.
         """
+
+        # Manually retrying means we force the retries to be 1 and
+        # Cancel any delay, so the retry is kicked off asap
         if self.retries_remaining is None or self.retries_remaining <= 0:
             self.retries_remaining = 1
+        if self.in_delay is not None:
+            self.in_delay.cancel()
+            self.in_delay = None
 
         if self.is_done:
             return self._exit_unsuccessful(self.exit_status)
@@ -443,6 +449,7 @@ class ActionRun(Observable):
                 self.retries_delay.total_seconds(), self.start_after_delay
             )
             log.info(f"{self} delaying for a retry in {self.retries_delay}s")
+            return True
         else:
             self.machine.reset()
             return self.start()
