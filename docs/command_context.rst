@@ -5,7 +5,22 @@ Built-In Command Context Variables
 ==================================
 
 Tron includes some built in command context variables that can be used in
-command configuration.
+command configuration for actions.
+
+These variables can be used in the command of an action, using Python's format syntax (``{}``).
+
+For example::
+
+    # myservice.yaml
+    myjob:
+      node: localhost
+      actions:
+        myaction1:
+          command: "Hello world! I'm {action} for job {name} running on {node}"
+
+The command would get rendered at job runtime to::
+
+    Hello world! I'm myaction1 for myservice.myjob running on localhost
 
 
 **shortdate**
@@ -48,20 +63,16 @@ command configuration.
     before the run date.
 
 **name**
-    Name of the job
+    Name of the job (e.g. ``myservice.myjob``).
+
+**actionnname**
+    The name of the action (e.g. ``myaction1``).
 
 **node**
-    Hostname of the node the action is being run on
-
-
-Context variables only available to Jobs
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+    Hostname of the node the action is being run on (e.g. ``localhost``).
 
 **runid**
     Run ID of the job run (e.g. ``sample_job.23``)
-
-**actionnname**
-    The name of the action
 
 **cleanup_job_status**
     ``SUCCESS`` if all actions have succeeded when the cleanup action runs,
@@ -72,3 +83,15 @@ Context variables only available to Jobs
     The last successful run date (defaults to current date if there was no
     previous successful run). Supports date arithmetic using the form
     ``{last_success#shortdate-1}``.
+
+**manual**
+    ``true`` if the job was run manually. ``false`` otherwise.
+    Manual job runs are those runs launched via the ``tronctl start`` command (as opposed to those launched by the scheduler).
+    This variable is useful changing the behavior when jobs are run manually, like adding more verbose loggin::
+
+    command: "myjob --verbose={manual}"
+
+**namespace**
+    The namespace of the config where the job comes from. Often ``MASTER`` or ``servicename``.
+    Usually matches the name of service where the code runs.
+    For example, if the job name is ``myservice.mycooljob.1.myaction``, ``{namespace}`` would be rendered as ``myservice``.
