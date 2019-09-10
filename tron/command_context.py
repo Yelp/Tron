@@ -111,6 +111,10 @@ class JobContext(object):
             return name, None
         return parts
 
+    @property
+    def namespace(self):
+        return self.job.name.split(".")[0]
+
 
 class JobRunContext(object):
     def __init__(self, job_run):
@@ -119,6 +123,10 @@ class JobRunContext(object):
     @property
     def runid(self):
         return self.job_run.id
+
+    @property
+    def manual(self):
+        return str(self.job_run.manual).lower()
 
     @property
     def cleanup_job_status(self):

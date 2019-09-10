@@ -141,7 +141,7 @@ class TestJobContext(TestCase):
             last_success=self.last_success,
         )
         self.job = job.Job(
-            "jobname",
+            "MASTER.jobname",
             mock_scheduler,
             run_collection=run_collection,
         )
@@ -173,11 +173,14 @@ class TestJobContext(TestCase):
     def test__getitem__missing(self):
         assert_raises(KeyError, lambda: self.context['bogus'])
 
+    def test_namespace(self):
+        assert self.context.namespace == 'MASTER'
+
 
 class TestJobRunContext(TestCase):
     @setup
     def setup_context(self):
-        self.jobrun = mock.create_autospec(jobrun.JobRun, run_time='sometime')
+        self.jobrun = mock.create_autospec(jobrun.JobRun, run_time='sometime', manual=True)
         self.context = command_context.JobRunContext(self.jobrun)
 
     def test_cleanup_job_status(self):
@@ -191,6 +194,9 @@ class TestJobRunContext(TestCase):
 
     def test_runid(self):
         assert_equal(self.context.runid, self.jobrun.id)
+
+    def test_manual_run(self):
+        assert self.context.manual == 'true'
 
     @mock.patch('tron.command_context.timeutils.DateArithmetic', autospec=True)
     def test__getitem__(self, mock_date_math):
