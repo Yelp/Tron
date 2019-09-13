@@ -73,16 +73,17 @@ def _timestamp_to_shortdate(timestamp, separator='.'):
 
 def compute_check_result_for_job_runs(client, job, job_content):
     url_index = client.index()
+    cluster = client.cluster_name
     kwargs = {}
     if job_content is None:
-        kwargs["output"] = f"OK: {job['name']} was just added and hasn't run yet."
+        kwargs["output"] = f"OK: {job['name']} was just added and hasn't run yet on {cluster}."
         kwargs["status"] = 0
         return kwargs
 
     relevant_job_run, last_state = get_relevant_run_and_state(job_content)
     if relevant_job_run is None:
         kwargs["output"] = f"CRIT: {job['name']} hasn't had a successful " \
-            f"run yet.\n{pretty_print_job(job_content)}"
+            f"run yet on {cluster}.\n{pretty_print_job(job_content)}"
         kwargs["status"] = 2
         return kwargs
     else:  # if no run scheduled, no run_time available
@@ -110,27 +111,27 @@ def compute_check_result_for_job_runs(client, job, job_content):
     action_run_details = client.action_runs(action_run_id.url, num_lines=10)
 
     if last_state == State.SUCCEEDED:
-        prefix = f"OK: The last job ({job_run_id}) run succeeded. Will watch future or in progress runs for the next failure"
+        prefix = f"OK: The last job ({job_run_id}) run succeeded on {cluster}. Will watch future or in progress runs for the next failure"
         status = 0
         stderr = ""
     elif last_state == State.NO_RUNS_TO_CHECK:
-        prefix = f"OK: The job {job['name']} is new and/or has no runs to check"
+        prefix = f"OK: The job {job['name']} is new and/or has no runs to check on {cluster}"
         status = 0
         stderr = ""
     elif last_state == State.SKIPPED:
-        prefix = f"OK: The last job ({job_run_id}) run was skipped. Will watch future or in progress runs for the next failure"
+        prefix = f"OK: The last job ({job_run_id}) run was skipped on {cluster}. Will watch future or in progress runs for the next failure"
         status = 0
         stderr = ""
     elif last_state == State.STUCK:
-        prefix = f"WARN: Job {job_run_id} exceeded expected runtime or still running when next job is scheduled"
+        prefix = f"WARN: Job {job_run_id} exceeded expected runtime or still running when next job is scheduled on {cluster}"
         status = 1
         stderr = '\n'.join(action_run_details.get('stderr', ["(No stderr available)"]))
     elif last_state == State.FAILED:
-        prefix = f"CRIT: The last job run ({job_run_id}) failed!"
+        prefix = f"CRIT: The last job run ({job_run_id}) failed on {cluster}!"
         status = 2
         stderr = '\n'.join(action_run_details.get('stderr', ["(No stderr available)"]))
     elif last_state == State.UNKNOWN:
-        prefix = f"CRIT: Job {job_run_id} has gone 'unknown' and might need manual intervention"
+        prefix = f"CRIT: Job {job_run_id} has gone 'unknown' and might need manual intervention on {cluster}"
         status = 2
         stderr = ""
     else:
@@ -357,7 +358,7 @@ def sort_runs_by_interval(job_content, interval='day', until=None):
 def compute_check_result_for_job(client, job):
     kwargs = m(
         name=f"check_tron_job.{job['name']}",
-        source="tron",
+        source=client.cluster_name,
     )
     if 'realert_every' not in kwargs:
         kwargs = kwargs.set('realert_every', guess_realert_every(job))
@@ -444,7 +445,7 @@ def main():
     args = parse_cli()
     cmd_utils.setup_logging(args)
     cmd_utils.load_config(args)
-    client = Client(args.server)
+    client = Client(args.server, args.cluster_name)
 
     error_code = 0
     global _run_interval

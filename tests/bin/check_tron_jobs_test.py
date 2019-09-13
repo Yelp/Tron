@@ -1581,6 +1581,7 @@ class TestCheckPreciousJobs(TestCase):
         mock_client,
     ):
         client = mock_client('fake_server')
+        client.cluster_name = 'fake_cluster'
         del self.job['monitoring'][check_tron_jobs.PRECIOUS_JOB_ATTR]
         client.job = mock.Mock(return_value=self.job)
         mock_check_job_runs.return_value = {
@@ -1605,6 +1606,7 @@ class TestCheckPreciousJobs(TestCase):
     @patch('tron.bin.check_tron_jobs.Client', autospec=True)
     def test_compute_check_result_for_job_disabled(self, mock_client):
         client = mock_client('fake_server')
+        client.cluster_name = 'fake_cluster'
         self.job['status'] = 'disabled'
 
         results = check_tron_jobs.compute_check_result_for_job(
@@ -1628,6 +1630,7 @@ class TestCheckPreciousJobs(TestCase):
         mock_client,
     ):
         client = mock_client('fake_server')
+        client.cluster_name = 'fake_cluster'
         self.job['monitoring']['check_every'] = 500
         client.job = mock.Mock(return_value=self.job)
         mock_check_job_runs.return_value = {
