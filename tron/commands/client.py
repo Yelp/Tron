@@ -96,11 +96,12 @@ class Client(object):
     """An HTTP client used to issue commands to the Tron API.
     """
 
-    def __init__(self, url_base):
+    def __init__(self, url_base, cluster_name=None):
         """Create a new client.
             url_base - A url with a schema, hostname and port
         """
         self.url_base = url_base
+        self.cluster_name = cluster_name
 
     def status(self):
         return self.http_get('/api/status')

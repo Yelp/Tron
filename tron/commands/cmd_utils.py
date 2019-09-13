@@ -35,6 +35,7 @@ DEFAULT_PORT = 8089
 DEFAULT_CONFIG = {
     'server': "http://%s:%d" % (DEFAULT_HOST, DEFAULT_PORT),
     'display_color': False,
+    'cluster_name': 'Unnamed Cluster',
 }
 
 TAB_COMPLETE_FILE = '/var/cache/tron_tab_completions'
@@ -114,6 +115,11 @@ def build_option_parser(usage=None, epilog=None):
         "--server",
         default=None,
         help="Url including scheme, host and port, Default: %(default)s",
+    )
+    parser.add_argument(
+        "--cluster_name",
+        default=None,
+        help="Human friendly tron cluster name",
     )
     parser.add_argument(
         "-s",

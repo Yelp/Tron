@@ -27,16 +27,6 @@ def parse_cli():
         default=False,
         help="Don't actually send metrics out. Defaults: %(default)s"
     )
-    parser.add_argument(
-        "--cluster",
-        default=None,
-        type=str,
-        help=(
-            "Cluster from which these metrics originate. "
-            "Sent as a dimension to meteorite. "
-            "Default: %(default)s"
-        ),
-    )
     args = parser.parse_args()
     return args
 
@@ -170,11 +160,11 @@ def main():
     args = parse_cli()
     cmd_utils.setup_logging(args)
     cmd_utils.load_config(args)
-    client = Client(args.server)
+    client = Client(args.server, args.cluster_name)
 
     if check_bin_exists('meteorite'):
         metrics = client.metrics()
-        send_metrics(metrics, cluster=args.cluster, dry_run=args.dry_run)
+        send_metrics(metrics, cluster=client.cluster_name, dry_run=args.dry_run)
     else:
         log.error("'meteorite' was not found")
 

@@ -125,21 +125,22 @@ class TestBuildOptionParser(TestCase):
             formatter_class=argparse.RawDescriptionHelpFormatter,
             epilog=epilog,
         )
-        assert_equal(parser.add_argument.call_count, 4)
+        assert parser.add_argument.call_count == 5
 
         args = [call[1] for call in parser.add_argument.mock_calls]
         expected = [
             ('--version', ),
             ('-v', '--verbose'),
             ('--server', ),
+            ('--cluster_name', ),
             ('-s', '--save'),
         ]
-        assert_equal(args, expected)
+        assert args == expected
 
         defaults = [
             call[2].get('default') for call in parser.add_argument.mock_calls
         ]
-        assert_equal(defaults, [None, None, None, None])
+        assert defaults == [None, None, None, None, None]
 
 
 class TestSuggestions(TestCase):
