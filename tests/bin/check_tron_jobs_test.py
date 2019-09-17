@@ -1590,7 +1590,7 @@ class TestCheckPreciousJobs(TestCase):
         }
 
         results = check_tron_jobs.compute_check_result_for_job(
-            client, self.job
+            client, self.job, url_index={},
         )
 
         # make sure all job runs for a job are included by not incl count arg
@@ -1610,7 +1610,7 @@ class TestCheckPreciousJobs(TestCase):
         self.job['status'] = 'disabled'
 
         results = check_tron_jobs.compute_check_result_for_job(
-            client, self.job
+            client, self.job, url_index={},
         )
 
         assert len(results) == 1
@@ -1639,7 +1639,7 @@ class TestCheckPreciousJobs(TestCase):
         }
 
         results = check_tron_jobs.compute_check_result_for_job(
-            client, self.job
+            client, self.job, url_index={},
         )
 
         # make sure all job runs for a job are included by not incl count arg
