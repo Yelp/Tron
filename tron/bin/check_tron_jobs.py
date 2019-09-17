@@ -95,11 +95,11 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index):
         url_index,
         relevant_job_run['id'],
     )
-    action_runs = client.job(job_run_id.url, include_action_runs=True)
+
     # A job action is like MASTER.foo.1.step1
     actions_expected_runtime = job_content.get('actions_expected_runtime', {})
     relevant_action = get_relevant_action(
-        action_runs=action_runs["runs"],
+        action_runs=relevant_job_run["runs"],
         last_state=last_state,
         actions_expected_runtime=actions_expected_runtime
     )
