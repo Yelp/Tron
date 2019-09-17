@@ -5,8 +5,6 @@ from __future__ import unicode_literals
 import os
 import tempfile
 
-import pytest
-
 from testifycompat import assert_equal
 from testifycompat import run
 from testifycompat import setup
@@ -201,35 +199,6 @@ class TestMCPReconfigure(TestCase):
         assert_equal(len(self.mcp.jobs.get_names()), count)
         self.reconfigure()
         assert_equal(len(self.mcp.jobs.get_names()), count)
-
-    @pytest.mark.skip(
-        reason="This test doesn't currently as run1 is not scheduled."
-    )
-    @suite('integration')
-    def test_job_unchanged(self):
-        assert 'MASTER.test_unchanged' in self.mcp.jobs
-        job_sched = self.mcp.jobs.get_by_name('MASTER.test_unchanged')
-        orig_job = job_sched.job
-        run0 = next(self._get_runs_to_schedule(job_sched))
-        run0.start()
-        run1 = next(self._get_runs_to_schedule(job_sched))
-
-        assert_equal(job_sched.job.name, "MASTER.test_unchanged")
-        action_map = job_sched.job.action_graph.action_map
-        assert_equal(len(action_map), 1)
-        assert_equal(action_map['action_unchanged'].name, 'action_unchanged')
-        assert_equal(str(job_sched.job.scheduler), "daily 00:00:00 ")
-
-        self.reconfigure()
-        assert job_sched is self.mcp.jobs.get_by_name('MASTER.test_unchanged')
-        assert job_sched.job is orig_job
-
-        assert_equal(len(job_sched.job.runs.runs), 2)
-        assert_equal(job_sched.job.runs.runs[1], run0)
-        assert_equal(job_sched.job.runs.runs[0], run1)
-        assert run1.is_scheduled
-        assert_equal(job_sched.job.context['a_variable'], 'is_constant')
-        assert_equal(job_sched.job.context['thischanges'], 'tob')
 
     @suite('integration')
     def test_job_unchanged_disabled(self):
