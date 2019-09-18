@@ -429,6 +429,7 @@ class ActionRun(Observable):
         if self.in_delay is not None:
             self.in_delay.cancel()
             self.in_delay = None
+        self.retries_delay = None
 
         if self.is_done:
             return self._exit_unsuccessful(self.exit_status)

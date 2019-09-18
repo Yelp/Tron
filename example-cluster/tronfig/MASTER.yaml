@@ -27,7 +27,9 @@ jobs:
     schedule: "cron */5 * * * *"
     actions:
       one:
-        command: sleep 10 && date
+        command: exit 1
+        retries: 3
+        retries_delay: 1m
         trigger_downstreams: {ymdhm: "{ymdhm}"}
   two:
     node: localhost

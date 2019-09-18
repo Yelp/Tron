@@ -20,42 +20,54 @@ mesos_options:
   dockercfg_location: file:///root/.dockercfg
 
 jobs:
-    - name: testjob0
-      node: localhost
-      schedule: "cron * * * * *"
-      actions:
-        - name: zeroth
-          command: "sleep 5"
-          trigger_downstreams:
-            minutely: "{ymdhm}"
-          cpus: 1
-          mem: 100
+  testjob0:
+    enabled: false
+    node: localhost
+    schedule: "cron * * * * *"
+    actions:
+      zeroth:
+        command: "sleep 5"
+        trigger_downstreams:
+          minutely: "{ymdhm}"
+        cpus: 1
+        mem: 100
 
-    - name: "testjob1"
-      node: localhost
-      schedule: "cron * * * * *"
-      actions:
-        - name: "first"
-          command: "sleep 5"
-          cpus: 1
-          mem: 100
-        - name: "second"
-          command: "echo 'hello world'"
-          requires: [first]
-          triggered_by:
-            - "MASTER.testjob0.zeroth.minutely.{ymdhm}"
-          trigger_downstreams:
-            minutely: "{ymdhm}"
-          cpus: 1
-          mem: 100
+  testjob1:
+    enabled: false
+    node: localhost
+    schedule: "cron * * * * *"
+    actions:
+      first:
+        command: "sleep 5"
+        cpus: 1
+        mem: 100
+      second:
+        command: "echo 'hello world'"
+        requires: [first]
+        triggered_by:
+          - "MASTER.testjob0.zeroth.minutely.{ymdhm}"
+        trigger_downstreams:
+          minutely: "{ymdhm}"
+        cpus: 1
+        mem: 100
 
-    - name: "testjob2"
-      node: localhost
-      schedule: "cron * * * * *"
-      actions:
-        - name: "first"
-          command: "echo 'goodbye, world'"
-          cpus: 1
-          mem: 100
-          triggered_by:
-            - "MASTER.testjob1.second.minutely.{ymdhm}"
+  testjob2:
+    enabled: false
+    node: localhost
+    schedule: "cron * * * * *"
+    actions:
+      first:
+        command: "echo 'goodbye, world'"
+        cpus: 1
+        mem: 100
+        triggered_by:
+          - "MASTER.testjob1.second.minutely.{ymdhm}"
+
+  retrier:
+    node: localhost
+    schedule: "cron 0 0 1 1 *"
+    actions:
+      failing:
+        command: exit 1
+        retries: 1
+        retries_delay: 5m
