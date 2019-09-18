@@ -1,3 +1,11 @@
+tron (1.0.2) xenial; urgency=medium
+
+  * 1.0.2 tagged with 'make release'
+    Commit: Don't do a retry_delay when manually retrying a failed
+    command. (#704)
+
+ -- root <root@de1d559b7b81>  Wed, 18 Sep 2019 20:28:54 +0000
+
 tron (1.0.1) xenial; urgency=medium
 
   * 1.0.1 tagged with 'make release'
