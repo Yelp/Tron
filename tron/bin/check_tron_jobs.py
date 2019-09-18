@@ -107,7 +107,11 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index):
         url_index,
         relevant_action['id'],
     )
-    action_run_details = client.action_runs(action_run_id.url, num_lines=10)
+
+    if last_state in (State.STUCK, State.FAILED, State.UNKNOWN):
+        action_run_details = client.action_runs(action_run_id.url, num_lines=10)
+    else:
+        action_run_details = {}
 
     if last_state == State.SUCCEEDED:
         prefix = f"OK: The last job ({job_run_id}) run succeeded on {cluster}. Will watch future or in progress runs for the next failure"
@@ -147,8 +151,13 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index):
         f"{stderr}\n"
         f"The latest run, {relevant_job_run['id']} {relevant_job_run['state']}\n"
         f"{precious_runs_note}"
-        "\nHere is the last action:\n"
-        f"{pretty_print_actions(action_run_details)}\n\n"
+    )
+    if action_run_details:
+        kwargs["output"] += (
+            "\nHere is the last action:\n"
+            f"{pretty_print_actions(action_run_details)}\n\n"
+        )
+    kwargs["output"] += (
         "And the job run view:\n"
         f"{pretty_print_job_run(relevant_job_run)}\n\n"
         "Here is the whole job view for context:\n"
