@@ -71,8 +71,7 @@ def _timestamp_to_shortdate(timestamp, separator='.'):
     )
 
 
-def compute_check_result_for_job_runs(client, job, job_content):
-    url_index = client.index()
+def compute_check_result_for_job_runs(client, job, job_content, url_index):
     cluster = client.cluster_name
     kwargs = {}
     if job_content is None:
@@ -96,11 +95,11 @@ def compute_check_result_for_job_runs(client, job, job_content):
         url_index,
         relevant_job_run['id'],
     )
-    action_runs = client.job(job_run_id.url, include_action_runs=True)
+
     # A job action is like MASTER.foo.1.step1
     actions_expected_runtime = job_content.get('actions_expected_runtime', {})
     relevant_action = get_relevant_action(
-        action_runs=action_runs["runs"],
+        action_runs=relevant_job_run["runs"],
         last_state=last_state,
         actions_expected_runtime=actions_expected_runtime
     )
@@ -108,7 +107,11 @@ def compute_check_result_for_job_runs(client, job, job_content):
         url_index,
         relevant_action['id'],
     )
-    action_run_details = client.action_runs(action_run_id.url, num_lines=10)
+
+    if last_state in (State.STUCK, State.FAILED, State.UNKNOWN):
+        action_run_details = client.action_runs(action_run_id.url, num_lines=10)
+    else:
+        action_run_details = {}
 
     if last_state == State.SUCCEEDED:
         prefix = f"OK: The last job ({job_run_id}) run succeeded on {cluster}. Will watch future or in progress runs for the next failure"
@@ -148,8 +151,13 @@ def compute_check_result_for_job_runs(client, job, job_content):
         f"{stderr}\n"
         f"The latest run, {relevant_job_run['id']} {relevant_job_run['state']}\n"
         f"{precious_runs_note}"
-        "\nHere is the last action:\n"
-        f"{pretty_print_actions(action_run_details)}\n\n"
+    )
+    if action_run_details:
+        kwargs["output"] += (
+            "\nHere is the last action:\n"
+            f"{pretty_print_actions(action_run_details)}\n\n"
+        )
+    kwargs["output"] += (
         "And the job run view:\n"
         f"{pretty_print_job_run(relevant_job_run)}\n\n"
         "Here is the whole job view for context:\n"
@@ -355,7 +363,7 @@ def sort_runs_by_interval(job_content, interval='day', until=None):
     return dict(run_buckets)
 
 
-def compute_check_result_for_job(client, job):
+def compute_check_result_for_job(client, job, url_index):
     kwargs = m(
         name=f"check_tron_job.{job['name']}",
         source=client.cluster_name,
@@ -382,7 +390,6 @@ def compute_check_result_for_job(client, job):
         kwargs_list.append(kwargs)
     else:
         # The job is not disabled, therefore we have to look at its run history
-        url_index = client.index()
         tron_id = get_object_type_from_identifier(url_index, job["name"])
         job_content = pmap(
             client.job(
@@ -401,6 +408,7 @@ def compute_check_result_for_job(client, job):
                 job=job,
                 job_content=job_content.set('runs', runs),
                 client=client,
+                url_index=url_index,
             )
             dated_kwargs = kwargs.update(results)
             if date:  # if empty date, leave job name alone
@@ -412,7 +420,7 @@ def compute_check_result_for_job(client, job):
     return [dict(kws) for kws in kwargs_list]
 
 
-def check_job(job, client):
+def check_job(job, client, url_index):
     if job.get('monitoring', {}) == {}:
         log.debug(f"Not checking {job['name']}, no monitoring metadata setup.")
         return
@@ -420,11 +428,11 @@ def check_job(job, client):
         log.debug(f"Not checking {job['name']}, no team specified")
         return
     log.info(f"Checking {job['name']}")
-    return compute_check_result_for_job(job=job, client=client)
+    return compute_check_result_for_job(job=job, client=client, url_index=url_index)
 
 
-def check_job_result(job, client, dry_run):
-    results = check_job(job, client)
+def check_job_result(job, client, url_index, dry_run):
+    results = check_job(job, client, url_index)
     if not results:
         return
 
@@ -450,18 +458,19 @@ def main():
     error_code = 0
     global _run_interval
     _run_interval = args.run_interval
+    url_index = client.index()
     if args.job is None:
         jobs = client.jobs(include_job_runs=True)
         for job in jobs:
             try:
-                check_job_result(job=job, client=client, dry_run=args.dry_run)
+                check_job_result(job=job, client=client, url_index=url_index, dry_run=args.dry_run)
             except Exception as e:
                 log.warning(f"check job result fails for job {job.get('name', '')}: {e}")
                 error_code = 1
     else:
         job_url = client.get_url(args.job)
         job = client.job_runs(job_url)
-        check_job_result(job=job, client=client, dry_run=args.dry_run)
+        check_job_result(job=job, client=client, url_index=url_index, dry_run=args.dry_run)
 
     return error_code
 
