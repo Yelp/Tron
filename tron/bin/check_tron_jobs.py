@@ -91,10 +91,7 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index):
         )
 
     # A job_run is like MASTER.foo.1
-    job_run_id = get_object_type_from_identifier(
-        url_index,
-        relevant_job_run['id'],
-    )
+    job_run_id = relevant_job_run['id']
 
     # A job action is like MASTER.foo.1.step1
     actions_expected_runtime = job_content.get('actions_expected_runtime', {})
