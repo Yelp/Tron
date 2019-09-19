@@ -1,3 +1,12 @@
+tron (1.0.3) xenial; urgency=medium
+
+  * 1.0.3 tagged with 'make release'
+    Commit: Merge pull request #706 from
+    Yelp/fix_check_tron_jobs_job_run_ids  fix job run ids reported by
+    check_tron_jobs
+
+ -- root <root@9d73659bb267>  Thu, 19 Sep 2019 21:56:23 +0000
+
 tron (1.0.2) xenial; urgency=medium
 
   * 1.0.2 tagged with 'make release'
