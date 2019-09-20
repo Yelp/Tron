@@ -37,8 +37,11 @@ def parse_args():
 
 def read_last_yaml_entries(filename):
     with open(filename) as f:
-        last_line = f.readlines()[-1]
-        entries = yaml.load(last_line)
+        lines = list(yaml.load_all(f))
+        if not lines:
+            entries = {}
+        else:
+            entries = lines[-1]
     return entries
 
 
@@ -77,12 +80,8 @@ def get_key_from_last_line(filepath, key):
         log.warning(f"status file {filepath} is empty")
         return None
     try:
-        with open(filepath) as f:
-            lines = f.readlines()
-            if lines:
-                content = yaml.load(lines[-1])
-                return content.get(key)
-            return None
+        content = read_last_yaml_entries(filepath)
+        return content.get(key)
     except Exception as e:
         log.warning(f"Exception encountered when inspecting {filepath}: {e}")
         return None
