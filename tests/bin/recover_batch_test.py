@@ -3,7 +3,6 @@ from queue import Queue
 
 import mock
 import pytest
-import yaml
 
 from tron.bin import recover_batch
 from tron.bin.action_runner import StatusFile
@@ -16,34 +15,63 @@ def mock_file():
     f.close()
 
 
+@mock.patch.object(recover_batch, 'reactor')
+@mock.patch('tron.bin.recover_batch.get_exit_code', autospec=True)
+@pytest.mark.parametrize('exit_code,error_msg,should_stop', [
+    (1, 'failed', True),
+    (None, None, False),
+])
+def test_notify(mock_get_exit_code, mock_reactor, exit_code, error_msg, should_stop):
+    mock_get_exit_code.return_value = exit_code, error_msg
+    queue = Queue()
+    path = mock.Mock()
+    recover_batch.notify(queue, 'some_ignored', path, 'mask')
+    if should_stop:
+        assert mock_reactor.stop.call_count == 1
+        assert queue.get_nowait() == (exit_code, error_msg)
+    else:
+        assert mock_reactor.stop.call_count == 0
+        assert queue.empty()
+
+
+@mock.patch('tron.bin.recover_batch.psutil.pid_exists', autospec=True)
 @mock.patch('tron.bin.recover_batch.read_last_yaml_entries', autospec=True)
-@mock.patch.object(recover_batch, 'reactor', autospec=True)
-@pytest.mark.parametrize('line,exit_code,error_msg', [
+@pytest.mark.parametrize('line,exit_code,is_running,error_msg', [
     (  # action runner finishes successfully
-        '\n'.join(['return_code: 0', 'runner_pid: 12345']),
+        {'return_code': 0, 'runner_pid': 12345},
         0,
+        False,
         None
     ), (  # action runner is killed
-        '\n'.join(['return_code: -9', 'runner_pid: 12345']),
+        {'return_code': -9, 'runner_pid': 12345},
         9,
+        False,
         'Action run killed by signal SIGKILL',
-    ), (  # action runner is somehow no longer running
-        'runner_pid: 12345',
+    ), (  # No return code but action_runner pid is not running
+        {'runner_pid': 12345},
         1,
+        False,
         'Action runner pid 12345 no longer running. Assuming an exit of 1.'
+    ), (  # No return code but action_runner pid is running
+        {'runner_pid': 12345},
+        None,
+        True,
+        None,
+    ), (  # No return code or PID from the file
+        {},
+        None,
+        Exception,
+        None,
     )
 ])
-def test_notify(mock_reactor, mock_read_last_yaml_entries, line, exit_code, error_msg):
+def test_get_exit_code(mock_read_last_yaml_entries, mock_pid_running, line, exit_code, is_running, error_msg):
     fake_path = mock.MagicMock()
-    mock_read_last_yaml_entries.return_value = yaml.safe_load(line)
-    q = Queue()
+    mock_read_last_yaml_entries.return_value = line
+    mock_pid_running.side_effect = [is_running]
 
-    recover_batch.notify(q, 'some_ignored', fake_path, 'a_mask')
-
-    actual_exit_code, actual_error_msg = q.get_nowait()
+    actual_exit_code, actual_error_msg = recover_batch.get_exit_code(fake_path)
     assert actual_exit_code == exit_code
     assert actual_error_msg == error_msg
-    assert mock_reactor.stop.call_count == 1
 
 
 def test_read_last_yaml_roundtrip(mock_file):
@@ -65,13 +93,26 @@ def test_read_last_yaml_roundtrip(mock_file):
     assert second == expected_content[1]
 
 
-@pytest.mark.parametrize('content,expected', [
-    ('', None),
-    ('{"bar": 1}', None),
-    ('{"foo": 1}', 1),
-])
-def test_get_key_from_last_line(mock_file, content, expected):
-    with open(mock_file, 'w') as f:
-        f.write(content)
-        f.flush()
-    assert recover_batch.get_key_from_last_line(mock_file, 'foo') == expected
+@mock.patch.object(recover_batch, 'reactor')
+@mock.patch('tron.bin.recover_batch.Queue', autospec=True)
+@mock.patch('tron.bin.recover_batch.get_exit_code', autospec=True, return_value=(None, None))
+@mock.patch('tron.bin.recover_batch.StatusFileWatcher', autospec=True)
+@pytest.mark.parametrize('existing_code,watcher_code', [(None, 1), (123, None)])
+def test_run(mock_watcher, mock_get_exit_code, mock_queue, mock_reactor, existing_code, watcher_code):
+    mock_get_exit_code.return_value = (existing_code, '')
+    mock_queue.return_value.get.return_value = (watcher_code, '')
+    mock_path = mock.Mock()
+    if existing_code is not None:
+        expected = existing_code
+    else:
+        expected = watcher_code
+
+    with pytest.raises(SystemExit) as e:
+        recover_batch.run(mock_path)
+        assert e.code == expected
+
+    assert mock_get_exit_code.call_args_list == [mock.call(mock_path)]
+    if existing_code is not None:
+        assert mock_watcher.call_count == 0
+    else:
+        assert mock_watcher.call_count == 1

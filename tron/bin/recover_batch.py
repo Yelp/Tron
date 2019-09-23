@@ -1,7 +1,6 @@
 #!/usr/bin/env python3.6
 import argparse
 import logging
-import os
 import signal
 import sys
 from queue import Queue
@@ -46,10 +45,17 @@ def read_last_yaml_entries(filename):
 
 
 def notify(notify_queue, ignored, filepath, mask):
-    entries = read_last_yaml_entries(filepath.path)
+    exit_code, error_message = get_exit_code(filepath.path)
+    if exit_code is not None:
+        reactor.stop()
+        notify_queue.put((exit_code, error_message))
+
+
+def get_exit_code(filepath):
+    entries = read_last_yaml_entries(filepath)
     pid = entries.get('runner_pid')
     return_code = entries.get('return_code')
-    exit_code, error_msg = None, None
+    exit_code, error_message = None, None
 
     if return_code is not None:
         if return_code < 0:
@@ -57,46 +63,36 @@ def notify(notify_queue, ignored, filepath, mask):
             # "A negative value -N indicates that the child was terminated by signal N (POSIX only)."
             # We should always exit with a positive code, so we take the absolute value of the return code
             exit_code = abs(return_code)
-            error_msg = f'Action run killed by signal {signal.Signals(exit_code).name}'
+            error_message = f'Action run killed by signal {signal.Signals(exit_code).name}'
         else:
             exit_code = return_code
     elif pid is None:
         log.warning(f"Status file {filepath.path} didn't have a PID. Will watch the file for updates.")
     elif not psutil.pid_exists(pid):
         exit_code = 1
-        error_msg = f'Action runner pid {pid} no longer running. Assuming an exit of 1.'
+        error_message = f'Action runner pid {pid} no longer running. Assuming an exit of 1.'
 
-    if exit_code is not None:
-        reactor.stop()
-        notify_queue.put((exit_code, error_msg))
-
-
-def file_is_empty(filepath):
-    return os.stat(filepath).st_size == 0
-
-
-def get_key_from_last_line(filepath, key):
-    if file_is_empty(filepath):
-        log.warning(f"status file {filepath} is empty")
-        return None
-    try:
-        content = read_last_yaml_entries(filepath)
-        return content.get(key)
-    except Exception as e:
-        log.warning(f"Exception encountered when inspecting {filepath}: {e}")
-        return None
+    return exit_code, error_message
 
 
 def run(fpath):
+    # Check if the process has already completed.
+    # If it has, we don't expect any more updates.
+    return_code, error_message = get_exit_code(fpath)
+    if return_code is not None:
+        log.warning(error_message)
+        sys.exit(return_code)
+
+    # If not, wait for updates to the file.
     notify_queue = Queue()
     StatusFileWatcher(
         fpath,
         lambda *args, **kwargs: notify(notify_queue, *args, **kwargs)
     )
     reactor.run()
-    exit_code, error_msg = notify_queue.get()
-    if error_msg is not None:
-        log.warning(error_msg)
+    exit_code, error_message = notify_queue.get()
+    if error_message is not None:
+        log.warning(error_message)
     sys.exit(exit_code)
 
 
