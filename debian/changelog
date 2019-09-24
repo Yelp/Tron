@@ -1,3 +1,11 @@
+tron (1.0.4) xenial; urgency=medium
+
+  * 1.0.4 tagged with 'make release'
+    Commit: Merge pull request #708 from Yelp/recovery-check-finished
+    Put back check for action runners that have completed in recovery
+
+ -- root <root@1a6c525a4bb8>  Tue, 24 Sep 2019 00:50:16 +0000
+
 tron (1.0.3) xenial; urgency=medium
 
   * 1.0.3 tagged with 'make release'
