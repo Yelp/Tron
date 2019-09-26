@@ -67,7 +67,7 @@ def get_exit_code(filepath):
         else:
             exit_code = return_code
     elif pid is None:
-        log.warning(f"Status file {filepath.path} didn't have a PID. Will watch the file for updates.")
+        log.warning(f"Status file {filepath} didn't have a PID. Will watch the file for updates.")
     elif not psutil.pid_exists(pid):
         exit_code = 1
         error_message = f'Action runner pid {pid} no longer running. Assuming an exit of 1.'
@@ -80,7 +80,8 @@ def run(fpath):
     # If it has, we don't expect any more updates.
     return_code, error_message = get_exit_code(fpath)
     if return_code is not None:
-        log.warning(error_message)
+        if error_message is not None:
+            log.warning(error_message)
         sys.exit(return_code)
 
     # If not, wait for updates to the file.
