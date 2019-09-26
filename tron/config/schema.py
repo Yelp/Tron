@@ -49,6 +49,8 @@ TronConfig = config_object_factory(
         'jobs',  # dict of ConfigJob
         'mesos_options',  # ConfigMesos
         'eventbus_enabled',  # bool or None
+        'external_text',
+        'external_urls',
     ],
 )
 

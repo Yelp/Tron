@@ -231,12 +231,14 @@ class JobScheduler(Observer):
 class JobSchedulerFactory(object):
     """Construct JobScheduler instances from configuration."""
 
-    def __init__(self, context, output_stream_dir, time_zone, action_runner, job_graph):
+    def __init__(self, context, output_stream_dir, time_zone, action_runner, job_graph, external_text, external_urls):
         self.context = context
         self.output_stream_dir = output_stream_dir
         self.time_zone = time_zone
         self.action_runner = action_runner
         self.job_graph = job_graph
+        self.external_text = external_text
+        self.external_urls = external_urls
 
     def build(self, job_config):
         log.debug(f"Building new job {job_config.name}")
@@ -251,5 +253,7 @@ class JobSchedulerFactory(object):
             output_path=output_path,
             action_runner=self.action_runner,
             action_graph=action_graph,
+            external_text=self.external_text,
+            external_urls=self.external_urls,
         )
         return JobScheduler(job)

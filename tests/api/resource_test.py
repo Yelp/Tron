@@ -237,6 +237,8 @@ class TestJobResource(WWWTestCase):
             node_pool=mock.create_autospec(node.NodePool, ),
             max_runtime=mock.Mock(),
             expected_runtime=mock.MagicMock(),
+            external_text=None,
+            external_urls=None,
         )
         self.job.get_name.return_value = 'foo'
         self.job_scheduler.get_job.return_value = self.job

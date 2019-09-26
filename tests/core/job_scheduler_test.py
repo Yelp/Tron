@@ -311,6 +311,8 @@ class TestJobSchedulerFactory(TestCase):
             self.time_zone,
             self.action_runner,
             mock.Mock(),
+            external_text=None,
+            external_urls=None,
         )
 
     def test_build(self):

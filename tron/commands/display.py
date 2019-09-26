@@ -321,6 +321,8 @@ class DisplayJobs(TableDisplay):
         ('Run on all nodes', 'all_nodes'),
         ('Allow overlapping', 'allow_overlap'),
         ('Queue overlapping', 'queueing'),
+        ('Text', 'external_text'),
+        ('Urls', 'external_urls'),
     ]
 
     colors = {
@@ -355,6 +357,8 @@ class DisplayActionRuns(TableDisplay):
         ('Retry exit statuses', 'exit_statuses'),
         ('Waits for triggers', 'triggered_by'),
         ('Publishes triggers', 'trigger_downstreams'),
+        ('Text', 'external_text'),
+        ('Urls', 'external_urls'),
     ]
 
     colors = {

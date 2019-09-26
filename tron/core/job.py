@@ -57,6 +57,8 @@ class Job(Observable, Observer):
         'monitoring',
         'time_zone',
         'expected_runtime',
+        'external_text',
+        'external_urls',
     ]
 
     # TODO: use config object
@@ -77,7 +79,9 @@ class Job(Observable, Observer):
         action_runner=None,
         max_runtime=None,
         time_zone=None,
-        expected_runtime=None
+        expected_runtime=None,
+        external_text=None,
+        external_urls=None,
     ):
         super(Job, self).__init__()
         self.name = maybe_decode(name)
@@ -98,6 +102,8 @@ class Job(Observable, Observer):
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(name)
         self.context = command_context.build_context(self, parent_context)
+        self.external_text = external_text
+        self.external_urls = external_urls
         log.info(f'{self} created')
 
     @classmethod
@@ -109,6 +115,8 @@ class Job(Observable, Observer):
         output_path,
         action_runner,
         action_graph,
+        external_text=None,
+        external_urls=None,
     ):
         """Factory method to create a new Job instance from configuration."""
         runs = jobrun.JobRunCollection.from_config(job_config)
@@ -131,6 +139,8 @@ class Job(Observable, Observer):
             action_runner=action_runner,
             max_runtime=job_config.max_runtime,
             expected_runtime=job_config.expected_runtime,
+            external_text=external_text,
+            external_urls=external_urls,
         )
 
     def update_from_job(self, job):
@@ -167,6 +177,12 @@ class Job(Observable, Observer):
 
     def get_runs(self):
         return self.runs
+
+    def get_external_text(self):
+        return self.external_text
+
+    def get_external_urls(self):
+        return self.external_urls
 
     @property
     def state_data(self):

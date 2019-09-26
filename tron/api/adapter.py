@@ -116,6 +116,8 @@ class ActionRunAdapter(RunAdapter):
         'in_delay',
         'triggered_by',
         'trigger_downstreams',
+        'external_text',
+        'external_urls',
     ]
 
     def __init__(
@@ -182,6 +184,12 @@ class ActionRunAdapter(RunAdapter):
     def get_trigger_downstreams(self) -> str:
         triggers_to_emit = self._obj.triggers_to_emit()
         return ', '.join(sorted(triggers_to_emit))
+
+    def get_external_text(self):
+        return "EXTERNAL TEXT"
+
+    def get_external_urls(self):
+        return "EXTERNAL TEXT"
 
 
 class ActionGraphAdapter(object):
@@ -255,6 +263,8 @@ class JobRunAdapter(RunAdapter):
         'url',
         'runs',
         'action_graph',
+        'external_text',
+        'external_urls',
     ]
 
     def __init__(
@@ -278,10 +288,23 @@ class JobRunAdapter(RunAdapter):
     def get_action_graph(self):
         return ActionRunGraphAdapter(self._obj.action_runs).get_repr()
 
+    def get_external_text(self):
+        return "EXTERNAL JOB RUN TEXT"
+
+    def get_external_urls(self):
+        return "EXTERNAL JOB RUN URLS"
+
 
 class JobAdapter(ReprAdapter):
 
-    field_names = ['status', 'all_nodes', 'allow_overlap', 'queueing']
+    field_names = [
+        'status',
+        'all_nodes',
+        'allow_overlap',
+        'queueing',
+        'external_text',
+        'external_urls',
+    ]
     translated_field_names = [
         'name',
         'scheduler',

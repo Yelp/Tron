@@ -12,6 +12,28 @@ ssh_options:
 nodes:
   - hostname: localhost
 
+external_urls:
+  job:
+    "Compute Resources": 'https://app.signalfx.com/#/dashboard/DJzYJDkAcAA?density=4&groupId=DJzYWe9AcAA&configId=DpqyzW_AgB&&startTime=-1d&endTime=Now&variables%5B%5D=PaaSTA%20Service%3Dpaasta_service:%5B"{namespace}"%5D&variables%5B%5D=PaaSTA%20Instance%3Dpaasta_instance:%5B"{name}.*"%5D&variables%5B%5D=PaaSTA%20Cluster%3Dpaasta_cluster:%5B"{cluster}"%5D'
+  job_run:
+    "Compute Resources": 'https://app.signalfx.com/#/dashboard/DJzYJDkAcAA?density=4&groupId=DJzYWe9AcAA&configId=DpqyzW_AgBA&startTime=-1d&endTime=Now&variables%5B%5D=PaaSTA%20Service%3Dpaasta_service:%5B"{namespace}"%5D&variables%5B%5D=PaaSTA%20Instance%3Dpaasta_instance:%5B"{actionname}"%5D&variables%5B%5D=PaaSTA%20Cluster%3Dpaasta_cluster:%5B"{cluster}"%5D'
+  action_run:
+    "Compute Resources": 'https://app.signalfx.com/#/dashboard/DJzYJDkAcAA?density=4&groupId=DJzYWe9AcAA&configId=DpqyzW_AgBA&startTime=-1d&endTime=Now&variables%5B%5D=PaaSTA%20Service%3Dpaasta_service:%5B"{namespace}"%5D&variables%5B%5D=PaaSTA%20Instance%3Dpaasta_instance:%5B"{actionname}"%5D&variables%5B%5D=PaaSTA%20Cluster%3Dpaasta_cluster:%5B"{cluster}"%5D'
+
+external_text:
+  job:
+    "CLI Commands": |
+      tronview-{cluster} {name}
+      tronctl-{cluster} start {name}
+  job_run:
+    "CLI Commands": |
+      tronview-{cluster} {name}.{runid}
+      tronctl-{cluster} rerun {name}.{runid}
+  action_run:
+    "CLI Commands": |
+      tronview-{cluster} {name}.{runid}.{actionname}
+      tronctl-{cluster} retry {name}.{runid}.{actionname}
+
 mesos_options:
   master_address: mesos.paasta-mesosstage.yelp
   master_port: 5050

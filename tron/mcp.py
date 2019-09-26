@@ -108,11 +108,13 @@ class MasterControlProgram(object):
             master_config.action_runner,
         )
         return JobSchedulerFactory(
-            self.context,
-            output_stream_dir,
-            master_config.time_zone,
-            action_runner,
-            job_graph,
+            context=self.context,
+            output_stream_dir=output_stream_dir,
+            time_zone=master_config.time_zone,
+            action_runner=action_runner,
+            job_graph=job_graph,
+            external_text=master_config.external_text,
+            external_urls=master_config.external_urls,
         )
 
     def update_state_watcher_config(self, state_config):
