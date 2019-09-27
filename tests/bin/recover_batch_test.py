@@ -65,7 +65,7 @@ def test_notify(mock_get_exit_code, mock_reactor, exit_code, error_msg, should_s
     )
 ])
 def test_get_exit_code(mock_read_last_yaml_entries, mock_pid_running, line, exit_code, is_running, error_msg):
-    fake_path = mock.MagicMock()
+    fake_path = '/file/path'
     mock_read_last_yaml_entries.return_value = line
     mock_pid_running.side_effect = [is_running]
 
