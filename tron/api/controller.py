@@ -25,7 +25,7 @@ class JobCollectionController(object):
                 return f"Error: {new_name} exists already"
             return self.job_collection.move(old_name, new_name)
 
-        raise UnknownCommandError("Unknown command %s" % command)
+        raise UnknownCommandError(f"Unknown command {command}. Try running this on an individual job or action run id")
 
 
 class ActionRunController(object):
@@ -47,7 +47,7 @@ class ActionRunController(object):
 
     def handle_command(self, command):
         if command not in self.mapped_commands:
-            raise UnknownCommandError("Unknown command %s" % command)
+            raise UnknownCommandError(f"Unknown command {command}. You can only do one of the following to Action runs: {self.mapped_commands}")
 
         if command == 'start' and self.job_run.is_scheduled:
             return (
@@ -114,7 +114,10 @@ class JobRunController(object):
             msg = "Failed to %s, %s in state %s"
             return msg % (command, self.job_run, self.job_run.state)
 
-        raise UnknownCommandError("Unknown command %s" % command)
+        if command == "retry":
+            raise UnknownCommandError("Error: Job runs cannot be retried, only individual actions can. Did you mean 'rerun'?")
+        else:
+            raise UnknownCommandError(f"Unknown command {command}. Only one of the following applies to a Job run: {self.mapped_commands}")
 
 
 class JobController(object):
@@ -134,7 +137,12 @@ class JobController(object):
             runs = self.job_scheduler.manual_start(run_time=run_time)
             return "Created %s" % ",".join(str(run) for run in runs)
 
-        raise UnknownCommandError("Unknown command %s" % command)
+        if command == "retry":
+            raise UnknownCommandError("Error: A whole Job cannot be retried, only individual actions for a specific job run id can.")
+        elif command in ["stop", "success", "cancel", "fail", "stop"]:
+            raise UnknownCommandError(f"Error: {command} doesn't apply to a whole Job. Please run this on an individual job run id. Hint: try '{self.job_scheduler.get_job()}.-1' for the latest job id")
+        else:
+            raise UnknownCommandError(f"Unknown command {command}. Does it apply to a whole job? Try a specific Job id or individual action")
 
 
 class ConfigController(object):
