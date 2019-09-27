@@ -747,6 +747,61 @@ class SSHActionRun(ActionRun, Observer):
         self.watch(self.action_command)
         return self.action_command
 
+    def recover(self):
+        log.info(f"Creating recovery run for actionrun {self.id}")
+        if isinstance(self.action_runner, NoActionRunnerFactory):
+            log.info(
+                f"Unable to recover action_run {self.id}: "
+                "action_run has no action_runner"
+            )
+            return None
+
+        recovery_command = f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"
+
+        # Might not need a separate action run
+        # Using for the separate name
+        recovery_run = SSHActionRun(
+            job_run_id=self.job_run_id,
+            name=f"recovery-{self.id}",
+            node=self.node,
+            bare_command=recovery_command,
+            output_path=self.output_path,
+        )
+        recovery_action_command = recovery_run.build_action_command()
+        recovery_action_command.write_stdout(
+            f"Recovering action run {self.id}",
+        )
+        # Put action command in "running" state so if it fails to connect
+        # and exits with no exit code, the real action run will not retry.
+        recovery_action_command.started()
+
+        # this line is where the magic happens.
+        # the action run watches another actioncommand,
+        # and updates its internal state according to its result.
+        self.watch(recovery_action_command)
+
+        if not self.machine.check('running'):
+            log.error(
+                f'Unable to transition action run {self.id} '
+                f'from {self.machine.state} to start'
+            )
+        else:
+            self.exit_status = None
+            self.end_time = None
+            self.machine.transition('running')
+
+        log.info(
+            f"Submitting recovery job with command {recovery_action_command.command} "
+            f"to node {recovery_run.node}"
+        )
+        try:
+            deferred = recovery_run.node.submit_command(recovery_action_command)
+            deferred.addCallback(
+                lambda x: log.info(f"Completed recovery run {recovery_run.id}")
+            )
+        except node.Error as e:
+            log.warning(f"Failed to submit recovery for {self.id}: {e!r}")
+
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
         log.debug(
