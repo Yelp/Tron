@@ -11,6 +11,7 @@ from tests.assertions import assert_length
 from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron import node
+from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.config.schema import ConfigConstraint
 from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigVolume
@@ -567,7 +568,7 @@ class TestSSHActionRun:
         )
         self.command = "do command {actionname}"
         self.action_run = SSHActionRun(
-            job_run_id="id",
+            job_run_id="job_name.5",
             name="action_name",
             node=mock.create_autospec(node.Node),
             bare_command=self.command,
@@ -736,6 +737,31 @@ class TestSSHActionRun:
             ActionCommand.PENDING,
         ) is None
         assert self.action_run.is_scheduled
+
+    def test_recover_action_run_no_action_runner(self):
+        # Default setup has no action runner
+        assert self.action_run.recover() is None
+
+    def test_recover_action_run_action_runner(self):
+        self.action_run.action_runner = SubprocessActionRunnerFactory(
+            status_path='/tmp/foo',
+            exec_path='/bin/foo',
+        )
+        self.action_run.end_time = 1000
+        self.action_run.exit_status = 0
+        self.action_run.machine.state = ActionRun.UNKNOWN
+        self.action_run.recover()
+        assert self.action_run.machine.state == ActionRun.RUNNING
+        assert self.action_run.end_time is None
+        assert self.action_run.exit_status is None
+        self.action_run.node.submit_command.assert_called_once()
+
+        # Check recovery command
+        submit_args = self.action_run.node.submit_command.call_args[0]
+        assert len(submit_args) == 1
+        recovery_command = submit_args[0]
+        assert recovery_command.command == '/bin/foo/recover_batch.py /tmp/foo/job_name.5.action_name/status'
+        assert recovery_command.start_time is not None  # already started
 
 
 class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
