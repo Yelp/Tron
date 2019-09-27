@@ -32,6 +32,12 @@ setup(
         exclude=['tests.*', 'tests', 'example-cluster']
     ) + ['tronweb'],
     scripts=glob.glob('bin/*') + glob.glob('tron/bin/*.py'),
+    entry_points={
+        "console_scripts": [
+            "tron-action-runner=tron.bin.action_runner:main",
+            "tron-action-status=tron.bin.action_status:main",
+        ],
+    },
     include_package_data=True,
     long_description="""
 Tron is a centralized system for managing periodic batch processes across a

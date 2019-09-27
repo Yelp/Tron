@@ -594,9 +594,9 @@ class ValidateActionRunner(Validator):
     config_class = schema.ConfigActionRunner
     optional = True
     defaults = {
-        'runner_type': None,
-        'remote_exec_path': '',
-        'remote_status_path': '/tmp',
+        'runner_type': "subprocess",
+        'remote_exec_path': '/usr/bin/',
+        'remote_status_path': '/tmp/tron',
     }
 
     validators = {
@@ -702,7 +702,11 @@ class ValidateConfig(Validator):
     """
     config_class = TronConfig
     defaults = {
-        'action_runner': {},
+        'action_runner': {
+            "runner_type": "subprocess",
+            "remote_status_path": "/tmp/tron",
+            "remote_exec_path": "/usr/bin/",
+        },
         'output_stream_dir': None,
         'command_context': {},
         'ssh_options': ConfigSSHOptions(**ValidateSSHOptions.defaults),

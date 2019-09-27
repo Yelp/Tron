@@ -10,11 +10,6 @@ ssh_options:
   identities:
     - /work/example-cluster/insecure_key
 
-action_runner:
-  runner_type: "subprocess"
-  remote_status_path: "/tmp/tron"
-  remote_exec_path: "/work/tron/bin/"
-
 nodes:
   - hostname: localhost
     username: root
