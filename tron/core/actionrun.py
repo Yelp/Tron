@@ -400,6 +400,9 @@ class ActionRun(Observable):
     def kill(self, final=True):
         raise NotImplementedError()
 
+    def recover(self):
+        raise NotImplementedError()
+
     def _done(self, target, exit_status=0):
         if self.machine.check(target):
             if self.triggered_by:
@@ -756,6 +759,14 @@ class SSHActionRun(ActionRun, Observer):
             )
             return None
 
+        if not self.machine.check('running'):
+            log.error(
+                f'Unable to transition action run {self.id} '
+                f'from {self.machine.state} to running. '
+                f'Only UNKNOWN actions can be recovered. '
+            )
+            return None
+
         recovery_command = f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"
 
         # Might not need a separate action run
@@ -780,15 +791,9 @@ class SSHActionRun(ActionRun, Observer):
         # and updates its internal state according to its result.
         self.watch(recovery_action_command)
 
-        if not self.machine.check('running'):
-            log.error(
-                f'Unable to transition action run {self.id} '
-                f'from {self.machine.state} to start'
-            )
-        else:
-            self.exit_status = None
-            self.end_time = None
-            self.machine.transition('running')
+        self.exit_status = None
+        self.end_time = None
+        self.machine.transition('running')
 
         log.info(
             f"Submitting recovery job with command {recovery_action_command.command} "
@@ -799,6 +804,7 @@ class SSHActionRun(ActionRun, Observer):
             deferred.addCallback(
                 lambda x: log.info(f"Completed recovery run {recovery_run.id}")
             )
+            return True
         except node.Error as e:
             log.warning(f"Failed to submit recovery for {self.id}: {e!r}")
 
