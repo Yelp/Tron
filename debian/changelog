@@ -1,3 +1,11 @@
+tron (1.1.0) xenial; urgency=medium
+
+  * 1.1.0 tagged with 'make release'
+    Commit: Merge pull request #714 from Yelp/recover-command  Add
+    manual recovery command to api
+
+ -- root <root@badb29026ca2>  Thu, 03 Oct 2019 16:54:12 +0000
+
 tron (1.0.4) xenial; urgency=medium
 
   * 1.0.4 tagged with 'make release'
