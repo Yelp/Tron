@@ -70,7 +70,13 @@ class TestActionRunController:
         self.job_run.is_scheduled = True
         result = self.controller.handle_command('start')
         assert not self.action_run.start.mock_calls
-        assert "can not be started" in result
+        assert "cannot be started" in result
+
+    def test_handle_command_recover_failed(self):
+        self.action_run.is_unknown = False
+        result = self.controller.handle_command('recover')
+        assert not self.action_run.recover.mock_calls
+        assert "cannot be recovered" in result
 
     def test_handle_command_mapped_command(self):
         result = self.controller.handle_command('cancel')

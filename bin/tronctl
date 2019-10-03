@@ -24,6 +24,7 @@ COMMAND_HELP = (
     ('start', 'Start the selected job, job run, or action'),
     ('rerun', 'Re-run a full job (all actions) with a new job id'),
     ('retry', 'Re-run a job action within an existing job run'),
+    ('recover', 'Ask Tron to start tracking an UNKNOWN action run again'),
     ('cancel', 'Cancel the selected job run'),
     ('backfill', 'Start many jobs for a particular date range'),
     ('disable', 'Disable selected job and cancel any outstanding runs'),

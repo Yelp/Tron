@@ -39,6 +39,7 @@ class ActionRunController(object):
         'stop',
         'kill',
         'retry',
+        'recover',
     }
 
     def __init__(self, action_run, job_run):
@@ -51,8 +52,13 @@ class ActionRunController(object):
 
         if command == 'start' and self.job_run.is_scheduled:
             return (
-                "Action run can not be started if it's job run is still "
+                "Action run cannot be started if its job run is still "
                 "scheduled."
+            )
+
+        if command == 'recover' and not self.action_run.is_unknown:
+            return (
+                "Action run cannot be recovered if its state is not unknown."
             )
 
         if command in ('stop', 'kill'):

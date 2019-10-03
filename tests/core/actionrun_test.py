@@ -740,7 +740,16 @@ class TestSSHActionRun:
 
     def test_recover_action_run_no_action_runner(self):
         # Default setup has no action runner
-        assert self.action_run.recover() is None
+        assert not self.action_run.recover()
+
+    def test_recover_action_run_incorrect_state(self):
+        # Should return falsy if not UNKNOWN.
+        self.action_run.action_runner = SubprocessActionRunnerFactory(
+            status_path='/tmp/foo',
+            exec_path='/bin/foo',
+        )
+        self.action_run.machine.state = ActionRun.FAILED
+        assert not self.action_run.recover()
 
     def test_recover_action_run_action_runner(self):
         self.action_run.action_runner = SubprocessActionRunnerFactory(
@@ -750,7 +759,7 @@ class TestSSHActionRun:
         self.action_run.end_time = 1000
         self.action_run.exit_status = 0
         self.action_run.machine.state = ActionRun.UNKNOWN
-        self.action_run.recover()
+        assert self.action_run.recover()
         assert self.action_run.machine.state == ActionRun.RUNNING
         assert self.action_run.end_time is None
         assert self.action_run.exit_status is None
@@ -1251,7 +1260,7 @@ class TestMesosActionRun:
             'watch',
             autospec=True,
         ) as mock_watch:
-            self.action_run.recover()
+            assert self.action_run.recover()
 
             mock_get_cluster = mock_cluster_repo.get_cluster
             mock_get_cluster.assert_called_once_with()
@@ -1281,7 +1290,7 @@ class TestMesosActionRun:
         self.action_run.machine.state = ActionRun.SUCCEEDED
         self.action_run.mesos_task_id = 'my_mesos_id'
 
-        self.action_run.recover()
+        assert not self.action_run.recover()
         assert mock_cluster_repo.get_cluster.call_count == 0
         assert self.action_run.is_succeeded
 
@@ -1293,7 +1302,7 @@ class TestMesosActionRun:
         self.action_run.machine.state = ActionRun.UNKNOWN
         self.action_run.mesos_task_id = None
 
-        self.action_run.recover()
+        assert not self.action_run.recover()
         assert mock_cluster_repo.get_cluster.call_count == 0
         assert self.action_run.is_unknown
         assert self.action_run.end_time is not None
@@ -1306,7 +1315,7 @@ class TestMesosActionRun:
         # Task is None if Mesos is disabled
         mock_get_cluster = mock_cluster_repo.get_cluster
         mock_get_cluster.return_value.create_task.return_value = None
-        self.action_run.recover()
+        assert not self.action_run.recover()
 
         mock_get_cluster.assert_called_once_with()
         assert self.action_run.is_unknown
