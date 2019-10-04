@@ -709,7 +709,7 @@ class TestJobRunStateTransitions:
         mock_job = mock.Mock(
             output_path=filehandler.OutputPath(tmpdir),
             action_graph=action_graph,
-            action_runner=actioncommand.NoActionRunnerFactory,
+            action_runner=actioncommand.NoActionRunnerFactory(),
         )
         job_run = jobrun.JobRun.for_job(
             mock_job,

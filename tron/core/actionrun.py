@@ -26,6 +26,8 @@ from tron.utils.observer import Observer
 from tron.utils.state import Machine
 
 log = logging.getLogger(__name__)
+MAX_RECOVER_TRIES = 5
+INITIAL_RECOVER_DELAY = 3
 
 
 class ActionRunFactory(object):
@@ -702,6 +704,7 @@ class SSHActionRun(ActionRun, Observer):
 
     def __init__(self, *args, **kwargs):
         super(SSHActionRun, self).__init__(*args, **kwargs)
+        self.recover_tries = 0
 
     def submit_command(self):
         action_command = self.build_action_command()
@@ -750,6 +753,23 @@ class SSHActionRun(ActionRun, Observer):
         self.watch(self.action_command)
         return self.action_command
 
+    def handle_unknown(self):
+        if isinstance(self.action_runner, NoActionRunnerFactory):
+            log.info(
+                f"Unable to recover action_run {self.id}: "
+                "action_run has no action_runner"
+            )
+            return self.fail_unknown()
+
+        if self.recover_tries >= MAX_RECOVER_TRIES:
+            log.info(f'Reached maximum tries {MAX_RECOVER_TRIES} for recovering {self.id}')
+            return self.fail_unknown()
+
+        desired_delay = INITIAL_RECOVER_DELAY * (3 ** self.recover_tries)
+        self.recover_tries += 1
+        log.info(f'Starting try #{self.recover_tries} to recover {self.id}, waiting {desired_delay}')
+        return self.do_recover(delay=desired_delay)
+
     def recover(self):
         log.info(f"Creating recovery run for actionrun {self.id}")
         if isinstance(self.action_runner, NoActionRunnerFactory):
@@ -767,6 +787,9 @@ class SSHActionRun(ActionRun, Observer):
             )
             return None
 
+        return self.do_recover(delay=0)
+
+    def do_recover(self, delay):
         recovery_command = f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"
 
         # Might not need a separate action run
@@ -795,6 +818,14 @@ class SSHActionRun(ActionRun, Observer):
         self.end_time = None
         self.machine.transition('running')
 
+        # Still want the action to appear running while we're waiting to submit the recovery
+        # So we do the delay at the end, after the transition to 'running' above
+        if not delay:
+            return self.submit_recovery_command(recovery_run, recovery_action_command)
+        else:
+            return reactor.callLater(delay, self.submit_recovery_command, recovery_run, recovery_action_command)
+
+    def submit_recovery_command(self, recovery_run, recovery_action_command):
         log.info(
             f"Submitting recovery job with command {recovery_action_command.command} "
             f"to node {recovery_run.node}"
@@ -822,7 +853,7 @@ class SSHActionRun(ActionRun, Observer):
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
-                return self.fail_unknown()
+                return self.handle_unknown()
 
             if not action_command.exit_status:
                 return self.success()

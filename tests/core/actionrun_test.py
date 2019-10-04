@@ -23,6 +23,8 @@ from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunCollection
 from tron.core.actionrun import ActionRunFactory
 from tron.core.actionrun import eager_all
+from tron.core.actionrun import INITIAL_RECOVER_DELAY
+from tron.core.actionrun import MAX_RECOVER_TRIES
 from tron.core.actionrun import MesosActionRun
 from tron.core.actionrun import min_filter
 from tron.core.actionrun import SSHActionRun
@@ -738,24 +740,37 @@ class TestSSHActionRun:
         ) is None
         assert self.action_run.is_scheduled
 
-    def test_recover_action_run_no_action_runner(self):
+    def test_recover_no_action_runner(self):
         # Default setup has no action runner
         assert not self.action_run.recover()
 
-    def test_recover_action_run_incorrect_state(self):
-        # Should return falsy if not UNKNOWN.
-        self.action_run.action_runner = SubprocessActionRunnerFactory(
+
+class TestSSHActionRunRecover:
+    @pytest.fixture(autouse=True)
+    def setup_action_run(self):
+        self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
+        self.action_runner = SubprocessActionRunnerFactory(
             status_path='/tmp/foo',
             exec_path='/bin/foo',
         )
+        self.command = "do command {actionname}"
+        self.action_run = SSHActionRun(
+            job_run_id="job_name.5",
+            name="action_name",
+            node=mock.create_autospec(node.Node),
+            bare_command=self.command,
+            output_path=self.output_path,
+            action_runner=self.action_runner,
+        )
+        yield
+        shutil.rmtree(self.output_path.base, ignore_errors=True)
+
+    def test_recover_incorrect_state(self):
+        # Should return falsy if not UNKNOWN.
         self.action_run.machine.state = ActionRun.FAILED
         assert not self.action_run.recover()
 
-    def test_recover_action_run_action_runner(self):
-        self.action_run.action_runner = SubprocessActionRunnerFactory(
-            status_path='/tmp/foo',
-            exec_path='/bin/foo',
-        )
+    def test_recover_action_runner(self):
         self.action_run.end_time = 1000
         self.action_run.exit_status = 0
         self.action_run.machine.state = ActionRun.UNKNOWN
@@ -771,6 +786,69 @@ class TestSSHActionRun:
         recovery_command = submit_args[0]
         assert recovery_command.command == '/bin/foo/recover_batch.py /tmp/foo/job_name.5.action_name/status'
         assert recovery_command.start_time is not None  # already started
+
+    @mock.patch('tron.core.actionrun.reactor', autospec=True)
+    def test_handler_exiting_failunknown(self, mock_reactor):
+        self.action_run.action_command = mock.create_autospec(
+            actioncommand.ActionCommand,
+            exit_status=None,
+        )
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+        delay_deferred = self.action_run.handler(
+            self.action_run.action_command,
+            ActionCommand.EXITING,
+        )
+        assert delay_deferred == mock_reactor.callLater.return_value
+        assert self.action_run.is_running
+        assert self.action_run.exit_status is None
+        assert self.action_run.end_time is None
+
+        call_args = mock_reactor.callLater.call_args[0]
+        assert call_args[0] == INITIAL_RECOVER_DELAY
+        assert call_args[1] == self.action_run.submit_recovery_command
+
+        # Check recovery run
+        recovery_run = call_args[2]
+        assert 'recovery' in recovery_run.name
+        assert isinstance(recovery_run, SSHActionRun)
+        # Recovery run should not be recovering itself, parent run handles its unknown status
+        assert recovery_run.recover() is None
+
+        # Check command
+        recovery_command = call_args[3]
+        assert recovery_command.command == '/bin/foo/recover_batch.py /tmp/foo/job_name.5.action_name/status'
+        assert recovery_command.start_time is not None  # already started
+
+    @mock.patch('tron.core.actionrun.SSHActionRun.do_recover', autospec=True)
+    @mock.patch('tron.core.actionrun.reactor', autospec=True)
+    def test_handler_exiting_failunknown_max_retries(self, mock_reactor, mock_do_recover):
+        self.action_run.action_command = mock.create_autospec(
+            actioncommand.ActionCommand,
+            exit_status=None,
+        )
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+
+        def exit_unknown(*args, **kwargs):
+            self.action_run.handler(
+                self.action_run.action_command,
+                ActionCommand.EXITING,
+            )
+        # Each time do_recover is called, end up exiting unknown again
+        mock_do_recover.side_effect = exit_unknown
+
+        # Start the cycle
+        exit_unknown()
+
+        assert mock_do_recover.call_count == MAX_RECOVER_TRIES
+        last_call = mock_do_recover.call_args
+        expected_delay = INITIAL_RECOVER_DELAY * (3 ** (MAX_RECOVER_TRIES - 1))
+        assert last_call == mock.call(self.action_run, delay=expected_delay)
+
+        assert self.action_run.is_unknown
+        assert self.action_run.exit_status is None
+        assert self.action_run.end_time is not None
 
 
 class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
