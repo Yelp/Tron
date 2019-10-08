@@ -435,6 +435,7 @@ class ActionRun(Observable):
         self.retries_delay = None
 
         if self.is_done:
+            self.machine.reset()
             return self._exit_unsuccessful(self.exit_status)
         else:
             log.info(f"{self} getting killed for a retry")
@@ -465,6 +466,12 @@ class ActionRun(Observable):
         return self._done('fail', exit_status)
 
     def _exit_unsuccessful(self, exit_status=None):
+        if self.is_done:
+            log.info(
+                f'{self} got exit code {exit_status} but already in terminal '
+                f'state "{self.state}", not retrying',
+            )
+            return
         if self.retries_remaining is not None:
             if self.retries_remaining > 0:
                 self.retries_remaining -= 1

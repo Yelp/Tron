@@ -430,6 +430,87 @@ class TestActionRun:
         with pytest.raises(AttributeError):
             self.action_run.__getattr__('is_not_a_real_state')
 
+    def test_auto_retry(self):
+        self.action_run.retries_remaining = 2
+        self.action_run.exit_statuses = []
+        self.action_run.machine.transition('start')
+
+        assert self.action_run._exit_unsuccessful(-1)
+        assert self.action_run.is_starting
+        assert self.action_run.retries_remaining == 1
+
+        assert self.action_run._exit_unsuccessful(-1)
+        assert self.action_run.retries_remaining == 0
+        assert not self.action_run.is_failed
+
+        assert self.action_run._exit_unsuccessful(-1)
+        assert self.action_run.retries_remaining == 0
+        assert self.action_run.is_failed
+
+        assert self.action_run.exit_statuses, [-1 == -1]
+
+    def test_no_auto_retry_on_fail_not_running(self):
+        self.action_run.retries_remaining = 2
+        self.action_run.exit_statuses = []
+
+        self.action_run.fail()
+        assert self.action_run.retries_remaining == -1
+        assert self.action_run.is_failed
+
+        assert self.action_run.exit_statuses == []
+        assert self.action_run.exit_status is None
+
+    def test_no_auto_retry_on_fail_running(self):
+        self.action_run.retries_remaining = 2
+        self.action_run.exit_statuses = []
+        self.action_run.machine.transition('start')
+
+        self.action_run.fail()
+        assert self.action_run.retries_remaining == -1
+        assert self.action_run.is_failed
+
+        assert self.action_run.exit_statuses == []
+        assert self.action_run.exit_status is None
+
+    def test_auto_retry_already_done(self):
+        # If someone transitions the action before it
+        # is done to success/fail, the action
+        # should not automatically retry when the command
+        # completes.
+        self.action_run.retries_remaining = 2
+        self.action_run.exit_statuses = []
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+
+        # Action gets manually transitioned to success with tronctl
+        self.action_run.machine.transition('success')
+        assert self.action_run.is_succeeded
+
+        # Command later fails
+        # Does not start a command
+        assert not self.action_run._exit_unsuccessful(-1)
+        # Still succeeded, not starting
+        assert self.action_run.is_succeeded
+
+    def test_manual_retry(self):
+        self.action_run.retries_remaining = None
+        self.action_run.exit_statuses = []
+        self.action_run.machine.transition('start')
+        self.action_run.fail(-1)
+        self.action_run.retry()
+        assert self.action_run.is_starting
+        assert self.action_run.exit_statuses == [-1]
+        assert self.action_run.retries_remaining == 0
+
+    @mock.patch('twisted.internet.reactor.callLater', autospec=True)
+    def test_retries_delay(self, callLater):
+        self.action_run.retries_delay = datetime.timedelta()
+        self.action_run.retries_remaining = 2
+        self.action_run.machine.transition('start')
+        callLater.return_value = "delayed call"
+        assert self.action_run._exit_unsuccessful(-1)
+        assert self.action_run.in_delay == "delayed call"
+
 
 class TestActionRunFactoryTriggerTimeout:
     def test_trigger_timeout_default(self):
@@ -605,75 +686,6 @@ class TestSSHActionRun:
             self.action_run.output_path,
         )
         self.action_run.watch.assert_called_with(action_command)
-
-    def test_auto_retry(self):
-        self.action_run.retries_remaining = 2
-        self.action_run.exit_statuses = []
-        self.action_run.build_action_command()
-        self.action_run.action_command.exit_status = -1
-        self.action_run.machine.transition('start')
-
-        self.action_run._exit_unsuccessful(-1)
-        assert self.action_run.retries_remaining == 1
-        assert not self.action_run.is_failed
-
-        self.action_run._exit_unsuccessful(-1)
-        assert self.action_run.retries_remaining == 0
-        assert not self.action_run.is_failed
-
-        self.action_run._exit_unsuccessful(-1)
-        assert self.action_run.retries_remaining == 0
-        assert self.action_run.is_failed
-
-        assert self.action_run.exit_statuses, [-1 == -1]
-
-    def test_no_auto_retry_on_fail_not_running(self):
-        self.action_run.retries_remaining = 2
-        self.action_run.exit_statuses = []
-        self.action_run.build_action_command()
-
-        self.action_run.fail()
-        assert self.action_run.retries_remaining == -1
-        assert self.action_run.is_failed
-
-        assert self.action_run.exit_statuses == []
-        assert self.action_run.exit_status is None
-
-    def test_no_auto_retry_on_fail_running(self):
-        self.action_run.retries_remaining = 2
-        self.action_run.exit_statuses = []
-        self.action_run.build_action_command()
-        self.action_run.machine.transition('start')
-
-        self.action_run.fail()
-        assert self.action_run.retries_remaining == -1
-        assert self.action_run.is_failed
-
-        assert self.action_run.exit_statuses == []
-        assert self.action_run.exit_status is None
-
-    def test_manual_retry(self):
-        self.action_run.retries_remaining = None
-        self.action_run.exit_statuses = []
-        self.action_run.build_action_command()
-        self.action_run.action_command.exit_status = -1
-        self.action_run.machine.transition('start')
-        self.action_run.fail(-1)
-        self.action_run.retry()
-        self.action_run.is_running
-        assert self.action_run.exit_statuses == [-1]
-        assert self.action_run.retries_remaining == 0
-
-    @mock.patch('twisted.internet.reactor.callLater', autospec=True)
-    def test_retries_delay(self, callLater):
-        self.action_run.retries_delay = datetime.timedelta()
-        self.action_run.retries_remaining = 2
-        self.action_run.build_action_command()
-        self.action_run.action_command.exit_status = -1
-        self.action_run.machine.transition('start')
-        callLater.return_value = "delayed call"
-        self.action_run._exit_unsuccessful(-1)
-        assert self.action_run.in_delay == "delayed call"
 
     def test_handler_running(self):
         self.action_run.build_action_command()
