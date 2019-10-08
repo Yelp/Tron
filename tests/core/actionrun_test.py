@@ -31,6 +31,13 @@ from tron.core.actionrun import SSHActionRun
 from tron.serialize import filehandler
 
 
+@pytest.fixture
+def output_path():
+    output_path = filehandler.OutputPath(tempfile.mkdtemp())
+    yield output_path
+    shutil.rmtree(output_path.base, ignore_errors=True)
+
+
 class TestMinFilter:
     def test_min_filter(self):
         seq = [None, 2, None, 7, None, 9, 10, 12, 1]
@@ -251,8 +258,7 @@ class TestActionRunFactory:
 
 class TestActionRun:
     @pytest.fixture(autouse=True)
-    def setup_action_run(self):
-        self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
+    def setup_action_run(self, output_path):
         self.action_runner = actioncommand.NoActionRunnerFactory()
         self.command = "do command {actionname}"
         self.rendered_command = "do command action_name"
@@ -261,7 +267,7 @@ class TestActionRun:
             name="action_name",
             node=mock.create_autospec(node.Node),
             bare_command=self.command,
-            output_path=self.output_path,
+            output_path=output_path,
             action_runner=self.action_runner,
         )
         # These should be implemented in subclasses, we don't care here
@@ -563,8 +569,7 @@ class TestActionRunTriggerTimeout:
 
 class TestSSHActionRun:
     @pytest.fixture(autouse=True)
-    def setup_action_run(self):
-        self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
+    def setup_action_run(self, output_path):
         self.action_runner = mock.create_autospec(
             actioncommand.NoActionRunnerFactory,
         )
@@ -574,11 +579,9 @@ class TestSSHActionRun:
             name="action_name",
             node=mock.create_autospec(node.Node),
             bare_command=self.command,
-            output_path=self.output_path,
+            output_path=output_path,
             action_runner=self.action_runner,
         )
-        yield
-        shutil.rmtree(self.output_path.base, ignore_errors=True)
 
     def test_start_node_error(self):
         def raise_error(c):
@@ -747,8 +750,7 @@ class TestSSHActionRun:
 
 class TestSSHActionRunRecover:
     @pytest.fixture(autouse=True)
-    def setup_action_run(self):
-        self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
+    def setup_action_run(self, output_path):
         self.action_runner = SubprocessActionRunnerFactory(
             status_path='/tmp/foo',
             exec_path='/bin/foo',
@@ -759,11 +761,9 @@ class TestSSHActionRunRecover:
             name="action_name",
             node=mock.create_autospec(node.Node),
             bare_command=self.command,
-            output_path=self.output_path,
+            output_path=output_path,
             action_runner=self.action_runner,
         )
-        yield
-        shutil.rmtree(self.output_path.base, ignore_errors=True)
 
     def test_recover_incorrect_state(self):
         # Should return falsy if not UNKNOWN.
@@ -1001,7 +1001,7 @@ class TestActionRunCollection:
         )
 
     @pytest.fixture(autouse=True)
-    def setup_runs(self):
+    def setup_runs(self, output_path):
         action_names = ['action_name', 'second_name', 'cleanup']
 
         action_graph = []
@@ -1015,14 +1015,12 @@ class TestActionRunCollection:
             {'action_name': set(), 'second_name': set(), 'cleanup': set()},
             {'action_name': set(), 'second_name': set(), 'cleanup': set()},
         )
-        self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
+        self.output_path = output_path
         self.command = "do command"
         self.action_runs = [self._build_run(name) for name in action_names]
         self.run_map = {a.action_name: a for a in self.action_runs}
         self.run_map['cleanup'].is_cleanup = True
         self.collection = ActionRunCollection(self.action_graph, self.run_map)
-        yield
-        shutil.rmtree(self.output_path.base, ignore_errors=True)
 
     def test__init__(self):
         assert self.collection.action_graph == self.action_graph
@@ -1171,7 +1169,7 @@ class TestActionRunCollectionIsRunBlocked:
         )
 
     @pytest.fixture(autouse=True)
-    def setup_collection(self):
+    def setup_collection(self, output_path):
         action_names = ['action_name', 'second_name', 'cleanup']
 
         actions = []
@@ -1188,14 +1186,12 @@ class TestActionRunCollectionIsRunBlocked:
             {'action_name': set(), 'second_name': set(), 'cleanup': set()},
         )
 
-        self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
+        self.output_path = output_path
         self.command = "do command"
         self.action_runs = [self._build_run(name) for name in action_names]
         self.run_map = {a.action_name: a for a in self.action_runs}
         self.run_map['cleanup'].is_cleanup = True
         self.collection = ActionRunCollection(self.action_graph, self.run_map)
-        yield
-        shutil.rmtree(self.output_path.base, ignore_errors=True)
 
     def test_is_run_blocked_no_required_actions(self):
         assert not self.collection._is_run_blocked(self.run_map['action_name'])
