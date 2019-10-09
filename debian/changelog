@@ -1,3 +1,11 @@
+tron (1.2.1) xenial; urgency=medium
+
+  * 1.2.1 tagged with 'make release'
+    Commit: Merge pull request #716 from Yelp/retry-check-state  Do not
+    auto retry action if state is already succeeded
+
+ -- root <root@bf4306e0c13c>  Wed, 09 Oct 2019 16:57:32 +0000
+
 tron (1.2.0) xenial; urgency=medium
 
   * 1.2.0 tagged with 'make release'
