@@ -18,6 +18,7 @@ from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
 
 PRECIOUS_JOB_ATTR = 'check_that_every_day_has_a_successful_run'
+NUM_PRECIOUS = 7
 
 log = logging.getLogger('check_tron_jobs')
 
@@ -317,6 +318,20 @@ def guess_realert_every(job):
     return realert_every
 
 
+def get_earliest_run_time_to_check(job_content, interval):
+    if not job_content['runs']:
+        return None
+
+    earliest_run_time = min([
+        time.mktime(_timestamp_to_timeobj(run['run_time']))
+        for run in job_content['runs']
+    ])
+    return max(
+        earliest_run_time,
+        time.time() - datetime.timedelta(**{f'{interval}s': NUM_PRECIOUS - 1}).total_seconds()
+    )
+
+
 def sort_runs_by_interval(job_content, interval='day', until=None):
     """ Sorts a job's runs by a time interval (day, hour, minute, or second),
     according to a job run's run time.
@@ -332,13 +347,7 @@ def sort_runs_by_interval(job_content, interval='day', until=None):
     if job_content is not None:
         if not until:
             until = time.time()  # can't set in default arg
-        if job_content['runs']:
-            earliest_run_time = min([
-                time.mktime(_timestamp_to_timeobj(run['run_time']))
-                for run in job_content['runs']
-            ])
-        else:
-            earliest_run_time = until
+        earliest_run_time = get_earliest_run_time_to_check(job_content, interval) or until
 
         # We add all dates by interval between our earliest run_time and now,
         # allowing functions downstream to see if some dates had no runs
@@ -351,11 +360,12 @@ def sort_runs_by_interval(job_content, interval='day', until=None):
 
         # Bucket runs by interval
         for run in job_content['runs']:
-            # If interval is invalid, will raise a KeyError
             run_time = time.strftime(
                 interval_formats[interval],
                 _timestamp_to_timeobj(run['run_time']),
             )
+            if run_time not in run_buckets:
+                continue
             run_buckets[run_time].append(run)
     return dict(run_buckets)
 

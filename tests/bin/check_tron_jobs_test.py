@@ -1,14 +1,20 @@
 import time
 
 import mock
+import pytest
 from mock import patch
 from mock import PropertyMock
 
 from testifycompat import assert_equal
-from testifycompat import setup
 from testifycompat import TestCase
 from tron.bin import check_tron_jobs
 from tron.bin.check_tron_jobs import State
+
+
+@pytest.fixture(autouse=True)
+def mock_run_interval():
+    with patch.object(check_tron_jobs, '_run_interval', 300):
+        yield
 
 
 class TestCheckJobs(TestCase):
@@ -24,7 +30,6 @@ class TestCheckJobs(TestCase):
         mock_check_job_result,
     ):
         type(mock_args.return_value).job = PropertyMock(return_value=None)
-        type(mock_args.return_value).run_interval = 300
         mock_client.return_value.jobs.return_value = [
             {
                 'name': 'job1',
@@ -1470,8 +1475,8 @@ class TestCheckJobs(TestCase):
         assert_equal(realert_every, -1)
 
 
-class TestCheckPreciousJobs(TestCase):
-    @setup
+class TestCheckPreciousJobs:
+    @pytest.fixture(autouse=True)
     def setup_job(self):
         self.job_name = 'fake_job'
         self.monitoring = {
@@ -1480,59 +1485,59 @@ class TestCheckPreciousJobs(TestCase):
             check_tron_jobs.PRECIOUS_JOB_ATTR: True,
         }
         self.runs = [{
-            'id': f"{self.job_name}.0",
+            'id': f"{self.job_name}.15",
             'job_name': self.job_name,
-            'run_num': 0,
-            'run_time': '2018-10-10 12:00:00',
-            'start_time': '2018-10-10 12:00:00',
-            'end_time': '2018-10-10 12:30:00',
-            'state': 'failed',
-            'exit_status': 1,
-        }, {
-            'id': f"{self.job_name}.1",
-            'job_name': self.job_name,
-            'run_num': 1,
-            'run_time': '2018-10-10 13:00:00',
-            'start_time': '2018-10-10 13:00:00',
-            'end_time': '2018-10-10 13:30:00',
+            'run_num': 15,
+            'run_time': '2018-10-13 12:00:00',
+            'start_time': '2018-10-13 12:00:00',
+            'end_time': '2018-10-13 12:30:00',
             'state': 'succeeded',
             'exit_status': 0,
         }, {
-            'id': f"{self.job_name}.2",
+            'id': f"{self.job_name}.14",
             'job_name': self.job_name,
-            'run_num': 2,
-            'run_time': '2018-10-11 12:00:00',
-            'start_time': '2018-10-11 12:00:00',
-            'end_time': '2018-10-11 12:30:00',
-            'state': 'succeeded',
-            'exit_status': 0,
-        }, {
-            'id': f"{self.job_name}.3",
-            'job_name': self.job_name,
-            'run_num': 3,
-            'run_time': '2018-10-11 13:00:00',
-            'start_time': '2018-10-11 13:00:00',
-            'end_time': '2018-10-11 13:30:00',
-            'state': 'failed',
-            'exit_status': 1,
-        }, {
-            'id': f"{self.job_name}.4",
-            'job_name': self.job_name,
-            'run_num': 4,
+            'run_num': 14,
             'run_time': '2018-10-12 12:00:00',
             'start_time': '2018-10-12 12:00:00',
             'end_time': '2018-10-12 12:30:00',
             'state': 'failed',
             'exit_status': 1,
         }, {
-            'id': f"{self.job_name}.5",
+            'id': f"{self.job_name}.13",
             'job_name': self.job_name,
-            'run_num': 5,
-            'run_time': '2018-10-13 12:00:00',
-            'start_time': '2018-10-13 12:00:00',
-            'end_time': '2018-10-13 12:30:00',
+            'run_num': 13,
+            'run_time': '2018-10-11 13:00:00',
+            'start_time': '2018-10-11 13:00:00',
+            'end_time': '2018-10-11 13:30:00',
+            'state': 'failed',
+            'exit_status': 1,
+        }, {
+            'id': f"{self.job_name}.12",
+            'job_name': self.job_name,
+            'run_num': 12,
+            'run_time': '2018-10-11 12:00:00',
+            'start_time': '2018-10-11 12:00:00',
+            'end_time': '2018-10-11 12:30:00',
             'state': 'succeeded',
             'exit_status': 0,
+        }, {
+            'id': f"{self.job_name}.11",
+            'job_name': self.job_name,
+            'run_num': 11,
+            'run_time': '2018-10-10 13:00:00',
+            'start_time': '2018-10-10 13:00:00',
+            'end_time': '2018-10-10 13:30:00',
+            'state': 'succeeded',
+            'exit_status': 0,
+        }, {
+            'id': f"{self.job_name}.10",
+            'job_name': self.job_name,
+            'run_num': 10,
+            'run_time': '2018-10-10 12:00:00',
+            'start_time': '2018-10-10 12:00:00',
+            'end_time': '2018-10-10 12:30:00',
+            'state': 'failed',
+            'exit_status': 1,
         }]
         self.job = {
             'name': 'fake_job',
@@ -1554,21 +1559,45 @@ class TestCheckPreciousJobs(TestCase):
 
     @patch('time.time', mock.Mock(return_value=1539633600.0), autospec=None)
     def test_sort_runs_by_interval_day_empty_buckets(self):
-        self.job['runs'].append({
-            'id': f"{self.job_name}.6",
+        self.job['runs'] = [{
+            'id': f"{self.job_name}.16",
             'job_name': self.job_name,
-            'run_num': 5,
+            'run_num': 16,
             'run_time': '2018-10-15 12:00:00',
             'start_time': '2018-10-15 12:00:00',
             'end_time': '2018-10-15 12:30:00',
             'state': 'succeeded',
             'exit_status': 0,
-        })
+        }] + self.job['runs']
 
         run_buckets = check_tron_jobs.sort_runs_by_interval(self.job, 'day')
 
         assert '2018.10.14' in run_buckets
         assert run_buckets['2018.10.14'] == []
+
+    @patch('time.time', mock.Mock(return_value=1539633600.0), autospec=None)
+    def test_sort_runs_by_interval_day_old_empty_buckets(self):
+        # If the newest run is a backfill for an older date, shouldn't be
+        # included for buckets
+        self.job['runs'] = [{
+            'id': f"{self.job_name}.16",
+            'job_name': self.job_name,
+            'run_num': 16,
+            'run_time': '2018-10-01 12:00:00',
+            'start_time': '2018-10-01 12:00:00',
+            'end_time': '2018-10-01 12:30:00',
+            'state': 'succeeded',
+            'exit_status': 0,
+        }] + self.job['runs']
+
+        run_buckets = check_tron_jobs.sort_runs_by_interval(self.job, 'day')
+        # Current time is patched to 2018-10-15, so we should include
+        # NUM_PRECIOUS intervals, starting 2018-10-09
+        # 2018-10-01 should not be included, even though there is a run for it,
+        # because it is too old
+        assert '2018.10.01' not in run_buckets
+        assert run_buckets['2018.10.14'] == []
+        assert len(run_buckets) == 7
 
     @patch('tron.bin.check_tron_jobs.guess_realert_every', mock.Mock(return_value=1), autospec=None)
     @patch('tron.bin.check_tron_jobs.Client', autospec=True)
