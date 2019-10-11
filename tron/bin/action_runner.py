@@ -73,6 +73,24 @@ def validate_output_dir(path):
             raise OSError("Could not create output dir %s" % path)
 
 
+def build_environment(run_id):
+    try:
+        namespace, job, run_num, action = run_id.split('.', maxsplit=3)
+    except ValueError:
+        # if we can't parse the run_id, we don't want to abort, so just
+        # set these semi-arbitrarily
+        namespace, job, run_num, action = ['UNKNOWN'] * 4
+
+    new_env = dict(os.environ)
+    new_env['TRON_JOB_NAMESPACE'] = namespace
+    new_env['TRON_JOB_NAME'] = job
+    new_env['TRON_RUN_NUM'] = run_num
+    new_env['TRON_ACTION'] = action
+
+    logging.debug(new_env)
+    return new_env
+
+
 def run_proc(output_path, command, run_id, proc):
     logging.warning(f'{run_id} running as pid {proc.pid}')
     status_file = StatusFile(os.path.join(output_path, STATUS_FILE))
@@ -103,12 +121,13 @@ def parse_args():
     return parser.parse_args()
 
 
-def run_command(command):
+def run_command(command, run_id):
     return subprocess.Popen(
         command,
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        env=build_environment(run_id=run_id),
     )
 
 
@@ -143,7 +162,7 @@ def main():
     args = parse_args()
     validate_output_dir(args.output_dir)
     configure_logging(run_id=args.run_id, output_dir=args.output_dir)
-    proc = run_command(args.command)
+    proc = run_command(command=args.command, run_id=args.run_id)
     threads = [
         threading.Thread(target=stream, args=p, daemon=True)
         for p in [(proc.stdout, sys.stdout), (proc.stderr, sys.stderr)]

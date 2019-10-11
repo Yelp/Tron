@@ -95,3 +95,41 @@ class TestRegister(TestCase):
             proc=self.proc,
         )
         self.proc.wait.assert_called_with()
+
+
+class TestBuildEnvironment:
+    def test_build_environment(self):
+        with mock.patch('tron.bin.action_runner.os.environ', dict(PATH='/usr/bin/nowhere'), autospec=None):
+            env = action_runner.build_environment('MASTER.foo.10.bar')
+
+        assert env == dict(
+            PATH='/usr/bin/nowhere',
+            TRON_JOB_NAMESPACE='MASTER',
+            TRON_JOB_NAME='foo',
+            TRON_RUN_NUM='10',
+            TRON_ACTION='bar',
+        )
+
+    def test_build_environment_invalid_run_id(self):
+        with mock.patch('tron.bin.action_runner.os.environ', dict(PATH='/usr/bin/nowhere'), autospec=None):
+            env = action_runner.build_environment('asdf')
+
+        assert env == dict(
+            PATH='/usr/bin/nowhere',
+            TRON_JOB_NAMESPACE='UNKNOWN',
+            TRON_JOB_NAME='UNKNOWN',
+            TRON_RUN_NUM='UNKNOWN',
+            TRON_ACTION='UNKNOWN',
+        )
+
+    def test_build_environment_too_long_run_id(self):
+        with mock.patch('tron.bin.action_runner.os.environ', dict(PATH='/usr/bin/nowhere'), autospec=None):
+            env = action_runner.build_environment('MASTER.foo.10.bar.baz')
+
+        assert env == dict(
+            PATH='/usr/bin/nowhere',
+            TRON_JOB_NAMESPACE='MASTER',
+            TRON_JOB_NAME='foo',
+            TRON_RUN_NUM='10',
+            TRON_ACTION='bar.baz',
+        )
