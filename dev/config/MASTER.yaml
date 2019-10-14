@@ -19,14 +19,20 @@ mesos_options:
   enabled: True
   dockercfg_location: file:///root/.dockercfg
 
+# Replace this with the path relative to your home dir to use
+# action_runner:
+#   runner_type: "subprocess"
+#   remote_status_path: "pg/tron/status"
+#   remote_exec_path: "pg/tron/.tox/py36/bin"
+
 jobs:
   testjob0:
-    enabled: false
+    enabled: true
     node: localhost
     schedule: "cron * * * * *"
     actions:
       zeroth:
-        command: "sleep 5"
+        command: env
         trigger_downstreams:
           minutely: "{ymdhm}"
         cpus: 1
