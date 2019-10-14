@@ -1,3 +1,11 @@
+tron (1.2.2) xenial; urgency=medium
+
+  * 1.2.2 tagged with 'make release'
+    Commit: Merge branch 'drmorr/TRON-
+    1303/action_runner_sets_env_variables'
+
+ -- root <root@b45f42581c03>  Mon, 14 Oct 2019 19:47:54 +0000
+
 tron (1.2.1) xenial; urgency=medium
 
   * 1.2.1 tagged with 'make release'
