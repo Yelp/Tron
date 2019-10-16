@@ -1,3 +1,11 @@
+tron (1.2.3) xenial; urgency=medium
+
+  * 1.2.3 tagged with 'make release'
+    Commit: Merge pull request #717 from Yelp/monitoring-backfill-
+    buckets  Try to handle backfills better in monitoring precious runs
+
+ -- root <root@9bc878dfcb57>  Tue, 15 Oct 2019 23:27:13 +0000
+
 tron (1.2.2) xenial; urgency=medium
 
   * 1.2.2 tagged with 'make release'
