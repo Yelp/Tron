@@ -21,7 +21,7 @@ decorator==4.4.0
 docker==3.7.2
 docker-pycreds==0.4.0
 docutils==0.14
-ecdsa==0.13.2
+ecdsa==0.13.3
 future==0.17.1
 http-parser==0.8.3
 humanize==0.5.1
@@ -70,11 +70,11 @@ s3transfer==0.2.0
 setuptools==41.0.1
 six==1.12.0
 task-processing==0.1.7
-Twisted==19.2.1
+Twisted==19.7.0
 urllib3==1.24.3
 wcwidth==0.1.7
 websocket-client==0.56.0
-Werkzeug==0.15.2
+Werkzeug==0.15.3
 wrapt==1.11.1
 xmltodict==0.12.0
 zope.interface==4.6.0
