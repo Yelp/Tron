@@ -12,6 +12,7 @@ from tron import node
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
+from tron.bin.action_runner import build_environment
 from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
@@ -884,7 +885,7 @@ class MesosActionRun(ActionRun, Observer):
                          for c in self.constraints],
             docker_image=self.docker_image,
             docker_parameters=[e._asdict() for e in self.docker_parameters],
-            env=self.env,
+            env=build_environment(original_env=self.env, run_id=self.id),
             extra_volumes=[e._asdict() for e in self.extra_volumes],
             serializer=serializer,
             task_id=task_id,
