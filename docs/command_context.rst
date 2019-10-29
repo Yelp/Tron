@@ -9,6 +9,8 @@ command configuration for actions.
 
 These variables can be used in the command of an action, using Python's format syntax (``{}``).
 
+Once rendered into the command, they will **not** change. This is especially important for datetime-based context variables. Once a run is constructed, the datetime-based variables are "frozen", and will not change, even if the job is retried, or rerun one week later.
+
 For example::
 
     # myservice.yaml
@@ -87,7 +89,7 @@ The command would get rendered at job runtime to::
 **manual**
     ``true`` if the job was run manually. ``false`` otherwise.
     Manual job runs are those runs launched via the ``tronctl start`` command (as opposed to those launched by the scheduler).
-    This variable is useful changing the behavior when jobs are run manually, like adding more verbose loggin::
+    This variable is useful changing the behavior when jobs are run manually, like adding more verbose logging::
 
     command: "myjob --verbose={manual}"
 
@@ -95,3 +97,27 @@ The command would get rendered at job runtime to::
     The namespace of the config where the job comes from. Often ``MASTER`` or ``servicename``.
     Usually matches the name of service where the code runs.
     For example, if the job name is ``myservice.mycooljob.1.myaction``, ``{namespace}`` would be rendered as ``myservice``.
+
+
+Built In Environment Variables
+==============================
+
+The following environment variables are also in the process environment.
+
+These can be used like a normal linux environment variable using ``$``, like ``$TRON_JOB_NAMESPACE`` will be expanded at runtime and replace by the appropriate string.
+
+Note: These are **different** that Tron Context Variables, which are referenced using python style f-strings (``{myvariable}``) and are "rendered" into the command only, and not available as normal environment variables.
+
+In all examples here, imagine running tronview like ``tronview myservice.myjob.42.myaction``. The example variables represent aspects of that particular action:
+
+**TRON_JOB_NAMESPACE**
+    This is the tron config namespace where the job lives. Example: ``myservice``.
+
+**TRON_JOB_NAME**
+    This variable is the top level key in the tron configuration file, like ``myjob``.
+
+**TRON_RUN_NUM**
+    This is the job run number. Example: ``42``.
+
+**TRON_ACTION**
+    This is the action name of the particular job. Example: ``myaction``.

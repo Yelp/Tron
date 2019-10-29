@@ -73,7 +73,9 @@ def validate_output_dir(path):
             raise OSError("Could not create output dir %s" % path)
 
 
-def build_environment(run_id):
+def build_environment(run_id, original_env=None):
+    if original_env is None:
+        original_env = dict(os.environ)
     try:
         namespace, job, run_num, action = run_id.split('.', maxsplit=3)
     except ValueError:
@@ -81,7 +83,7 @@ def build_environment(run_id):
         # set these semi-arbitrarily
         namespace, job, run_num, action = ['UNKNOWN'] * 4
 
-    new_env = dict(os.environ)
+    new_env = dict(original_env)
     new_env['TRON_JOB_NAMESPACE'] = namespace
     new_env['TRON_JOB_NAME'] = job
     new_env['TRON_RUN_NUM'] = run_num

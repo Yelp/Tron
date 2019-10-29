@@ -1270,11 +1270,15 @@ class TestMesosActionRun:
             'disk': 42,
             'docker_image': 'container:v2',
             'env': {
-                'TESTING': 'true'
+                'TESTING': 'true',
+                'TRON_JOB_NAMESPACE': 'mynamespace',
+                'TRON_JOB_NAME': 'myjob',
+                'TRON_RUN_NUM': '42',
+                'TRON_ACTION': 'action_name',
             },
         }
         self.action_run = MesosActionRun(
-            job_run_id="job_run_id",
+            job_run_id="mynamespace.myjob.42",
             name="action_name",
             node=mock.create_autospec(node.Node),
             rendered_command=self.command,
@@ -1359,7 +1363,7 @@ class TestMesosActionRun:
                 constraints=[['an attr', 'an op', 'a val']],
                 docker_parameters=[{'key': 'init', 'value': 'true'}],
                 **self.other_task_kwargs
-            )
+            ), mock_get_cluster.return_value.create_task.calls
             task = mock_get_cluster.return_value.create_task.return_value
             mock_get_cluster.return_value.recover.assert_called_once_with(task)
             mock_watch.assert_called_once_with(task)
