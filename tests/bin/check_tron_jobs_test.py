@@ -1661,6 +1661,7 @@ class TestCheckPreciousJobs:
         client = mock_client('fake_server')
         client.cluster_name = 'fake_cluster'
         self.job['monitoring']['check_every'] = 500
+        self.job['monitoring']['hide_stderr'] = True
         client.job = mock.Mock(return_value=self.job)
         mock_check_job_runs.return_value = {
             'output': 'fake_output',
@@ -1670,6 +1671,9 @@ class TestCheckPreciousJobs:
         results = check_tron_jobs.compute_check_result_for_job(
             client, self.job, url_index={},
         )
+
+        # Test that hide_stderr is passed to check_job_runs
+        assert mock_check_job_runs.call_args_list[0][1]['hide_stderr'] is True
 
         # make sure all job runs for a job are included by not incl count arg
         assert client.job.call_args_list == [mock.call(
