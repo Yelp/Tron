@@ -219,6 +219,7 @@ Optional Fields
     have been emitted by upstream actions. Unlike with ``requires`` attribute,
     dependent actions don't have to belong to the same job. ``triggered_by``
     template may contain any pattern allowed in ``command`` attribute.
+    See :ref:`shortdate` for an explantion of shortdate
 
     Example:
 
@@ -226,9 +227,16 @@ Optional Fields
     triggered_by:
     - "other_namespace.some_job.action1.shortdate.{shortdate-1}"
 
-**trigger_timeout** (timedelta)
+**trigger_timeout** (default **24h**)
     How long will action wait for dependencies listed in ``triggered_by`` before
-    failing. Is not included in ``expected_runtime``.
+    failing. Is not included in ``expected_runtime``. If upstream job fails, no
+    trigger event will be emitted and downstream jobs will fail with trigger
+    timeout. Re-running upstream job will emit the trigger upon successful
+    completion and if any downstream job is still waiting - it will proceed
+    normally. Timed out downstream jobs will not be re-started, and you need to
+    use ``tronctl publish`` to trigger it manually.  .
+
+
 
 Example Actions
 ^^^^^^^^^^^^^^^
@@ -450,3 +458,26 @@ Job Run States
     The run is in an unknown state. This state could indicate a bug in Tron, or
     an exceptional situation with the infrastructure that requires manual inspection.
     Actions for this job may in fact still be running, but Tron cannot reach them.
+
+
+Troubleshooting
+^^^^^^^^^^^^^^^
+**My job doesn't start even though the trigger are emitted?**
+    Check that both jobs are in the same tron master. A "tron master" refers to a
+    cluster; like tron-norcal-devc, tron-nova-prod, etc. Triggers don't work across
+    tron masters! You can emit the event manually using command line or API
+
+**S3 consistency issues**
+    If your downstream job relies on s3 list to process data you may see it triggered
+    before S3 had finished replicating. This was previously masked by log_done
+    continuously polling S3 to determine if upstream finished. See STREAMINT-269 for
+    details.
+
+.. _shortdate:
+**What does shortdate in triggers mean?**
+    There are two concepts of shortdate here.
+
+    shortdate in triggered_by: this shortdate is technically the run_date,
+    indicating when the tron job runs
+    shortdate in command: this shortdate is used by batch jobs to specify which s3
+    dir it is writing to or polling.
