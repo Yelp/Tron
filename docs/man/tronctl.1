@@ -100,6 +100,21 @@ Force stop (SIGKILL) a service
 .TP
 .B kill <action_run_id>
 Force stop (SIGKILL) an action run
+.TP
+.B move <job_name> <new_job_name>
+Rename a job
+.TP
+.B publish <action_run_trigger>
+Pulish a action run trigger. This command can be used to trigger an action run in waiting state.
+e.g. \fBtronctl publish yelp-main.transaction_extract_report.run.shortdate.2019-10-31\fP
+.TP
+.B discard <action_run_trigger>
+Discard existing actionrun trigger.
+e.g. \fBtronctl discard  yelp-main.transaction_extract_report.run.shortdate.2019-10-31\fP
+.TP
+.B version
+Print tron client and server versions
+
 .UNINDENT
 .SH SERVICE COMMANDS
 .INDENT 0.0
