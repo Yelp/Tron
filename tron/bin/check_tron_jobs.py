@@ -72,7 +72,7 @@ def _timestamp_to_shortdate(timestamp, separator='.'):
     )
 
 
-def compute_check_result_for_job_runs(client, job, job_content, url_index):
+def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_stderr=False):
     cluster = client.cluster_name
     kwargs = {}
     if job_content is None:
@@ -138,6 +138,9 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index):
     else:
         prefix = f"UNKNOWN: Job {job_run_id} is in a state that check_tron_jobs doesn't understand"
         status = 3
+        stderr = ""
+
+    if hide_stderr:
         stderr = ""
 
     precious_runs_note = ''
@@ -386,7 +389,7 @@ def compute_check_result_for_job(client, job, url_index):
         .discard('check_every')
     )
     kwargs = kwargs.update(sensu_kwargs)
-
+    hide_stderr = kwargs.get('hide_stderr', False)
     kwargs_list = []
     if job["status"] == "disabled":
         kwargs = kwargs.set(
@@ -416,6 +419,7 @@ def compute_check_result_for_job(client, job, url_index):
                 job_content=job_content.set('runs', runs),
                 client=client,
                 url_index=url_index,
+                hide_stderr=hide_stderr,
             )
             dated_kwargs = kwargs.update(results)
             if date:  # if empty date, leave job name alone
