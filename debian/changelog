@@ -1,3 +1,12 @@
+tron (1.2.4) xenial; urgency=medium
+
+  * 1.2.4 tagged with 'make release'
+    Commit: Merge pull request #723 from Yelp/drmorr/TRON-
+    1329/fix_time_interval_construction  fix time interval construction
+    in check_tron_jobs
+
+ -- root <root@1a1c533ec7a5>  Wed, 06 Nov 2019 21:56:14 +0000
+
 tron (1.2.3) xenial; urgency=medium
 
   * 1.2.3 tagged with 'make release'
