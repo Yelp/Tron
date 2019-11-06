@@ -345,6 +345,7 @@ def sort_runs_by_interval(job_content, interval='day', until=None):
         'minute': '%Y.%m.%d-%H.%M',
         'second': '%Y.%m.%d-%H.%M.%S',
     }
+    fmt = interval_formats[interval]
 
     run_buckets = defaultdict(list)
     if job_content is not None:
@@ -357,8 +358,11 @@ def sort_runs_by_interval(job_content, interval='day', until=None):
         start = datetime.datetime.fromtimestamp(earliest_run_time)
         end = datetime.datetime.fromtimestamp(until)
         step = datetime.timedelta(**{f'{interval}s': 1})
-        while start <= end:
-            run_buckets[start.strftime(interval_formats[interval])] = []
+
+        # We compare the strings _after_ we've converted to the final format to make
+        # sure we don't miss something due to off-by-one/weird DST bugs, etc
+        while start.strftime(fmt) <= end.strftime(fmt):
+            run_buckets[start.strftime(fmt)] = []
             start += step
 
         # Bucket runs by interval
