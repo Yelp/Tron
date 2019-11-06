@@ -150,6 +150,7 @@ Optional Fields
 
 **expected_runtime** (default **24h**)
     A time interval (ex: "2 hours") that specifies the maximum expected duration of each job run.
+    Single units like (20m, 1h, 2d) are accepted, but you can't use mixed units like (1h 20m)
     Monitoring will alert if a job run is still running after this duration.
     Use max_runtime instead if hard limit is needed.
 
