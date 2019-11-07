@@ -98,11 +98,13 @@ class TestJob(TestCase):
             'otherjob',
             'scheduler',
             action_runner=action_runner,
+            run_limit=10,
         )
         self.job.update_from_job(other_job)
         assert_equal(self.job.name, 'otherjob')
         assert_equal(self.job.scheduler, 'scheduler')
         assert_equal(self.job, other_job)
+        assert_equal(self.job.runs.run_limit, 10)
 
     def test_status_disabled(self):
         self.job.enabled = False
@@ -209,13 +211,13 @@ class TestJob(TestCase):
         self.job.notify.assert_called_with(self.job.NOTIFY_RUN_DONE)
 
     def test__eq__(self):
-        other_job = job.Job("jobname", 'scheduler')
+        other_job = job.Job("jobname", 'scheduler', run_collection=MagicMock())
         assert not self.job == other_job
         other_job.update_from_job(self.job)
         assert_equal(self.job, other_job)
 
     def test__ne__(self):
-        other_job = job.Job("jobname", 'scheduler')
+        other_job = job.Job("jobname", 'scheduler', run_collection=MagicMock())
         assert self.job != other_job
         other_job.update_from_job(self.job)
         assert not self.job != other_job

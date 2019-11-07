@@ -57,6 +57,7 @@ class Job(Observable, Observer):
         'monitoring',
         'time_zone',
         'expected_runtime',
+        'run_limit',
     ]
 
     # TODO: use config object
@@ -77,7 +78,8 @@ class Job(Observable, Observer):
         action_runner=None,
         max_runtime=None,
         time_zone=None,
-        expected_runtime=None
+        expected_runtime=None,
+        run_limit=None,
     ):
         super(Job, self).__init__()
         self.name = maybe_decode(name)
@@ -98,6 +100,7 @@ class Job(Observable, Observer):
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(name)
         self.context = command_context.build_context(self, parent_context)
+        self.run_limit = run_limit
         log.info(f'{self} created')
 
     @classmethod
@@ -131,6 +134,7 @@ class Job(Observable, Observer):
             action_runner=action_runner,
             max_runtime=job_config.max_runtime,
             expected_runtime=job_config.expected_runtime,
+            run_limit=job_config.run_limit,
         )
 
     def update_from_job(self, job):
@@ -140,6 +144,10 @@ class Job(Observable, Observer):
         """
         for attr in self.equality_attributes:
             setattr(self, attr, getattr(job, attr))
+
+        # the run_limit is a property on the JobRunCollection, not on the
+        # Job itself so we need to handle that separately
+        self.runs.run_limit = job.run_limit
         log.info(f'{self} reconfigured')
 
     @property

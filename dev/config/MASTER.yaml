@@ -30,6 +30,7 @@ jobs:
     enabled: true
     node: localhost
     schedule: "cron * * * * *"
+    run_limit: 5
     actions:
       zeroth:
         command: env
