@@ -1,3 +1,10 @@
+tron (1.2.5) xenial; urgency=medium
+
+  * 1.2.5 tagged with 'make release'
+    Commit: Merge branch 'u/kawaiwan/bump-task-proc-to-0.1.8'
+
+ -- root <root@308ec6e1aa22>  Tue, 12 Nov 2019 01:01:46 +0000
+
 tron (1.2.4) xenial; urgency=medium
 
   * 1.2.4 tagged with 'make release'
