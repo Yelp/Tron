@@ -338,6 +338,9 @@ class JobRun(Observable, Observer):
 
         return ActionRun.UNKNOWN
 
+    def cancel(self):
+        return self.action_runs.cancel()
+
     def __getattr__(self, name):
         if name.startswith('is_'):
             state_name = name[3:]
