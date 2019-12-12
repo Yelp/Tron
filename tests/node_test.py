@@ -17,8 +17,8 @@ from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron import node
 from tron import ssh
+from tron.actioncommand import ActionCommand
 from tron.config import schema
-from tron.core import actionrun
 from tron.serialize import filehandler
 
 
@@ -164,7 +164,7 @@ class TestNode(TestCase):
     def test_output_logging(self):
         test_node = build_node()
         serializer = mock.create_autospec(filehandler.FileHandleManager)
-        action_cmd = actionrun.ActionCommand("test", "false", serializer)
+        action_cmd = ActionCommand("test", "false", serializer)
 
         test_node.connection = self.TestConnection()
         test_node.run_states = {action_cmd.id: mock.Mock(state=0)}

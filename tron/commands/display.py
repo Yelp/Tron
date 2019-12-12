@@ -8,8 +8,8 @@ import contextlib
 from functools import partial
 from operator import itemgetter
 
-from tron.core import actionrun
 from tron.core import job
+from tron.core.actionrun import base as actionrun
 from tron.utils import maybe_encode
 
 

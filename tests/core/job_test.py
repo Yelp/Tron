@@ -16,7 +16,7 @@ from tron import actioncommand
 from tron import node
 from tron.core import job
 from tron.core import jobrun
-from tron.core.actionrun import ActionRun
+from tron.core.actionrun.base import ActionRun
 from tron.core.job_scheduler import JobScheduler
 
 

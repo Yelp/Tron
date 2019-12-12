@@ -3,7 +3,7 @@ import logging
 from tron import command_context
 from tron import node
 from tron.core import jobrun
-from tron.core.actionrun import ActionRun
+from tron.core.actionrun.base import ActionRun
 from tron.serialize import filehandler
 from tron.utils import maybe_decode
 from tron.utils.observer import Observable

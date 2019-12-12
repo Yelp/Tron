@@ -8,9 +8,9 @@ from testifycompat import setup
 from testifycompat import TestCase
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
-from tron.core.actionrun import ActionRun
-from tron.core.actionrun import MesosActionRun
-from tron.core.actionrun import SSHActionRun
+from tron.core.actionrun.base import ActionRun
+from tron.core.actionrun.mesos import MesosActionRun
+from tron.core.actionrun.ssh import SSHActionRun
 from tron.core.recovery import filter_action_runs_needing_recovery
 from tron.core.recovery import launch_recovery_actionruns_for_job_runs
 from tron.utils import timeutils

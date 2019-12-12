@@ -10,8 +10,8 @@ from tron.commands import display
 from tron.commands.display import DisplayActionRuns
 from tron.commands.display import DisplayJobRuns
 from tron.commands.display import DisplayJobs
-from tron.core import actionrun
 from tron.core import job
+from tron.core.actionrun import base as actionrun
 
 
 class TestDisplayJobRuns(TestCase):

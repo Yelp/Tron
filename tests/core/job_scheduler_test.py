@@ -9,7 +9,7 @@ from tests import testingutils
 from tests.assertions import assert_length
 from tron import actioncommand
 from tron.core import job
-from tron.core.actionrun import ActionRun
+from tron.core.actionrun.base import ActionRun
 from tron.core.job_scheduler import JobScheduler
 from tron.core.job_scheduler import JobSchedulerFactory
 

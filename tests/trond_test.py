@@ -11,7 +11,7 @@ import pytest
 from testifycompat import assert_equal
 from testifycompat import assert_gt
 from tests import sandbox
-from tron.core import actionrun
+from tron.core.actionrun import base as actionrun
 
 BASIC_CONFIG = """
 ssh_options:

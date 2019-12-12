@@ -1,6 +1,4 @@
 import datetime
-import shutil
-import tempfile
 
 import mock
 import pytest
@@ -11,31 +9,16 @@ from tests.assertions import assert_length
 from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron import node
-from tron.actioncommand import SubprocessActionRunnerFactory
-from tron.config.schema import ConfigConstraint
-from tron.config.schema import ConfigParameter
-from tron.config.schema import ConfigVolume
 from tron.config.schema import ExecutorTypes
 from tron.core import actiongraph
 from tron.core import jobrun
-from tron.core.actionrun import ActionCommand
-from tron.core.actionrun import ActionRun
-from tron.core.actionrun import ActionRunCollection
-from tron.core.actionrun import ActionRunFactory
-from tron.core.actionrun import eager_all
-from tron.core.actionrun import INITIAL_RECOVER_DELAY
-from tron.core.actionrun import MAX_RECOVER_TRIES
-from tron.core.actionrun import MesosActionRun
-from tron.core.actionrun import min_filter
-from tron.core.actionrun import SSHActionRun
-from tron.serialize import filehandler
-
-
-@pytest.fixture
-def output_path():
-    output_path = filehandler.OutputPath(tempfile.mkdtemp())
-    yield output_path
-    shutil.rmtree(output_path.base, ignore_errors=True)
+from tron.core.actionrun.base import ActionRun
+from tron.core.actionrun.base import ActionRunCollection
+from tron.core.actionrun.base import ActionRunFactory
+from tron.core.actionrun.base import eager_all
+from tron.core.actionrun.base import min_filter
+from tron.core.actionrun.mesos import MesosActionRun
+from tron.core.actionrun.ssh import SSHActionRun
 
 
 class TestMinFilter:
@@ -293,7 +276,7 @@ class TestActionRun:
         self.action_run.fail()
         assert not self.action_run.start()
 
-    @mock.patch('tron.core.actionrun.log', autospec=True)
+    @mock.patch('tron.core.actionrun.base.log', autospec=True)
     def test_start_invalid_command(self, _log):
         self.action_run.bare_command = "{notfound}"
         self.action_run.machine.transition('ready')
@@ -337,7 +320,7 @@ class TestActionRun:
         assert self.action_run.success()
         assert self.action_run.emit_triggers.call_count == 1
 
-    @mock.patch('tron.core.actionrun.EventBus', autospec=True)
+    @mock.patch('tron.core.actionrun.base.EventBus', autospec=True)
     def test_emit_triggers(self, eventbus):
         self.action_run.context = {'shortdate': 'foo'}
 
@@ -405,7 +388,7 @@ class TestActionRun:
         self.action_run.bare_command = "new command"
         assert self.action_run.command == self.rendered_command
 
-    @mock.patch('tron.core.actionrun.log', autospec=True)
+    @mock.patch('tron.core.actionrun.base.log', autospec=True)
     def test_command_failed_render(self, _log):
         self.action_run.bare_command = "{this_is_missing}"
         assert self.action_run.command == ActionRun.FAILED_RENDER
@@ -575,16 +558,16 @@ class TestActionRunTriggerTimeout:
         assert self.action_run.trigger_timeout_call is None
         timeout_call.cancel.assert_called_with()
 
-    @mock.patch('tron.core.actionrun.EventBus', autospec=True)
-    @mock.patch('tron.core.actionrun.reactor', autospec=True)
+    @mock.patch('tron.core.actionrun.base.EventBus', autospec=True)
+    @mock.patch('tron.core.actionrun.base.reactor', autospec=True)
     def test_setup_subscriptions_no_triggers(self, reactor, eventbus):
         self.action_run.triggered_by = []
         self.action_run.setup_subscriptions()
         assert not reactor.callLater.called
         assert not eventbus.subscribe.called
 
-    @mock.patch('tron.core.actionrun.EventBus', autospec=True)
-    @mock.patch('tron.core.actionrun.reactor', autospec=True)
+    @mock.patch('tron.core.actionrun.base.EventBus', autospec=True)
+    @mock.patch('tron.core.actionrun.base.reactor', autospec=True)
     def test_setup_subscriptions_no_remaining(self, reactor, eventbus):
         self.action_run.triggered_by = ['hello']
         self.action_run.trigger_timeout_timestamp = None
@@ -594,8 +577,8 @@ class TestActionRunTriggerTimeout:
         assert not eventbus.subscribe.called
         assert eventbus.has_event.call_args_list == [mock.call('hello')]
 
-    @mock.patch('tron.core.actionrun.timeutils', autospec=True)
-    @mock.patch('tron.core.actionrun.reactor', autospec=True)
+    @mock.patch('tron.core.actionrun.base.timeutils', autospec=True)
+    @mock.patch('tron.core.actionrun.base.reactor', autospec=True)
     def test_setup_subscriptions_timeout_in_future(self, reactor, timeutils):
         now = datetime.datetime.now()
         timeutils.current_time.return_value = now
@@ -605,8 +588,8 @@ class TestActionRunTriggerTimeout:
             10.0, self.action_run.trigger_timeout_reached
         )
 
-    @mock.patch('tron.core.actionrun.timeutils', autospec=True)
-    @mock.patch('tron.core.actionrun.reactor', autospec=True)
+    @mock.patch('tron.core.actionrun.base.timeutils', autospec=True)
+    @mock.patch('tron.core.actionrun.base.reactor', autospec=True)
     def test_setup_subscriptions_timeout_in_past(self, reactor, timeutils):
         now = datetime.datetime.now()
         timeutils.current_time.return_value = now
@@ -616,7 +599,7 @@ class TestActionRunTriggerTimeout:
             1, self.action_run.trigger_timeout_reached
         )
 
-    @mock.patch('tron.core.actionrun.EventBus', autospec=True)
+    @mock.patch('tron.core.actionrun.base.EventBus', autospec=True)
     def test_trigger_timeout_reached_no_remaining_notifies(self, eventbus):
         self.action_run.notify = MagicMock()
         self.action_run.triggered_by = ['hello']
@@ -624,7 +607,7 @@ class TestActionRunTriggerTimeout:
         self.action_run.trigger_timeout_reached()
         assert self.action_run.notify.called
 
-    @mock.patch('tron.core.actionrun.EventBus', autospec=True)
+    @mock.patch('tron.core.actionrun.base.EventBus', autospec=True)
     def test_trigger_timeout_reached_with_remaining_fails(self, eventbus):
         self.action_run.fail = MagicMock()
         self.action_run.triggered_by = ['hello']
@@ -646,221 +629,6 @@ class TestActionRunTriggerTimeout:
         self.action_run.clear_trigger_timeout = MagicMock()
         self.action_run.trigger_notify()
         assert self.action_run.clear_trigger_timeout.called
-
-
-class TestSSHActionRun:
-    @pytest.fixture(autouse=True)
-    def setup_action_run(self, output_path):
-        self.action_runner = mock.create_autospec(
-            actioncommand.NoActionRunnerFactory,
-        )
-        self.command = "do command {actionname}"
-        self.action_run = SSHActionRun(
-            job_run_id="job_name.5",
-            name="action_name",
-            node=mock.create_autospec(node.Node),
-            bare_command=self.command,
-            output_path=output_path,
-            action_runner=self.action_runner,
-        )
-
-    def test_start_node_error(self):
-        def raise_error(c):
-            raise node.Error("The error")
-
-        self.action_run.node = mock.MagicMock()
-        self.action_run.node.submit_command.side_effect = raise_error
-        self.action_run.machine.transition('ready')
-        assert not self.action_run.start()
-        assert self.action_run.exit_status == -2
-        assert self.action_run.is_failed
-
-    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
-    def test_build_action_command(self, mock_filehandler):
-        self.action_run.watch = mock.MagicMock()
-        serializer = mock_filehandler.OutputStreamSerializer.return_value
-        action_command = self.action_run.build_action_command()
-        assert action_command == self.action_run.action_command
-        assert action_command == self.action_runner.create.return_value
-        self.action_runner.create.assert_called_with(
-            self.action_run.id,
-            self.action_run.command,
-            serializer,
-        )
-        mock_filehandler.OutputStreamSerializer.assert_called_with(
-            self.action_run.output_path,
-        )
-        self.action_run.watch.assert_called_with(action_command)
-
-    def test_handler_running(self):
-        self.action_run.build_action_command()
-        self.action_run.machine.transition('start')
-        assert self.action_run.handler(
-            self.action_run.action_command,
-            ActionCommand.RUNNING,
-        )
-        assert self.action_run.is_running
-
-    def test_handler_failstart(self):
-        self.action_run.build_action_command()
-        assert self.action_run.handler(
-            self.action_run.action_command,
-            ActionCommand.FAILSTART,
-        )
-        assert self.action_run.is_failed
-
-    def test_handler_exiting_fail(self):
-        self.action_run.build_action_command()
-        self.action_run.action_command.exit_status = -1
-        self.action_run.machine.transition('start')
-        assert self.action_run.handler(
-            self.action_run.action_command,
-            ActionCommand.EXITING,
-        )
-        assert self.action_run.is_failed
-        assert self.action_run.exit_status == -1
-
-    def test_handler_exiting_success(self):
-        self.action_run.build_action_command()
-        self.action_run.action_command.exit_status = 0
-        self.action_run.machine.transition('start')
-        self.action_run.machine.transition('started')
-        assert self.action_run.handler(
-            self.action_run.action_command,
-            ActionCommand.EXITING,
-        )
-        assert self.action_run.is_succeeded
-        assert self.action_run.exit_status == 0
-
-    def test_handler_exiting_failunknown(self):
-        self.action_run.action_command = mock.create_autospec(
-            actioncommand.ActionCommand,
-            exit_status=None,
-        )
-        self.action_run.machine.transition('start')
-        self.action_run.machine.transition('started')
-        assert self.action_run.handler(
-            self.action_run.action_command,
-            ActionCommand.EXITING,
-        )
-        assert self.action_run.is_unknown
-        assert self.action_run.exit_status is None
-        assert self.action_run.end_time is not None
-
-    def test_handler_unhandled(self):
-        self.action_run.build_action_command()
-        assert self.action_run.handler(
-            self.action_run.action_command,
-            ActionCommand.PENDING,
-        ) is None
-        assert self.action_run.is_scheduled
-
-    def test_recover_no_action_runner(self):
-        # Default setup has no action runner
-        assert not self.action_run.recover()
-
-
-class TestSSHActionRunRecover:
-    @pytest.fixture(autouse=True)
-    def setup_action_run(self, output_path):
-        self.action_runner = SubprocessActionRunnerFactory(
-            status_path='/tmp/foo',
-            exec_path='/bin/foo',
-        )
-        self.command = "do command {actionname}"
-        self.action_run = SSHActionRun(
-            job_run_id="job_name.5",
-            name="action_name",
-            node=mock.create_autospec(node.Node),
-            bare_command=self.command,
-            output_path=output_path,
-            action_runner=self.action_runner,
-        )
-
-    def test_recover_incorrect_state(self):
-        # Should return falsy if not UNKNOWN.
-        self.action_run.machine.state = ActionRun.FAILED
-        assert not self.action_run.recover()
-
-    def test_recover_action_runner(self):
-        self.action_run.end_time = 1000
-        self.action_run.exit_status = 0
-        self.action_run.machine.state = ActionRun.UNKNOWN
-        assert self.action_run.recover()
-        assert self.action_run.machine.state == ActionRun.RUNNING
-        assert self.action_run.end_time is None
-        assert self.action_run.exit_status is None
-        self.action_run.node.submit_command.assert_called_once()
-
-        # Check recovery command
-        submit_args = self.action_run.node.submit_command.call_args[0]
-        assert len(submit_args) == 1
-        recovery_command = submit_args[0]
-        assert recovery_command.command == '/bin/foo/recover_batch.py /tmp/foo/job_name.5.action_name/status'
-        assert recovery_command.start_time is not None  # already started
-
-    @mock.patch('tron.core.actionrun.reactor', autospec=True)
-    def test_handler_exiting_failunknown(self, mock_reactor):
-        self.action_run.action_command = mock.create_autospec(
-            actioncommand.ActionCommand,
-            exit_status=None,
-        )
-        self.action_run.machine.transition('start')
-        self.action_run.machine.transition('started')
-        delay_deferred = self.action_run.handler(
-            self.action_run.action_command,
-            ActionCommand.EXITING,
-        )
-        assert delay_deferred == mock_reactor.callLater.return_value
-        assert self.action_run.is_running
-        assert self.action_run.exit_status is None
-        assert self.action_run.end_time is None
-
-        call_args = mock_reactor.callLater.call_args[0]
-        assert call_args[0] == INITIAL_RECOVER_DELAY
-        assert call_args[1] == self.action_run.submit_recovery_command
-
-        # Check recovery run
-        recovery_run = call_args[2]
-        assert 'recovery' in recovery_run.name
-        assert isinstance(recovery_run, SSHActionRun)
-        # Recovery run should not be recovering itself, parent run handles its unknown status
-        assert recovery_run.recover() is None
-
-        # Check command
-        recovery_command = call_args[3]
-        assert recovery_command.command == '/bin/foo/recover_batch.py /tmp/foo/job_name.5.action_name/status'
-        assert recovery_command.start_time is not None  # already started
-
-    @mock.patch('tron.core.actionrun.SSHActionRun.do_recover', autospec=True)
-    @mock.patch('tron.core.actionrun.reactor', autospec=True)
-    def test_handler_exiting_failunknown_max_retries(self, mock_reactor, mock_do_recover):
-        self.action_run.action_command = mock.create_autospec(
-            actioncommand.ActionCommand,
-            exit_status=None,
-        )
-        self.action_run.machine.transition('start')
-        self.action_run.machine.transition('started')
-
-        def exit_unknown(*args, **kwargs):
-            self.action_run.handler(
-                self.action_run.action_command,
-                ActionCommand.EXITING,
-            )
-        # Each time do_recover is called, end up exiting unknown again
-        mock_do_recover.side_effect = exit_unknown
-
-        # Start the cycle
-        exit_unknown()
-
-        assert mock_do_recover.call_count == MAX_RECOVER_TRIES
-        last_call = mock_do_recover.call_args
-        expected_delay = INITIAL_RECOVER_DELAY * (3 ** (MAX_RECOVER_TRIES - 1))
-        assert last_call == mock.call(self.action_run, delay=expected_delay)
-
-        assert self.action_run.is_unknown
-        assert self.action_run.exit_status is None
-        assert self.action_run.end_time is not None
 
 
 class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
@@ -948,7 +716,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         )
         assert action_run.node == self.run_node
 
-    @mock.patch('tron.core.actionrun.node.NodePoolRepository', autospec=True)
+    @mock.patch('tron.core.actionrun.base.node.NodePoolRepository', autospec=True)
     def test_from_state_with_node_exists(self, mock_store):
         ActionRun.from_state(
             self.state_data,
@@ -1254,240 +1022,3 @@ class TestActionRunCollectionIsRunBlocked:
         self.run_map['second_name'].triggered_by = ['trigger']
         assert not self.collection._is_run_blocked(self.run_map['second_name'], in_job_only=True)
         assert self.collection._is_run_blocked(self.run_map['second_name'], in_job_only=False)
-
-
-class TestMesosActionRun:
-    @pytest.fixture(autouse=True)
-    def setup_action_run(self):
-        self.output_path = mock.MagicMock()
-        self.command = "do the command"
-        self.extra_volumes = [ConfigVolume('/mnt/foo', '/mnt/foo', 'RO')]
-        self.constraints = [ConfigConstraint('an attr', 'an op', 'a val')]
-        self.docker_parameters = [ConfigParameter('init', 'true')]
-        self.other_task_kwargs = {
-            'cpus': 1,
-            'mem': 50,
-            'disk': 42,
-            'docker_image': 'container:v2',
-            'env': {
-                'TESTING': 'true',
-                'TRON_JOB_NAMESPACE': 'mynamespace',
-                'TRON_JOB_NAME': 'myjob',
-                'TRON_RUN_NUM': '42',
-                'TRON_ACTION': 'action_name',
-            },
-        }
-        self.action_run = MesosActionRun(
-            job_run_id="mynamespace.myjob.42",
-            name="action_name",
-            node=mock.create_autospec(node.Node),
-            rendered_command=self.command,
-            output_path=self.output_path,
-            executor=ExecutorTypes.mesos.value,
-            extra_volumes=self.extra_volumes,
-            constraints=self.constraints,
-            docker_parameters=self.docker_parameters,
-            **self.other_task_kwargs
-        )
-
-    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_submit_command(self, mock_cluster_repo, mock_filehandler):
-        serializer = mock_filehandler.OutputStreamSerializer.return_value
-        # submit_command should reset the task_id
-        self.action_run.mesos_task_id = 'last_attempt'
-        with mock.patch.object(
-            self.action_run,
-            'watch',
-            autospec=True,
-        ) as mock_watch:
-            self.action_run.submit_command()
-
-            mock_get_cluster = mock_cluster_repo.get_cluster
-            mock_get_cluster.assert_called_once_with()
-
-            mock_get_cluster.return_value.create_task.assert_called_once_with(
-                action_run_id=self.action_run.id,
-                command=self.command,
-                serializer=serializer,
-                task_id=None,
-                extra_volumes=[e._asdict() for e in self.extra_volumes],
-                constraints=[['an attr', 'an op', 'a val']],
-                docker_parameters=[{'key': 'init', 'value': 'true'}],
-                **self.other_task_kwargs
-            )
-            task = mock_get_cluster.return_value.create_task.return_value
-            mock_get_cluster.return_value.submit.assert_called_once_with(task)
-            mock_watch.assert_called_once_with(task)
-            assert self.action_run.mesos_task_id == task.get_mesos_id.return_value
-
-        mock_filehandler.OutputStreamSerializer.assert_called_with(
-            self.action_run.output_path,
-        )
-
-    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_submit_command_task_none(
-        self, mock_cluster_repo, mock_filehandler
-    ):
-        # Task is None if Mesos is disabled
-        mock_get_cluster = mock_cluster_repo.get_cluster
-        mock_get_cluster.return_value.create_task.return_value = None
-        self.action_run.submit_command()
-
-        mock_get_cluster.assert_called_once_with()
-        assert mock_get_cluster.return_value.submit.call_count == 0
-        assert self.action_run.is_failed
-
-    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_recover(self, mock_cluster_repo, mock_filehandler):
-        self.action_run.machine.state = ActionRun.UNKNOWN
-        self.action_run.mesos_task_id = 'my_mesos_id'
-        serializer = mock_filehandler.OutputStreamSerializer.return_value
-        with mock.patch.object(
-            self.action_run,
-            'watch',
-            autospec=True,
-        ) as mock_watch:
-            assert self.action_run.recover()
-
-            mock_get_cluster = mock_cluster_repo.get_cluster
-            mock_get_cluster.assert_called_once_with()
-            mock_get_cluster.return_value.create_task.assert_called_once_with(
-                action_run_id=self.action_run.id,
-                command=self.command,
-                serializer=serializer,
-                task_id='my_mesos_id',
-                extra_volumes=[e._asdict() for e in self.extra_volumes],
-                constraints=[['an attr', 'an op', 'a val']],
-                docker_parameters=[{'key': 'init', 'value': 'true'}],
-                **self.other_task_kwargs
-            ), mock_get_cluster.return_value.create_task.calls
-            task = mock_get_cluster.return_value.create_task.return_value
-            mock_get_cluster.return_value.recover.assert_called_once_with(task)
-            mock_watch.assert_called_once_with(task)
-
-        assert self.action_run.is_running
-        assert self.action_run.end_time is None
-        mock_filehandler.OutputStreamSerializer.assert_called_with(
-            self.action_run.output_path,
-        )
-
-    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_recover_done_no_change(self, mock_cluster_repo, mock_filehandler):
-        self.action_run.machine.state = ActionRun.SUCCEEDED
-        self.action_run.mesos_task_id = 'my_mesos_id'
-
-        assert not self.action_run.recover()
-        assert mock_cluster_repo.get_cluster.call_count == 0
-        assert self.action_run.is_succeeded
-
-    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_recover_no_mesos_task_id(
-        self, mock_cluster_repo, mock_filehandler
-    ):
-        self.action_run.machine.state = ActionRun.UNKNOWN
-        self.action_run.mesos_task_id = None
-
-        assert not self.action_run.recover()
-        assert mock_cluster_repo.get_cluster.call_count == 0
-        assert self.action_run.is_unknown
-        assert self.action_run.end_time is not None
-
-    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_recover_task_none(self, mock_cluster_repo, mock_filehandler):
-        self.action_run.machine.state = ActionRun.UNKNOWN
-        self.action_run.mesos_task_id = 'my_mesos_id'
-        # Task is None if Mesos is disabled
-        mock_get_cluster = mock_cluster_repo.get_cluster
-        mock_get_cluster.return_value.create_task.return_value = None
-        assert not self.action_run.recover()
-
-        mock_get_cluster.assert_called_once_with()
-        assert self.action_run.is_unknown
-        assert mock_get_cluster.return_value.recover.call_count == 0
-        assert self.action_run.end_time is not None
-
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_kill_task(self, mock_cluster_repo):
-        mock_get_cluster = mock_cluster_repo.get_cluster
-        self.action_run.mesos_task_id = 'fake_task_id'
-        self.action_run.machine.state = ActionRun.RUNNING
-
-        self.action_run.kill()
-        mock_get_cluster.return_value.kill.assert_called_once_with(
-            self.action_run.mesos_task_id
-        )
-
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_kill_task_no_task_id(self, mock_cluster_repo):
-        self.action_run.machine.state = ActionRun.RUNNING
-        error_message = self.action_run.kill()
-        assert error_message == "Error: Can't find task id for the action."
-
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_stop_task(self, mock_cluster_repo):
-        mock_get_cluster = mock_cluster_repo.get_cluster
-        self.action_run.mesos_task_id = 'fake_task_id'
-        self.action_run.machine.state = ActionRun.RUNNING
-
-        self.action_run.stop()
-        mock_get_cluster.return_value.kill.assert_called_once_with(
-            self.action_run.mesos_task_id
-        )
-
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_stop_task_no_task_id(self, mock_cluster_repo):
-        self.action_run.machine.state = ActionRun.RUNNING
-        error_message = self.action_run.stop()
-        assert error_message == "Error: Can't find task id for the action."
-
-    def test_handler_exiting_unknown(self):
-        self.action_run.action_command = mock.create_autospec(
-            actioncommand.ActionCommand,
-            exit_status=None,
-        )
-        self.action_run.machine.transition('start')
-        self.action_run.machine.transition('started')
-        assert self.action_run.handler(
-            self.action_run.action_command,
-            ActionCommand.EXITING,
-        )
-        assert self.action_run.is_unknown
-        assert self.action_run.exit_status is None
-        assert self.action_run.end_time is not None
-
-    def test_handler_exiting_unknown_retry(self):
-        self.action_run.action_command = mock.create_autospec(
-            actioncommand.ActionCommand,
-            exit_status=None,
-        )
-        self.action_run.retries_remaining = 1
-        self.action_run.exit_statuses = []
-        self.action_run.start = mock.Mock()
-
-        self.action_run.machine.transition('start')
-        self.action_run.machine.transition('started')
-        assert self.action_run.handler(
-            self.action_run.action_command,
-            ActionCommand.EXITING,
-        )
-        assert self.action_run.retries_remaining == 0
-        assert not self.action_run.is_unknown
-        assert self.action_run.start.call_count == 1
-
-    def test_handler_exiting_failstart_failed(self):
-        self.action_run.action_command = mock.create_autospec(
-            actioncommand.ActionCommand,
-            exit_status=1,
-        )
-        self.action_run.machine.transition('start')
-        assert self.action_run.handler(
-            self.action_run.action_command,
-            ActionCommand.FAILSTART,
-        )
-        assert self.action_run.is_failed

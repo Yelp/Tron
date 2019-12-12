@@ -1,5 +1,5 @@
 """
- tron.core.actionrun
+ tron.core.actionrun.base
 """
 import datetime
 import logging
@@ -9,26 +9,20 @@ from twisted.internet import reactor
 
 from tron import command_context
 from tron import node
-from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
-from tron.bin.action_runner import build_environment
 from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
 from tron.eventbus import EventBus
-from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
 from tron.utils import maybe_decode
 from tron.utils import proxy
 from tron.utils import timeutils
 from tron.utils.observer import Observable
-from tron.utils.observer import Observer
 from tron.utils.state import Machine
 
 log = logging.getLogger(__name__)
-MAX_RECOVER_TRIES = 5
-INITIAL_RECOVER_DELAY = 3
 
 
 class ActionRunFactory(object):
@@ -111,6 +105,9 @@ class ActionRunFactory(object):
             'on_upstream_rerun': action.on_upstream_rerun,
             'trigger_timeout_timestamp': trigger_timeout.timestamp(),
         }
+
+        from tron.core.actionrun.mesos import MesosActionRun
+        from tron.core.actionrun.ssh import SSHActionRun
         if action.executor == ExecutorTypes.mesos.value:
             return MesosActionRun(**args)
         return SSHActionRun(**args)
@@ -126,6 +123,8 @@ class ActionRunFactory(object):
             'cleanup': cleanup,
         }
 
+        from tron.core.actionrun.mesos import MesosActionRun
+        from tron.core.actionrun.ssh import SSHActionRun
         if state_data.get('executor') == ExecutorTypes.mesos.value:
             return MesosActionRun.from_state(**args)
         return SSHActionRun.from_state(**args)
@@ -704,314 +703,6 @@ class ActionRun(Observable):
         if self.machine.transition(target):
             self.notify(self.state)
             return True
-
-
-class SSHActionRun(ActionRun, Observer):
-    """An ActionRun that executes the command on a node through SSH.
-    """
-
-    def __init__(self, *args, **kwargs):
-        super(SSHActionRun, self).__init__(*args, **kwargs)
-        self.recover_tries = 0
-
-    def submit_command(self):
-        action_command = self.build_action_command()
-        try:
-            self.node.submit_command(action_command)
-        except node.Error as e:
-            log.warning("Failed to start %s: %r", self.id, e)
-            self._exit_unsuccessful(self.EXIT_NODE_ERROR)
-            return
-        return True
-
-    def stop(self):
-        if self.retries_remaining is not None:
-            self.retries_remaining = -1
-
-        if self.cancel_delay():
-            return
-
-        stop_command = self.action_runner.build_stop_action_command(
-            self.id,
-            'terminate',
-        )
-        self.node.submit_command(stop_command)
-
-    def kill(self, final=True):
-        if self.retries_remaining is not None and final:
-            self.retries_remaining = -1
-
-        if self.cancel_delay():
-            return
-
-        kill_command = self.action_runner.build_stop_action_command(
-            self.id,
-            'kill',
-        )
-        self.node.submit_command(kill_command)
-
-    def build_action_command(self):
-        """Create a new ActionCommand instance to send to the node."""
-        serializer = filehandler.OutputStreamSerializer(self.output_path)
-        self.action_command = self.action_runner.create(
-            id=self.id,
-            command=self.command,
-            serializer=serializer,
-        )
-        self.watch(self.action_command)
-        return self.action_command
-
-    def handle_unknown(self):
-        if isinstance(self.action_runner, NoActionRunnerFactory):
-            log.info(
-                f"Unable to recover action_run {self.id}: "
-                "action_run has no action_runner"
-            )
-            return self.fail_unknown()
-
-        if self.recover_tries >= MAX_RECOVER_TRIES:
-            log.info(f'Reached maximum tries {MAX_RECOVER_TRIES} for recovering {self.id}')
-            return self.fail_unknown()
-
-        desired_delay = INITIAL_RECOVER_DELAY * (3 ** self.recover_tries)
-        self.recover_tries += 1
-        log.info(f'Starting try #{self.recover_tries} to recover {self.id}, waiting {desired_delay}')
-        return self.do_recover(delay=desired_delay)
-
-    def recover(self):
-        log.info(f"Creating recovery run for actionrun {self.id}")
-        if isinstance(self.action_runner, NoActionRunnerFactory):
-            log.info(
-                f"Unable to recover action_run {self.id}: "
-                "action_run has no action_runner"
-            )
-            return None
-
-        if not self.machine.check('running'):
-            log.error(
-                f'Unable to transition action run {self.id} '
-                f'from {self.machine.state} to running. '
-                f'Only UNKNOWN actions can be recovered. '
-            )
-            return None
-
-        return self.do_recover(delay=0)
-
-    def do_recover(self, delay):
-        recovery_command = f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"
-
-        # Might not need a separate action run
-        # Using for the separate name
-        recovery_run = SSHActionRun(
-            job_run_id=self.job_run_id,
-            name=f"recovery-{self.id}",
-            node=self.node,
-            bare_command=recovery_command,
-            output_path=self.output_path,
-        )
-        recovery_action_command = recovery_run.build_action_command()
-        recovery_action_command.write_stdout(
-            f"Recovering action run {self.id}",
-        )
-        # Put action command in "running" state so if it fails to connect
-        # and exits with no exit code, the real action run will not retry.
-        recovery_action_command.started()
-
-        # this line is where the magic happens.
-        # the action run watches another actioncommand,
-        # and updates its internal state according to its result.
-        self.watch(recovery_action_command)
-
-        self.exit_status = None
-        self.end_time = None
-        self.machine.transition('running')
-
-        # Still want the action to appear running while we're waiting to submit the recovery
-        # So we do the delay at the end, after the transition to 'running' above
-        if not delay:
-            return self.submit_recovery_command(recovery_run, recovery_action_command)
-        else:
-            return reactor.callLater(delay, self.submit_recovery_command, recovery_run, recovery_action_command)
-
-    def submit_recovery_command(self, recovery_run, recovery_action_command):
-        log.info(
-            f"Submitting recovery job with command {recovery_action_command.command} "
-            f"to node {recovery_run.node}"
-        )
-        try:
-            deferred = recovery_run.node.submit_command(recovery_action_command)
-            deferred.addCallback(
-                lambda x: log.info(f"Completed recovery run {recovery_run.id}")
-            )
-            return True
-        except node.Error as e:
-            log.warning(f"Failed to submit recovery for {self.id}: {e!r}")
-
-    def handle_action_command_state_change(self, action_command, event):
-        """Observe ActionCommand state changes."""
-        log.debug(
-            f"{self} action_command state change: {action_command.state}"
-        )
-
-        if event == ActionCommand.RUNNING:
-            return self.transition_and_notify('started')
-
-        if event == ActionCommand.FAILSTART:
-            return self._exit_unsuccessful(self.EXIT_NODE_ERROR)
-
-        if event == ActionCommand.EXITING:
-            if action_command.exit_status is None:
-                return self.handle_unknown()
-
-            if not action_command.exit_status:
-                return self.success()
-
-            return self._exit_unsuccessful(action_command.exit_status)
-
-    handler = handle_action_command_state_change
-
-
-class MesosActionRun(ActionRun, Observer):
-    """An ActionRun that executes the command on a Mesos cluster.
-    """
-    def _create_mesos_task(self, mesos_cluster, serializer, task_id=None):
-        return mesos_cluster.create_task(
-            action_run_id=self.id,
-            command=self.command,
-            cpus=self.cpus,
-            mem=self.mem,
-            disk=1024.0 if self.disk is None else self.disk,
-            constraints=[[c.attribute, c.operator, c.value]
-                         for c in self.constraints],
-            docker_image=self.docker_image,
-            docker_parameters=[e._asdict() for e in self.docker_parameters],
-            env=build_environment(original_env=self.env, run_id=self.id),
-            extra_volumes=[e._asdict() for e in self.extra_volumes],
-            serializer=serializer,
-            task_id=task_id,
-        )
-
-    def submit_command(self):
-        serializer = filehandler.OutputStreamSerializer(self.output_path)
-        mesos_cluster = MesosClusterRepository.get_cluster()
-        task = self._create_mesos_task(mesos_cluster, serializer)
-        if not task:  # Mesos is disabled
-            self.fail(self.EXIT_MESOS_DISABLED)
-            return
-
-        self.mesos_task_id = task.get_mesos_id()
-
-        # Watch before submitting, in case submit causes a transition
-        self.watch(task)
-        mesos_cluster.submit(task)
-        return task
-
-    def recover(self):
-        if not self.machine.check('running'):
-            log.error(
-                f'{self} unable to transition from {self.machine.state}'
-                'to running for recovery'
-            )
-            return
-
-        if self.mesos_task_id is None:
-            log.error(f'{self} no task ID, cannot recover')
-            self.fail_unknown()
-            return
-
-        log.info(f'{self} recovering Mesos run')
-
-        serializer = filehandler.OutputStreamSerializer(self.output_path)
-        mesos_cluster = MesosClusterRepository.get_cluster()
-        task = self._create_mesos_task(
-            mesos_cluster,
-            serializer,
-            self.mesos_task_id,
-        )
-        if not task:
-            log.warning(
-                f'{self} cannot recover, Mesos is disabled or '
-                f'invalid task ID {self.mesos_task_id!r}'
-            )
-            self.fail_unknown()
-            return
-
-        self.watch(task)
-        mesos_cluster.recover(task)
-
-        # Reset status
-        self.exit_status = None
-        self.end_time = None
-        self.transition_and_notify('running')
-
-        return task
-
-    def stop(self):
-        if self.retries_remaining is not None:
-            self.retries_remaining = -1
-
-        if self.cancel_delay():
-            return
-
-        return self._kill_mesos_task()
-
-    def kill(self, final=True):
-        if self.retries_remaining is not None and final:
-            self.retries_remaining = -1
-
-        if self.cancel_delay():
-            return
-
-        return self._kill_mesos_task()
-
-    def _kill_mesos_task(self):
-        msgs = []
-        if not self.is_active:
-            msgs.append(
-                f'Action is {self.state}, not running. Continuing anyway.'
-            )
-
-        mesos_cluster = MesosClusterRepository.get_cluster()
-        if self.mesos_task_id is None:
-            msgs.append("Error: Can't find task id for the action.")
-        else:
-            msgs.append(f"Sending kill for {self.mesos_task_id}...")
-            succeeded = mesos_cluster.kill(self.mesos_task_id)
-            if succeeded:
-                msgs.append(
-                    "Sent! It can take up to docker_stop_timeout (current setting is 2 mins) to stop."
-                )
-            else:
-                msgs.append(
-                    "Error while sending kill request. Please try again."
-                )
-
-        return '\n'.join(msgs)
-
-    def handle_action_command_state_change(self, action_command, event):
-        """Observe ActionCommand state changes."""
-        log.debug(
-            f"{self} action_command state change: {action_command.state}"
-        )
-
-        if event == ActionCommand.RUNNING:
-            return self.transition_and_notify('started')
-
-        if event == ActionCommand.FAILSTART:
-            return self._exit_unsuccessful(action_command.exit_status)
-
-        if event == ActionCommand.EXITING:
-            if action_command.exit_status is None:
-                # This is different from SSHActionRun
-                # Allows retries to happen, if configured
-                return self._exit_unsuccessful(None)
-
-            if not action_command.exit_status:
-                return self.success()
-
-            return self._exit_unsuccessful(action_command.exit_status)
-
-    handler = handle_action_command_state_change
 
 
 def min_filter(seq):

@@ -21,8 +21,8 @@ from tron.api.adapter import JobRunAdapter
 from tron.api.adapter import ReprAdapter
 from tron.api.adapter import RunAdapter
 from tron.core import actiongraph
-from tron.core import actionrun
 from tron.core import job
+from tron.core.actionrun import base as actionrun
 
 
 class MockAdapter(ReprAdapter):

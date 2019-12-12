@@ -9,8 +9,8 @@ from tron.api.controller import JobCollectionController
 from tron.api.controller import UnknownCommandError
 from tron.config import ConfigError
 from tron.config import manager
-from tron.core import actionrun
 from tron.core import jobrun
+from tron.core.actionrun import base as actionrun
 from tron.core.job_collection import JobCollection
 from tron.core.job_scheduler import JobScheduler
 

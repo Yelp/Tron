@@ -13,9 +13,9 @@ from testifycompat import TestCase
 from tron import command_context
 from tron import node
 from tron import scheduler
-from tron.core import actionrun
 from tron.core import job
 from tron.core import jobrun
+from tron.core.actionrun import base as actionrun
 from tron.core.jobrun import JobRunCollection
 
 

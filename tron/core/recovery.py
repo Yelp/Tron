@@ -3,9 +3,9 @@ from __future__ import unicode_literals
 
 import logging
 
-from tron.core.actionrun import ActionRun
-from tron.core.actionrun import MesosActionRun
-from tron.core.actionrun import SSHActionRun
+from tron.core.actionrun.base import ActionRun
+from tron.core.actionrun.mesos import MesosActionRun
+from tron.core.actionrun.ssh import SSHActionRun
 
 log = logging.getLogger(__name__)
 

@@ -17,9 +17,9 @@ from tron import actioncommand
 from tron import node
 from tron.core import action
 from tron.core import actiongraph
-from tron.core import actionrun
 from tron.core import job
 from tron.core import jobrun
+from tron.core.actionrun import base as actionrun
 from tron.serialize import filehandler
 
 
@@ -686,7 +686,7 @@ class TestJobRunStateTransitions:
     @pytest.fixture
     def mock_event_bus(self):
         with mock.patch(
-            'tron.core.actionrun.EventBus',
+            'tron.core.actionrun.base.EventBus',
             autospec=True,
         ) as mock_event_bus:
             mock_event_bus.has_event.return_value = True
