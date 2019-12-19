@@ -196,7 +196,7 @@ class MesosTask(ActionCommand):
             )
         elif mesos_type == 'running':
             agent = event.raw.get('agent_id', {}).get('value')
-            self.log.info(f'Running on agent {agent}')
+            self.log.info(f'Remote job started running on agent {agent}:')
         elif mesos_type == 'finished':
             pass
         elif mesos_type in self.ERROR_STATES:
@@ -209,7 +209,7 @@ class MesosTask(ActionCommand):
             message = event.raw.get('message', '')
             reason = event.raw.get('reason', '')
             if message or reason:
-                self.log.info(f'More info: {reason}: {message}')
+                self.log.info(f'{reason}: {message}')
 
     def handle_event(self, event):
         event_id = getattr(event, 'task_id', None)
@@ -240,7 +240,7 @@ class MesosTask(ActionCommand):
         elif mesos_type == 'finished':
             self.exited(0)
         elif mesos_type == 'lost':
-            self.log.warning("Mesos does not know anything about this task, it is LOST")
+            self.log.warning("\n\nMesos does not know anything about this task, it is LOST")
             self.log.warning("This can happen for any number of reasons, and Tron can't know if the task ran or not at all!")
             self.log.warning("If you want Tron to RUN it (again) anyway, retry it with:")
             self.log.warning(f"    tronctl retry {self.id}")
@@ -248,6 +248,7 @@ class MesosTask(ActionCommand):
             self.log.warning(f"    tronctl skip {self.id}")
             self.log.warning("If you want Tron to NOT run it and consider it as a failure, fail it with:")
             self.log.warning(f"    tronctl fail {self.id}")
+            self.log.warning("\n\n")
             self.exited(None)
         elif mesos_type in self.ERROR_STATES:
             self.exited(1)
@@ -259,15 +260,15 @@ class MesosTask(ActionCommand):
             )
 
         if event.terminal:
-            self.log.info('This Mesos event was terminal, ending this action')
             self.report_resources(decrement=True)
-
             exit_code = int(not getattr(event, 'success', False))
             # Returns False if we've already exited normally above
             unexpected_error = self.exited(exit_code)
             if unexpected_error:
-                self.log.error('Unexpected failure, exiting')
-
+                self.log.error(f'Unexpected failure, exiting with exit code: {exit_code}')
+            else:
+                self.log.info(f'Exiting normally with exit code: {exit_code}')
+            self.log.info("################################################\n")
             self.done()
 
 
