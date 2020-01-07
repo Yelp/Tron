@@ -180,10 +180,14 @@ class TestConfigManager(TestCase):
         assert_equal(mock_remove.call_count, 0)
 
     @mock.patch(
+        'tron.config.manager.JobGraph',
+        autospec=True,
+    )
+    @mock.patch(
         'tron.config.manager.config_parse.ConfigContainer',
         autospec=True,
     )
-    def test_validate_with_fragment(self, mock_config_container):
+    def test_validate_with_fragment(self, mock_config_container, mock_job_graph):
         name = 'the_name'
         name_mapping = {'something': 'content', name: 'old_content'}
         autospec_method(self.manager.get_config_name_mapping)
@@ -192,6 +196,10 @@ class TestConfigManager(TestCase):
         expected_mapping = dict(name_mapping)
         expected_mapping[name] = self.content
         mock_config_container.create.assert_called_with(expected_mapping)
+        mock_job_graph.assert_called_once_with(
+            mock_config_container.create.return_value,
+            should_validate_missing_dependency=True,
+        )
 
     @mock.patch('tron.config.manager.read', autospec=True)
     @mock.patch(

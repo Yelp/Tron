@@ -6,6 +6,7 @@ from tron import yaml
 from tron.config import config_parse
 from tron.config import ConfigError
 from tron.config import schema
+from tron.core.jobgraph import JobGraph
 from tron.utils import maybe_decode
 from tron.utils import maybe_encode
 
@@ -128,7 +129,13 @@ class ConfigManager(object):
     def validate_with_fragment(self, name, content):
         name_mapping = self.get_config_name_mapping()
         name_mapping[name] = content
-        config_parse.ConfigContainer.create(name_mapping)
+        try:
+            JobGraph(
+                config_parse.ConfigContainer.create(name_mapping),
+                should_validate_missing_dependency=True,
+            )
+        except ValueError as e:
+            raise ConfigError(str(e))
 
     def get_config_name_mapping(self):
         seq = self.manifest.get_file_mapping().items()
