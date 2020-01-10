@@ -13,7 +13,7 @@ class JobGraph(object):
     cross-job dependencies (aka triggers)
     """
 
-    def __init__(self, config_container):
+    def __init__(self, config_container, should_validate_missing_dependency=False):
         """ Build an adjacency list and a reverse adjacency list for the graph,
         and store all the actions as well as which actions belong to which job
         """
@@ -22,20 +22,19 @@ class JobGraph(object):
         self._adj_list = defaultdict(list)
         self._rev_adj_list = defaultdict(list)
 
+        all_actions = set()
         for job_name, job_config in config_container.get_jobs().items():
             for action_name, action_config in job_config.actions.items():
                 full_name = self._save_action(action_name, job_name, action_config)
+                all_actions.add(full_name)
 
-                if action_config.requires:
-                    self._rev_adj_list[full_name] += [
-                        AdjListEntry(f'{job_name}.{required_action}', False)
-                        for required_action in action_config.requires
-                    ]
-                if action_config.triggered_by:
-                    self._rev_adj_list[full_name] += [
-                        AdjListEntry('.'.join(trigger.split('.')[:3]), True)
-                        for trigger in action_config.triggered_by
-                    ]
+                for required_action in action_config.requires or []:
+                    required_action_name = f'{job_name}.{required_action}'
+                    self._rev_adj_list[full_name].append(AdjListEntry(required_action_name, False))
+
+                for trigger in action_config.triggered_by or []:
+                    trigger_action_name = '.'.join(trigger.split('.')[:3])
+                    self._rev_adj_list[full_name].append(AdjListEntry(trigger_action_name, True))
 
                 for parent_action, is_trigger in self._rev_adj_list[full_name]:
                     self._adj_list[parent_action].append(AdjListEntry(full_name, is_trigger))
@@ -43,6 +42,35 @@ class JobGraph(object):
             cleanup_action_config = job_config.cleanup_action
             if cleanup_action_config:
                 self._save_action(cleanup_action_config.name, job_name, cleanup_action_config)
+
+        if should_validate_missing_dependency:
+            missing_dependent_actions = defaultdict(list)
+            for action_name in self._rev_adj_list:
+                for dependent_action_entry in self._rev_adj_list[action_name]:
+                    if dependent_action_entry.action_name not in all_actions:
+                        missing_dependent_actions[dependent_action_entry.action_name].append(action_name)
+
+            error_messages = []
+            for action_name, child_action_names in missing_dependent_actions.items():
+                error_messages.append(
+                    'Action {0} is dependency of actions:\n{1}'.format(
+                        action_name,
+                        '\n'.join(
+                            ['  - {}'.format(child_action_name) for child_action_name in child_action_names]
+                        )
+                    )
+                )
+
+            if error_messages:
+                raise ValueError(
+                    (
+                        'The following actions are dependencies of other actions but missing:\n'
+                        '{0}\n'
+                        'Please check if you have deleted/renamed any of them or their containing jobs.'
+                    ).format(
+                        '\n'.join(error_messages),
+                    )
+                )
 
     def get_action_graph_for_job(self, job_name):
         """ Traverse the JobGraph for a specific job to construct an ActionGraph for it """
