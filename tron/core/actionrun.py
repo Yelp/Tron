@@ -776,7 +776,11 @@ class SSHActionRun(ActionRun, Observer):
         desired_delay = INITIAL_RECOVER_DELAY * (3 ** self.recover_tries)
         self.recover_tries += 1
         log.info(f'Starting try #{self.recover_tries} to recover {self.id}, waiting {desired_delay}')
-        return self.do_recover(delay=desired_delay)
+        try:
+            return self.do_recover(delay=desired_delay)
+        except Exception as e:
+            log.error(f'Could not recover {self.id}: {str(e)}')
+            return None
 
     def recover(self):
         log.info(f"Creating recovery run for actionrun {self.id}")
@@ -795,7 +799,11 @@ class SSHActionRun(ActionRun, Observer):
             )
             return None
 
-        return self.do_recover(delay=0)
+        try:
+            return self.do_recover(delay=0)
+        except Exception as e:
+            log.error(f'Could not recover {self.id}: {str(e)}')
+            return None
 
     def do_recover(self, delay):
         recovery_command = f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"

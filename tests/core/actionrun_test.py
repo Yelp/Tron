@@ -782,6 +782,11 @@ class TestSSHActionRunRecover:
         self.action_run.machine.state = ActionRun.FAILED
         assert not self.action_run.recover()
 
+    def test_recover_failed(self):
+        self.action_run.do_recover = mock.Mock(side_effect=Exception('recovery failed'))
+        assert not self.action_run.recover()
+        assert self.action_run.machine.state == ActionRun.SCHEDULED
+
     def test_recover_action_runner(self):
         self.action_run.end_time = 1000
         self.action_run.exit_status = 0
@@ -831,6 +836,21 @@ class TestSSHActionRunRecover:
         recovery_command = call_args[3]
         assert recovery_command.command == '/bin/foo/recover_batch.py /tmp/foo/job_name.5.action_name/status'
         assert recovery_command.start_time is not None  # already started
+
+    @mock.patch('tron.core.actionrun.reactor', autospec=True)
+    def test_handler_exiting_failunknown_recovery_failed(self, mock_reactor):
+        self.action_run.do_recover = mock.Mock(side_effect=Exception('recovery failed'))
+        self.action_run.action_command = mock.create_autospec(
+            actioncommand.ActionCommand,
+            exit_status=None,
+        )
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+        delay_deferred = self.action_run.handler(
+            self.action_run.action_command,
+            ActionCommand.EXITING,
+        )
+        assert not delay_deferred
 
     @mock.patch('tron.core.actionrun.SSHActionRun.do_recover', autospec=True)
     @mock.patch('tron.core.actionrun.reactor', autospec=True)
