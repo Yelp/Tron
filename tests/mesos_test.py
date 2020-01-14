@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
+import staticconf.testing
 
 from testifycompat import assert_equal
 from testifycompat import setup_teardown
@@ -432,22 +433,64 @@ class TestMesosCluster(TestCase):
         assert_equal(cluster.offer_timeout, 300)
 
     def test_submit(self):
+        mock_clusterman_metrics = mock.MagicMock()
         cluster = MesosCluster('mesos-cluster-a.me')
-        mock_task = mock.MagicMock()
+        mock_task = mock.MagicMock(get_config=mock.Mock(return_value={'environment': {}}))
         mock_task.get_mesos_id.return_value = 'this_task'
-        cluster.submit(mock_task)
+        with mock.patch(
+            'tron.mesos.get_clusterman_metrics',
+            return_value=(mock_clusterman_metrics, mock.MagicMock()),
+            autospec=True,
+        ):
+            cluster.submit(mock_task)
 
         assert 'this_task' in cluster.tasks
         assert cluster.tasks['this_task'] == mock_task
         cluster.runner.run.assert_called_once_with(
             mock_task.get_config.return_value,
         )
+        assert mock_clusterman_metrics.ClustermanMetricsBotoClient.call_count == 0
+
+    def test_submit_with_clusterman(self):
+        mock_clusterman_metrics = mock.MagicMock()
+        cluster = MesosCluster('mesos-cluster-a.me')
+        mock_task = mock.MagicMock(
+            get_config=mock.Mock(return_value={
+                'environment': {
+                    'CLUSTERMAN_RESOURCES': '{"required_cpus|blah=x": 4}',
+                    'EXECUTOR_CLUSTER': 'fake-cluster',
+                    'EXECUTOR_POOL': 'fake-pool',
+                },
+            }),
+        )
+        mock_task.get_mesos_id.return_value = 'this_task'
+        with mock.patch(
+            'tron.mesos.get_clusterman_metrics',
+            return_value=(mock_clusterman_metrics, mock.MagicMock()),
+            autospec=True,
+        ), staticconf.testing.MockConfiguration(
+            {'clusters': {'fake-cluster': {'aws_region': 'fake-region'}}},
+            namespace='clusterman_metrics',
+        ):
+            cluster.submit(mock_task)
+
+        assert 'this_task' in cluster.tasks
+        assert cluster.tasks['this_task'] == mock_task
+        cluster.runner.run.assert_called_once_with(
+            mock_task.get_config.return_value,
+        )
+        assert mock_clusterman_metrics.ClustermanMetricsBotoClient.call_count == 1
 
     def test_submit_disabled(self):
         cluster = MesosCluster('mesos-cluster-a.me', enabled=False)
         mock_task = mock.MagicMock()
         mock_task.get_mesos_id.return_value = 'this_task'
-        cluster.submit(mock_task)
+        with mock.patch(
+            'tron.mesos.get_clusterman_metrics',
+            return_value=(None, None),
+            autospec=True,
+        ):
+            cluster.submit(mock_task)
 
         assert 'this_task' not in cluster.tasks
         mock_task.exited.assert_called_once_with(1)

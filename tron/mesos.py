@@ -1,8 +1,11 @@
+import json
 import logging
 import socket
+import time
 from urllib.parse import urlparse
 
 import requests
+import staticconf
 from task_processing.runners.subscription import Subscription
 from task_processing.task_processor import TaskProcessor
 from twisted.internet.defer import logError
@@ -13,8 +16,26 @@ from tron.utils.queue import PyDeferredQueue
 
 TASK_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
 TASK_OUTPUT_LOGGER = 'tron.mesos.task_output'
+CLUSTERMAN_YAML_FILE_PATH = "/nail/srv/configs/clusterman.yaml"
+CLUSTERMAN_METRICS_YAML_FILE_PATH = "/nail/srv/configs/clusterman_metrics.yaml"
 
 log = logging.getLogger(__name__)
+
+
+def get_clusterman_metrics():
+    try:
+        import clusterman_metrics
+        import clusterman_metrics.util.costs
+
+        clusterman_yaml = CLUSTERMAN_YAML_FILE_PATH
+        staticconf.YamlConfiguration(
+            CLUSTERMAN_METRICS_YAML_FILE_PATH, namespace="clusterman_metrics",
+        )
+    except (ImportError, FileNotFoundError):
+        clusterman_metrics = None
+        clusterman_yaml = None
+
+    return clusterman_metrics, clusterman_yaml
 
 
 def get_mesos_leader(master_address, mesos_master_port):
@@ -362,6 +383,23 @@ class MesosCluster:
 
         mesos_task_id = task.get_mesos_id()
         self.tasks[mesos_task_id] = task
+        env = task.get_config()['environment']
+        clusterman_resource_str = env.get('CLUSTERMAN_RESOURCES')
+        clusterman_metrics, _ = get_clusterman_metrics()
+        if clusterman_resource_str and clusterman_metrics:
+            clusterman_resources = json.loads(clusterman_resource_str)
+            cluster = env.get('EXECUTOR_CLUSTER', env.get('PAASTA_CLUSTER'))
+            pool = env.get('EXECUTOR_POOL', env.get('PAASTA_POOL'))
+            aws_region = staticconf.read(f'clusters.{cluster}.aws_region', namespace='clusterman_metrics')
+            metrics_client = clusterman_metrics.ClustermanMetricsBotoClient(
+                region_name=aws_region,
+                app_identifier=pool,
+            )
+            with metrics_client.get_writer(
+                clusterman_metrics.APP_METRICS, aggregate_meteorite_dims=True
+            ) as writer:
+                for metric_key, metric_value in clusterman_resources.items():
+                    writer.send((metric_key, int(time.time()), metric_value))
         self.runner.run(task.get_config())
         log.info(
             'Submitting task {} to {}'.format(
