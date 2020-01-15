@@ -1,4 +1,4 @@
-FROM ubuntu:trusty
+FROM ubuntu:bionic
 
 RUN apt-get update > /dev/null && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
