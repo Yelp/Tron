@@ -1,3 +1,10 @@
+tron (1.3.0) xenial; urgency=medium
+
+  * 1.3.0 tagged with 'make release'
+    Commit: Merge branch 'drmorr/TRON-1369/clusterman_env_var'
+
+ -- root <root@bd7d68bcdb7a>  Thu, 16 Jan 2020 18:59:08 +0000
+
 tron (1.2.5) xenial; urgency=medium
 
   * 1.2.5 tagged with 'make release'
