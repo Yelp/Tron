@@ -11,9 +11,11 @@ Jinja2>=2.10.1
 lockfile
 moto
 psutil
+py-bcrypt
 pyasn1
 pyformance
 pysensu-yelp
+PyStaticConfiguration
 pytimeparse
 pytz
 PyYAML>=5.1
