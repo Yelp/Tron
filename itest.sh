@@ -8,6 +8,7 @@ apt-get update
 apt-get install -y software-properties-common gdebi-core curl
 add-apt-repository -y ppa:deadsnakes/ppa
 apt-get update
+
 gdebi --non-interactive /work/dist/*.deb
 
 # TODO: change default MASTER config to not require ssh agent
