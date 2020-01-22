@@ -72,7 +72,7 @@ class TestJobRun(TestCase):
     def test__init__(self):
         assert_equal(self.job_run.job_name, 'jobname')
         assert_equal(self.job_run.run_time, self.run_time)
-        assert str(self.job_run.output_path).endswith(self.job_run.id)
+        assert str(self.job_run.output_path).endswith(str(self.job_run.run_num))
 
     def test_for_job(self):
         run_num = 6

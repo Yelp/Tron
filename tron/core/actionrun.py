@@ -3,6 +3,7 @@
 """
 import datetime
 import logging
+import os
 from typing import List
 
 from twisted.internet import reactor
@@ -271,7 +272,7 @@ class ActionRun(Observable):
         self.extra_volumes = extra_volumes
         self.mesos_task_id = mesos_task_id
         self.output_path = output_path or filehandler.OutputPath()
-        self.output_path.append(self.id)
+        self.output_path.append(self.action_name)
         self.context = command_context.build_context(self, parent_context)
         self.retries_remaining = retries_remaining
         self.retries_delay = retries_delay
@@ -800,14 +801,18 @@ class SSHActionRun(ActionRun, Observer):
     def do_recover(self, delay):
         recovery_command = f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"
 
+        # Put the "recovery" output at the same directory level as the original action_run's output
+        recovery_output_path = self.output_path.clone()
+        recovery_output_path.base = os.path.dirname(recovery_output_path.base)
+
         # Might not need a separate action run
         # Using for the separate name
         recovery_run = SSHActionRun(
-            job_run_id=self.job_run_id,
-            name=f"recovery-{self.id}",
+            job_run_id=f"{self.job_run_id}-recovery",
+            name=f"{self.name}-recovery",
             node=self.node,
             bare_command=recovery_command,
-            output_path=self.output_path,
+            output_path=recovery_output_path,
         )
         recovery_action_command = recovery_run.build_action_command()
         recovery_action_command.write_stdout(

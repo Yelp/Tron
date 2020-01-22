@@ -98,7 +98,10 @@ class Job(Observable, Observer):
         self.time_zone = time_zone
         self.expected_runtime = expected_runtime
         self.output_path = output_path or filehandler.OutputPath()
-        self.output_path.append(name)
+        # if the name doesn't have a period, the "namespace" and the "job-name" will
+        # be the same, we don't have to worry about a crash here
+        self.output_path.append(name.split('.')[0])  # namespace
+        self.output_path.append(name.split('.')[-1])  # job-name
         self.context = command_context.build_context(self, parent_context)
         self.run_limit = run_limit
         log.info(f'{self} created')
