@@ -210,6 +210,29 @@ class ActionRun(Observable):
         EXIT_MESOS_DISABLED: 'Mesos disabled',
     }
 
+    # This is a list of "alternate locations" that we can look for stdout/stderr in
+    # The PR in question is https://github.com/Yelp/Tron/pull/735/files, which changed
+    # the format of the stdout/stderr paths
+    STDOUT_PATHS = [
+        os.path.join(
+            '{namespace}.{jobname}',
+            '{namespace}.{jobname}.{run_num}',
+            '{namespace}.{jobname}.{run_num}.{action}',
+        ),  # old style paths (pre-#735 PR)
+        os.path.join(
+            '{namespace}.{jobname}',
+            '{namespace}.{jobname}.{run_num}',
+            '{namespace}.{jobname}.{run_num}.{action}',
+            '{namespace}.{jobname}.{run_num}.recovery-{namespace}.{jobname}.{run_num}.{action}',
+        ),  # old style recovery paths (pre-#735 PR)
+        os.path.join(
+            '{namespace}',
+            '{jobname}',
+            '{run_num}',
+            '{action}-recovery',
+        ),  # new style recovery paths (post-#735 PR)
+    ]
+
     context_class = command_context.ActionRunContext
 
     # TODO: create a class for ActionRunId, JobRunId, Etc
@@ -802,17 +825,16 @@ class SSHActionRun(ActionRun, Observer):
         recovery_command = f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"
 
         # Put the "recovery" output at the same directory level as the original action_run's output
-        recovery_output_path = self.output_path.clone()
-        recovery_output_path.base = os.path.dirname(recovery_output_path.base)
+        self.output_path.parts = []
 
         # Might not need a separate action run
         # Using for the separate name
         recovery_run = SSHActionRun(
-            job_run_id=f"{self.job_run_id}-recovery",
+            job_run_id=self.job_run_id,
             name=f"{self.name}-recovery",
             node=self.node,
             bare_command=recovery_command,
-            output_path=recovery_output_path,
+            output_path=self.output_path,
         )
         recovery_action_command = recovery_run.build_action_command()
         recovery_action_command.write_stdout(
