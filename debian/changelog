@@ -1,3 +1,11 @@
+tron (1.3.1) xenial; urgency=medium
+
+  * 1.3.1 tagged with 'make release'
+    Commit: Merge pull request #735 from Yelp/drmorr/TRON-
+    1454/shorten_tron_directory_names  tron output dir names shortened
+
+ -- root <root@24a5021f338d>  Tue, 04 Feb 2020 18:35:32 +0000
+
 tron (1.3.0) xenial; urgency=medium
 
   * 1.3.0 tagged with 'make release'
