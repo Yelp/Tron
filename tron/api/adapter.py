@@ -8,6 +8,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import functools
+import os.path
 import time
 from urllib.parse import quote
 
@@ -144,18 +145,52 @@ class ActionRunAdapter(RunAdapter):
         required = self.job_run.action_graph.get_dependencies(action_name)
         return [act.name for act in required]
 
-    def _get_serializer(self):
-        return filehandler.OutputStreamSerializer(self._obj.output_path)
+    def _get_serializer(self, path=None):
+        path = filehandler.OutputPath(path) if path else self._obj.output_path
+        return filehandler.OutputStreamSerializer(path)
+
+    def _get_alternate_output_paths(self):
+        try:
+            namespace, jobname, run_num, action = self._obj.id.split('.')
+        except Exception:
+            return None
+
+        # Check to see if the output might have ended up in any alternate locations.
+        for alt_path in self._obj.STDOUT_PATHS:
+            formatted_alt_path = os.path.join(
+                # This ugliness is getting the "root output directory"
+                self._obj.context.next.next.base.job.output_path.base,
+                alt_path.format(
+                    namespace=namespace,
+                    jobname=jobname,
+                    run_num=run_num,
+                    action=action,
+                ),
+            )
+            if os.path.exists(formatted_alt_path):
+                yield formatted_alt_path
 
     @toggle_flag('include_stdout')
     def get_stdout(self):
         filename = actioncommand.ActionCommand.STDOUT
-        return self._get_serializer().tail(filename, self.max_lines)
+        output = self._get_serializer().tail(filename, self.max_lines)
+        if not output:
+            for alt_path in self._get_alternate_output_paths():
+                output = self._get_serializer(alt_path).tail(filename, self.max_lines)
+                if output:
+                    break
+        return output
 
     @toggle_flag('include_stderr')
     def get_stderr(self):
         filename = actioncommand.ActionCommand.STDERR
-        return self._get_serializer().tail(filename, self.max_lines)
+        output = self._get_serializer().tail(filename, self.max_lines)
+        if not output:
+            for alt_path in self._get_alternate_output_paths():
+                output = self._get_serializer(alt_path).tail(filename, self.max_lines)
+                if output:
+                    break
+        return output
 
     def get_job_name(self):
         return self._obj.job_run_id.rsplit('.', 1)[-2]

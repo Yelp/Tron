@@ -57,7 +57,7 @@ class JobRun(Observable, Observer):
         self.run_time = run_time
         self.node = node
         self.output_path = output_path or filehandler.OutputPath()
-        self.output_path.append(self.id)
+        self.output_path.append(str(self.run_num))
         self.action_runs_proxy = None
         self._action_runs = None
         self.action_graph = action_graph

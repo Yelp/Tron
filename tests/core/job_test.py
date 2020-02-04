@@ -58,7 +58,6 @@ class TestJob(TestCase):
             requires=[],
         )
         job_config = mock.Mock(
-            name='ajob',
             node='thenodepool',
             monitoring={
                 "team": "foo",
@@ -71,6 +70,7 @@ class TestJob(TestCase):
             actions={action.name: action},
             cleanup_action=None,
         )
+        job_config.name = 'ajob'  # set this after mock creation to give it a "real" name attribute
         scheduler = 'scheduler_token'
         parent_context = 'parent_context_token'
         output_path = ["base_path"]
