@@ -1,3 +1,11 @@
+tron (1.3.2) xenial; urgency=medium
+
+  * 1.3.2 tagged with 'make release'
+    Commit: Merge branch 'drmorr/TRON-
+    1369/fixing_the_clusterman_invocation'
+
+ -- root <root@d12c97f27fb7>  Wed, 05 Feb 2020 23:32:42 +0000
+
 tron (1.3.1) xenial; urgency=medium
 
   * 1.3.1 tagged with 'make release'
