@@ -27,15 +27,16 @@ def get_clusterman_metrics():
         import clusterman_metrics
         import clusterman_metrics.util.costs
 
-        clusterman_yaml = CLUSTERMAN_YAML_FILE_PATH
+        staticconf.YamlConfiguration(
+            CLUSTERMAN_YAML_FILE_PATH, namespace="clusterman",
+        )
         staticconf.YamlConfiguration(
             CLUSTERMAN_METRICS_YAML_FILE_PATH, namespace="clusterman_metrics",
         )
     except (ImportError, FileNotFoundError):
         clusterman_metrics = None
-        clusterman_yaml = None
 
-    return clusterman_metrics, clusterman_yaml
+    return clusterman_metrics
 
 
 def get_mesos_leader(master_address, mesos_master_port):
@@ -385,12 +386,12 @@ class MesosCluster:
         self.tasks[mesos_task_id] = task
         env = task.get_config()['environment']
         clusterman_resource_str = env.get('CLUSTERMAN_RESOURCES')
-        clusterman_metrics, _ = get_clusterman_metrics()
+        clusterman_metrics = get_clusterman_metrics()
         if clusterman_resource_str and clusterman_metrics:
             clusterman_resources = json.loads(clusterman_resource_str)
             cluster = env.get('EXECUTOR_CLUSTER', env.get('PAASTA_CLUSTER'))
             pool = env.get('EXECUTOR_POOL', env.get('PAASTA_POOL'))
-            aws_region = staticconf.read(f'clusters.{cluster}.aws_region', namespace='clusterman_metrics')
+            aws_region = staticconf.read(f'clusters.{cluster}.aws_region', namespace='clusterman')
             metrics_client = clusterman_metrics.ClustermanMetricsBotoClient(
                 region_name=aws_region,
                 app_identifier=pool,

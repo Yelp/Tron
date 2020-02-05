@@ -439,7 +439,7 @@ class TestMesosCluster(TestCase):
         mock_task.get_mesos_id.return_value = 'this_task'
         with mock.patch(
             'tron.mesos.get_clusterman_metrics',
-            return_value=(mock_clusterman_metrics, mock.MagicMock()),
+            return_value=(mock_clusterman_metrics),
             autospec=True,
         ):
             cluster.submit(mock_task)
@@ -466,11 +466,11 @@ class TestMesosCluster(TestCase):
         mock_task.get_mesos_id.return_value = 'this_task'
         with mock.patch(
             'tron.mesos.get_clusterman_metrics',
-            return_value=(mock_clusterman_metrics, mock.MagicMock()),
+            return_value=mock_clusterman_metrics,
             autospec=True,
         ), staticconf.testing.MockConfiguration(
             {'clusters': {'fake-cluster': {'aws_region': 'fake-region'}}},
-            namespace='clusterman_metrics',
+            namespace='clusterman',
         ):
             cluster.submit(mock_task)
 
