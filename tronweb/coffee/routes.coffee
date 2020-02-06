@@ -27,6 +27,7 @@ class module.TronRoutes extends Backbone.Router
     home: (params) ->
         model = new Dashboard
             filterModel: new DashboardFilterModel(module.getParamsMap(params))
+        document.title = "home"
         @updateMainView(model, DashboardView)
 
     dashboard: (params) ->
@@ -35,27 +36,33 @@ class module.TronRoutes extends Backbone.Router
             filterModel: new DashboardFilterModel(module.getParamsMap(params))
         dashboard = new DashboardView(model: model)
         model.fetch()
+        document.title = "dashboard"
         mainView.updateFullView dashboard.render()
 
     configs: ->
+        document.title = "configs"
         @updateMainView(new NamespaceList(), NamespaceListView)
 
     config: (name) ->
+        document.title = "config #{name}"
         @updateMainView(new Config(name: name), ConfigView)
 
     jobs: (params) ->
         collection = new JobCollection([],
             refreshModel: new RefreshModel(),
             filterModel: new JobListFilterModel(module.getParamsMap(params)))
+        document.title = "jobs"
         @updateMainView(collection, JobListView)
 
     job: (name) ->
         refreshModel = new RefreshModel()
+        document.title = "#{name}"
         @updateMainView(new Job(name: name, refreshModel: refreshModel), JobView)
 
     jobrun: (name, run) ->
         model = new JobRun(
             name: name, run_num: run, refreshModel: new RefreshModel())
+        document.title = "#{name}.#{run}"
         @updateMainView(model, JobRunView)
 
     actionrun: (name, run, action) ->
@@ -72,6 +79,7 @@ class module.TronRoutes extends Backbone.Router
             history: historyCollection)
         model.fetch()
         historyCollection.fetch()
+        document.title = "#{name}.#{run}.#{action}"
         mainView.updateMain(view)
 
 
