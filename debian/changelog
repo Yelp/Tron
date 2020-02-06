@@ -1,3 +1,12 @@
+tron (1.3.3) xenial; urgency=medium
+
+  * 1.3.3 tagged with 'make release'
+    Commit: Merge pull request #737 from Yelp/u/siruitan/TRON-385-
+    skip_validate_in_write_config  Skip job graph validation in
+    write_config
+
+ -- root <root@8b441532ebab>  Thu, 06 Feb 2020 18:59:31 +0000
+
 tron (1.3.2) xenial; urgency=medium
 
   * 1.3.2 tagged with 'make release'
