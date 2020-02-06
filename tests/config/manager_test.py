@@ -151,6 +151,7 @@ class TestConfigManager(TestCase):
         self.manager.validate_with_fragment.assert_called_with(
             name,
             self.content,
+            should_validate_missing_dependency=False,
         )
 
     def test_write_config_new_name(self):
