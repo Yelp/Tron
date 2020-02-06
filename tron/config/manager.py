@@ -104,7 +104,12 @@ class ConfigManager(object):
         return read_raw(filename)
 
     def write_config(self, name, content):
-        self.validate_with_fragment(name, from_string(content))
+        self.validate_with_fragment(
+            name,
+            from_string(content),
+            # TODO: remove this constraint after tron triggers across clusters are supported.
+            should_validate_missing_dependency=False,
+        )
         filename = self.get_filename_from_manifest(name)
         write_raw(filename, content)
 
@@ -126,13 +131,18 @@ class ConfigManager(object):
 
         return self.manifest.get_file_name(name) or create_filename()
 
-    def validate_with_fragment(self, name, content):
+    def validate_with_fragment(
+        self,
+        name,
+        content,
+        should_validate_missing_dependency=True,
+    ):
         name_mapping = self.get_config_name_mapping()
         name_mapping[name] = content
         try:
             JobGraph(
                 config_parse.ConfigContainer.create(name_mapping),
-                should_validate_missing_dependency=True,
+                should_validate_missing_dependency=should_validate_missing_dependency,
             )
         except ValueError as e:
             raise ConfigError(str(e))
