@@ -46,26 +46,32 @@ enable <job_name>
 
 start <job_name>
     Creates a new run of the specified job and runs it immediately.
+    Tron will use the latest version of the code and tron config available for the new run id.
 
 start <job_run_id>
     Attempt to start the given job run. A Job run only starts if no
     other instance is running. If the job has already started, it will attempt
     to start any actions in the SCH or QUE state.
+    Tron will use the latest version of the code and tron config available for the new run id.
 
 start <action_run_id>
     Attempt to start the action run.
+    Tron will use the latest version of the code and tron config available for the new run id.
 
 restart <job_run_id>
     Creates a new job run with the same run time as this job.
+    Tron will use the latest version of the code and tron config available for the new run id.
 
 retry <action_run_id>
     Re-run an action within an existing job run.
+    Will use the exact same code version and tron config as the previous run.
 
 rerun <job_run_id>
     Creates a new job run with the same run time as this job (same as restart).
+    Tron will use the latest version of the code and tron config available for the new run id.
 
 backfill <job_id>
-    Creates a series of start jobs for a sequence of dates.
+    Creates a series of tronctl start commands for a sequence of dates.
     --start-date must be provided for a backfill.
 
 cancel <job_run_id | action_run_id>

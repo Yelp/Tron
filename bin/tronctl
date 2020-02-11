@@ -21,12 +21,12 @@ from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
 
 COMMAND_HELP = (
-    ('start', 'Start the selected job, job run, or action'),
-    ('rerun', 'Re-run a full job (all actions) with a new job id'),
-    ('retry', 'Re-run a job action within an existing job run'),
+    ('start', 'Start the selected job, job run, or action. Will use the latest code and tron config available.'),
+    ('rerun', 'Re-run a full job (all actions) with a new job id. Will use new code and new tron config.'),
+    ('retry', 'Re-run a job action within an existing job run. Uses the exact same code and tron config as the previous runs.'),
     ('recover', 'Ask Tron to start tracking an UNKNOWN action run again'),
-    ('cancel', 'Cancel the selected job run'),
-    ('backfill', 'Start many jobs for a particular date range'),
+    ('cancel', 'Cancel the selected job run.'),
+    ('backfill', 'Print tronctl commands for starting many jobs for a particular date range'),
     ('disable', 'Disable selected job and cancel any outstanding runs'),
     ('enable', 'Enable the selected job and schedule the next run'),
     ('fail', 'Mark an UNKNOWN job as having failed'),
