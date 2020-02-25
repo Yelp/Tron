@@ -225,6 +225,14 @@ class MesosTask(ActionCommand):
             self.log.error(f'Error from Mesos: {event.raw}')
         elif mesos_type is None:
             self.log.info(f'Non-Mesos event: {event.raw}')
+            if 'Failed due to offer timeout' in str(event.raw):
+                self.log.info(f'Explanation:')
+                self.log.info(f'This error means that Tron timed out waiting for Mesos to give it the')
+                self.log.info(f'resources requested (ram, cpu, disk, pool, etc).')
+                self.log.info(f'This can happen if the cluster is low on resources, or if the resource')
+                self.log.info(f'requests are too high.')
+                self.log.info(f'Try reducing the resource request, or adding retries + retries_delay.')
+                self.log.info(f'')
 
         # Mesos events may have task reasons
         if mesos_type:
