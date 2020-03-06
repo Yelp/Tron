@@ -37,27 +37,27 @@ class Job(Observable, Observer):
     STATUS_UNKNOWN = "unknown"
     STATUS_RUNNING = "running"
 
-    NOTIFY_STATE_CHANGE = 'notify_state_change'
-    NOTIFY_RUN_DONE = 'notify_run_done'
+    NOTIFY_STATE_CHANGE = "notify_state_change"
+    NOTIFY_RUN_DONE = "notify_run_done"
 
     context_class = command_context.JobContext
 
     # These attributes determine equality between two Job objects
     equality_attributes = [
-        'name',
-        'queueing',
-        'scheduler',
-        'node_pool',
-        'all_nodes',
-        'action_graph',
-        'output_path',
-        'action_runner',
-        'max_runtime',
-        'allow_overlap',
-        'monitoring',
-        'time_zone',
-        'expected_runtime',
-        'run_limit',
+        "name",
+        "queueing",
+        "scheduler",
+        "node_pool",
+        "all_nodes",
+        "action_graph",
+        "output_path",
+        "action_runner",
+        "max_runtime",
+        "allow_overlap",
+        "monitoring",
+        "time_zone",
+        "expected_runtime",
+        "run_limit",
     ]
 
     # TODO: use config object
@@ -100,11 +100,11 @@ class Job(Observable, Observer):
         self.output_path = output_path or filehandler.OutputPath()
         # if the name doesn't have a period, the "namespace" and the "job-name" will
         # be the same, we don't have to worry about a crash here
-        self.output_path.append(name.split('.')[0])  # namespace
-        self.output_path.append(name.split('.')[-1])  # job-name
+        self.output_path.append(name.split(".")[0])  # namespace
+        self.output_path.append(name.split(".")[-1])  # job-name
         self.context = command_context.build_context(self, parent_context)
         self.run_limit = run_limit
-        log.info(f'{self} created')
+        log.info(f"{self} created")
 
     @classmethod
     def from_config(
@@ -151,7 +151,7 @@ class Job(Observable, Observer):
         # the run_limit is a property on the JobRunCollection, not on the
         # Job itself so we need to handle that separately
         self.runs.run_limit = job.run_limit
-        log.info(f'{self} reconfigured')
+        log.info(f"{self} reconfigured")
 
     @property
     def status(self):
@@ -183,15 +183,15 @@ class Job(Observable, Observer):
     def state_data(self):
         """This data is used to serialize the state of this job."""
         return {
-            'runs': self.runs.state_data,
-            'enabled': self.enabled,
+            "runs": self.runs.state_data,
+            "enabled": self.enabled,
         }
 
     def get_job_runs_from_state(self, state_data):
         """Apply a previous state to this Job."""
-        self.enabled = state_data['enabled']
+        self.enabled = state_data["enabled"]
         job_runs = jobrun.job_runs_from_state(
-            state_data['runs'],
+            state_data["runs"],
             self.action_graph,
             self.output_path.clone(),
             self.context,

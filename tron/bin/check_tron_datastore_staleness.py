@@ -12,22 +12,22 @@ from tron.config import schema
 from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
 
 # Default values for arguments
-DEFAULT_WORKING_DIR = '/var/lib/tron/'
-DEFAULT_CONF_PATH = 'config/'
+DEFAULT_WORKING_DIR = "/var/lib/tron/"
+DEFAULT_CONF_PATH = "config/"
 DEFAULT_STALENESS_THRESHOLD = 1800
-log = logging.getLogger('check_tron_datastore_staleness')
+log = logging.getLogger("check_tron_datastore_staleness")
 
 
 def get_last_run_time(job):
-    '''
+    """
     Get all sorted timestamps, and only count the actions that actually ran
-    '''
+    """
     timestamps = []
-    job_runs = job['runs']
+    job_runs = job["runs"]
     for run in job_runs:
-        for action in run['runs']:
-            if action.get('start_time') and action.get('state') != 'scheduled':
-                timestamps.append(action.get('start_time'))
+        for action in run["runs"]:
+            if action.get("start_time") and action.get("state") != "scheduled":
+                timestamps.append(action.get("start_time"))
     return max(timestamps) if timestamps else None
 
 
@@ -46,9 +46,7 @@ def parse_cli():
         help="File path to the Tron configuration file",
     )
     parser.add_argument(
-        "--job-name",
-        required=True,
-        help="The job name to read timestamp from",
+        "--job-name", required=True, help="The job name to read timestamp from",
     )
     parser.add_argument(
         "--staleness-threshold",
@@ -57,10 +55,7 @@ def parse_cli():
     )
     args = parser.parse_args()
     args.working_dir = os.path.abspath(args.working_dir)
-    args.config_path = os.path.join(
-        args.working_dir,
-        args.config_path,
-    )
+    args.config_path = os.path.join(args.working_dir, args.config_path,)
     return args
 
 
@@ -81,34 +76,53 @@ def main():
         dynamodb_region = persistence_config.dynamodb_region
         table_name = persistence_config.table_name
         store = DynamoDBStateStore(table_name, dynamodb_region)
-        key = store.build_key('job_state', job_name)
+        key = store.build_key("job_state", job_name)
         try:
             job = store.restore([key])[key]
         except Exception as e:
-            logging.exception(f'UNKN: Failed to retreive status for job {job_name} due to {e}')
+            logging.exception(
+                f"UNKN: Failed to retreive status for job {job_name} due to {e}"
+            )
             sys.exit(3)
 
         # Exit if the job never runs.
         last_run_time = get_last_run_time(job)
         if not last_run_time:
-            logging.error(f'WARN: No last run for {key} found. If the job was just added, it might take some time for it to run')
+            logging.error(
+                f"WARN: No last run for {key} found. If the job was just added, it might take some time for it to run"
+            )
             sys.exit(1)
 
         # Alert if timestamp is not updated after staleness_threshold
-        stateless_for_secs = time.time() - last_run_time.astimezone(pytz.utc).timestamp()
+        stateless_for_secs = (
+            time.time() - last_run_time.astimezone(pytz.utc).timestamp()
+        )
         if stateless_for_secs > args.staleness_threshold:
-            logging.error(f'CRIT: {key} has not been updated in DynamoDB for {stateless_for_secs} seconds')
+            logging.error(
+                f"CRIT: {key} has not been updated in DynamoDB for {stateless_for_secs} seconds"
+            )
             sys.exit(2)
         else:
-            logging.info(f"OK: DynamoDB is up to date. It's last updated at {last_run_time}")
+            logging.info(
+                f"OK: DynamoDB is up to date. It's last updated at {last_run_time}"
+            )
             sys.exit(0)
     # Alert for BerkeleyDB
     elif store_type == schema.StatePersistenceTypes.shelve:
-        os.execl('/usr/lib/nagios/plugins/check_file_age', '/nail/tron/tron_state', '-w', str(args.staleness_threshold), '-c', str(args.staleness_threshold))
+        os.execl(
+            "/usr/lib/nagios/plugins/check_file_age",
+            "/nail/tron/tron_state",
+            "-w",
+            str(args.staleness_threshold),
+            "-c",
+            str(args.staleness_threshold),
+        )
     else:
-        logging.exception(f'UNKN: Not designed to check this type of datastore: {store_type}')
+        logging.exception(
+            f"UNKN: Not designed to check this type of datastore: {store_type}"
+        )
         sys.exit(3)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

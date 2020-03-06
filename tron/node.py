@@ -40,6 +40,7 @@ class Error(Exception):
 
 class ConnectError(Error):
     """There was a problem connecting, run was never started"""
+
     pass
 
 
@@ -49,6 +50,7 @@ class ResultError(Error):
     We did try to execute the command, but we don't know if it succeeded or
     failed.
     """
+
     pass
 
 
@@ -61,8 +63,8 @@ class NodePoolRepository(object):
         if self._instance is not None:
             raise ValueError("NodePoolRepository is already instantiated.")
         super(NodePoolRepository, self).__init__()
-        self.nodes = collections.MappingCollection('nodes')
-        self.pools = collections.MappingCollection('pools')
+        self.nodes = collections.MappingCollection("nodes")
+        self.pools = collections.MappingCollection("pools")
 
     @classmethod
     def get_instance(cls):
@@ -83,19 +85,12 @@ class NodePoolRepository(object):
         known_hosts = KnownHosts.from_path(ssh_config.known_hosts_file)
         instance.filter_by_name(node_configs, node_pool_configs)
         instance._update_nodes(
-            node_configs,
-            ssh_options,
-            known_hosts,
-            ssh_config,
+            node_configs, ssh_options, known_hosts, ssh_config,
         )
         instance._update_node_pools(node_pool_configs)
 
     def _update_nodes(
-        self,
-        node_configs,
-        ssh_options,
-        known_hosts,
-        ssh_config,
+        self, node_configs, ssh_options, known_hosts, ssh_config,
     ):
         for config in node_configs.values():
             pub_key = known_hosts.get_public_key(config.hostname)
@@ -135,7 +130,7 @@ class NodePool(object):
     def __init__(self, nodes, name):
         self.nodes = nodes
         self.disabled = False
-        self.name = name or '_'.join(n.get_name() for n in nodes)
+        self.name = name or "_".join(n.get_name() for n in nodes)
         self.iter = itertools.cycle(self.nodes)
 
     @classmethod
@@ -273,10 +268,10 @@ class Node(object):
         if not isinstance(other, self.__class__):
             return False
         return (
-            self.config == other.config and
-            self.conch_options == other.conch_options and
-            self.pub_key == other.pub_key and
-            self.node_settings == other.node_settings
+            self.config == other.config
+            and self.conch_options == other.conch_options
+            and self.pub_key == other.pub_key
+            and self.node_settings == other.node_settings
         )
 
     def __ne__(self, other):
@@ -308,9 +303,7 @@ class Node(object):
 
         if run.id in self.run_states:
             log.warning(
-                "Run %s(%r) already running !?!",
-                run.id,
-                self.run_states[run.id],
+                "Run %s(%r) already running !?!", run.id, self.run_states[run.id],
             )
 
         if self.idle_timer and self.idle_timer.active():
@@ -319,17 +312,12 @@ class Node(object):
         self.run_states[run.id] = RunState(run)
 
         # TODO: have this return a runner instead of number
-        fudge_factor = determine_jitter(
-            len(self.run_states),
-            self.node_settings,
-        )
+        fudge_factor = determine_jitter(len(self.run_states), self.node_settings,)
         if fudge_factor == 0.0:
             self._do_run(run)
         else:
             log.info(
-                "Delaying execution of %s for %.2f secs",
-                run.id,
-                fudge_factor,
+                "Delaying execution of %s for %.2f secs", run.id, fudge_factor,
             )
             reactor.callLater(fudge_factor, self._do_run, run)
 
@@ -412,18 +400,15 @@ class Node(object):
                 "Cannot run %s, Failed to connect to %s: %s",
                 run,
                 self.hostname,
-                repr(result)
+                repr(result),
             )
             self.connection_defer = None
             self._fail_run(
                 run,
                 failure.Failure(
                     exc_value=ConnectError(
-                        "Connection to %s@%s:%d failed" % (
-                            self.username,
-                            self.hostname,
-                            self.port,
-                        ),
+                        "Connection to %s@%s:%d failed"
+                        % (self.username, self.hostname, self.port,),
                     ),
                 ),
             )
@@ -460,8 +445,7 @@ class Node(object):
                 else:
                     # Doesn't seem like this should ever happen.
                     log.warning(
-                        "Run %r caught in starting state, but"
-                        " start_defer is over.",
+                        "Run %r caught in starting state, but" " start_defer is over.",
                         run_id,
                     )
                     self._fail_run(run, None)
@@ -470,9 +454,7 @@ class Node(object):
                 # this (and cleanup) themselves, so if there should not be any
                 # runs except those waiting to connect
                 raise Error(
-                    "Run %s in state %s when service stopped",
-                    run_id,
-                    run.state,
+                    "Run %s in state %s when service stopped", run_id, run.state,
                 )
 
     def _connect(self):
@@ -490,9 +472,7 @@ class Node(object):
             self.pub_key,
         )
         create_defer = client_creator.connectTCP(
-            self.hostname,
-            self.config.port,
-            timeout=self.node_settings.connect_timeout,
+            self.hostname, self.config.port, timeout=self.node_settings.connect_timeout,
         )
 
         # We're going to create a deferred, returned to the caller, that will
@@ -500,8 +480,7 @@ class Node(object):
         # for opening channels. The value will be this instance of node.
         connect_defer = defer.Deferred()
         twistedutils.defer_timeout(
-            connect_defer,
-            self.node_settings.connect_timeout,
+            connect_defer, self.node_settings.connect_timeout,
         )
 
         def on_service_started(connection):
@@ -632,11 +611,8 @@ class Node(object):
             run,
             failure.Failure(
                 exc_value=ConnectError(
-                    "Connection to %s@%s:%d failed" % (
-                        self.username,
-                        self.hostname,
-                        self.port,
-                    ),
+                    "Connection to %s@%s:%d failed"
+                    % (self.username, self.hostname, self.port,),
                 ),
             ),
         )

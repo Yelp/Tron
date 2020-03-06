@@ -21,37 +21,49 @@ from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
 
 COMMAND_HELP = (
-    ('start', 'Start the selected job, job run, or action. Will use the latest code and tron config available.'),
-    ('rerun', 'Re-run a full job (all actions) with a new job id. Will use new code and new tron config.'),
-    ('retry', 'Re-run a job action within an existing job run. Uses the exact same code and tron config as the previous runs.'),
-    ('recover', 'Ask Tron to start tracking an UNKNOWN action run again'),
-    ('cancel', 'Cancel the selected job run.'),
-    ('backfill', 'Print tronctl commands for starting many jobs for a particular date range'),
-    ('disable', 'Disable selected job and cancel any outstanding runs'),
-    ('enable', 'Enable the selected job and schedule the next run'),
-    ('fail', 'Mark an UNKNOWN job as having failed'),
-    ('success', 'Mark an UNKNOWN job as having succeeded'),
-    ('skip', 'Skip a failed action, runs dependent actions.'),
-    ('stop', 'Stop the action run (SIGTERM)'),
-    ('kill', 'Force kill the action run (SIGKILL)'),
-    ('move', 'Rename a job'),
-    ('publish', 'Publish actionrun trigger'),
-    ('discard', 'Discard existing actionrun trigger'),
-    ('version', 'Print tron client and server versions'),
+    (
+        "start",
+        "Start the selected job, job run, or action. Will use the latest code and tron config available.",
+    ),
+    (
+        "rerun",
+        "Re-run a full job (all actions) with a new job id. Will use new code and new tron config.",
+    ),
+    (
+        "retry",
+        "Re-run a job action within an existing job run. Uses the exact same code and tron config as the previous runs.",
+    ),
+    ("recover", "Ask Tron to start tracking an UNKNOWN action run again"),
+    ("cancel", "Cancel the selected job run."),
+    (
+        "backfill",
+        "Print tronctl commands for starting many jobs for a particular date range",
+    ),
+    ("disable", "Disable selected job and cancel any outstanding runs"),
+    ("enable", "Enable the selected job and schedule the next run"),
+    ("fail", "Mark an UNKNOWN job as having failed"),
+    ("success", "Mark an UNKNOWN job as having succeeded"),
+    ("skip", "Skip a failed action, runs dependent actions."),
+    ("stop", "Stop the action run (SIGTERM)"),
+    ("kill", "Force kill the action run (SIGKILL)"),
+    ("move", "Rename a job"),
+    ("publish", "Publish actionrun trigger"),
+    ("discard", "Discard existing actionrun trigger"),
+    ("version", "Print tron client and server versions"),
 )
 
-log = logging.getLogger('tronctl')
+log = logging.getLogger("tronctl")
 
 
 def command_help_epilog():
     # We want to include some extra helpful info
     result = ["commands:", "\n"]
     for cmd_name, desc in COMMAND_HELP:
-        result.append('  ')
-        text = ''.join((cmd_name.ljust(15), desc.ljust(40)))
+        result.append("  ")
+        text = "".join((cmd_name.ljust(15), desc.ljust(40)))
         result.append(text)
-        result.append('\n')
-    return ''.join(result)
+        result.append("\n")
+    return "".join(result)
 
 
 def parse_date(date_string):
@@ -59,7 +71,7 @@ def parse_date(date_string):
 
 
 def parse_cli():
-    parser = cmd_utils.build_option_parser(epilog=command_help_epilog(), )
+    parser = cmd_utils.build_option_parser(epilog=command_help_epilog(),)
 
     parser.add_argument(
         "--run-date",
@@ -77,18 +89,15 @@ def parse_cli():
         "--end-date",
         type=parse_date,
         dest="end_date",
-        help=
-        "For backfills, what should the last run-date be (note: many jobs operate on date-1). Defaults to today.",
+        help="For backfills, what should the last run-date be (note: many jobs operate on date-1). Defaults to today.",
     )
     parser.add_argument(
-        'command',
-        help='Tronctl command to run',
+        "command",
+        help="Tronctl command to run",
         choices=[row[0] for row in COMMAND_HELP],
     )
     parser.add_argument(
-        'id',
-        nargs='*',
-        help='job name, job run id, or action id',
+        "id", nargs="*", help="job name, job run id, or action id",
     ).completer = cmd_utils.tron_jobs_completer
 
     argcomplete.autocomplete(parser)
@@ -100,25 +109,23 @@ def parse_cli():
 def request(url, data, headers=None, method=None):
     response = client.request(url, data=data, headers=headers, method=method)
     if response.error:
-        print(f'Error: {response.content}')
+        print(f"Error: {response.content}")
         return
-    print(response.content.get('result', 'OK'))
+    print(response.content.get("result", "OK"))
     return True
 
 
 def event_publish(args):
     for event in args.id:
         yield request(
-            urljoin(args.server, "/api/events"),
-            dict(command='publish', event=event)
+            urljoin(args.server, "/api/events"), dict(command="publish", event=event)
         )
 
 
 def event_discard(args):
     for event in args.id:
         yield request(
-            urljoin(args.server, "/api/events"),
-            dict(command='discard', event=event)
+            urljoin(args.server, "/api/events"), dict(command="discard", event=event)
         )
 
 
@@ -127,14 +134,9 @@ def control_objects(args):
     url_index = tron_client.index()
     for identifier in args.id:
         try:
-            tron_id = client.get_object_type_from_identifier(
-                url_index,
-                identifier,
-            )
+            tron_id = client.get_object_type_from_identifier(url_index, identifier,)
         except ValueError as e:
-            possibilities = list(
-                tron_jobs_completer(prefix='', client=tron_client)
-            )
+            possibilities = list(tron_jobs_completer(prefix="", client=tron_client))
             suggestions = suggest_possibilities(
                 word=identifier, possibilities=possibilities
             )
@@ -142,7 +144,7 @@ def control_objects(args):
 
         data = dict(command=args.command)
         if args.command == "start" and args.run_date:
-            data['run_time'] = str(args.run_date)
+            data["run_time"] = str(args.run_date)
         yield request(urljoin(args.server, tron_id.url), data)
 
 
@@ -155,14 +157,14 @@ def move(args):
 
     tron_client = client.Client(args.server)
     url_index = tron_client.index()
-    job_index = url_index['jobs']
+    job_index = url_index["jobs"]
     if old_name not in job_index.keys():
         raise SystemExit(f"Error: {old_name} doesn't exist")
     if new_name in job_index.keys():
         raise SystemExit(f"Error: {new_name} exists already")
 
-    data = dict(command='move', old_name=old_name, new_name=new_name)
-    yield request(urljoin(args.server, '/api/jobs'), data)
+    data = dict(command="move", old_name=old_name, new_name=new_name)
+    yield request(urljoin(args.server, "/api/jobs"), data)
 
 
 def backfill(args):
@@ -177,9 +179,7 @@ def backfill(args):
         print(f"Error: must provide at least one id argument")
         yield False
 
-    dates = get_dates_for_backfill(
-        start_date=args.start_date, end_date=args.end_date
-    )
+    dates = get_dates_for_backfill(start_date=args.start_date, end_date=args.end_date)
     print("tronctl backfill currently only prints jobs for a human to run.")
     print(f"Please run the following {len(dates)} commands:")
     print("")
@@ -199,13 +199,13 @@ def get_dates_for_backfill(start_date, end_date):
 
 
 def tron_version(args):
-    local_version = '.'.join(map(str, __version_info__))
+    local_version = ".".join(map(str, __version_info__))
     print(f"Tron client version: {local_version}")
     response = client.request(urljoin(args.server, "/api/status"))
     if response.error:
-        print(f'Error: {response.content}')
+        print(f"Error: {response.content}")
         yield
-    server_version = response.content.get('version', 'unknown')
+    server_version = response.content.get("version", "unknown")
     print(f"Tron server version: {server_version}")
     if server_version != local_version:
         print(f"Warning: client and server versions should match")
@@ -234,9 +234,12 @@ def main():
             if not ret:
                 sys.exit(ExitCode.fail)
     except RequestError as err:
-        print(f"Error connecting to the tron server ({args.server}): {err}", file=sys.stderr)
+        print(
+            f"Error connecting to the tron server ({args.server}): {err}",
+            file=sys.stderr,
+        )
         sys.exit(ExitCode.fail)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -21,6 +21,7 @@ log = logging.getLogger(__name__)
 
 class NullFileHandle(object):
     """A No-Op object that supports a File interface."""
+
     closed = True
 
     @classmethod
@@ -37,7 +38,8 @@ class FileHandleWrapper(object):
     access time and metadata.  These objects should only be created
     by FileHandleManager. Do not instantiate them on their own.
     """
-    __slots__ = ['manager', 'name', 'last_accessed', '_fh_lock', '_fh']
+
+    __slots__ = ["manager", "name", "last_accessed", "_fh_lock", "_fh"]
 
     def __init__(self, manager, name):
         self.manager = manager
@@ -63,7 +65,7 @@ class FileHandleWrapper(object):
             if self._fh is not None:
                 if self._fh == NullFileHandle:
                     try:
-                        self._fh = open(self.name, 'ab')
+                        self._fh = open(self.name, "ab")
                     except IOError as e:
                         log.error("Failed to open %s: %s", self.name, e)
                         return
@@ -184,7 +186,7 @@ class OutputStreamSerializer(object):
             num_lines = sys.maxsize
 
         try:
-            cmd = ('tail', '-n', str(num_lines), path)
+            cmd = ("tail", "-n", str(num_lines), path)
             tail_sub = Popen(cmd, stdout=PIPE)
             return list(line.rstrip().decode() for line in tail_sub.stdout)
         except OSError as e:
@@ -202,9 +204,10 @@ class OutputPath(object):
     file path is constructed by joining the base path with any additional
     path elements.
     """
-    __slots__ = ['base', 'parts']
 
-    def __init__(self, base='.', *path_parts):
+    __slots__ = ["base", "parts"]
+
+    def __init__(self, base=".", *path_parts):
         self.base = base
         self.parts = list(path_parts or [])
 

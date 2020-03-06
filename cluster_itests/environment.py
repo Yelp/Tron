@@ -21,8 +21,8 @@ import requests
 
 
 def before_all(context):
-    wait_for_http('tronmaster:8089')
-    wait_for_http('mesosmaster:5050')
+    wait_for_http("tronmaster:8089")
+    wait_for_http("mesosmaster:5050")
 
 
 def after_all(context):
@@ -68,12 +68,12 @@ def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
     return decorator
 
 
-@timeout(120, error_message='Service is not available. Cancelling integration tests')
+@timeout(120, error_message="Service is not available. Cancelling integration tests")
 def wait_for_http(service):
     while True:
-        print(f'Waiting for {service} to be up...')
+        print(f"Waiting for {service} to be up...")
         try:
-            response = requests.get('http://%s/' % service, timeout=5)
+            response = requests.get("http://%s/" % service, timeout=5)
         except (
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,

@@ -12,20 +12,19 @@ import textwrap
 from tron.commands import cmd_utils
 from tron.commands.client import Client
 
-log = logging.getLogger('get_tron_metrics')
+log = logging.getLogger("get_tron_metrics")
 
 
 def parse_cli():
     parser = cmd_utils.build_option_parser()
     parser.description = (
-        "Collects metrics from Tron via its API and forwards them to "
-        "meteorite."
+        "Collects metrics from Tron via its API and forwards them to " "meteorite."
     )
     parser.add_argument(
         "--dry-run",
         action="store_true",
         default=False,
-        help="Don't actually send metrics out. Defaults: %(default)s"
+        help="Don't actually send metrics out. Defaults: %(default)s",
     )
     args = parser.parse_args()
     return args
@@ -37,11 +36,10 @@ def check_bin_exists(bin):
 
     :param bin: (str) Name of the executable; could be a path to one
     """
-    return subprocess.call(
-        ['which', bin],
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    ) == 0
+    return (
+        subprocess.call(["which", bin], stdout=subprocess.PIPE, stderr=subprocess.PIPE,)
+        == 0
+    )
 
 
 def send_data_metric(name, metric_type, value, dimensions={}, dry_run=False):
@@ -57,35 +55,24 @@ def send_data_metric(name, metric_type, value, dimensions={}, dry_run=False):
     """
     if dry_run:
         metric_args = dict(
-            name=name,
-            metric_type=metric_type,
-            value=value,
-            dimensions=dimensions,
+            name=name, metric_type=metric_type, value=value, dimensions=dimensions,
         )
         log.info(
-            f"Would have sent this to meteorite:\n"
-            f"{pprint.pformat(metric_args)}"
+            f"Would have sent this to meteorite:\n" f"{pprint.pformat(metric_args)}"
         )
         return
 
-    cmd = ['meteorite', 'data', '-v', name, metric_type, str(value)]
+    cmd = ["meteorite", "data", "-v", name, metric_type, str(value)]
     for k, v in dimensions.items():
-        cmd.extend(['-d', f"{k}:{v}"])
+        cmd.extend(["-d", f"{k}:{v}"])
 
-    process = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,)
     output, error = process.communicate()
-    output = output.decode('utf-8').rstrip()
-    error = error.decode('utf-8').rstrip()
+    output = output.decode("utf-8").rstrip()
+    error = error.decode("utf-8").rstrip()
 
     if process.returncode != 0:
-        log.error(
-            "Meteorite failed with:\n"
-            f"{textwrap.indent(error, '    ')}"
-        )
+        log.error("Meteorite failed with:\n" f"{textwrap.indent(error, '    ')}")
     else:
         log.debug(f"From meteorite: {output}")
 
@@ -93,20 +80,20 @@ def send_data_metric(name, metric_type, value, dimensions={}, dry_run=False):
 def send_counter(name, **kwargs):
     send_data_metric(
         name=name,
-        metric_type='counter',
-        value=kwargs.pop('count'),
-        dimensions=kwargs.pop('dimensions', {}),
-        dry_run=kwargs.pop('dry_run', False),
+        metric_type="counter",
+        value=kwargs.pop("count"),
+        dimensions=kwargs.pop("dimensions", {}),
+        dry_run=kwargs.pop("dry_run", False),
     )
 
 
 def send_gauge(name, **kwargs):
     send_data_metric(
         name=name,
-        metric_type='gauge',
-        value=kwargs.pop('value'),
-        dimensions=kwargs.pop('dimensions', {}),
-        dry_run=kwargs.pop('dry_run', False),
+        metric_type="gauge",
+        value=kwargs.pop("value"),
+        dimensions=kwargs.pop("dimensions", {}),
+        dry_run=kwargs.pop("dry_run", False),
     )
 
 
@@ -115,9 +102,9 @@ def send_meter(name, **kwargs):
 
 
 def send_histogram(name, **kwargs):
-    for k in ['p50', 'p75', 'p95', 'p99']:  # Only send p50-99
+    for k in ["p50", "p75", "p95", "p99"]:  # Only send p50-99
         gauge_name = f"{name}.{k}"
-        kwargs['value'] = kwargs[k]  # set for gauge
+        kwargs["value"] = kwargs[k]  # set for gauge
         send_gauge(gauge_name, **kwargs)
 
 
@@ -129,11 +116,11 @@ def send_timer(name, **kwargs):
 
 
 _METRIC_SENDERS = {
-    'counter': send_counter,
-    'gauge': send_gauge,
-    'meter': send_meter,
-    'histogram': send_histogram,
-    'timer': send_timer,
+    "counter": send_counter,
+    "gauge": send_gauge,
+    "meter": send_meter,
+    "histogram": send_histogram,
+    "timer": send_timer,
 }
 
 
@@ -145,13 +132,13 @@ def send_metrics(metrics, cluster=None, dry_run=False):
     """
     for metric_type, data in metrics.items():
         for kwargs in data:
-            name = kwargs.pop('name')
-            kwargs['dry_run'] = dry_run
+            name = kwargs.pop("name")
+            kwargs["dry_run"] = dry_run
 
             if cluster:
-                dimensions = kwargs.get('dimensions', {})
-                dimensions['tron_cluster'] = cluster
-                kwargs['dimensions'] = dimensions
+                dimensions = kwargs.get("dimensions", {})
+                dimensions["tron_cluster"] = cluster
+                kwargs["dimensions"] = dimensions
 
             _METRIC_SENDERS[metric_type](name, **kwargs)
 
@@ -162,12 +149,12 @@ def main():
     cmd_utils.load_config(args)
     client = Client(args.server, args.cluster_name)
 
-    if check_bin_exists('meteorite'):
+    if check_bin_exists("meteorite"):
         metrics = client.metrics()
         send_metrics(metrics, cluster=client.cluster_name, dry_run=args.dry_run)
     else:
         log.error("'meteorite' was not found")
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     sys.exit(main())

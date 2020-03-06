@@ -13,38 +13,38 @@ from tron.utils import crontab
 
 class TestConvertPredefined(TestCase):
     def test_convert_predefined_valid(self):
-        expected = crontab.PREDEFINED_SCHEDULE['@hourly']
-        assert_equal(crontab.convert_predefined('@hourly'), expected)
+        expected = crontab.PREDEFINED_SCHEDULE["@hourly"]
+        assert_equal(crontab.convert_predefined("@hourly"), expected)
 
     def test_convert_predefined_invalid(self):
-        assert_raises(ValueError, crontab.convert_predefined, '@bogus')
+        assert_raises(ValueError, crontab.convert_predefined, "@bogus")
 
     def test_convert_predefined_none(self):
-        line = 'something else'
+        line = "something else"
         assert_equal(crontab.convert_predefined(line), line)
 
 
 class TestParseCrontab(TestCase):
     def test_parse_asterisk(self):
-        line = '* * * * *'
+        line = "* * * * *"
         actual = crontab.parse_crontab(line)
-        assert_equal(actual['minutes'], None)
-        assert_equal(actual['hours'], None)
-        assert_equal(actual['months'], None)
+        assert_equal(actual["minutes"], None)
+        assert_equal(actual["hours"], None)
+        assert_equal(actual["months"], None)
 
-    @mock.patch('tron.utils.crontab.MinuteFieldParser.parse', autospec=True)
-    @mock.patch('tron.utils.crontab.HourFieldParser.parse', autospec=True)
-    @mock.patch('tron.utils.crontab.MonthdayFieldParser.parse', autospec=True)
-    @mock.patch('tron.utils.crontab.MonthFieldParser.parse', autospec=True)
-    @mock.patch('tron.utils.crontab.WeekdayFieldParser.parse', autospec=True)
+    @mock.patch("tron.utils.crontab.MinuteFieldParser.parse", autospec=True)
+    @mock.patch("tron.utils.crontab.HourFieldParser.parse", autospec=True)
+    @mock.patch("tron.utils.crontab.MonthdayFieldParser.parse", autospec=True)
+    @mock.patch("tron.utils.crontab.MonthFieldParser.parse", autospec=True)
+    @mock.patch("tron.utils.crontab.WeekdayFieldParser.parse", autospec=True)
     def test_parse(self, mock_dow, mock_month, mock_monthday, mock_hour, mock_min):
-        line = '* * * * *'
+        line = "* * * * *"
         actual = crontab.parse_crontab(line)
-        assert_equal(actual['minutes'], mock_min.return_value)
-        assert_equal(actual['hours'], mock_hour.return_value)
-        assert_equal(actual['monthdays'], mock_monthday.return_value)
-        assert_equal(actual['months'], mock_month.return_value)
-        assert_equal(actual['weekdays'], mock_dow.return_value)
+        assert_equal(actual["minutes"], mock_min.return_value)
+        assert_equal(actual["hours"], mock_hour.return_value)
+        assert_equal(actual["monthdays"], mock_monthday.return_value)
+        assert_equal(actual["months"], mock_month.return_value)
+        assert_equal(actual["weekdays"], mock_dow.return_value)
 
 
 class TestMinuteFieldParser(TestCase):
@@ -107,7 +107,7 @@ class TestMonthdayFieldParser(TestCase):
         self.parser = crontab.MonthdayFieldParser()
 
     def test_parse_last(self):
-        expected = [5, 6, 'LAST']
+        expected = [5, 6, "LAST"]
         assert_equal(self.parser.parse("5, 6, L"), expected)
 
 

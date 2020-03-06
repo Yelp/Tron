@@ -26,10 +26,7 @@ from tron.serialize import filehandler
 def build_mock_job():
     action_graph = mock.create_autospec(actiongraph.ActionGraph)
     action_graph.action_map = {
-        'foo': mock.Mock(
-            triggered_by=[],
-            trigger_timeout=datetime.timedelta(days=1)
-        )
+        "foo": mock.Mock(triggered_by=[], trigger_timeout=datetime.timedelta(days=1))
     }
     runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
     return mock.create_autospec(
@@ -53,37 +50,27 @@ class TestJobRun(TestCase):
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         mock_node = mock.create_autospec(node.Node)
         self.job_run = jobrun.JobRun(
-            'jobname',
+            "jobname",
             7,
             self.run_time,
             mock_node,
             action_runs=MagicMock(
-                action_runs_with_cleanup=[],
-                get_startable_action_runs=lambda: [],
+                action_runs_with_cleanup=[], get_startable_action_runs=lambda: [],
             ),
         )
         autospec_method(self.job_run.watch)
         autospec_method(self.job_run.notify)
-        self.action_run = mock.create_autospec(
-            actionrun.ActionRun,
-            is_skipped=False,
-        )
+        self.action_run = mock.create_autospec(actionrun.ActionRun, is_skipped=False,)
 
     def test__init__(self):
-        assert_equal(self.job_run.job_name, 'jobname')
+        assert_equal(self.job_run.job_name, "jobname")
         assert_equal(self.job_run.run_time, self.run_time)
         assert str(self.job_run.output_path).endswith(str(self.job_run.run_num))
 
     def test_for_job(self):
         run_num = 6
         mock_node = mock.create_autospec(node.Node)
-        run = jobrun.JobRun.for_job(
-            self.job,
-            run_num,
-            self.run_time,
-            mock_node,
-            False,
-        )
+        run = jobrun.JobRun.for_job(self.job, run_num, self.run_time, mock_node, False,)
 
         assert_equal(run.action_runs.action_graph, self.action_graph)
         assert_equal(run.job_name, self.job.get_name.return_value)
@@ -94,31 +81,22 @@ class TestJobRun(TestCase):
     def test_for_job_manual(self):
         run_num = 6
         mock_node = mock.create_autospec(node.Node)
-        run = jobrun.JobRun.for_job(
-            self.job,
-            run_num,
-            self.run_time,
-            mock_node,
-            True,
-        )
+        run = jobrun.JobRun.for_job(self.job, run_num, self.run_time, mock_node, True,)
         assert_equal(run.action_runs.action_graph, self.action_graph)
         assert run.manual
 
     def test_state_data(self):
         state_data = self.job_run.state_data
-        assert_equal(state_data['run_num'], 7)
-        assert not state_data['manual']
-        assert_equal(state_data['run_time'], self.run_time)
+        assert_equal(state_data["run_num"], 7)
+        assert not state_data["manual"]
+        assert_equal(state_data["run_time"], self.run_time)
 
     def test_set_action_runs(self):
         self.job_run._action_runs = None
         count = 2
-        action_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in range(count)
-        ]
+        action_runs = [mock.create_autospec(actionrun.ActionRun) for _ in range(count)]
         run_collection = mock.create_autospec(
-            actionrun.ActionRunCollection,
-            action_runs_with_cleanup=action_runs,
+            actionrun.ActionRunCollection, action_runs_with_cleanup=action_runs,
         )
         self.job_run._set_action_runs(run_collection)
         assert_equal(self.job_run.watch.call_count, count)
@@ -138,18 +116,16 @@ class TestJobRun(TestCase):
     def test_set_action_runs_duplicate(self):
         run_collection = mock.create_autospec(actionrun.ActionRunCollection)
         assert_raises(
-            ValueError,
-            self.job_run._set_action_runs,
-            run_collection,
+            ValueError, self.job_run._set_action_runs, run_collection,
         )
 
-    @mock.patch('tron.core.jobrun.timeutils.current_time', autospec=True)
+    @mock.patch("tron.core.jobrun.timeutils.current_time", autospec=True)
     def test_seconds_until_run_time(self, mock_current_time):
         mock_current_time.return_value = self.now
         seconds = self.job_run.seconds_until_run_time()
         assert_equal(seconds, 6)
 
-    @mock.patch('tron.core.jobrun.timeutils.current_time', autospec=True)
+    @mock.patch("tron.core.jobrun.timeutils.current_time", autospec=True)
     def test_seconds_until_run_time_with_tz(self, mock_current_time):
         mock_current_time.return_value = self.now_with_tz
         self.job_run.run_time = self.run_time.replace(tzinfo=pytz.utc)
@@ -166,9 +142,7 @@ class TestJobRun(TestCase):
         assert not self.job_run.start()
 
     def test_do_start(self):
-        startable_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in range(3)
-        ]
+        startable_runs = [mock.create_autospec(actionrun.ActionRun) for _ in range(3)]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         assert self.job_run._do_start()
@@ -189,18 +163,14 @@ class TestJobRun(TestCase):
         assert not self.job_run._do_start()
 
     def test_start_action_runs(self):
-        startable_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in range(3)
-        ]
+        startable_runs = [mock.create_autospec(actionrun.ActionRun) for _ in range(3)]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         started_runs = self.job_run._start_action_runs()
         assert_equal(started_runs, startable_runs)
 
     def test_start_action_runs_failed(self):
-        startable_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in range(3)
-        ]
+        startable_runs = [mock.create_autospec(actionrun.ActionRun) for _ in range(3)]
         startable_runs[0].start.return_value = False
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
@@ -208,9 +178,7 @@ class TestJobRun(TestCase):
         assert_equal(started_runs, startable_runs[1:])
 
     def test_start_action_runs_all_failed(self):
-        startable_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in range(2)
-        ]
+        startable_runs = [mock.create_autospec(actionrun.ActionRun) for _ in range(2)]
         for startable_run in startable_runs:
             startable_run.start.return_value = False
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
@@ -242,14 +210,13 @@ class TestJobRun(TestCase):
     def test_handler_with_startable(self):
         startable_run = mock.create_autospec(actionrun.ActionRun)
         self.job_run.action_runs.get_startable_action_runs = lambda: [
-            startable_run, ]
+            startable_run,
+        ]
         autospec_method(self.job_run.finalize)
         self.action_run.is_broken = False
 
         self.job_run.handler(self.action_run, mock.Mock())
-        self.job_run.notify.assert_called_with(
-            self.job_run.NOTIFY_STATE_CHANGED,
-        )
+        self.job_run.notify.assert_called_with(self.job_run.NOTIFY_STATE_CHANGED,)
         startable_run.start.assert_called_with()
         assert not self.job_run.finalize.mock_calls
 
@@ -328,7 +295,7 @@ class TestJobRun(TestCase):
 
     def test__getattr__(self):
         assert self.job_run.cancel
-        assert self.job_run.state == 'succeeded'
+        assert self.job_run.state == "succeeded"
         assert self.job_run.is_succeeded
 
     def test__getattr__miss(self):
@@ -340,29 +307,31 @@ class TestJobRunFromState(TestCase):
     def setup_jobrun(self):
         self.action_graph = mock.create_autospec(actiongraph.ActionGraph)
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
-        self.path = ['base', 'path']
+        self.path = ["base", "path"]
         self.output_path = mock.create_autospec(filehandler.OutputPath)
         self.node_pool = mock.create_autospec(node.NodePool)
-        self.action_run_state_data = [{
-            'job_run_id': 'thejobname.22',
-            'action_name': 'blingaction',
-            'state': 'succeeded',
-            'run_time': 'sometime',
-            'start_time': 'sometime',
-            'end_time': 'sometime',
-            'command': 'doit',
-            'node_name': 'thenode',
-        }]
+        self.action_run_state_data = [
+            {
+                "job_run_id": "thejobname.22",
+                "action_name": "blingaction",
+                "state": "succeeded",
+                "run_time": "sometime",
+                "start_time": "sometime",
+                "end_time": "sometime",
+                "command": "doit",
+                "node_name": "thenode",
+            }
+        ]
         self.state_data = {
-            'job_name': 'thejobname',
-            'run_num': 22,
-            'run_time': self.run_time,
-            'node_name': 'thebox',
-            'end_time': 'the_end',
-            'start_time': 'start_time',
-            'runs': self.action_run_state_data,
-            'cleanup_run': None,
-            'manual': True,
+            "job_name": "thejobname",
+            "run_num": 22,
+            "run_time": self.run_time,
+            "node_name": "thebox",
+            "end_time": "the_end",
+            "start_time": "start_time",
+            "runs": self.action_run_state_data,
+            "cleanup_run": None,
+            "manual": True,
         }
         self.context = mock.Mock()
 
@@ -375,7 +344,7 @@ class TestJobRunFromState(TestCase):
             self.node_pool,
         )
         assert_length(run.action_runs.run_map, 1)
-        assert_equal(run.job_name, self.state_data['job_name'])
+        assert_equal(run.job_name, self.state_data["job_name"])
         assert_equal(run.run_time, self.run_time)
         assert run.manual
         assert_equal(run.output_path, self.output_path)
@@ -391,7 +360,7 @@ class TestJobRunFromState(TestCase):
             self.node_pool,
         )
         assert_length(run.action_runs.run_map, 1)
-        assert_equal(run.job_name, 'thejobname')
+        assert_equal(run.job_name, "thejobname")
         assert_equal(run.run_time, self.run_time)
         assert_equal(run.node, self.node_pool)
 
@@ -400,7 +369,7 @@ class MockJobRun(MagicMock):
 
     manual = False
 
-    node = 'anode'
+    node = "anode"
 
     @property
     def is_scheduled(self):
@@ -438,10 +407,8 @@ class TestJobRunCollection(TestCase):
             self._mock_run(state=actionrun.ActionRun.WAITING, run_num=4),
             self._mock_run(state=actionrun.ActionRun.RUNNING, run_num=3),
         ] + [
-            self._mock_run(
-                state=actionrun.ActionRun.SUCCEEDED,
-                run_num=i,
-            ) for i in range(2, 0, -1)
+            self._mock_run(state=actionrun.ActionRun.SUCCEEDED, run_num=i,)
+            for i in range(2, 0, -1)
         ]
         self.run_collection.runs.extend(self.job_runs)
         self.mock_node = mock.create_autospec(node.Node)
@@ -464,18 +431,15 @@ class TestJobRunCollection(TestCase):
                 end_time="sometime",
                 cleanup_run=None,
                 runs=[],
-            ) for i in range(3, -1, -1)
+            )
+            for i in range(3, -1, -1)
         ]
         action_graph = mock.create_autospec(actiongraph.ActionGraph)
         output_path = mock.create_autospec(filehandler.OutputPath)
         context = mock.Mock()
         node_pool = mock.create_autospec(node.NodePool)
         runs = jobrun.job_runs_from_state(
-            state_data,
-            action_graph,
-            output_path,
-            context,
-            node_pool,
+            state_data, action_graph, output_path, context, node_pool,
         )
         assert len(runs) == 4
         assert all([type(job) == jobrun.JobRun for job in runs])
@@ -484,11 +448,7 @@ class TestJobRunCollection(TestCase):
         autospec_method(self.run_collection.remove_old_runs)
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         mock_job = build_mock_job()
-        job_run = self.run_collection.build_new_run(
-            mock_job,
-            run_time,
-            self.mock_node,
-        )
+        job_run = self.run_collection.build_new_run(mock_job, run_time, self.mock_node,)
         assert_in(job_run, self.run_collection.runs)
         self.run_collection.remove_old_runs.assert_called_with()
         assert job_run.run_num == 6
@@ -499,10 +459,7 @@ class TestJobRunCollection(TestCase):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         mock_job = build_mock_job()
         job_run = self.run_collection.build_new_run(
-            mock_job,
-            run_time,
-            self.mock_node,
-            True,
+            mock_job, run_time, self.mock_node, True,
         )
         assert_in(job_run, self.run_collection.runs)
         self.run_collection.remove_old_runs.assert_called_with()
@@ -512,8 +469,7 @@ class TestJobRunCollection(TestCase):
     def test_cancel_pending(self):
         pending_runs = [mock.Mock() for _ in range(2)]
         autospec_method(
-            self.run_collection.get_pending,
-            return_value=pending_runs,
+            self.run_collection.get_pending, return_value=pending_runs,
         )
         self.run_collection.cancel_pending()
         for pending_run in pending_runs:
@@ -568,11 +524,7 @@ class TestJobRunCollection(TestCase):
         assert_equal(run, self.job_runs[0])
 
     def test_get_newest_exclude_manual(self):
-        run = self._mock_run(
-            state=actionrun.ActionRun.RUNNING,
-            run_num=5,
-            manual=True,
-        )
+        run = self._mock_run(state=actionrun.ActionRun.RUNNING, run_num=5, manual=True,)
         self.job_runs.insert(0, run)
         newest_run = self.run_collection.get_newest(include_manual=False)
         assert_equal(newest_run, self.job_runs[1])
@@ -584,8 +536,7 @@ class TestJobRunCollection(TestCase):
     def test_pending(self):
         run_num = self.run_collection.next_run_num()
         scheduled_run = self._mock_run(
-            run_num=run_num,
-            state=actionrun.ActionRun.SCHEDULED,
+            run_num=run_num, state=actionrun.ActionRun.SCHEDULED,
         )
         self.run_collection.runs.appendleft(scheduled_run)
         pending = list(self.run_collection.get_pending())
@@ -607,21 +558,20 @@ class TestJobRunCollection(TestCase):
             run_num=self.run_collection.next_run_num(),
             state=actionrun.ActionRun.STARTING,
         )
-        starting_run.node = 'differentnode'
+        starting_run.node = "differentnode"
         self.run_collection.runs.appendleft(starting_run)
-        active = list(self.run_collection.get_active('anode'))
+        active = list(self.run_collection.get_active("anode"))
         assert_length(active, 2)
         assert_equal(active, [self.job_runs[1], self.job_runs[2]])
 
     def test_get_active_none(self):
-        active = list(self.run_collection.get_active('bogus'))
+        active = list(self.run_collection.get_active("bogus"))
         assert_length(active, 0)
 
     def test_get_first_queued(self):
         run_num = self.run_collection.next_run_num()
         second_queued = self._mock_run(
-            run_num=run_num,
-            state=actionrun.ActionRun.QUEUED,
+            run_num=run_num, state=actionrun.ActionRun.QUEUED,
         )
         self.run_collection.runs.appendleft(second_queued)
 
@@ -669,12 +619,10 @@ class TestJobRunCollection(TestCase):
         assert_equal(str(self.run_collection), expected)
 
     def test_get_action_runs(self):
-        action_name = 'action_name'
+        action_name = "action_name"
         self.run_collection.runs = job_runs = [mock.Mock(), mock.Mock()]
         runs = self.run_collection.get_action_runs(action_name)
-        expected = [
-            job_run.get_action_run.return_value for job_run in job_runs
-        ]
+        expected = [job_run.get_action_run.return_value for job_run in job_runs]
         assert_equal(runs, expected)
         for job_run in job_runs:
             job_run.get_action_run.assert_called_with(action_name)
@@ -686,25 +634,24 @@ class TestJobRunStateTransitions:
     @pytest.fixture
     def mock_event_bus(self):
         with mock.patch(
-            'tron.core.actionrun.EventBus',
-            autospec=True,
+            "tron.core.actionrun.EventBus", autospec=True,
         ) as mock_event_bus:
             mock_event_bus.has_event.return_value = True
             yield mock_event_bus
 
     @pytest.fixture
     def job_run(self, tmpdir, mock_event_bus):
-        action_foo = action.Action('foo', 'command', None)
-        action_after_foo = action.Action('after_foo', 'command', None)
-        action_bar = action.Action('bar', 'command', None, triggered_by={'trigger'})
+        action_foo = action.Action("foo", "command", None)
+        action_after_foo = action.Action("after_foo", "command", None)
+        action_bar = action.Action("bar", "command", None, triggered_by={"trigger"})
         action_graph = actiongraph.ActionGraph(
             action_map={
-                'foo': action_foo,
-                'after_foo': action_after_foo,
-                'bar': action_bar,
+                "foo": action_foo,
+                "after_foo": action_after_foo,
+                "bar": action_bar,
             },
-            required_actions={'foo': set(), 'after_foo': {'foo'}, 'bar': set()},
-            required_triggers={'foo': set(), 'after_foo': set(), 'bar': {'trigger'}},
+            required_actions={"foo": set(), "after_foo": {"foo"}, "bar": set()},
+            required_triggers={"foo": set(), "after_foo": set(), "bar": {"trigger"}},
         )
         mock_job = mock.Mock(
             output_path=filehandler.OutputPath(tmpdir),
@@ -722,9 +669,9 @@ class TestJobRunStateTransitions:
 
     def test_success_path(self, job_run):
         # Check expected states as actions run normally and succeed.
-        foo = job_run.get_action_run('foo')
-        after_foo = job_run.get_action_run('after_foo')
-        bar = job_run.get_action_run('bar')
+        foo = job_run.get_action_run("foo")
+        after_foo = job_run.get_action_run("after_foo")
+        bar = job_run.get_action_run("bar")
 
         # Run is initially SCHEDULED
         assert job_run.state == actionrun.ActionRun.SCHEDULED
@@ -756,9 +703,9 @@ class TestJobRunStateTransitions:
         assert job_run.state == actionrun.ActionRun.SUCCEEDED
 
     def test_one_action_fails(self, job_run):
-        foo = job_run.get_action_run('foo')
-        after_foo = job_run.get_action_run('after_foo')
-        bar = job_run.get_action_run('bar')
+        foo = job_run.get_action_run("foo")
+        after_foo = job_run.get_action_run("after_foo")
+        bar = job_run.get_action_run("bar")
 
         # bar action fails, job is RUNNING because foo is still running
         job_run.start()
@@ -782,9 +729,9 @@ class TestJobRunStateTransitions:
         assert job_run.state == actionrun.ActionRun.SUCCEEDED
 
     def test_one_action_unknown(self, job_run):
-        foo = job_run.get_action_run('foo')
-        after_foo = job_run.get_action_run('after_foo')
-        bar = job_run.get_action_run('bar')
+        foo = job_run.get_action_run("foo")
+        after_foo = job_run.get_action_run("after_foo")
+        bar = job_run.get_action_run("bar")
 
         assert job_run.state == actionrun.ActionRun.SCHEDULED
 
@@ -806,9 +753,9 @@ class TestJobRunStateTransitions:
         assert job_run.state == actionrun.ActionRun.UNKNOWN
 
     def test_both_unknown_and_failed(self, job_run):
-        foo = job_run.get_action_run('foo')
-        after_foo = job_run.get_action_run('after_foo')
-        bar = job_run.get_action_run('bar')
+        foo = job_run.get_action_run("foo")
+        after_foo = job_run.get_action_run("after_foo")
+        bar = job_run.get_action_run("bar")
 
         # bar action becomes unknown, job is RUNNING because foo is still running
         job_run.start()
@@ -829,9 +776,9 @@ class TestJobRunStateTransitions:
         assert job_run.state == actionrun.ActionRun.FAILED
 
     def test_required_action_fails(self, job_run):
-        foo = job_run.get_action_run('foo')
-        after_foo = job_run.get_action_run('after_foo')
-        bar = job_run.get_action_run('bar')
+        foo = job_run.get_action_run("foo")
+        after_foo = job_run.get_action_run("after_foo")
+        bar = job_run.get_action_run("bar")
 
         assert job_run.state == actionrun.ActionRun.SCHEDULED
 
@@ -853,13 +800,13 @@ class TestJobRunStateTransitions:
         # Pretend we reconfigured and after_foo doesn't depend on foo anymore
         # Run should not be WAITING
         # Ideally it would still be FAILED, but for now it's UNKNOWN in this case
-        job_run.action_runs.action_graph.required_actions['after_foo'] = {}
+        job_run.action_runs.action_graph.required_actions["after_foo"] = {}
         assert job_run.state == actionrun.ActionRun.UNKNOWN
 
     def test_required_action_unknown(self, job_run):
-        foo = job_run.get_action_run('foo')
-        after_foo = job_run.get_action_run('after_foo')
-        bar = job_run.get_action_run('bar')
+        foo = job_run.get_action_run("foo")
+        after_foo = job_run.get_action_run("after_foo")
+        bar = job_run.get_action_run("bar")
 
         # An action (foo) required by another action becomes unknown
         # Run is RUNNING while the other action, bar, is running
@@ -878,13 +825,13 @@ class TestJobRunStateTransitions:
 
         # Pretend we reconfigured and after_foo doesn't depend on foo anymore
         # Run should not be waiting
-        job_run.action_runs.action_graph.required_actions['after_foo'] = {}
+        job_run.action_runs.action_graph.required_actions["after_foo"] = {}
         assert job_run.state == actionrun.ActionRun.UNKNOWN
 
     def test_with_trigger(self, job_run, mock_event_bus):
-        foo = job_run.get_action_run('foo')
-        after_foo = job_run.get_action_run('after_foo')
-        bar = job_run.get_action_run('bar')
+        foo = job_run.get_action_run("foo")
+        after_foo = job_run.get_action_run("after_foo")
+        bar = job_run.get_action_run("bar")
 
         # Start without trigger for bar
         mock_event_bus.has_event.return_value = False
@@ -930,5 +877,5 @@ class TestJobRunStateTransitions:
         assert job_run.state == actionrun.ActionRun.SCHEDULED
         job_run.start()
         assert job_run.state == actionrun.ActionRun.STARTING
-        job_run.get_action_run('after_foo').cancel()
+        job_run.get_action_run("after_foo").cancel()
         assert job_run.state == actionrun.ActionRun.CANCELLED

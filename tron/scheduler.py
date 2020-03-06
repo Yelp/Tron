@@ -37,12 +37,12 @@ def scheduler_from_config(config, time_zone):
     if isinstance(config, schedule_parse.ConfigGrocScheduler):
         return GeneralScheduler(
             time_zone=time_zone,
-            timestr=config.timestr or '00:00',
+            timestr=config.timestr or "00:00",
             ordinals=config.ordinals,
             monthdays=config.monthdays,
             months=config.months,
             weekdays=config.weekdays,
-            name='groc',
+            name="groc",
             original=config.original,
             jitter=config.jitter,
         )
@@ -57,7 +57,7 @@ def scheduler_from_config(config, time_zone):
             weekdays=config.weekdays,
             ordinals=config.ordinals,
             seconds=[0],
-            name='cron',
+            name="cron",
             original=config.original,
             jitter=config.jitter,
         )
@@ -69,7 +69,7 @@ def scheduler_from_config(config, time_zone):
             minutes=[config.minute],
             seconds=[config.second],
             weekdays=config.days,
-            name='daily',
+            name="daily",
             original=config.original,
             jitter=config.jitter,
         )
@@ -84,13 +84,14 @@ def get_jitter(time_delta):
 
 def get_jitter_str(time_delta):
     if not time_delta:
-        return ''
-    return ' (+/- %s)' % time_delta
+        return ""
+    return " (+/- %s)" % time_delta
 
 
 class GeneralScheduler(object):
     """Scheduler which uses a TimeSpecification.
     """
+
     schedule_on_complete = False
 
     def __init__(
@@ -123,8 +124,8 @@ class GeneralScheduler(object):
         """
         self.time_zone = time_zone
         self.jitter = jitter
-        self.name = name or 'daily'
-        self.original = original or ''
+        self.name = name or "daily"
+        self.original = original or ""
         self.time_spec = trontimespec.TimeSpecification(
             ordinals=ordinals,
             weekdays=weekdays,
@@ -142,9 +143,10 @@ class GeneralScheduler(object):
         if not start_time:
             start_time = timeutils.current_time(tz=self.time_zone)
         elif self.time_zone:
-            if start_time.tzinfo is None or start_time.tzinfo.utcoffset(
-                start_time,
-            ) is None:
+            if (
+                start_time.tzinfo is None
+                or start_time.tzinfo.utcoffset(start_time,) is None
+            ):
                 # tz-naive start times need to be localized first to the requested
                 # time zone.
                 start_time = trontimespec.naive_as_timezone(start_time, self.time_zone)
@@ -152,17 +154,10 @@ class GeneralScheduler(object):
         return self.time_spec.get_match(start_time) + get_jitter(self.jitter)
 
     def __str__(self):
-        return '%s %s%s' % (
-            self.name,
-            self.original,
-            get_jitter_str(self.jitter),
-        )
+        return "%s %s%s" % (self.name, self.original, get_jitter_str(self.jitter),)
 
     def __eq__(self, other):
-        return hasattr(
-            other,
-            'time_spec',
-        ) and self.time_spec == other.time_spec
+        return hasattr(other, "time_spec",) and self.time_spec == other.time_spec
 
     def __ne__(self, other):
         return not self == other

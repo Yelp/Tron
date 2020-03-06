@@ -111,7 +111,7 @@ class EventBus:
 
     def _publish(self, event):
         if isinstance(event, str):
-            event = {'id': event}
+            event = {"id": event}
         if isinstance(event, dict):
             self.publish_queue.append(event)
             log.debug(f"publish of {event['id']} enqueued")
@@ -139,7 +139,7 @@ class EventBus:
 
     def sync_load_log(self):
         started = time.time()
-        with open(self.log_current, 'rb') as f:
+        with open(self.log_current, "rb") as f:
             self.event_log = pickle.load(f)
         duration = time.time() - started
         log.info(f"log read from disk, took {duration:.4}s")
@@ -148,7 +148,7 @@ class EventBus:
         started = time.time()
         new_file = os.path.join(self.log_dir, f"{int(started)}.pickle")
         try:
-            with open(new_file, 'xb') as f:
+            with open(new_file, "xb") as f:
                 pickle.dump(self.event_log, f)
         except FileExistsError:
             log.exception(
@@ -188,8 +188,7 @@ class EventBus:
         if time.time() > self.log_last_save + self.log_save_interval:
             if self.log_updates > 0:
                 save_reason = (
-                    f"{self.log_save_interval}s passed, "
-                    f"{self.log_updates} updates"
+                    f"{self.log_save_interval}s passed, " f"{self.log_updates} updates"
                 )
             else:
                 self.log_last_save = time.time()
@@ -202,15 +201,13 @@ class EventBus:
             self.log_updates = 0
 
         consume_dequeue(self.subscribe_queue, self.sync_subscribe)
-        consume_dequeue(
-            self.clear_subscription_queue, self.sync_clear_subscriptions
-        )
+        consume_dequeue(self.clear_subscription_queue, self.sync_clear_subscriptions)
         consume_dequeue(self.publish_queue, self.sync_publish)
 
     def sync_publish(self, event):
         event = pickle.loads(pickle.dumps(event))
-        event_id = event['id']
-        del event['id']
+        event_id = event["id"]
+        del event["id"]
         if event_id in self.event_log:
             if self.event_log[event_id] != event:
                 log.info(f"replacing event: {event_id}")
@@ -237,8 +234,7 @@ class EventBus:
             return
 
         new_subs = [
-            sub_cb for sub_cb in self.event_subscribers[prefix]
-            if sub_cb[0] != sub
+            sub_cb for sub_cb in self.event_subscribers[prefix] if sub_cb[0] != sub
         ]
         if new_subs:
             self.event_subscribers[prefix] = new_subs

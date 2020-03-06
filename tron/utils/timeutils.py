@@ -22,7 +22,7 @@ def delta_total_seconds(td):
     """Equivalent to timedelta.total_seconds() available in Python 2.7.
     """
     microseconds, seconds, days = td.microseconds, td.seconds, td.days
-    return (microseconds + (seconds + days * 24 * 3600) * 10**6) / 10**6
+    return (microseconds + (seconds + days * 24 * 3600) * 10 ** 6) / 10 ** 6
 
 
 def macro_timedelta(start_date, years=0, months=0, days=0, hours=0, minutes=0):
@@ -46,11 +46,7 @@ def macro_timedelta(start_date, years=0, months=0, days=0, hours=0, minutes=0):
     new_day = min(start_date.day, days_in_month)
 
     end_date = datetime.datetime(
-        new_year,
-        new_month,
-        new_day,
-        start_date.hour,
-        start_date.minute,
+        new_year, new_month, new_day, start_date.hour, start_date.minute,
     )
     month_and_year_delta = end_date - start_date.replace(tzinfo=None)
     delta += month_and_year_delta
@@ -76,18 +72,18 @@ class DateArithmetic(object):
     a date with the delta added or subtracted.
     """
 
-    DATE_TYPE_PATTERN = re.compile(r'(\w+)([+-]\d+)?')
+    DATE_TYPE_PATTERN = re.compile(r"(\w+)([+-]\d+)?")
 
     DATE_FORMATS = {
-        'year': '%Y',
-        'month': '%m',
-        'day': '%d',
-        'hour': '%H',
-        'shortdate': '%Y-%m-%d',
-        'ym': '%Y-%m',
-        'ymd': '%Y-%m-%d',
-        'ymdh': '%Y-%m-%dT%H',
-        'ymdhm': '%Y-%m-%dT%H:%M',
+        "year": "%Y",
+        "month": "%m",
+        "day": "%d",
+        "hour": "%H",
+        "shortdate": "%Y-%m-%d",
+        "ym": "%Y-%m",
+        "ymd": "%Y-%m-%d",
+        "ymdh": "%Y-%m-%dT%H",
+        "ymdhm": "%Y-%m-%dT%H:%M",
     }
 
     @classmethod
@@ -105,20 +101,20 @@ class DateArithmetic(object):
         attr, value = match.groups()
         delta = int(value) if value else 0
 
-        if attr in ('shortdate', 'year', 'month', 'day', 'hour'):
+        if attr in ("shortdate", "year", "month", "day", "hour"):
             if delta:
-                kwargs = {'days' if attr == 'shortdate' else attr + 's': delta}
+                kwargs = {"days" if attr == "shortdate" else attr + "s": delta}
                 dt += macro_timedelta(dt, **kwargs)
             return dt.strftime(cls.DATE_FORMATS[attr])
 
-        if attr in ('ym', 'ymd', 'ymdh', 'ymdhm'):
+        if attr in ("ym", "ymd", "ymdh", "ymdhm"):
             args = [0] * len(attr)
             args[-1] = delta
             dt += macro_timedelta(dt, *args)
             return dt.strftime(cls.DATE_FORMATS[attr])
 
-        if attr == 'unixtime':
+        if attr == "unixtime":
             return int(dt.timestamp()) + delta
 
-        if attr == 'daynumber':
+        if attr == "daynumber":
             return dt.toordinal() + delta

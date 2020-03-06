@@ -29,12 +29,8 @@ class TestPersistenceManagerFactory(TestCase):
     def test_from_config_shelve(self):
         tmpdir = tempfile.mkdtemp()
         try:
-            fname = os.path.join(tmpdir, 'state')
-            config = schema.ConfigState(
-                store_type='shelve',
-                name=fname,
-                buffer_size=0,
-            )
+            fname = os.path.join(tmpdir, "state")
+            config = schema.ConfigState(store_type="shelve", name=fname, buffer_size=0,)
             manager = PersistenceManagerFactory.from_config(config)
             store = manager._impl
             assert_equal(store.filename, config.name)
@@ -45,7 +41,7 @@ class TestPersistenceManagerFactory(TestCase):
 
 class TestStateMetadata(TestCase):
     def test_validate_metadata(self):
-        metadata = {'version': (0, 5, 2)}
+        metadata = {"version": (0, 5, 2)}
         StateMetadata.validate_metadata(metadata)
 
     def test_validate_metadata_no_state_data(self):
@@ -53,11 +49,9 @@ class TestStateMetadata(TestCase):
         StateMetadata.validate_metadata(metadata)
 
     def test_validate_metadata_mismatch(self):
-        metadata = {'version': (200, 1, 1)}
+        metadata = {"version": (200, 1, 1)}
         assert_raises(
-            VersionMismatchError,
-            StateMetadata.validate_metadata,
-            metadata,
+            VersionMismatchError, StateMetadata.validate_metadata, metadata,
         )
 
 
@@ -88,7 +82,7 @@ class TestPersistentStateManager(TestCase):
     @setup
     def setup_manager(self):
         self.store = mock.Mock()
-        self.store.build_key.side_effect = lambda t, i: '%s%s' % (t, i)
+        self.store.build_key.side_effect = lambda t, i: "%s%s" % (t, i)
         self.buffer = StateSaveBuffer(1)
         self.manager = PersistentStateManager(self.store, self.buffer)
 
@@ -96,59 +90,47 @@ class TestPersistentStateManager(TestCase):
         assert_equal(self.manager._impl, self.store)
 
     def test_keys_for_items(self):
-        names = ['namea', 'nameb']
-        key_to_item_map = self.manager._keys_for_items('type', names)
+        names = ["namea", "nameb"]
+        key_to_item_map = self.manager._keys_for_items("type", names)
 
-        keys = ['type%s' % name for name in names]
+        keys = ["type%s" % name for name in names]
         assert_equal(key_to_item_map, dict(zip(keys, names)))
 
     def test_restore_dicts(self):
-        names = ['namea', 'nameb']
+        names = ["namea", "nameb"]
         autospec_method(self.manager._keys_for_items)
         self.manager._keys_for_items.return_value = dict(enumerate(names))
         self.store.restore.return_value = {
-            0: {
-                'state': 'data',
-            },
-            1: {
-                'state': '2data',
-            },
+            0: {"state": "data",},
+            1: {"state": "2data",},
         }
-        state_data = self.manager._restore_dicts('type', names)
+        state_data = self.manager._restore_dicts("type", names)
         expected = {
-            names[0]: {
-                'state': 'data',
-            },
-            names[1]: {
-                'state': '2data',
-            },
+            names[0]: {"state": "data",},
+            names[1]: {"state": "2data",},
         }
         assert_equal(expected, state_data)
 
     def test_save(self):
-        name, state_data = 'name', mock.Mock()
+        name, state_data = "name", mock.Mock()
         self.manager.save(runstate.JOB_STATE, name, state_data)
-        key = '%s%s' % (runstate.JOB_STATE, name)
+        key = "%s%s" % (runstate.JOB_STATE, name)
         self.store.save.assert_called_with([(key, state_data)])
 
     def test_save_failed(self):
         self.store.save.side_effect = PersistenceStoreError("blah")
         assert_raises(
-            PersistenceStoreError,
-            self.manager.save,
-            None,
-            None,
-            None,
+            PersistenceStoreError, self.manager.save, None, None, None,
         )
 
     def test_save_while_disabled(self):
         with self.manager.disabled():
-            self.manager.save("something", 'name', mock.Mock())
+            self.manager.save("something", "name", mock.Mock())
         assert not self.store.save.mock_calls
 
     def test_check_consistency(self):
         state_data = mock.Mock()
-        state = {runstate.JOB_STATE: {'name': state_data}}
+        state = {runstate.JOB_STATE: {"name": state_data}}
         key = f"{runstate.JOB_STATE}name"
 
         self.manager._check_consistency(state)
@@ -157,19 +139,12 @@ class TestPersistentStateManager(TestCase):
         assert self.store.save.call_args == mock.call([(key, state_data)])
 
     def test_check_consistency_failed(self):
-        state = {runstate.JOB_STATE: {'name': mock.Mock()}}
+        state = {runstate.JOB_STATE: {"name": mock.Mock()}}
 
         with mock.patch.object(
-            self.store,
-            'save',
-            side_effect=PersistenceStoreError,
-            autospec=None,
+            self.store, "save", side_effect=PersistenceStoreError, autospec=None,
         ):
-            assert_raises(
-                PersistenceStoreError,
-                self.manager._check_consistency,
-                state
-            )
+            assert_raises(PersistenceStoreError, self.manager._check_consistency, state)
 
     def test_cleanup(self):
         self.manager.cleanup()
@@ -210,8 +185,7 @@ class TestStateChangeWatcher(TestCase):
         assert not self.watcher.shutdown.mock_calls
 
     @mock.patch(
-        'tron.serialize.runstate.statemanager.PersistenceManagerFactory',
-        autospec=True,
+        "tron.serialize.runstate.statemanager.PersistenceManagerFactory", autospec=True,
     )
     def test_update_from_config_changed(self, mock_factory):
         state_config = mock.Mock()
@@ -220,8 +194,7 @@ class TestStateChangeWatcher(TestCase):
         assert_equal(self.watcher.config, state_config)
         self.watcher.shutdown.assert_called_with()
         assert_equal(
-            self.watcher.state_manager,
-            mock_factory.from_config.return_value,
+            self.watcher.state_manager, mock_factory.from_config.return_value,
         )
         mock_factory.from_config.assert_called_with(state_config)
 
@@ -229,21 +202,15 @@ class TestStateChangeWatcher(TestCase):
         mock_job = mock.Mock()
         self.watcher.save_job(mock_job)
         self.watcher.state_manager.save.assert_called_with(
-            runstate.JOB_STATE,
-            mock_job.name,
-            mock_job.state_data,
+            runstate.JOB_STATE, mock_job.name, mock_job.state_data,
         )
 
-    @mock.patch(
-        'tron.serialize.runstate.statemanager.StateMetadata', autospec=None
-    )
+    @mock.patch("tron.serialize.runstate.statemanager.StateMetadata", autospec=None)
     def test_save_metadata(self, mock_state_metadata):
         self.watcher.save_metadata()
         meta_data = mock_state_metadata.return_value
         self.watcher.state_manager.save.assert_called_with(
-            runstate.MCP_STATE,
-            meta_data.name,
-            meta_data.state_data,
+            runstate.MCP_STATE, meta_data.name, meta_data.state_data,
         )
 
     def test_shutdown(self):

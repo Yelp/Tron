@@ -8,9 +8,6 @@ from twisted.internet import protocol
 def make_manhole(namespace):
     f = protocol.ServerFactory()
     f.protocol = lambda: TelnetTransport(
-        TelnetBootstrapProtocol,
-        insults.ServerProtocol,
-        ColoredManhole,
-        namespace
+        TelnetBootstrapProtocol, insults.ServerProtocol, ColoredManhole, namespace
     )
     return f

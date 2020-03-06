@@ -11,14 +11,14 @@ class JobCollection:
     """A collection of jobs."""
 
     def __init__(self):
-        self.jobs = collections.MappingCollection('jobs')
+        self.jobs = collections.MappingCollection("jobs")
         self.proxy = proxy.CollectionProxy(
             self.jobs.values,
             [
-                proxy.func_proxy('enable', lambda seq: all(list(seq))),
-                proxy.func_proxy('disable', lambda seq: all(list(seq))),
-                proxy.func_proxy('schedule', lambda seq: all(list(seq))),
-                proxy.func_proxy('run_queue_schedule', lambda seq: all(list(seq))),
+                proxy.func_proxy("enable", lambda seq: all(list(seq))),
+                proxy.func_proxy("disable", lambda seq: all(list(seq))),
+                proxy.func_proxy("schedule", lambda seq: all(list(seq))),
+                proxy.func_proxy("run_queue_schedule", lambda seq: all(list(seq))),
             ],
         )
 

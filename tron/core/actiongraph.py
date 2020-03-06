@@ -7,7 +7,7 @@ from collections import namedtuple
 from tron.utils.timeutils import delta_total_seconds
 
 log = logging.getLogger(__name__)
-Trigger = namedtuple('Trigger', ['name', 'command'])
+Trigger = namedtuple("Trigger", ["name", "command"])
 
 
 class ActionGraph(object):
@@ -30,8 +30,7 @@ class ActionGraph(object):
             return []
 
         dependencies = [
-            self.action_map[action]
-            for action in self.required_actions[action_name]
+            self.action_map[action] for action in self.required_actions[action_name]
         ]
         if include_triggers:
             dependencies += [
@@ -59,15 +58,15 @@ class ActionGraph(object):
         elif name in self.all_triggers:
             # we don't have the Trigger config to know what the real command is,
             # so we just fill in the command with 'TRIGGER'
-            return Trigger(name, 'TRIGGER')
+            return Trigger(name, "TRIGGER")
         else:
-            raise KeyError(f'{name} is not a valid action')
+            raise KeyError(f"{name} is not a valid action")
 
     def __eq__(self, other):
         return (
-            self.action_map == other.action_map and
-            self.required_actions == other.required_actions and
-            self.required_triggers == other.required_triggers
+            self.action_map == other.action_map
+            and self.required_actions == other.required_actions
+            and self.required_triggers == other.required_triggers
         )
 
     def __ne__(self, other):

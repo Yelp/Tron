@@ -9,13 +9,13 @@ from tron.metrics import timer
 
 def report_resource_request(resource, request, duration_ms):
     timer(
-        name=f'tron.api.{resource.__class__.__name__}',
+        name=f"tron.api.{resource.__class__.__name__}",
         delta=duration_ms,
-        dimensions={'method': request.method.decode()}
+        dimensions={"method": request.method.decode()},
     )
 
 
-class AsyncResource():
+class AsyncResource:
     capacity = 10
     semaphore = threading.Semaphore(value=capacity)
     lock = threading.Lock()
@@ -38,9 +38,7 @@ class AsyncResource():
     @staticmethod
     def bounded(fn):
         def wrapper(resource, request):
-            d = threads.deferToThread(
-                AsyncResource.process, fn, resource, request
-            )
+            d = threads.deferToThread(AsyncResource.process, fn, resource, request)
             d.addCallback(AsyncResource.finish, request, resource)
             d.addErrback(request.processingFailed)
             return server.NOT_DONE_YET

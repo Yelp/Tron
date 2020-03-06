@@ -13,20 +13,20 @@ log = logging.getLogger(__name__)
 
 
 class Py2Shelf(shelve.Shelf):
-    def __init__(self, filename, flag='c', protocol=2, writeback=False):
+    def __init__(self, filename, flag="c", protocol=2, writeback=False):
         db = bsddb3.hashopen(filename, flag)
         args = [self, db, protocol, writeback]
         if sys.version_info[0] == 3:
-            args.append('utf8')
+            args.append("utf8")
         shelve.Shelf.__init__(*args)
 
     def __getitem__(self, key):
         try:
             value = self.cache[key]
         except KeyError:
-            f = BytesIO(self.dict[key.encode('utf8')])
+            f = BytesIO(self.dict[key.encode("utf8")])
             if sys.version_info[0] == 3:
-                value = pickle.load(f, encoding='bytes')
+                value = pickle.load(f, encoding="bytes")
             else:
                 value = pickle.load(f)
             if self.writeback:
@@ -38,11 +38,11 @@ class Py2Shelf(shelve.Shelf):
             self.cache[key] = value
         f = BytesIO()
         pickle.dump(obj=value, file=f, protocol=self._protocol)
-        self.dict[key.encode('utf8')] = f.getvalue()
+        self.dict[key.encode("utf8")] = f.getvalue()
 
 
 class ShelveKey(object):
-    __slots__ = ['type', 'iden']
+    __slots__ = ["type", "iden"]
 
     def __init__(self, type, iden):
         self.type = maybe_decode(type)
@@ -78,10 +78,7 @@ class ShelveStateStore(object):
         self.shelve.sync()
 
     def restore(self, keys):
-        items = zip(
-            keys,
-            (self.shelve.get(str(key.key)) for key in keys),
-        )
+        items = zip(keys, (self.shelve.get(str(key.key)) for key in keys),)
         return dict(filter(operator.itemgetter(1), items))
 
     def cleanup(self):

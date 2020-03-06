@@ -29,7 +29,7 @@ class JobScheduler(Observer):
         for run in job_runs:
             self.job.watch(run)
         self.job.runs.runs.extend(job_runs)
-        log.info(f'{self} restored')
+        log.info(f"{self} restored")
 
         recovery.launch_recovery_actionruns_for_job_runs(
             job_runs=job_runs, master_action_runner=config_action_runner
@@ -79,7 +79,7 @@ class JobScheduler(Observer):
         # when reconfiguring, preserve the latest scheduled run's time
         pending_run_times = [j.run_time for j in list(self.job.runs.get_pending())]
         if len(pending_run_times) != 1:
-            log.warning(f'{self.job} has {len(pending_run_times)} pending runs, not 1')
+            log.warning(f"{self.job} has {len(pending_run_times)} pending runs, not 1")
         next_run_time = None if len(pending_run_times) == 0 else pending_run_times[0]
 
         self.job.runs.remove_pending()
@@ -106,13 +106,15 @@ class JobScheduler(Observer):
         # Since job updating only copies equality attributes (defined in the Job
         # class), we need to now enable or disable the job depending on if the
         # new job says so.
-        if (curr_job.enabled is not new_job.enabled and
-                curr_job.config_enabled is not new_job.config_enabled):
+        if (
+            curr_job.enabled is not new_job.enabled
+            and curr_job.config_enabled is not new_job.config_enabled
+        ):
             if new_job.config_enabled:
-                log.info(f'{curr_job} re-enabled during reconfiguration')
+                log.info(f"{curr_job} re-enabled during reconfiguration")
                 self.enable()
             else:
-                log.info(f'{curr_job} disabled during reconfiguration')
+                log.info(f"{curr_job} disabled during reconfiguration")
                 self.disable()
         curr_job.config_enabled = new_job.config_enabled
 
@@ -206,7 +208,9 @@ class JobScheduler(Observer):
         self.job.name = name
         for job_run in self.get_job_runs():
             for action_run in job_run._get_action_runs():
-                action_run.job_run_id = action_run.job_run_id.replace(job_run.job_name, name, 1)
+                action_run.job_run_id = action_run.job_run_id.replace(
+                    job_run.job_name, name, 1
+                )
             job_run.job_name = name
 
     def __str__(self):

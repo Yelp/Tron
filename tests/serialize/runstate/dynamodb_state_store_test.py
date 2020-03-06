@@ -18,35 +18,40 @@ def mock_transact_write_items(self):
     """
 
     def put_item(item):
-        name = item['TableName']
-        record = item['Item']
+        name = item["TableName"]
+        record = item["Item"]
         return self.dynamodb_backend.put_item(name, record)
 
     def delete_item(item):
-        name = item['TableName']
-        keys = item['Key']
+        name = item["TableName"]
+        keys = item["Key"]
         return self.dynamodb_backend.delete_item(name, keys)
 
     def update_item(item):
-        name = item['TableName']
-        key = item['Key']
-        update_expression = item.get('UpdateExpression')
-        attribute_updates = item.get('AttributeUpdates')
-        expression_attribute_names = item.get('ExpressionAttributeNames', {})
-        expression_attribute_values = item.get('ExpressionAttributeValues', {})
+        name = item["TableName"]
+        key = item["Key"]
+        update_expression = item.get("UpdateExpression")
+        attribute_updates = item.get("AttributeUpdates")
+        expression_attribute_names = item.get("ExpressionAttributeNames", {})
+        expression_attribute_values = item.get("ExpressionAttributeValues", {})
         return self.dynamodb_backend.update_item(
-            name, key, update_expression, attribute_updates, expression_attribute_names,
-            expression_attribute_values)
+            name,
+            key,
+            update_expression,
+            attribute_updates,
+            expression_attribute_names,
+            expression_attribute_values,
+        )
 
-    transact_items = self.body['TransactItems']
+    transact_items = self.body["TransactItems"]
 
     for transact_item in transact_items:
-        if 'Put' in transact_item:
-            put_item(transact_item['Put'])
-        elif 'Update' in transact_item:
-            update_item(transact_item['Update'])
-        elif 'Delete' in transact_item:
-            delete_item(transact_item['Delete'])
+        if "Put" in transact_item:
+            put_item(transact_item["Put"])
+        elif "Update" in transact_item:
+            update_item(transact_item["Update"])
+        elif "Delete" in transact_item:
+            delete_item(transact_item["Delete"])
 
     return dynamo_json_dump({})
 
@@ -54,48 +59,33 @@ def mock_transact_write_items(self):
 @pytest.fixture(autouse=True)
 def store():
     with mock.patch(
-        'moto.dynamodb2.responses.DynamoHandler.transact_write_items',
-        new=mock_transact_write_items, create=True
+        "moto.dynamodb2.responses.DynamoHandler.transact_write_items",
+        new=mock_transact_write_items,
+        create=True,
     ), mock_dynamodb2():
-        dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
-        table_name = 'tmp'
-        store = DynamoDBStateStore(table_name, 'us-west-2')
+        dynamodb = boto3.resource("dynamodb", region_name="us-west-2")
+        table_name = "tmp"
+        store = DynamoDBStateStore(table_name, "us-west-2")
         store.table = dynamodb.create_table(
             TableName=table_name,
             KeySchema=[
-                {
-                    'AttributeName': 'key',
-                    'KeyType': 'HASH'  # Partition key
-                },
-                {
-                    'AttributeName': 'index',
-                    'KeyType': 'RANGE'  # Sort key
-                }
+                {"AttributeName": "key", "KeyType": "HASH"},  # Partition key
+                {"AttributeName": "index", "KeyType": "RANGE"},  # Sort key
             ],
             AttributeDefinitions=[
-                {
-                    'AttributeName': 'key',
-                    'AttributeType': 'S'
-                },
-                {
-                    'AttributeName': 'index',
-                    'AttributeType': 'N'
-                },
-
+                {"AttributeName": "key", "AttributeType": "S"},
+                {"AttributeName": "index", "AttributeType": "N"},
             ],
-            ProvisionedThroughput={
-                'ReadCapacityUnits': 10,
-                'WriteCapacityUnits': 10
-            }
+            ProvisionedThroughput={"ReadCapacityUnits": 10, "WriteCapacityUnits": 10},
         )
-        store.client = boto3.client('dynamodb', region_name='us-west-2')
+        store.client = boto3.client("dynamodb", region_name="us-west-2")
         # Has to be yield here for moto to work
         yield store
 
 
 @pytest.fixture
 def small_object():
-    yield pickle.dumps({'this': 'data'})
+    yield pickle.dumps({"this": "data"})
 
 
 @pytest.fixture
@@ -107,29 +97,21 @@ def large_object():
 class TestDynamoDBStateStore:
     def test_save(self, store, small_object, large_object):
         key_value_pairs = [
-            (
-                store.build_key("DynamoDBTest", "two"),
-                small_object,
-            ),
-            (
-                store.build_key("DynamoDBTest2", "four"),
-                small_object,
-            ),
+            (store.build_key("DynamoDBTest", "two"), small_object,),
+            (store.build_key("DynamoDBTest2", "four"), small_object,),
         ]
         store.save(key_value_pairs)
 
-        keys = [store.build_key("DynamoDBTest", "two"), store.build_key("DynamoDBTest2", "four")]
+        keys = [
+            store.build_key("DynamoDBTest", "two"),
+            store.build_key("DynamoDBTest2", "four"),
+        ]
         vals = store.restore(keys)
         for key, value in key_value_pairs:
             assert_equal(vals[key], value)
 
     def test_save_more_than_4KB(self, store, small_object, large_object):
-        key_value_pairs = [
-            (
-                store.build_key("DynamoDBTest", "two"),
-                large_object
-            )
-        ]
+        key_value_pairs = [(store.build_key("DynamoDBTest", "two"), large_object)]
         store.save(key_value_pairs)
 
         keys = [store.build_key("DynamoDBTest", "two")]
@@ -171,8 +153,8 @@ class TestDynamoDBStateStore:
 
     def test_retry_saving(self, store, small_object, large_object):
         with mock.patch(
-            'moto.dynamodb2.responses.DynamoHandler.transact_write_items',
-            side_effect=KeyError('foo')
+            "moto.dynamodb2.responses.DynamoHandler.transact_write_items",
+            side_effect=KeyError("foo"),
         ) as mock_failed_write:
             keys = [store.build_key("thing", i) for i in range(1)]
             value = pickle.loads(small_object)
@@ -184,34 +166,21 @@ class TestDynamoDBStateStore:
 
     def test_retry_reading(self, store, small_object, large_object):
         unprocessed_value = {
-            'Responses': {
-                store.name: [
-                    {
-                        'index': {'N': '0'},
-                        'key': {'S': 'thing 0'}
-                    }
-                ]
-            },
-            'UnprocessedKeys':
-            {
+            "Responses": {store.name: [{"index": {"N": "0"}, "key": {"S": "thing 0"}}]},
+            "UnprocessedKeys": {
                 store.name: {
-                    'ConsistentRead': True,
-                    'Keys': [{
-                        'index': {'N': '0'},
-                        'key': {'S': 'thing 0'}
-                    }]
+                    "ConsistentRead": True,
+                    "Keys": [{"index": {"N": "0"}, "key": {"S": "thing 0"}}],
                 }
             },
-            'ResponseMetadata': {}
+            "ResponseMetadata": {},
         }
         keys = [store.build_key("thing", i) for i in range(1)]
         value = pickle.loads(small_object)
         pairs = zip(keys, (value for i in range(len(keys))))
         store.save(pairs)
         with mock.patch.object(
-            store.client,
-            'batch_get_item',
-            return_value=unprocessed_value
+            store.client, "batch_get_item", return_value=unprocessed_value
         ) as mock_failed_read:
             try:
                 store.restore(keys)

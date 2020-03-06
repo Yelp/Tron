@@ -15,6 +15,7 @@ class PyDeferredQueue(defer.DeferredQueue):
         # Call from reactor thread so callbacks from get() will be executed
         # on the reactor thread, even if this is called from another thread.
         from twisted.internet import reactor
+
         try:
             reactor.callFromThread(super(PyDeferredQueue, self).put, item)
         except defer.QueueOverflow:

@@ -19,7 +19,7 @@ class TestShelveStateStore(TestCase):
     @setup
     def setup_store(self):
         self.tmpdir = tempfile.mkdtemp()
-        self.filename = os.path.join(self.tmpdir, 'state')
+        self.filename = os.path.join(self.tmpdir, "state")
         self.store = ShelveStateStore(self.filename)
 
     @teardown
@@ -31,18 +31,8 @@ class TestShelveStateStore(TestCase):
 
     def test_save(self):
         key_value_pairs = [
-            (
-                ShelveKey("one", "two"),
-                {
-                    'this': 'data',
-                },
-            ),
-            (
-                ShelveKey("three", "four"),
-                {
-                    'this': 'data2',
-                },
-            ),
+            (ShelveKey("one", "two"), {"this": "data",},),
+            (ShelveKey("three", "four"), {"this": "data2",},),
         ]
         self.store.save(key_value_pairs)
         self.store.cleanup()
@@ -55,7 +45,7 @@ class TestShelveStateStore(TestCase):
     def test_restore(self):
         self.store.cleanup()
         keys = [ShelveKey("thing", i) for i in range(5)]
-        value = {'this': 'data'}
+        value = {"this": "data"}
         store = Py2Shelf(self.filename)
         for key in keys:
             store[str(key.key)] = value

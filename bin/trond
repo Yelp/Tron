@@ -17,19 +17,19 @@ from tron.config import manager
 
 log = logging.getLogger(__name__)
 
-DEFAULT_CONF = 'default_config.yaml'
-DEFAULT_CONF_PATH = 'config/'
-DEFAULT_WORKING_DIR = '/var/lib/tron/'
-DEFAULT_LOCKFILE = 'tron.lock'
-DEFAULT_LOCKPATH = '/var/run/' + DEFAULT_LOCKFILE
+DEFAULT_CONF = "default_config.yaml"
+DEFAULT_CONF_PATH = "config/"
+DEFAULT_WORKING_DIR = "/var/lib/tron/"
+DEFAULT_LOCKFILE = "tron.lock"
+DEFAULT_LOCKPATH = "/var/run/" + DEFAULT_LOCKFILE
 
 
 def parse_cli():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        '--version',
-        action='version',
+        "--version",
+        action="version",
         version="%s %s" % (parser.prog, tron.__version__),
     )
 
@@ -56,21 +56,19 @@ def parse_cli():
 
     parser.add_argument(  # for backwards compatibility
         "--pid-file",
-        help="[DEPRECATED] File path to pid file. Use --lock-file instead."
+        help="[DEPRECATED] File path to pid file. Use --lock-file instead.",
     )
 
     parser.add_argument(
         "--lock-file",
         help="File path to lock file, defaults to %s if working directory "
-        "is default. Otherwise defaults to <working dir>/%s" %
-        (DEFAULT_LOCKPATH, DEFAULT_LOCKFILE),
+        "is default. Otherwise defaults to <working dir>/%s"
+        % (DEFAULT_LOCKPATH, DEFAULT_LOCKFILE),
     )
 
-    logging_group = parser.add_argument_group('logging', '')
+    logging_group = parser.add_argument_group("logging", "")
     logging_group.add_argument(
-        "--log-conf",
-        "-l",
-        help="File path to a custom logging.conf",
+        "--log-conf", "-l", help="File path to a custom logging.conf",
     )
 
     logging_group.add_argument(
@@ -87,7 +85,7 @@ def parse_cli():
         help="Debug mode, extra error reporting, no daemonizing",
     )
 
-    api_group = parser.add_argument_group('Web Service API', '')
+    api_group = parser.add_argument_group("Web Service API", "")
     api_group.add_argument(
         "--port",
         "-P",
@@ -108,10 +106,7 @@ def parse_cli():
     requirement = pkg_resources.Requirement.parse("tron")
     api_group.add_argument(
         "--web-path",
-        default=pkg_resources.resource_filename(
-            requirement,
-            'tronweb',
-        ),
+        default=pkg_resources.resource_filename(requirement, "tronweb",),
         help="Path to static web resources, default %(default)s.",
     )
 
@@ -121,7 +116,7 @@ def parse_cli():
     if args.log_conf:
         args.log_conf = os.path.join(args.working_dir, args.log_conf)
         if not os.path.exists(args.log_conf):
-            parser.error("Logging config file not found: %s" % args.log_conf, )
+            parser.error("Logging config file not found: %s" % args.log_conf,)
 
     if not args.lock_file:
         if args.pid_file:  # for backwards compatibility
@@ -132,10 +127,7 @@ def parse_cli():
             args.lock_file = DEFAULT_LOCKFILE
 
     args.lock_file = os.path.join(args.working_dir, args.lock_file)
-    args.config_path = os.path.join(
-        args.working_dir,
-        args.config_path,
-    )
+    args.config_path = os.path.join(args.working_dir, args.config_path,)
 
     return args
 
@@ -151,9 +143,8 @@ def setup_environment(args):
     if not os.path.exists(args.working_dir):
         os.makedirs(args.working_dir)
 
-    if (
-        not os.path.isdir(args.working_dir) or
-        not os.access(args.working_dir, os.R_OK | os.W_OK | os.X_OK)
+    if not os.path.isdir(args.working_dir) or not os.access(
+        args.working_dir, os.R_OK | os.W_OK | os.X_OK
     ):
         msg = "Error, can't access working directory %s" % args.working_dir
         raise SystemExit(msg)
@@ -180,5 +171,5 @@ def main():
     trond.run()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

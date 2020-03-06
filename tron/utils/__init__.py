@@ -33,7 +33,7 @@ def next_or_none(iterable):
 def flock(fd):
     close = False
     if isinstance(fd, str):
-        fd = open(fd, 'a')
+        fd = open(fd, "a")
         close = True
 
     try:

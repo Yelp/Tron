@@ -21,22 +21,22 @@ def from_string(content):
 
 
 def write(path, content):
-    with open(path, 'w') as fh:
+    with open(path, "w") as fh:
         yaml.dump(content, fh)
 
 
 def read(path):
-    with open(path, 'r') as fh:
+    with open(path, "r") as fh:
         return from_string(fh)
 
 
 def write_raw(path, content):
-    with open(path, 'w') as fh:
+    with open(path, "w") as fh:
         fh.write(maybe_decode(content))
 
 
 def read_raw(path):
-    with open(path, 'r') as fh:
+    with open(path, "r") as fh:
         return fh.read()
 
 
@@ -47,7 +47,7 @@ def hash_digest(content):
 class ManifestFile(object):
     """Manage the manifest file, which tracks name to filename."""
 
-    MANIFEST_FILENAME = '_manifest.yaml'
+    MANIFEST_FILENAME = "_manifest.yaml"
 
     def __init__(self, path):
         self.filename = os.path.join(path, self.MANIFEST_FILENAME)
@@ -95,8 +95,8 @@ class ConfigManager(object):
         self.manifest = manifest or ManifestFile(config_path)
 
     def build_file_path(self, name):
-        name = name.replace('.', '_').replace(os.path.sep, '_')
-        return os.path.join(self.config_path, '%s.yaml' % name)
+        name = name.replace(".", "_").replace(os.path.sep, "_")
+        return os.path.join(self.config_path, "%s.yaml" % name)
 
     def read_raw_config(self, name=schema.MASTER_NAMESPACE):
         """Read the config file without converting to yaml."""
@@ -132,10 +132,7 @@ class ConfigManager(object):
         return self.manifest.get_file_name(name) or create_filename()
 
     def validate_with_fragment(
-        self,
-        name,
-        content,
-        should_validate_missing_dependency=True,
+        self, name, content, should_validate_missing_dependency=True,
     ):
         name_mapping = self.get_config_name_mapping()
         name_mapping[name] = content

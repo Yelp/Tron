@@ -92,21 +92,18 @@ class JobContext(object):
         if not date_spec:
             raise KeyError(item)
 
-        if date_name == 'last_success':
+        if date_name == "last_success":
             last_success = self.job.runs.last_success
             last_success = last_success.run_time if last_success else None
 
-            time_value = timeutils.DateArithmetic.parse(
-                date_spec,
-                last_success,
-            )
+            time_value = timeutils.DateArithmetic.parse(date_spec, last_success,)
             if time_value:
                 return time_value
 
         raise KeyError(item)
 
     def _get_date_spec_parts(self, name):
-        parts = name.rsplit('#', 1)
+        parts = name.rsplit("#", 1)
         if len(parts) != 2:
             return name, None
         return parts
@@ -134,10 +131,10 @@ class JobRunContext(object):
         the status of the other steps
         """
         if self.job_run.action_runs.is_failed:
-            return 'FAILURE'
+            return "FAILURE"
         elif self.job_run.action_runs.is_complete_without_cleanup:
-            return 'SUCCESS'
-        return 'UNKNOWN'
+            return "SUCCESS"
+        return "UNKNOWN"
 
     def __getitem__(self, name):
         """Attempt to parse date arithmetic syntax and apply to run_time."""

@@ -34,7 +34,7 @@ class MasterControlProgram(object):
         self.config = manager.ConfigManager(config_path)
         self.context = command_context.CommandContext()
         self.state_watcher = statemanager.StateChangeWatcher()
-        log.info('initialized')
+        log.info("initialized")
 
     def shutdown(self):
         EventBus.shutdown()
@@ -71,16 +71,16 @@ class MasterControlProgram(object):
     def apply_config(self, config_container, reconfigure=False):
         """Apply a configuration."""
         master_config_directives = [
-            (self.update_state_watcher_config, 'state_persistence'),
-            (self.set_context_base, 'command_context'),
+            (self.update_state_watcher_config, "state_persistence"),
+            (self.set_context_base, "command_context"),
             (
                 node.NodePoolRepository.update_from_config,
-                'nodes',
-                'node_pools',
-                'ssh_options',
+                "nodes",
+                "node_pools",
+                "ssh_options",
             ),
-            (MesosClusterRepository.configure, 'mesos_options'),
-            (self.configure_eventbus, 'eventbus_enabled'),
+            (MesosClusterRepository.configure, "mesos_options"),
+            (self.configure_eventbus, "eventbus_enabled"),
         ]
         master_config = config_container.get_master()
         apply_master_configuration(master_config_directives, master_config)
@@ -144,11 +144,11 @@ class MasterControlProgram(object):
         """Use the state manager to retrieve to persisted state and apply it
         to the configured Jobs.
         """
-        log.info('restoring')
+        log.info("restoring")
         states = self.state_watcher.restore(self.jobs.get_names())
-        MesosClusterRepository.restore_state(states.get('mesos_state', {}))
+        MesosClusterRepository.restore_state(states.get("mesos_state", {}))
 
-        self.jobs.restore_state(states.get('job_state', {}), action_runner)
+        self.jobs.restore_state(states.get("job_state", {}), action_runner)
         self.state_watcher.save_metadata()
 
     def __str__(self):

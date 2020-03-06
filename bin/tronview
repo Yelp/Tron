@@ -69,9 +69,7 @@ def parse_cli():
         default=0,
     )
     parser.add_argument(
-        'name',
-        nargs='?',
-        help='job name | job run id | action id',
+        "name", nargs="?", help="job name | job run id | action id",
     ).completer = cmd_utils.tron_jobs_completer
 
     argcomplete.autocomplete(parser)
@@ -82,7 +80,7 @@ def parse_cli():
 def console_height():
     if not sys.stdout.isatty():
         return 40
-    return int(os.popen('stty size', 'r').read().split()[0])
+    return int(os.popen("stty size", "r").read().split()[0])
 
 
 def view_all(args, client):
@@ -110,10 +108,7 @@ def view_job_run(args, job_run_id, client):
 
 
 def view_action_run(args, act_run_id, client):
-    content = client.action_runs(
-        act_run_id.url,
-        num_lines=args.num_displays,
-    )
+    content = client.action_runs(act_run_id.url, num_lines=args.num_displays,)
     return display.format_action_run_details(content)
 
 
@@ -129,10 +124,8 @@ def get_view_output(name, args, client):
     try:
         tron_id = get_object_type_from_identifier(url_index, name)
     except ValueError as e:
-        possibilities = list(tron_jobs_completer(prefix='', client=client))
-        suggestions = suggest_possibilities(
-            word=name, possibilities=possibilities
-        )
+        possibilities = list(tron_jobs_completer(prefix="", client=client))
+        suggestions = suggest_possibilities(word=name, possibilities=possibilities)
         raise SystemExit(f"Error: {e}{suggestions}")
 
     if tron_id.type not in obj_type_to_view_map:
@@ -156,9 +149,9 @@ def main():
     try:
         if args.events:
             response = client.request("/api/events")
-            error = response.get('error')
+            error = response.get("error")
             if not error:
-                for evt in response.get('response', ['* no recorded events *']):
+                for evt in response.get("response", ["* no recorded events *"]):
                     print(evt)
                 sys.exit(ExitCode.success)
 
@@ -171,15 +164,18 @@ def main():
             print("Unrecognized identifier: %s" % args.name, file=sys.stderr)
             sys.exit(ExitCode.fail)
 
-        if sys.stdout.isatty() and len(output.split('\n')) > console_height():
+        if sys.stdout.isatty() and len(output.split("\n")) > console_height():
             display.view_with_less(output, args.display_color)
         else:
             print(output)
 
     except RequestError as err:
-        print(f"Error connecting to the tron server ({args.server}): {err}", file=sys.stderr)
+        print(
+            f"Error connecting to the tron server ({args.server}): {err}",
+            file=sys.stderr,
+        )
         sys.exit(ExitCode.fail)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

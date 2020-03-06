@@ -13,6 +13,7 @@ log = logging.getLogger(__name__)
 @dataclass
 class Action:
     """A configurable data object for an Action."""
+
     name: str
     command: str
     node_pool: str
@@ -52,7 +53,7 @@ class Action:
             executor=config.executor,
             cpus=config.cpus,
             mem=config.mem,
-            disk=(1024. if config.disk is None else config.disk),
+            disk=(1024.0 if config.disk is None else config.disk),
             docker_image=config.docker_image,
             trigger_downstreams=config.trigger_downstreams,
             triggered_by=config.triggered_by,

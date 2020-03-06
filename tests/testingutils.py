@@ -29,16 +29,16 @@ class MockReactorTestCase(TestCase):
     def class_setup_patched_reactor(self):
         msg = "%s must set a module_to_mock field" % self.__class__
         assert self.module_to_mock, msg
-        self.old_reactor = getattr(self.module_to_mock, 'reactor')
+        self.old_reactor = getattr(self.module_to_mock, "reactor")
 
     @class_teardown
     def teardown_patched_reactor(self):
-        setattr(self.module_to_mock, 'reactor', self.old_reactor)
+        setattr(self.module_to_mock, "reactor", self.old_reactor)
 
     @setup
     def setup_mock_reactor(self):
         self.reactor = mock.MagicMock()
-        setattr(self.module_to_mock, 'reactor', self.reactor)
+        setattr(self.module_to_mock, "reactor", self.reactor)
 
 
 # TODO: remove

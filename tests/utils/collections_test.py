@@ -14,21 +14,21 @@ from tron.utils import collections
 class TestMappingCollections(TestCase):
     @setup
     def setup_collection(self):
-        self.name = 'some_name'
+        self.name = "some_name"
         self.collection = collections.MappingCollection(self.name)
 
     def test_filter_by_name(self):
         autospec_method(self.collection.remove)
-        self.collection.update(dict.fromkeys(['c', 'd', 'e']))
-        self.collection.filter_by_name(['a', 'c'])
-        expected = [mock.call(name) for name in ['d', 'e']]
+        self.collection.update(dict.fromkeys(["c", "d", "e"]))
+        self.collection.filter_by_name(["a", "c"])
+        expected = [mock.call(name) for name in ["d", "e"]]
         assert_mock_calls(expected, self.collection.remove.mock_calls)
 
     def test_remove_missing(self):
-        assert_raises(ValueError, self.collection.remove, 'name')
+        assert_raises(ValueError, self.collection.remove, "name")
 
     def test_remove(self):
-        name = 'the_name'
+        name = "the_name"
         self.collection[name] = item = mock.Mock()
         self.collection.remove(name)
         assert_not_in(name, self.collection)
@@ -41,7 +41,7 @@ class TestMappingCollections(TestCase):
 
     def test_contains_item_not_equal(self):
         mock_item, mock_func = mock.Mock(), mock.Mock()
-        self.collection[mock_item.get_name()] = 'other item'
+        self.collection[mock_item.get_name()] = "other item"
         result = self.collection.contains_item(mock_item, mock_func)
         assert_equal(result, mock_func.return_value)
         mock_func.assert_called_with(mock_item)
@@ -68,6 +68,5 @@ class TestMappingCollections(TestCase):
         item = mock.Mock()
         self.collection.replace(item)
         self.collection.add.assert_called_with(
-            item,
-            self.collection.remove_item,
+            item, self.collection.remove_item,
         )

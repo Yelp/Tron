@@ -18,11 +18,9 @@ from tron.config import manager
 
 def parse_options():
     parser = optparse.OptionParser()
-    parser.add_option('-s', '--source', help="Path to old configuration file.")
+    parser.add_option("-s", "--source", help="Path to old configuration file.")
     parser.add_option(
-        '-d',
-        '--dest',
-        help="Path to new configuration directory.",
+        "-d", "--dest", help="Path to new configuration directory.",
     )
     opts, _ = parser.parse_args()
 

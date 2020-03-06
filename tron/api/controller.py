@@ -18,28 +18,30 @@ class JobCollectionController(object):
         self.job_collection = job_collection
 
     def handle_command(self, command, old_name=None, new_name=None):
-        if command == 'move':
+        if command == "move":
             if old_name not in self.job_collection.get_names():
                 return f"Error: {old_name} doesn't exist"
             if new_name in self.job_collection.get_names():
                 return f"Error: {new_name} exists already"
             return self.job_collection.move(old_name, new_name)
 
-        raise UnknownCommandError(f"Unknown command {command}. Try running this on an individual job or action run id")
+        raise UnknownCommandError(
+            f"Unknown command {command}. Try running this on an individual job or action run id"
+        )
 
 
 class ActionRunController(object):
 
     mapped_commands = {
-        'start',
-        'success',
-        'cancel',
-        'fail',
-        'skip',
-        'stop',
-        'kill',
-        'retry',
-        'recover',
+        "start",
+        "success",
+        "cancel",
+        "fail",
+        "skip",
+        "stop",
+        "kill",
+        "retry",
+        "recover",
     }
 
     def __init__(self, action_run, job_run):
@@ -48,23 +50,20 @@ class ActionRunController(object):
 
     def handle_command(self, command):
         if command not in self.mapped_commands:
-            raise UnknownCommandError(f"Unknown command {command}. You can only do one of the following to Action runs: {self.mapped_commands}")
-
-        if command == 'start' and self.job_run.is_scheduled:
-            return (
-                "Action run cannot be started if its job run is still "
-                "scheduled."
+            raise UnknownCommandError(
+                f"Unknown command {command}. You can only do one of the following to Action runs: {self.mapped_commands}"
             )
 
-        if command == 'recover' and not self.action_run.is_unknown:
-            return (
-                "Action run cannot be recovered if its state is not unknown."
-            )
+        if command == "start" and self.job_run.is_scheduled:
+            return "Action run cannot be started if its job run is still " "scheduled."
 
-        if command in ('stop', 'kill'):
+        if command == "recover" and not self.action_run.is_unknown:
+            return "Action run cannot be recovered if its state is not unknown."
+
+        if command in ("stop", "kill"):
             return self.handle_termination(command)
 
-        if command == 'retry':
+        if command == "retry":
             return self.handle_retry()
 
         if getattr(self.action_run, command)():
@@ -99,31 +98,32 @@ class ActionRunController(object):
 
 class JobRunController(object):
 
-    mapped_commands = {'start', 'success', 'cancel', 'fail', 'stop'}
+    mapped_commands = {"start", "success", "cancel", "fail", "stop"}
 
     def __init__(self, job_run, job_scheduler):
         self.job_run = job_run
         self.job_scheduler = job_scheduler
 
     def handle_command(self, command):
-        if command == 'restart' or command == 'rerun':
+        if command == "restart" or command == "rerun":
             runs = self.job_scheduler.manual_start(self.job_run.run_time)
             return "Created %s" % ",".join(str(run) for run in runs)
 
         if command in self.mapped_commands:
             if getattr(self.job_run, command)():
-                return "%s now in state %s" % (
-                    self.job_run,
-                    self.job_run.state,
-                )
+                return "%s now in state %s" % (self.job_run, self.job_run.state,)
 
             msg = "Failed to %s, %s in state %s"
             return msg % (command, self.job_run, self.job_run.state)
 
         if command == "retry":
-            raise UnknownCommandError("Error: Job runs cannot be retried, only individual actions can. Did you mean 'rerun'?")
+            raise UnknownCommandError(
+                "Error: Job runs cannot be retried, only individual actions can. Did you mean 'rerun'?"
+            )
         else:
-            raise UnknownCommandError(f"Unknown command {command}. Only one of the following applies to a Job run: {self.mapped_commands}")
+            raise UnknownCommandError(
+                f"Unknown command {command}. Only one of the following applies to a Job run: {self.mapped_commands}"
+            )
 
 
 class JobController(object):
@@ -131,24 +131,30 @@ class JobController(object):
         self.job_scheduler = job_scheduler
 
     def handle_command(self, command, run_time=None):
-        if command == 'enable':
+        if command == "enable":
             self.job_scheduler.enable()
             return "%s is enabled" % self.job_scheduler.get_job()
 
-        elif command == 'disable':
+        elif command == "disable":
             self.job_scheduler.disable()
             return "%s is disabled" % self.job_scheduler.get_job()
 
-        elif command == 'start':
+        elif command == "start":
             runs = self.job_scheduler.manual_start(run_time=run_time)
             return "Created %s" % ",".join(str(run) for run in runs)
 
         if command == "retry":
-            raise UnknownCommandError("Error: A whole Job cannot be retried, only individual actions for a specific job run id can.")
+            raise UnknownCommandError(
+                "Error: A whole Job cannot be retried, only individual actions for a specific job run id can."
+            )
         elif command in ["stop", "success", "cancel", "fail", "stop"]:
-            raise UnknownCommandError(f"Error: {command} doesn't apply to a whole Job. Please run this on an individual job run id. Hint: try '{self.job_scheduler.get_job()}.-1' for the latest job id")
+            raise UnknownCommandError(
+                f"Error: {command} doesn't apply to a whole Job. Please run this on an individual job run id. Hint: try '{self.job_scheduler.get_job()}.-1' for the latest job id"
+            )
         else:
-            raise UnknownCommandError(f"Unknown command {command}. Does it apply to a whole job? Try a specific Job id or individual action")
+            raise UnknownCommandError(
+                f"Unknown command {command}. Does it apply to a whole job? Try a specific Job id or individual action"
+            )
 
 
 class ConfigController(object):
@@ -188,7 +194,7 @@ class ConfigController(object):
         if self.config_manager.get_hash(name) != config_hash:
             return "Configuration has changed. Please try again."
 
-        old_config = self.read_config(name)['config']
+        old_config = self.read_config(name)["config"]
         try:
             self.config_manager.write_config(name, content)
             self.mcp.reconfigure()
@@ -223,11 +229,11 @@ class ConfigController(object):
 
 
 class EventsController:
-    COMMANDS = {'publish', 'discard'}
+    COMMANDS = {"publish", "discard"}
 
     def publish(self, event):
         if not EventBus.instance:
-            return dict(error='EventBus disabled')
+            return dict(error="EventBus disabled")
 
         if EventBus.has_event(event):
             msg = f"event {event} already published"
@@ -235,25 +241,25 @@ class EventsController:
             return dict(response=msg)
 
         if not EventBus.publish(event):
-            msg = f'could not publish {event}'
+            msg = f"could not publish {event}"
             log.error(msg)
             return dict(error=msg)
 
-        return dict(response='OK')
+        return dict(response="OK")
 
     def discard(self, event):
         if not EventBus.instance:
-            return dict(error='EventBus disabled')
+            return dict(error="EventBus disabled")
 
         if not EventBus.discard(event):
             msg = f"could not discard {event}"
             log.error(msg)
             return dict(error=msg)
 
-        return dict(response='OK')
+        return dict(response="OK")
 
     def info(self):
         if not EventBus.instance:
-            return dict(error='EventBus disabled')
+            return dict(error="EventBus disabled")
 
         return dict(response=EventBus.instance.event_log)

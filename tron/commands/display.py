@@ -17,22 +17,22 @@ class Color(object):
 
     enabled = None
     colors = {
-        'gray': '\033[90m',
-        'red': '\033[91m',
-        'green': '\033[92m',
-        'yellow': '\033[93m',
-        'blue': '\033[94m',
-        'purple': '\033[95m',
-        'cyan': '\033[96m',
-        'white': '\033[99m',
+        "gray": "\033[90m",
+        "red": "\033[91m",
+        "green": "\033[92m",
+        "yellow": "\033[93m",
+        "blue": "\033[94m",
+        "purple": "\033[95m",
+        "cyan": "\033[96m",
+        "white": "\033[99m",
         # h is for highlighted
-        'hgray': '\033[100m',
-        'hred': '\033[101m',
-        'hgreen': '\033[102m',
-        'hyellow': '\033[103m',
-        'hblue': '\033[104m',
-        'hcyan': '\033[106m',
-        'end': '\033[0m',
+        "hgray": "\033[100m",
+        "hred": "\033[101m",
+        "hgreen": "\033[102m",
+        "hyellow": "\033[103m",
+        "hblue": "\033[104m",
+        "hcyan": "\033[106m",
+        "end": "\033[0m",
     }
 
     @classmethod
@@ -49,11 +49,7 @@ class Color(object):
     def set(cls, color_name, text):
         if not cls.enabled or not color_name:
             return text
-        return "{}{}{}".format(
-            cls.colors[color_name.lower()],
-            text,
-            cls.colors['end'],
-        )
+        return "{}{}{}".format(cls.colors[color_name.lower()], text, cls.colors["end"],)
 
     @classmethod
     def toggle(cls, enable):
@@ -92,7 +88,7 @@ class TableDisplay(object):
     resize_fields = set()
     reversed = False
 
-    header_color = 'hgray'
+    header_color = "hgray"
 
     def __init__(self, sort_index=0):
         self.out = []
@@ -108,8 +104,7 @@ class TableDisplay(object):
 
     def header(self):
         row = [
-            label.ljust(self.get_field_width(i))
-            for i, label in enumerate(self.columns)
+            label.ljust(self.get_field_width(i)) for i, label in enumerate(self.columns)
         ]
         self.out.append(Color.set(self.header_color, "".join(row)))
 
@@ -136,7 +131,7 @@ class TableDisplay(object):
         length = self.get_field_width(field_idx)
         value = self.format_value(field_idx, value)
         if len(value) > length:
-            return (value[:length - 3] + '...').ljust(length)
+            return (value[: length - 3] + "...").ljust(length)
         return value.ljust(length)
 
     def format_value(self, field_idx, value):
@@ -199,15 +194,15 @@ class TableDisplay(object):
 
 def add_color_for_state(state):
     if state == actionrun.ActionRun.FAILED:
-        return Color.set('red', state)
+        return Color.set("red", state)
     if state in {
         actionrun.ActionRun.RUNNING,
         actionrun.ActionRun.SUCCEEDED,
         job.Job.STATUS_ENABLED,
     }:
-        return Color.set('green', state)
+        return Color.set("green", state)
     if state in {job.Job.STATUS_DISABLED}:
-        return Color.set('blue', state)
+        return Color.set("blue", state)
     return state
 
 
@@ -231,105 +226,103 @@ def format_fields(display_obj, content):
 
 def format_job_details(job_content):
     details = format_fields(DisplayJobs, job_content)
-    job_runs = DisplayJobRuns().format(job_content['runs'])
-    actions = "\n\nList of Actions:\n%s" % '\n'.join(
-        job_content['action_names'],
-    )
+    job_runs = DisplayJobRuns().format(job_content["runs"])
+    actions = "\n\nList of Actions:\n%s" % "\n".join(job_content["action_names"],)
     return details + actions + "\n" + job_runs
 
 
 def format_action_run_details(content, stdout=True, stderr=True):
-    out = ["Requirements:"] + content['requirements'] + ['']
+    out = ["Requirements:"] + content["requirements"] + [""]
     if stdout:
-        out.append("Stdout:\n%s\n" % '\n'.join(content['stdout']))
+        out.append("Stdout:\n%s\n" % "\n".join(content["stdout"]))
 
     if stderr:
-        out.append("Stderr:\n%s\n" % '\n'.join(content['stderr']))
+        out.append("Stderr:\n%s\n" % "\n".join(content["stderr"]))
 
     details = format_fields(DisplayActionRuns, content)
-    return details + '\n' + '\n'.join(out)
+    return details + "\n" + "\n".join(out)
 
 
 class DisplayJobRuns(TableDisplay):
     """Format Job runs."""
 
-    columns = ['Run ID', 'State', 'Node', 'Scheduled Time']
-    fields = ['run_num', 'state', 'node', 'run_time']
+    columns = ["Run ID", "State", "Node", "Scheduled Time"]
+    fields = ["run_num", "state", "node", "run_time"]
     widths = [10, 12, 30, 25]
-    title = 'job runs'
+    title = "job runs"
     reversed = True
 
     detail_labels = [
-        ('Job Run', 'id'),
-        ('State', 'state'),
-        ('Node', 'node'),
-        ('Scheduled time', 'run_time'),
-        ('Start time', 'start_time'),
-        ('End time', 'end_time'),
-        ('Manual run', 'manual'),
+        ("Job Run", "id"),
+        ("State", "state"),
+        ("Node", "node"),
+        ("Scheduled time", "run_time"),
+        ("Start time", "start_time"),
+        ("End time", "end_time"),
+        ("Manual run", "manual"),
     ]
 
     colors = {
-        'id': partial(Color.set, 'yellow'),
-        'state': add_color_for_state,
-        'manual': lambda value: Color.set('cyan' if value else None, value),
+        "id": partial(Color.set, "yellow"),
+        "state": add_color_for_state,
+        "manual": lambda value: Color.set("cyan" if value else None, value),
     }
 
     def format_value(self, field_idx, value):
-        if self.fields[field_idx] == 'run_num':
-            value = '.' + str(value)
+        if self.fields[field_idx] == "run_num":
+            value = "." + str(value)
 
-        if self.fields[field_idx] == 'scheduled_time':
-            value = value or '-'
+        if self.fields[field_idx] == "scheduled_time":
+            value = value or "-"
 
-        if self.fields[field_idx] == 'node':
+        if self.fields[field_idx] == "node":
             value = display_node(value)
 
         return super(DisplayJobRuns, self).format_value(field_idx, value)
 
     def row_color(self, fields):
-        return 'red' if fields['state'] == 'FAIL' else 'white'
+        return "red" if fields["state"] == "FAIL" else "white"
 
     def post_row(self, row):
-        start = row['start_time'] or "-"
-        end = row['end_time'] or "-"
-        duration = row['duration'][:-7] if row['duration'] else "-"
+        start = row["start_time"] or "-"
+        end = row["end_time"] or "-"
+        duration = row["duration"][:-7] if row["duration"] else "-"
 
         row_data = "%sStart: %s  End: %s  (%s)" % (
-            ' ' * self.widths[0],
+            " " * self.widths[0],
             start,
             end,
             duration,
         )
-        self.out.append(Color.set('gray', row_data))
+        self.out.append(Color.set("gray", row_data))
 
 
 class DisplayJobs(TableDisplay):
 
-    columns = ['Name', 'State', 'Scheduler', 'Last Success']
-    fields = ['name', 'status', 'scheduler', 'last_success']
+    columns = ["Name", "State", "Scheduler", "Last Success"]
+    fields = ["name", "status", "scheduler", "last_success"]
     widths = [50, 10, 20, 22]
-    title = 'jobs'
-    resize_fields = ['name']
+    title = "jobs"
+    resize_fields = ["name"]
 
     detail_labels = [
-        ('Job', 'name'),
-        ('State', 'status'),
-        ('Scheduler', 'scheduler'),
-        ('Max runtime', 'max_runtime'),
-        ('Node Pool', 'node_pool'),
-        ('Run on all nodes', 'all_nodes'),
-        ('Allow overlapping', 'allow_overlap'),
-        ('Queue overlapping', 'queueing'),
+        ("Job", "name"),
+        ("State", "status"),
+        ("Scheduler", "scheduler"),
+        ("Max runtime", "max_runtime"),
+        ("Node Pool", "node_pool"),
+        ("Run on all nodes", "all_nodes"),
+        ("Allow overlapping", "allow_overlap"),
+        ("Queue overlapping", "queueing"),
     ]
 
     colors = {
-        'name': partial(Color.set, 'yellow'),
-        'status': add_color_for_state,
+        "name": partial(Color.set, "yellow"),
+        "status": add_color_for_state,
     }
 
     def format_value(self, field_idx, value):
-        if self.fields[field_idx] == 'scheduler':
+        if self.fields[field_idx] == "scheduler":
             value = display_scheduler(value)
 
         return super(DisplayJobs, self).format_value(field_idx, value)
@@ -337,30 +330,30 @@ class DisplayJobs(TableDisplay):
 
 class DisplayActionRuns(TableDisplay):
 
-    columns = ['Action', 'State', 'Start Time', 'End Time', 'Duration']
-    fields = ['id', 'state', 'start_time', 'end_time', 'duration']
+    columns = ["Action", "State", "Start Time", "End Time", "Duration"]
+    fields = ["id", "state", "start_time", "end_time", "duration"]
     widths = [40, 12, 22, 22, 10]
-    title = 'actions'
-    resize_fields = ['id']
+    title = "actions"
+    resize_fields = ["id"]
 
     detail_labels = [
-        ('Action Run', 'id'),
-        ('State', 'state_delayed'),
-        ('Node', 'node'),
-        ('Command', 'command'),
-        ('Bare command', 'raw_command'),
-        ('Start time', 'start_time'),
-        ('End time', 'end_time'),
-        ('Final exit status', 'exit_status'),
-        ('Retry exit statuses', 'exit_statuses'),
-        ('Waits for triggers', 'triggered_by'),
-        ('Publishes triggers', 'trigger_downstreams'),
+        ("Action Run", "id"),
+        ("State", "state_delayed"),
+        ("Node", "node"),
+        ("Command", "command"),
+        ("Bare command", "raw_command"),
+        ("Start time", "start_time"),
+        ("End time", "end_time"),
+        ("Final exit status", "exit_status"),
+        ("Retry exit statuses", "exit_statuses"),
+        ("Waits for triggers", "triggered_by"),
+        ("Publishes triggers", "trigger_downstreams"),
     ]
 
     colors = {
-        'id': partial(Color.set, 'yellow'),
-        'state': add_color_for_state,
-        'command': partial(Color.set, 'gray'),
+        "id": partial(Color.set, "yellow"),
+        "state": add_color_for_state,
+        "command": partial(Color.set, "gray"),
     }
 
     def __init__(self):
@@ -372,21 +365,21 @@ class DisplayActionRuns(TableDisplay):
         super(DisplayActionRuns, self).banner()
 
     def format_value(self, field_idx, value):
-        if self.fields[field_idx] == 'id':
-            value = '.' + value.rsplit('.', 1)[-1]
-        if self.fields[field_idx] in ('start_time', 'end_time'):
+        if self.fields[field_idx] == "id":
+            value = "." + value.rsplit(".", 1)[-1]
+        if self.fields[field_idx] in ("start_time", "end_time"):
             value = value or "-"
-        if self.fields[field_idx] == 'duration':
+        if self.fields[field_idx] == "duration":
             # Strip microseconds
             value = value[:-7] if value else "-"
 
         return super(DisplayActionRuns, self).format_value(field_idx, value)
 
     def row_color(self, fields):
-        return 'red' if fields['state'] == 'FAIL' else 'white'
+        return "red" if fields["state"] == "FAIL" else "white"
 
     def store_data(self, data):
-        self.data = data['runs']
+        self.data = data["runs"]
         self.job_run = data
 
     def rows(self):
@@ -402,25 +395,25 @@ class DisplayActionRuns(TableDisplay):
 
 def display_node(source, _=None):
     if not source:
-        return ''
-    return '%s@%s' % (source['username'], source['hostname'])
+        return ""
+    return "%s@%s" % (source["username"], source["hostname"])
 
 
 def display_node_pool(source, _=None):
     if not source:
-        return ''
-    return "%s (%d node(s))" % (source['name'], len(source['nodes']))
+        return ""
+    return "%s (%d node(s))" % (source["name"], len(source["nodes"]))
 
 
 def display_scheduler(source, _=None):
     if not source:
-        return ''
-    return "%s %s%s" % (source['type'], source['value'], source['jitter'])
+        return ""
+    return "%s %s%s" % (source["type"], source["value"], source["jitter"])
 
 
 def display_state_delayed(_, obj):
-    state = obj['state']
-    in_delay = obj['in_delay']
+    state = obj["state"]
+    in_delay = obj["in_delay"]
     if in_delay:
         return f"{state} (retry delayed for {int(in_delay)}s)"
     else:
@@ -428,20 +421,21 @@ def display_state_delayed(_, obj):
 
 
 field_display_mapping = {
-    'node': display_node,
-    'node_pool': display_node_pool,
-    'scheduler': display_scheduler,
-    'state_delayed': display_state_delayed,
-    'exit_status': lambda v, _: actionrun.ActionRun.EXIT_REASONS.get(v, v),
+    "node": display_node,
+    "node_pool": display_node_pool,
+    "scheduler": display_scheduler,
+    "state_delayed": display_state_delayed,
+    "exit_status": lambda v, _: actionrun.ActionRun.EXIT_REASONS.get(v, v),
 }
 
 
 def view_with_less(content, color=True):
     """Send `content` through less."""
     import subprocess
-    cmd = ['less']
+
+    cmd = ["less"]
     if color:
-        cmd.append('-r')
+        cmd.append("-r")
 
     less_proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
     less_proc.stdin.write(maybe_encode(content))

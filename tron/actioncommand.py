@@ -26,29 +26,23 @@ class ActionCommand(Observable):
       done      (when the command is finished)
     """
 
-    PENDING = 'pending'
-    RUNNING = 'running'
-    EXITING = 'exiting'
-    COMPLETE = 'complete'
-    FAILSTART = 'failstart'
+    PENDING = "pending"
+    RUNNING = "running"
+    EXITING = "exiting"
+    COMPLETE = "complete"
+    FAILSTART = "failstart"
 
     STATE_MACHINE = Machine(
-        PENDING, **{
-            PENDING: {
-                'start': RUNNING,
-                'exit': FAILSTART
-            },
-            RUNNING: {
-                'exit': EXITING
-            },
-            EXITING: {
-                'close': COMPLETE
-            },
-        }
+        PENDING,
+        **{
+            PENDING: {"start": RUNNING, "exit": FAILSTART},
+            RUNNING: {"exit": EXITING},
+            EXITING: {"close": COMPLETE},
+        },
     )
 
-    STDOUT = '.stdout'
-    STDERR = '.stderr'
+    STDOUT = ".stdout"
+    STDERR = ".stderr"
 
     def __init__(self, id, command, serializer=None):
         super().__init__()
@@ -75,15 +69,15 @@ class ActionCommand(Observable):
             return True
 
     def started(self):
-        if self.machine.check('start'):
+        if self.machine.check("start"):
             self.start_time = timeutils.current_timestamp()
-            return self.transition_and_notify('start')
+            return self.transition_and_notify("start")
 
     def exited(self, exit_status):
-        if self.machine.check('exit'):
+        if self.machine.check("exit"):
             self.end_time = timeutils.current_timestamp()
             self.exit_status = exit_status
-            return self.transition_and_notify('exit')
+            return self.transition_and_notify("exit")
 
     def write_stderr(self, value):
         self.stderr.write(value)
@@ -92,10 +86,10 @@ class ActionCommand(Observable):
         self.stdout.write(value)
 
     def done(self):
-        if self.machine.check('close'):
+        if self.machine.check("close"):
             self.stdout.close()
             self.stderr.close()
-            return self.transition_and_notify('close')
+            return self.transition_and_notify("close")
 
     def handle_errback(self, result):
         """Handle an unexpected error while being run. This will likely be
@@ -122,9 +116,7 @@ class ActionCommand(Observable):
     @property
     def is_done(self):
         """Done implies no more work will be done, but might not be success."""
-        return self.machine.state in (
-            ActionCommand.COMPLETE, ActionCommand.FAILSTART
-        )
+        return self.machine.state in (ActionCommand.COMPLETE, ActionCommand.FAILSTART)
 
     def __repr__(self):
         return f"ActionCommand {self.id} {self.command}: {self.state}"
@@ -183,14 +175,14 @@ class SubprocessActionRunnerFactory(object):
 
     def build_stop_action_command(self, id, command):
         command = self.build_command(id, command, self.status_exec_name)
-        run_id = '%s.%s' % (id, command)
+        run_id = "%s.%s" % (id, command)
         return ActionCommand(run_id, command, StringBufferStore())
 
     def __eq__(self, other):
         return (
-            self.__class__ == other.__class__ and
-            self.status_path == other.status_path and
-            self.exec_path == other.exec_path
+            self.__class__ == other.__class__
+            and self.status_path == other.status_path
+            and self.exec_path == other.exec_path
         )
 
     def __ne__(self, other):

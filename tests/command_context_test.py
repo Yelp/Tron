@@ -25,10 +25,10 @@ class TestEmptyContext(TestCase):
         self.context = command_context.CommandContext(None)
 
     def test__getitem__(self):
-        assert_raises(KeyError, self.context.__getitem__, 'foo')
+        assert_raises(KeyError, self.context.__getitem__, "foo")
 
     def test_get(self):
-        assert not self.context.get('foo')
+        assert not self.context.get("foo")
 
 
 class TestBuildFilledContext(TestCase):
@@ -38,9 +38,7 @@ class TestBuildFilledContext(TestCase):
         assert not output.next
 
     def test_build_filled_context_single(self):
-        output = command_context.build_filled_context(
-            command_context.JobContext,
-        )
+        output = command_context.build_filled_context(command_context.JobContext,)
         assert isinstance(output.base, command_context.JobContext)
         assert not output.next
 
@@ -56,29 +54,29 @@ class SimpleContextTestCaseBase(TestCase):
     __test__ = False
 
     def test_hit(self):
-        assert_equal(self.context['foo'], 'bar')
+        assert_equal(self.context["foo"], "bar")
 
     def test_miss(self):
-        assert_raises(KeyError, self.context.__getitem__, 'your_mom')
+        assert_raises(KeyError, self.context.__getitem__, "your_mom")
 
     def test_get_hit(self):
-        assert_equal(self.context.get('foo'), 'bar')
+        assert_equal(self.context.get("foo"), "bar")
 
     def test_get_miss(self):
-        assert not self.context.get('unknown')
+        assert not self.context.get("unknown")
 
 
 class SimpleDictContextTestCase(SimpleContextTestCaseBase):
     @setup
     def build_context(self):
-        self.context = command_context.CommandContext(dict(foo='bar'))
+        self.context = command_context.CommandContext(dict(foo="bar"))
 
 
 class SimpleObjectContextTestCase(SimpleContextTestCaseBase):
     @setup
     def build_context(self):
         class Obj(object):
-            foo = 'bar'
+            foo = "bar"
 
         self.context = command_context.CommandContext(Obj)
 
@@ -87,30 +85,26 @@ class ChainedDictContextTestCase(SimpleContextTestCaseBase):
     @setup
     def build_context(self):
         self.next_context = command_context.CommandContext(
-            dict(foo='bar', next_foo='next_bar'),
+            dict(foo="bar", next_foo="next_bar"),
         )
-        self.context = command_context.CommandContext(
-            dict(),
-            self.next_context,
-        )
+        self.context = command_context.CommandContext(dict(), self.next_context,)
 
     def test_chain_get(self):
-        assert_equal(self.context['next_foo'], 'next_bar')
+        assert_equal(self.context["next_foo"], "next_bar")
 
 
 class ChainedDictOverrideContextTestCase(SimpleContextTestCaseBase):
     @setup
     def build_context(self):
         self.next_context = command_context.CommandContext(
-            dict(foo='your mom', next_foo='next_bar'),
+            dict(foo="your mom", next_foo="next_bar"),
         )
         self.context = command_context.CommandContext(
-            dict(foo='bar'),
-            self.next_context,
+            dict(foo="bar"), self.next_context,
         )
 
     def test_chain_get(self):
-        assert_equal(self.context['next_foo'], 'next_bar')
+        assert_equal(self.context["next_foo"], "next_bar")
 
 
 class ChainedObjectOverrideContextTestCase(SimpleContextTestCaseBase):
@@ -120,15 +114,15 @@ class ChainedObjectOverrideContextTestCase(SimpleContextTestCaseBase):
             pass
 
         obj = MyObject()
-        obj.foo = 'bar'
+        obj.foo = "bar"
 
         self.next_context = command_context.CommandContext(
-            dict(foo='your mom', next_foo='next_bar'),
+            dict(foo="your mom", next_foo="next_bar"),
         )
         self.context = command_context.CommandContext(obj, self.next_context)
 
     def test_chain_get(self):
-        assert_equal(self.context['next_foo'], 'next_bar')
+        assert_equal(self.context["next_foo"], "next_bar")
 
 
 class TestJobContext(TestCase):
@@ -137,13 +131,10 @@ class TestJobContext(TestCase):
         self.last_success = mock.Mock(run_time=datetime.datetime(2012, 3, 14))
         mock_scheduler = mock.create_autospec(scheduler.GeneralScheduler)
         run_collection = mock.create_autospec(
-            JobRunCollection,
-            last_success=self.last_success,
+            JobRunCollection, last_success=self.last_success,
         )
         self.job = job.Job(
-            "MASTER.jobname",
-            mock_scheduler,
-            run_collection=run_collection,
+            "MASTER.jobname", mock_scheduler, run_collection=run_collection,
         )
         self.context = command_context.JobContext(self.job)
 
@@ -171,36 +162,38 @@ class TestJobContext(TestCase):
         assert_raises(KeyError, lambda: self.context[name])
 
     def test__getitem__missing(self):
-        assert_raises(KeyError, lambda: self.context['bogus'])
+        assert_raises(KeyError, lambda: self.context["bogus"])
 
     def test_namespace(self):
-        assert self.context.namespace == 'MASTER'
+        assert self.context.namespace == "MASTER"
 
 
 class TestJobRunContext(TestCase):
     @setup
     def setup_context(self):
-        self.jobrun = mock.create_autospec(jobrun.JobRun, run_time='sometime', manual=True)
+        self.jobrun = mock.create_autospec(
+            jobrun.JobRun, run_time="sometime", manual=True
+        )
         self.context = command_context.JobRunContext(self.jobrun)
 
     def test_cleanup_job_status(self):
         self.jobrun.action_runs.is_failed = False
         self.jobrun.action_runs.is_complete_without_cleanup = True
-        assert_equal(self.context.cleanup_job_status, 'SUCCESS')
+        assert_equal(self.context.cleanup_job_status, "SUCCESS")
 
     def test_cleanup_job_status_failure(self):
         self.jobrun.action_runs.is_failed = True
-        assert_equal(self.context.cleanup_job_status, 'FAILURE')
+        assert_equal(self.context.cleanup_job_status, "FAILURE")
 
     def test_runid(self):
         assert_equal(self.context.runid, self.jobrun.id)
 
     def test_manual_run(self):
-        assert self.context.manual == 'true'
+        assert self.context.manual == "true"
 
-    @mock.patch('tron.command_context.timeutils.DateArithmetic', autospec=True)
+    @mock.patch("tron.command_context.timeutils.DateArithmetic", autospec=True)
     def test__getitem__(self, mock_date_math):
-        name = 'date_name'
+        name = "date_name"
         time_value = self.context[name]
         mock_date_math.parse.assert_called_with(name, self.jobrun.run_time)
         assert_equal(time_value, mock_date_math.parse.return_value)
@@ -209,11 +202,9 @@ class TestJobRunContext(TestCase):
 class TestActionRunContext(TestCase):
     @setup
     def build_context(self):
-        mock_node = mock.create_autospec(node.Node, hostname='something')
+        mock_node = mock.create_autospec(node.Node, hostname="something")
         self.action_run = mock.create_autospec(
-            actionrun.ActionRun,
-            action_name='something',
-            node=mock_node,
+            actionrun.ActionRun, action_name="something", node=mock_node,
         )
         self.context = command_context.ActionRunContext(self.action_run)
 
@@ -232,13 +223,13 @@ class TestFiller(TestCase):
     def test_filler_with_job__getitem__(self):
         context = command_context.JobContext(self.filler)
         todays_date = datetime.date.today().strftime("%Y-%m-%d")
-        assert_equal(context['last_success#shortdate'], todays_date)
+        assert_equal(context["last_success#shortdate"], todays_date)
 
     def test_filler_with_job_run__getitem__(self):
         context = command_context.JobRunContext(self.filler)
         todays_date = datetime.date.today().strftime("%Y-%m-%d")
-        assert_equal(context['shortdate'], todays_date)
+        assert_equal(context["shortdate"], todays_date)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()
