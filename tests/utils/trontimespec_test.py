@@ -3,6 +3,8 @@ from __future__ import unicode_literals
 
 import datetime
 
+import pytz
+
 from testifycompat import assert_equal
 from testifycompat import run
 from testifycompat import TestCase
@@ -131,6 +133,33 @@ class TestTimeSpecification(TestCase):
         assert time_spec.next_time(start_date, True) is None
         time = time_spec.next_time(start_date, False)
         assert_equal(time, datetime.time(1, 20, 4))
+
+    def test_get_match_dst_spring_forward(self):
+        tz = pytz.timezone('US/Pacific')
+        time_spec = trontimespec.TimeSpecification(
+            hours=[0, 1, 2, 3, 4],
+            minutes=[0],
+            seconds=[0],
+            timezone='US/Pacific',
+        )
+        start = trontimespec.naive_as_timezone(datetime.datetime(2020, 3, 8, 1), tz)
+        # Springing forward, the next hour after 1AM should be 3AM
+        next_time = time_spec.get_match(start)
+        assert next_time.hour == 3
+
+    def test_get_match_dst_fall_back(self):
+        tz = pytz.timezone('US/Pacific')
+        time_spec = trontimespec.TimeSpecification(
+            hours=[0, 1, 2, 3, 4],
+            minutes=[0],
+            seconds=[0],
+            timezone='US/Pacific',
+        )
+        start = trontimespec.naive_as_timezone(datetime.datetime(2020, 11, 1, 1), tz)
+        # Falling back, the next hour after 1AM is 1AM again. But we only run on the first 1AM
+        # Next run time should be 2AM
+        next_time = time_spec.get_match(start)
+        assert next_time.hour == 2
 
 
 if __name__ == "__main__":

@@ -67,7 +67,7 @@ def naive_as_timezone(t, tzinfo):
     except pytz.NonExistentTimeError:
         # We are in the infamous 2:xx AM block which does not
         # exist. Pretend like it's the later time, every time.
-        result = tzinfo.localize(t, is_dst=True)
+        result = tzinfo.localize(t, is_dst=False)
     return result
 
 
