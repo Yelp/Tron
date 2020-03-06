@@ -8,13 +8,17 @@ repos:
     -   id: check-json
     -   id: check-yaml
     -   id: requirements-txt-fixer
-    -   id: flake8
-        exclude: testifycompat/
 -   repo: https://github.com/asottile/reorder_python_imports.git
     rev: v1.3.2
     hooks:
     -   id: reorder-python-imports
         language_version: python3.6
+-   repo: https://github.com/psf/black
+    rev: 19.10b0
+    hooks:
+    -   id: black
+        language_version: python3.6
+        args: ['--target-version', 'py36']
 -   repo: local
     hooks:
     -   id: patch-enforce-autospec
