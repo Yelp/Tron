@@ -1,4 +1,5 @@
 import logging
+import time
 
 from tron import actioncommand
 from tron import command_context
@@ -34,6 +35,7 @@ class MasterControlProgram(object):
         self.config = manager.ConfigManager(config_path)
         self.context = command_context.CommandContext()
         self.state_watcher = statemanager.StateChangeWatcher()
+        self.boot_time = time.time()
         log.info('initialized')
 
     def shutdown(self):

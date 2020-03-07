@@ -413,6 +413,7 @@ class StatusResource(resource.Resource):
             request=request, response={
                 'status': "I'm alive.",
                 'version': __version__,
+                'boot_time': int(self._master_control.boot_time),
             }
         )
 
