@@ -56,17 +56,13 @@ class window.RefreshModel extends Backbone.Model
 
 class window.StatusModel extends Backbone.Model
 
-    initialize: (options) =>
-        super options
-        options = options || {}
-
     urlRoot: ->
         "/status/"
 
-    parse: (resp, options) =>
-        booted = moment.unix(resp['boot_time']).format()
+    parse: (resp) =>
+        booted = moment.unix(resp['boot_time']).format('YY-MM-DD HH:mm ZZ')
         uptime = moment.duration(moment() - booted).minutes()
-        $('#version').html('Tron: <b>v' + resp['version'] + '</b>  Uptime: <b>' + uptime + 'm</b> Boot: <b>' + booted + '</b>')
+        $('#version').html('<b>Tron:</b> v' + resp['version'] + ' <b>Boot:</b> ' + booted + '</b>')
         resp
 
 window.matchAny = (item, query) ->
