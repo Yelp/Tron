@@ -124,8 +124,13 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
         status = 0
         stderr = ""
     elif last_state == State.STUCK:
-        prefix = f"WARN: Job {job_run_id} exceeded expected runtime or still running when next job is scheduled on {cluster}"
-        status = 1
+        if job['monitoring'].get("page_for_expected_runtime", False):
+            level = "CRIT"
+            status = 2
+        else:
+            level = "WARN"
+            status = 1
+        prefix = f"{level}: Job {job_run_id} exceeded expected runtime or still running when next job is scheduled on {cluster}"
         stderr = '\n'.join(action_run_details.get('stderr', ["(No stderr available)"]))
     elif last_state == State.FAILED:
         prefix = f"CRIT: The last job run ({job_run_id}) failed on {cluster}!"
@@ -391,6 +396,7 @@ def compute_check_result_for_job(client, job, url_index):
     sensu_kwargs = (
         pmap(job['monitoring']).discard(PRECIOUS_JOB_ATTR)
         .discard('check_every')
+        .discard('page_for_expected_runtime')
     )
     kwargs = kwargs.update(sensu_kwargs)
     hide_stderr = kwargs.get('hide_stderr', False)

@@ -101,6 +101,12 @@ Optional Fields
       If **False**, only the latest overall run will be checked to see if it was
       successful.
 
+    **page_for_expected_runtime** (default **False**)
+      If **True**, when either a job or an action exceeds its configured ``expected_runtime``, the generated alert will be considered "critical" and will page the user.
+
+      If **False**, then an alert will not page the user.
+
+
 **queueing** (default **True**)
     If a job run is still running when the next job run is to be scheduled,
     add the next run to a queue if this is **True**. Otherwise, cancel
