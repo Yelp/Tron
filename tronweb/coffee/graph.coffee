@@ -50,7 +50,8 @@ class window.GraphView extends Backbone.View
         @node = @svg.selectAll(".node")
             .data(data)
             .enter().append("svg:g")
-            .call(@force.drag)
+            .on("dblclick", (d) -> d.fixed = false)
+            .call(@force.drag().on("dragstart", (d) -> d.fixed = true))
             .attr
                 class: @nodeClass
                 'data-title': (d) -> d.name
@@ -77,7 +78,6 @@ class window.GraphView extends Backbone.View
                 .attr("y2", (d) -> d.target.y)
 
             @node.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
-
     addNodes: (data) ->
         @force.nodes data
 
@@ -91,7 +91,6 @@ class window.GraphView extends Backbone.View
             .theta(1)
             .linkDistance(@linkDistance)
             .size([width, height])
-
     buildSvg: (height, width) ->
         @svg = d3.select(@el)
             .append("svg")
