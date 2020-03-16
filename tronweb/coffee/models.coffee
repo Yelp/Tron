@@ -54,6 +54,16 @@ class window.RefreshModel extends Backbone.Model
             console.log("scheduled with " + @interval)
             @timeout = setTimeout(@doRefresh, @interval)
 
+class window.StatusModel extends Backbone.Model
+
+    urlRoot: ->
+        "/status/"
+
+    parse: (resp) =>
+        booted = moment.unix(resp['boot_time']).format('YYYY-MM-DD HH:mm ZZ')
+        uptime = moment.duration(moment() - booted).minutes()
+        $('#version').html('<b>Tron:</b> v' + resp['version'] + ' <b>Boot:</b> ' + booted + '</b>')
+        resp
 
 window.matchAny = (item, query) ->
     ~item.toLowerCase().indexOf(query.toLowerCase())

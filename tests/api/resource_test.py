@@ -12,6 +12,7 @@ from twisted.web import http
 
 from tests.assertions import assert_call
 from tests.testingutils import autospec_method
+from tron import __version__
 from tron import mcp
 from tron import node
 from tron.api import controller
@@ -323,6 +324,22 @@ class TestConfigResource:
             'error': self.resource.controller.delete_config.return_value,
         }
         mock_respond.assert_called_with(request=request, response=expected_response)
+
+
+class TestStatusResource:
+    def test_render_GET(self, request, mock_respond):
+        self.mcp = mock.create_autospec(mcp.MasterControlProgram)
+        self.mcp.boot_time = 999
+        resource = www.StatusResource(self.mcp)
+        resource.render_GET(request)
+        expected_response = {
+            'status': "I'm alive.",
+            'version': __version__,
+            'boot_time': self.mcp.boot_time,
+        }
+        mock_respond.assert_called_with(
+            request=request, response=expected_response
+        )
 
 
 class TestMetricsResource:

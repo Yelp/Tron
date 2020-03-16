@@ -41,6 +41,7 @@ class module.NavView extends Backbone.View
             </form>
 
             </div>
+            <div id="version"></div>
           </div>
     """
 
@@ -55,6 +56,8 @@ class module.NavView extends Backbone.View
     render: =>
         @$el.html @template
         @renderTypeahead()
+        # fetch tron version and uptime
+        new window.StatusModel().fetch()
         @
 
     updater: (item) =>
