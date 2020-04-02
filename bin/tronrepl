@@ -188,7 +188,6 @@ def main():
 
     mcp = trond.mcp  # noqa: F841
     store = mcp.state_watcher.state_manager._impl  # noqa: F841
-    shelve = store.shelve  # noqa: F841
 
     print("")
     print("+---------------------+")
