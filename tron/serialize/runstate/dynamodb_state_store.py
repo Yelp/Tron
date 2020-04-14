@@ -1,8 +1,10 @@
 import logging
 import math
+import os
 import pickle
 import time
 from collections import defaultdict
+from collections import deque
 
 import boto3
 
@@ -17,6 +19,9 @@ class DynamoDBStateStore(object):
         self.name = name
         self.dynamodb_region = dynamodb_region
         self.table = self.dynamodb.Table(name)
+        self.save_thread = Thread(target=self._save_loop, daemon=True)
+        self.save_queue = deque()
+        self.stopping = False
 
     def build_key(self, type, iden) -> str:
         """
@@ -88,23 +93,48 @@ class DynamoDBStateStore(object):
         return deserialized_items
 
     def save(self, key_value_pairs) -> None:
-        """
-        Remove all previous data with the same partition key, examine the size of state_data,
-        and splice it into different parts under 400KB with different sort keys,
-        and save them under the same partition key built.
-        """
-        try:
-            for key, val in key_value_pairs:
-                self._delete_item(key)
-                self[key] = pickle.dumps(val)
-        except Exception as e:
-            error = f'tron_dynamodb_save_failure: failed to save items with keys \n{key_value_pairs.keys()}\n to dynamodb\n{repr(e)}'
-            log.error(error)
+        for key, val in key_value_pairs:
+            self.save_queue.append((key,pickle.dumps(val),))
+
+    def _save_loop(self):
+        while True:
+            while True:
+                errors = 0
+                try:
+                    key, val = self.save_queue.popleft()
+                    # Remove all previous data with the same partition key
+                    # TODO: only remove excess partitions if new data has fewer
+                    self._delete_item(key)
+                    self[key] = val
+                    # reset errors count if we can successfully save
+                    errors = 0
+                except IndexError:
+                    # deque is empty
+                    break
+                except Exception as e:
+                    error = (
+                        'tron_dynamodb_save_failure: failed to save key'
+                        f'"{key}" to dynamodb:\n{repr(e)}'
+                    )
+                    log.error(error)
+                    errors +=1
+                    if errors > 100:
+                        log.error("too many dynamodb errors, crashing")
+                        os.exit(1)
+                    self.save_queue.appendleft((key,val,))
+            if self.stopping:
+                return
+            if len(self.save_queue) == 0:
+                time.sleep(1)
 
     def __setitem__(self, key: str, val: bytes) -> None:
         """
         Partition the item and write up to 10 partitions atomically.
         Retry up to 3 times on failure
+
+        Examine the size of `val`, and splice it into
+        different parts under 400KB with different sort keys,
+        and save them under the same partition key built.
         """
         num_partitions = math.ceil(len(val) / OBJECT_SIZE)
         items = []
@@ -176,4 +206,6 @@ class DynamoDBStateStore(object):
             return 0
 
     def cleanup(self) -> None:
+        self.stopping = True
+        self.save_thread.join()
         return
