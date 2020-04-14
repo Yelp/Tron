@@ -105,10 +105,11 @@ class DynamoDBStateStore(object):
                     # Remove all previous data with the same partition key
                     # TODO: only remove excess partitions if new data has fewer
                     self._delete_item(key)
-                    self[key] = pickle.dumps(val)
+                    self[key] = val
                     # reset errors count if we can successfully save
                     errors = 0
                 except IndexError:
+                    # deque is empty
                     break
                 except Exception as e:
                     error = (
