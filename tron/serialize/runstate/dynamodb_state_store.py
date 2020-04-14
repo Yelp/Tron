@@ -112,7 +112,8 @@ class DynamoDBStateStore(object):
                     log.error(error)
             if self.stopping:
                 return
-            time.sleep(1)
+            if len(self.save_queue) == 0:
+                time.sleep(1)
 
     def __setitem__(self, key: str, val: bytes) -> None:
         """
