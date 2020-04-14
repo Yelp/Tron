@@ -97,13 +97,15 @@ class DynamoDBStateStore(object):
 
     def _save_loop(self):
         while True:
-            for _ in range(len(self.save_queue)):
+            while True:
                 try:
                     key, val = self.save_queue.popleft()
                     # Remove all previous data with the same partition key
                     # TODO: only remove excess partitions if new data has fewer
                     self._delete_item(key)
                     self[key] = pickle.dumps(val)
+                except IndexError:
+                    break
                 except Exception as e:
                     error = (
                         'tron_dynamodb_save_failure: failed to save key'
