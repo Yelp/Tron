@@ -20,9 +20,11 @@ class DynamoDBStateStore(object):
         self.name = name
         self.dynamodb_region = dynamodb_region
         self.table = self.dynamodb.Table(name)
-        self.save_thread = threading.Thread(target=self._save_loop, daemon=True)
-        self.save_queue = deque()
         self.stopping = False
+        self.save_queue = deque()
+        self.save_errors = 0
+        self.save_thread = threading.Thread(target=self._save_loop, args=(), daemon=True)
+        self.save_thread.start()
 
     def build_key(self, type, iden) -> str:
         """
@@ -98,8 +100,10 @@ class DynamoDBStateStore(object):
             self.save_queue.append((key, pickle.dumps(val)))
 
     def _consume_save_queue(self):
-        while True:
-            errors = 0
+        qlen = len(self.save_queue)
+        saved = 0
+        start = time.time()
+        for _ in range(qlen):
             try:
                 key, val = self.save_queue.popleft()
                 # Remove all previous data with the same partition key
@@ -107,29 +111,35 @@ class DynamoDBStateStore(object):
                 self._delete_item(key)
                 self[key] = val
                 # reset errors count if we can successfully save
-                errors = 0
-            except IndexError:
-                # deque is empty
-                break
+                saved += 1
             except Exception as e:
                 error = (
                     'tron_dynamodb_save_failure: failed to save key'
                     f'"{key}" to dynamodb:\n{repr(e)}'
                 )
                 log.error(error)
-                errors += 1
-                if errors > 100:
-                    log.error("too many dynamodb errors, crashing")
-                    os.exit(1)
-                self.save_queue.appendleft((key, val))
+                self.save_queue.append((key, val))
+        duration = time.time() - start
+        log.info(f"saved {saved} items in {duration}s")
+
+        if saved < qlen:
+            self.save_errors += 1
+        else:
+            self.save_errors = 0
 
     def _save_loop(self):
         while True:
-            self._consume_save_queue()
-            if self.stopping:
-                return
             if len(self.save_queue) == 0:
-                time.sleep(1)
+                log.debug("save queue empty, sleeping 5s")
+                time.sleep(5)
+                continue
+            self._consume_save_queue()
+            if self.save_errors > 100:
+                log.error("too many dynamodb errors in a row, crashing")
+                os.exit(1)
+            if self.stopping:
+                self._consume_save_queue()
+                return
 
     def __setitem__(self, key: str, val: bytes) -> None:
         """
@@ -173,24 +183,17 @@ class DynamoDBStateStore(object):
                 except Exception as e:
                     count += 1
                     if count > 3:
-                        error = f'tron_dynamodb_save_failure: failed to save due to transact_write_items failure with key {key} to DynamoDB \n{repr(e)}'
-                        log.error(error)
-                        time.sleep(1)
-                        break
+                        raise e
 
     def _delete_item(self, key: str) -> None:
-        try:
-            with self.table.batch_writer() as batch:
-                for index in range(self._get_num_of_partitions(key)):
-                    batch.delete_item(
-                        Key={
-                            'key': key,
-                            'index': index,
-                        }
-                    )
-        except Exception as e:
-            msg = f'tron_dynamodb_save_failure: failed to delete {key} for unknown reason \n {repr(e)}'
-            log.error(msg)
+        with self.table.batch_writer() as batch:
+            for index in range(self._get_num_of_partitions(key)):
+                batch.delete_item(
+                    Key={
+                        'key': key,
+                        'index': index,
+                    }
+                )
 
     def _get_num_of_partitions(self, key: str) -> int:
         """
