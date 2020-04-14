@@ -10,6 +10,7 @@ from collections import deque
 import boto3
 
 OBJECT_SIZE = 400000
+MAX_SAVE_QUEUE = 500
 log = logging.getLogger(__name__)
 
 
@@ -97,7 +98,14 @@ class DynamoDBStateStore(object):
 
     def save(self, key_value_pairs) -> None:
         for key, val in key_value_pairs:
-            self.save_queue.append((key, pickle.dumps(val)))
+            while True:
+                qlen = len(self.save_queue)
+                if qlen > MAX_SAVE_QUEUE:
+                    log.info(f"save queue size {qlen} > {MAX_SAVE_QUEUE}, sleeping 5s")
+                    time.sleep(5)
+                    continue
+                self.save_queue.append((key, pickle.dumps(val)))
+                break
 
     def _consume_save_queue(self):
         qlen = len(self.save_queue)
