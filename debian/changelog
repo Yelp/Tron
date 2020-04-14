@@ -1,3 +1,11 @@
+tron (1.3.8) xenial; urgency=medium
+
+  * 1.3.8 tagged with 'make release'
+    Commit: consume save queue in predefined chunks, count errors
+    correctly
+
+ -- root <root@56162b61acd9>  Tue, 14 Apr 2020 14:07:12 +0000
+
 tron (1.3.7) xenial; urgency=medium
 
   * 1.3.7 tagged with 'make release'
