@@ -150,7 +150,6 @@ class PersistentStateManager(object):
             runstate.JOB_STATE: jobs,
             runstate.MESOS_STATE: frameworks,
         }
-        self._check_consistency(state)
         return state
 
     def _restore_metadata(self):
@@ -196,22 +195,6 @@ class PersistentStateManager(object):
                 msg = "Failed to save state for %s: %s" % (keys, e)
                 log.warning(msg)
                 raise PersistenceStoreError(msg)
-
-    def _check_consistency(self, state):
-        """ Consistency checks on serialized state to ensure no corruption.
-
-        :param state: A dict of serialized state, like that returned by
-            self.restore
-        """
-        log.info("Running consistency checks")
-        try:
-            # We attempt to save all the state. A failure indicates corruption
-            for type_enum, items in state.items():
-                for name, state_data in items.items():
-                    self.save(type_enum, name, state_data)
-        except PersistenceStoreError as e:
-            log.error("Failed consistency check: Could not save serialized state")
-            raise e
 
     def cleanup(self):
         self._save_from_buffer()
