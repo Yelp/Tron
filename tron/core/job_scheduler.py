@@ -52,7 +52,10 @@ class JobScheduler(Observer):
         self.create_and_schedule_runs(next_run_time=None)
 
     def create_and_schedule_runs(self, next_run_time=None):
-        for r in self.get_runs_to_schedule(next_run_time):
+        runs_to_schedule = self.get_runs_to_schedule(next_run_time)
+        if not runs_to_schedule:
+            return
+        for r in runs_to_schedule:
             self._set_callback(r)
         # Eagerly save new runs in case tron gets restarted
         self.job.notify(Job.NOTIFY_STATE_CHANGE)
