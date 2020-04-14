@@ -1,5 +1,6 @@
 import logging
 import math
+import os
 import pickle
 import time
 from collections import defaultdict
@@ -98,12 +99,15 @@ class DynamoDBStateStore(object):
     def _save_loop(self):
         while True:
             while True:
+                errors = 0
                 try:
                     key, val = self.save_queue.popleft()
                     # Remove all previous data with the same partition key
                     # TODO: only remove excess partitions if new data has fewer
                     self._delete_item(key)
                     self[key] = pickle.dumps(val)
+                    # reset errors count if we can successfully save
+                    errors = 0
                 except IndexError:
                     break
                 except Exception as e:
@@ -112,6 +116,11 @@ class DynamoDBStateStore(object):
                         f'"{key}" to dynamodb:\n{repr(e)}'
                     )
                     log.error(error)
+                    errors +=1
+                    if errors > 100:
+                        log.error("too many dynamodb errors, crashing")
+                        os.exit(1)
+                    self.save_queue.appendleft((key,val,))
             if self.stopping:
                 return
             if len(self.save_queue) == 0:
