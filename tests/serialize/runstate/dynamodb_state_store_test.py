@@ -59,7 +59,7 @@ def store():
     ), mock_dynamodb2():
         dynamodb = boto3.resource('dynamodb', region_name='us-west-2')
         table_name = 'tmp'
-        store = DynamoDBStateStore(table_name, 'us-west-2')
+        store = DynamoDBStateStore(table_name, 'us-west-2', stopping=True)
         store.table = dynamodb.create_table(
             TableName=table_name,
             KeySchema=[
@@ -117,6 +117,7 @@ class TestDynamoDBStateStore:
             ),
         ]
         store.save(key_value_pairs)
+        store._consume_save_queue()
 
         keys = [store.build_key("DynamoDBTest", "two"), store.build_key("DynamoDBTest2", "four")]
         vals = store.restore(keys)
@@ -131,6 +132,7 @@ class TestDynamoDBStateStore:
             )
         ]
         store.save(key_value_pairs)
+        store._consume_save_queue()
 
         keys = [store.build_key("DynamoDBTest", "two")]
         vals = store.restore(keys)
@@ -142,6 +144,7 @@ class TestDynamoDBStateStore:
         value = pickle.loads(large_object)
         pairs = zip(keys, (value for i in range(len(keys))))
         store.save(pairs)
+        store._consume_save_queue()
 
         vals = store.restore(keys)
         for key in keys:
@@ -152,6 +155,7 @@ class TestDynamoDBStateStore:
         value = pickle.loads(small_object)
         pairs = zip(keys, (value for i in range(len(keys))))
         store.save(pairs)
+        store._consume_save_queue()
 
         vals = store.restore(keys)
         for key in keys:

@@ -14,13 +14,13 @@ log = logging.getLogger(__name__)
 
 
 class DynamoDBStateStore(object):
-    def __init__(self, name, dynamodb_region) -> None:
+    def __init__(self, name, dynamodb_region, stopping=False) -> None:
         self.dynamodb = boto3.resource('dynamodb', region_name=dynamodb_region)
         self.client = boto3.client('dynamodb', region_name=dynamodb_region)
         self.name = name
         self.dynamodb_region = dynamodb_region
         self.table = self.dynamodb.Table(name)
-        self.stopping = False
+        self.stopping = stopping
         self.save_queue = deque()
         self.save_errors = 0
         self.save_thread = threading.Thread(target=self._save_loop, args=(), daemon=True)
@@ -129,17 +129,19 @@ class DynamoDBStateStore(object):
 
     def _save_loop(self):
         while True:
+            if self.stopping:
+                self._consume_save_queue()
+                return
+
             if len(self.save_queue) == 0:
                 log.debug("save queue empty, sleeping 5s")
                 time.sleep(5)
                 continue
+
             self._consume_save_queue()
             if self.save_errors > 100:
                 log.error("too many dynamodb errors in a row, crashing")
                 os.exit(1)
-            if self.stopping:
-                self._consume_save_queue()
-                return
 
     def __setitem__(self, key: str, val: bytes) -> None:
         """
