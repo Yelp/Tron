@@ -21,9 +21,10 @@ window.dateFromNow = (string, defaultString='never') ->
         """
 
     if string
-        formatted = moment(string).format('MMM, Do YYYY, h:mm:ss a')
+        date = moment.tz string, 'America/Los_Angeles'
+        formatted = date.format('MMM, Do YYYY, h:mm:ss a')
         delta = label_template
-            delta: moment(string).fromNow()
+            delta: date.fromNow()
             type: "clear"
     else
         formatted = defaultString

@@ -4,7 +4,7 @@ module = window.modules.timeline = {}
 
 
 module.padMaxDate = (dateRange, padding) ->
-    [minDate, maxDate] = (moment(date) for date in dateRange)
+    [minDate, maxDate] = (moment.tz(date, 'America/Los_Angeles') for date in dateRange)
     delta = maxDate.diff(minDate)
     maxDate.add('ms', delta * padding)
     [minDate.toDate(), maxDate.toDate()]
