@@ -60,9 +60,8 @@ class SSHAuthOptions(object):
 
 class NoPasswordAuthClient(default.SSHUserAuthClient):
     """Only support passwordless auth."""
-    preferredOrder = ['publickey']
+    preferredOrder = ['publickey', 'keyboard-interactive']
     auth_password = None
-    auth_keyboard_interactive = None
 
 
 class ClientTransport(transport.SSHClientTransport):
