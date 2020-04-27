@@ -1,3 +1,12 @@
+tron (1.3.11) xenial; urgency=medium
+
+  * 1.3.11 tagged with 'make release'
+    Commit: Merge pull request #753 from Yelp/u/dpopes/SEC-12778-support-
+    keyboard-interactive-ssh  Support keyboard-interactive as an
+    authentication method for ssh
+
+ -- root <root@9879ae11933f>  Mon, 27 Apr 2020 18:01:41 +0000
+
 tron (1.3.10) xenial; urgency=medium
 
   * 1.3.10 tagged with 'make release'
