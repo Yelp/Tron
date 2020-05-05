@@ -1,3 +1,12 @@
+tron (1.3.12) xenial; urgency=medium
+
+  * 1.3.12 tagged with 'make release'
+    Commit: Merge pull request #754 from Yelp/u/dpopes/TRON-1531-
+    keyboard-interactive-suppress-tty-if-no-prompt  TRON-1531: Suppress
+    the need to prompt the user via tty
+
+ -- root <root@c1df7d685229>  Tue, 05 May 2020 18:26:53 +0000
+
 tron (1.3.11) xenial; urgency=medium
 
   * 1.3.11 tagged with 'make release'
