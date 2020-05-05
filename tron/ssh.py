@@ -63,6 +63,16 @@ class NoPasswordAuthClient(default.SSHUserAuthClient):
     preferredOrder = ['publickey', 'keyboard-interactive']
     auth_password = None
 
+    def getGenericAnswers(self, name, instruction, prompts):
+        # We really only need to get input from the user if there is actually a prompt
+        # This works around an issue where some PAM modules that have "keyboard-interactive"
+        # but don't actually require any input from the end-user
+        if prompts:
+            return super().getGenericAnswers(self, name, instruction, prompts)
+
+        # Otherwise, just return an empty defer.succeed to satisfy the contract
+        return defer.succeed([])
+
 
 class ClientTransport(transport.SSHClientTransport):
 
