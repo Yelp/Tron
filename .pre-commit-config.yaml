@@ -9,6 +9,7 @@ repos:
     -   id: check-yaml
     -   id: requirements-txt-fixer
     -   id: flake8
+        additional_dependencies: ['flake8==3.8.3']
         exclude: testifycompat/
         language_version: python3.6
 -   repo: https://github.com/asottile/reorder_python_imports.git

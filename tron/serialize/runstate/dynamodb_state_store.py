@@ -199,7 +199,7 @@ class DynamoDBStateStore(object):
                         raise e
                     log.warning(f'Got error while saving, trying again: {repr(e)}')
         timer(
-            name=f'tron.dynamodb.setitem',
+            name='tron.dynamodb.setitem',
             delta=time.time() - start,
         )
 
@@ -214,7 +214,7 @@ class DynamoDBStateStore(object):
                     }
                 )
         timer(
-            name=f'tron.dynamodb.delete',
+            name='tron.dynamodb.delete',
             delta=time.time() - start,
         )
 
