@@ -1,3 +1,11 @@
+tron (1.3.14) xenial; urgency=medium
+
+  * 1.3.14 tagged with 'make release'
+    Commit: Merge pull request #756 from Yelp/TRON-1539-dynamo-metrics
+    Tron 1539 dynamo metrics
+
+ -- root <root@07c5254e0dd9>  Wed, 01 Jul 2020 21:26:52 +0000
+
 tron (1.3.13) xenial; urgency=medium
 
   * 1.3.13 tagged with 'make release'

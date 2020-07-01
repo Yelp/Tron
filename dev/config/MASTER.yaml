@@ -1,8 +1,8 @@
 state_persistence:
   name: "tron_state"
-  table_name: "-tmp-tron_state"
-  store_type: "shelve"
-  buffer_size: 10
+  table_name: "tmp-tron-state"
+  store_type: "dynamodb"
+  buffer_size: 1
   dynamodb_region: us-west-1
 
 eventbus_enabled: True
