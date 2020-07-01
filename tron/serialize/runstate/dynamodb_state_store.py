@@ -196,8 +196,13 @@ class DynamoDBStateStore(object):
                 except Exception as e:
                     count += 1
                     if count > 3:
+                        timer(
+                            name='tron.dynamodb.setitem',
+                            delta=time.time() - start,
+                        )
                         raise e
-                    log.warning(f'Got error while saving, trying again: {repr(e)}')
+                    else:
+                        log.warning(f'Got error while saving, trying again: {repr(e)}')
         timer(
             name='tron.dynamodb.setitem',
             delta=time.time() - start,
@@ -205,18 +210,20 @@ class DynamoDBStateStore(object):
 
     def _delete_item(self, key: str) -> None:
         start = time.time()
-        with self.table.batch_writer() as batch:
-            for index in range(self._get_num_of_partitions(key)):
-                batch.delete_item(
-                    Key={
-                        'key': key,
-                        'index': index,
-                    }
-                )
-        timer(
-            name='tron.dynamodb.delete',
-            delta=time.time() - start,
-        )
+        try:
+            with self.table.batch_writer() as batch:
+                for index in range(self._get_num_of_partitions(key)):
+                    batch.delete_item(
+                        Key={
+                            'key': key,
+                            'index': index,
+                        }
+                    )
+        finally:
+            timer(
+                name='tron.dynamodb.delete',
+                delta=time.time() - start,
+            )
 
     def _get_num_of_partitions(self, key: str) -> int:
         """
