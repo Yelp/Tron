@@ -194,6 +194,7 @@ class DynamoDBStateStore(object):
                     count += 1
                     if count > 3:
                         raise e
+                    log.warning(f'Got error while saving, trying again: {repr(e)}')
 
     def _delete_item(self, key: str) -> None:
         with self.table.batch_writer() as batch:
