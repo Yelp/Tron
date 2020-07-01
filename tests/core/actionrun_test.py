@@ -348,8 +348,8 @@ class TestActionRun:
         self.action_run.emit_triggers()
 
         assert eventbus.publish.mock_calls == [
-            mock.call(f"ns.id.action_name.shortdate.foo"),
-            mock.call(f"ns.id.action_name.foo.bar"),
+            mock.call("ns.id.action_name.shortdate.foo"),
+            mock.call("ns.id.action_name.foo.bar"),
         ]
 
     def test_success_bad_state(self):

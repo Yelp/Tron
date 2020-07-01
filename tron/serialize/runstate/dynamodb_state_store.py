@@ -9,6 +9,8 @@ from collections import deque
 
 import boto3
 
+from tron.metrics import timer
+
 OBJECT_SIZE = 400000
 MAX_SAVE_QUEUE = 500
 log = logging.getLogger(__name__)
@@ -160,6 +162,7 @@ class DynamoDBStateStore(object):
         different parts under 400KB with different sort keys,
         and save them under the same partition key built.
         """
+        start = time.time()
         num_partitions = math.ceil(len(val) / OBJECT_SIZE)
         items = []
         for index in range(num_partitions):
@@ -193,17 +196,34 @@ class DynamoDBStateStore(object):
                 except Exception as e:
                     count += 1
                     if count > 3:
+                        timer(
+                            name='tron.dynamodb.setitem',
+                            delta=time.time() - start,
+                        )
                         raise e
+                    else:
+                        log.warning(f'Got error while saving, trying again: {repr(e)}')
+        timer(
+            name='tron.dynamodb.setitem',
+            delta=time.time() - start,
+        )
 
     def _delete_item(self, key: str) -> None:
-        with self.table.batch_writer() as batch:
-            for index in range(self._get_num_of_partitions(key)):
-                batch.delete_item(
-                    Key={
-                        'key': key,
-                        'index': index,
-                    }
-                )
+        start = time.time()
+        try:
+            with self.table.batch_writer() as batch:
+                for index in range(self._get_num_of_partitions(key)):
+                    batch.delete_item(
+                        Key={
+                            'key': key,
+                            'index': index,
+                        }
+                    )
+        finally:
+            timer(
+                name='tron.dynamodb.delete',
+                delta=time.time() - start,
+            )
 
     def _get_num_of_partitions(self, key: str) -> int:
         """

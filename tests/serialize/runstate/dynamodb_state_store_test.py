@@ -119,6 +119,7 @@ class TestDynamoDBStateStore:
         store.save(key_value_pairs)
         store._consume_save_queue()
 
+        assert store.save_errors == 0
         keys = [store.build_key("DynamoDBTest", "two"), store.build_key("DynamoDBTest2", "four")]
         vals = store.restore(keys)
         for key, value in key_value_pairs:
@@ -134,6 +135,7 @@ class TestDynamoDBStateStore:
         store.save(key_value_pairs)
         store._consume_save_queue()
 
+        assert store.save_errors == 0
         keys = [store.build_key("DynamoDBTest", "two")]
         vals = store.restore(keys)
         for key, value in key_value_pairs:
@@ -146,6 +148,7 @@ class TestDynamoDBStateStore:
         store.save(pairs)
         store._consume_save_queue()
 
+        assert store.save_errors == 0
         vals = store.restore(keys)
         for key in keys:
             assert_equal(pickle.dumps(vals[key]), large_object)
@@ -157,6 +160,7 @@ class TestDynamoDBStateStore:
         store.save(pairs)
         store._consume_save_queue()
 
+        assert store.save_errors == 0
         vals = store.restore(keys)
         for key in keys:
             assert_equal(pickle.dumps(vals[key]), small_object)
@@ -164,13 +168,13 @@ class TestDynamoDBStateStore:
     def test_delete(self, store, small_object, large_object):
         keys = [store.build_key("thing", i) for i in range(3)]
         value = pickle.loads(large_object)
-        pairs = zip(keys, (value for i in range(len(keys))))
+        pairs = list(zip(keys, (value for i in range(len(keys)))))
         store.save(pairs)
 
-        for key in pairs:
+        for key, value in pairs:
             store._delete_item(key)
 
-        for key in pairs:
+        for key, value in pairs:
             assert_equal(store._get_num_of_partitions(key), 0)
 
     def test_retry_saving(self, store, small_object, large_object):

@@ -282,7 +282,7 @@ class TestEventsController:
         assert len(self.eventbus.publish.mock_calls) == 1
 
         self.eventbus.publish.return_value = True
-        assert self.controller.publish(event) == dict(response=f'OK')
+        assert self.controller.publish(event) == dict(response='OK')
         assert len(self.eventbus.publish.mock_calls) == 2
 
     def test_discard(self):
@@ -298,5 +298,5 @@ class TestEventsController:
         assert len(self.eventbus.discard.mock_calls) == 1
 
         self.eventbus.discard.return_value = True
-        assert self.controller.discard(event) == dict(response=f'OK')
+        assert self.controller.discard(event) == dict(response='OK')
         assert len(self.eventbus.discard.mock_calls) == 2

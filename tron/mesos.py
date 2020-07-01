@@ -202,9 +202,9 @@ class MesosTask(ActionCommand):
 
     def report_resources(self, decrement=False):
         multiplier = -1 if decrement else 1
-        metrics.count(f'tron.mesos.cpus', self.task_config.cpus * multiplier)
-        metrics.count(f'tron.mesos.mem', self.task_config.mem * multiplier)
-        metrics.count(f'tron.mesos.disk', self.task_config.disk * multiplier)
+        metrics.count('tron.mesos.cpus', self.task_config.cpus * multiplier)
+        metrics.count('tron.mesos.mem', self.task_config.mem * multiplier)
+        metrics.count('tron.mesos.disk', self.task_config.disk * multiplier)
 
     def log_event_info(self, event):
         # Separate out so task still transitions even if this nice-to-have logging fails.
@@ -226,13 +226,13 @@ class MesosTask(ActionCommand):
         elif mesos_type is None:
             self.log.info(f'Non-Mesos event: {event.raw}')
             if 'Failed due to offer timeout' in str(event.raw):
-                self.log.info(f'Explanation:')
-                self.log.info(f'This error means that Tron timed out waiting for Mesos to give it the')
-                self.log.info(f'resources requested (ram, cpu, disk, pool, etc).')
-                self.log.info(f'This can happen if the cluster is low on resources, or if the resource')
-                self.log.info(f'requests are too high.')
-                self.log.info(f'Try reducing the resource request, or adding retries + retries_delay.')
-                self.log.info(f'')
+                self.log.info('Explanation:')
+                self.log.info('This error means that Tron timed out waiting for Mesos to give it the')
+                self.log.info('resources requested (ram, cpu, disk, pool, etc).')
+                self.log.info('This can happen if the cluster is low on resources, or if the resource')
+                self.log.info('requests are too high.')
+                self.log.info('Try reducing the resource request, or adding retries + retries_delay.')
+                self.log.info('')
 
         # Mesos events may have task reasons
         if mesos_type:

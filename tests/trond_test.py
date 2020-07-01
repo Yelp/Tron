@@ -176,7 +176,7 @@ class TronCommandsTestCase(sandbox.SandboxTestCase):
             """
 
         def remove_line_space(s):
-            return [l.replace(' ', '') for l in s.split('\n')]
+            return [line.replace(' ', '') for line in s.split('\n')]
 
         actual = self.sandbox.tronview()[0]
         assert_equal(remove_line_space(actual), remove_line_space(expected))

@@ -174,7 +174,7 @@ def backfill(args):
         args.end_date = datetime.datetime.today()
 
     if not args.id:
-        print(f"Error: must provide at least one id argument")
+        print("Error: must provide at least one id argument")
         yield False
 
     dates = get_dates_for_backfill(
@@ -208,7 +208,7 @@ def tron_version(args):
     server_version = response.content.get('version', 'unknown')
     print(f"Tron server version: {server_version}")
     if server_version != local_version:
-        print(f"Warning: client and server versions should match")
+        print("Warning: client and server versions should match")
         yield
     yield True
 
