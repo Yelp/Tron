@@ -48,14 +48,14 @@ class Observable(object):
         """Returns the complete list of handlers for the event."""
         return self._observers.get(True, []) + self._observers.get(event, [])
 
-    def notify(self, event):
+    def notify(self, event, event_data=None):
         """Notify all observers of the event."""
         handlers = self._get_handlers_for_event(event)
         log.debug(
             f"Notifying {len(handlers)} listeners for new event {event!r}"
         )
         for handler in handlers:
-            handler.handler(self, event)
+            handler.handler(self, event, event_data)
 
 
 class Observer(object):

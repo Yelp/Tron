@@ -211,7 +211,7 @@ class Job(Observable, Observer):
             self.watch(run)
             yield run
 
-    def handle_job_run_state_change(self, _job_run, event):
+    def handle_job_run_state_change(self, _job_run, event, event_data=None):
         """Handle state changes from JobRuns and propagate changes to any
         observers.
         """

@@ -254,7 +254,7 @@ class StateChangeWatcher(observer.Observer):
         self.config = state_config
         return True
 
-    def handler(self, observable, _event):
+    def handler(self, observable, _event, event_data=None):
         """Handle a state change in an observable by saving its state."""
         if isinstance(observable, job.Job):
             self.save_job(observable)
