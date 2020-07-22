@@ -134,7 +134,7 @@ class TestJob:
 
     def test_state_data(self):
         state_data = self.job.state_data
-        assert_equal(state_data['runs'], self.job.runs.state_data)
+        assert_equal(state_data['run_nums'], self.job.runs.get_run_nums.return_value)
         assert state_data['enabled']
 
     def test_get_job_runs_from_state(self):

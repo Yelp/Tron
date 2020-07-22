@@ -679,6 +679,9 @@ class TestJobRunCollection(TestCase):
         for job_run in job_runs:
             job_run.get_action_run.assert_called_with(action_name)
 
+    def test_get_run_nums(self):
+        assert self.run_collection.get_run_nums() == [5, 4, 3, 2, 1]
+
 
 class TestJobRunStateTransitions:
     """Integration test for the state of a job run when actions change state in various ways."""
