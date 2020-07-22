@@ -3,12 +3,10 @@ import datetime
 from unittest.mock import MagicMock
 
 import mock
+import pytest
 
 from testifycompat import assert_equal
 from testifycompat import assert_not_equal
-from testifycompat import setup
-from testifycompat import setup_teardown
-from testifycompat import TestCase
 from tests.assertions import assert_call
 from tests.assertions import assert_length
 from tests.testingutils import autospec_method
@@ -20,37 +18,44 @@ from tron.core.actionrun import ActionRun
 from tron.core.job_scheduler import JobScheduler
 
 
-class TestJob(TestCase):
-    @setup_teardown
-    def setup_job(self):
-        action_graph = mock.Mock(names=lambda: ['one', 'two'])
-        scheduler = mock.Mock()
-        run_collection = MagicMock()
-        self.nodes = mock.create_autospec(node.NodePool)
-        self.action_runner = mock.create_autospec(
-            actioncommand.SubprocessActionRunnerFactory,
-        )
+@pytest.fixture
+def mock_node_repo():
+    with mock.patch(
+        'tron.core.job.node.NodePoolRepository', autospec=True,
+    ) as mock_node_repo:
+        yield mock_node_repo
 
-        patcher = mock.patch(
-            'tron.core.job.node.NodePoolRepository', autospec=True
-        )
-        with patcher as self.mock_node_repo:
-            self.job = job.Job(
-                "jobname",
-                scheduler,
-                run_collection=run_collection,
-                action_graph=action_graph,
-                node_pool=self.nodes,
-                action_runner=actioncommand.NoActionRunnerFactory
-            )
-            autospec_method(self.job.notify)
-            autospec_method(self.job.watch)
-            yield
+
+@pytest.fixture
+def mock_job(mock_node_repo):
+    action_graph = mock.Mock(names=lambda: ['one', 'two'])
+    scheduler = mock.Mock()
+    run_collection = MagicMock()
+    nodes = mock.create_autospec(node.NodePool)
+    mock_job = job.Job(
+        "jobname",
+        scheduler,
+        run_collection=run_collection,
+        action_graph=action_graph,
+        node_pool=nodes,
+        action_runner=actioncommand.NoActionRunnerFactory
+    )
+    yield mock_job
+
+
+class TestJob:
+
+    @pytest.fixture(autouse=True)
+    def setup_job(self, mock_job):
+        self.job = mock_job
+        autospec_method(self.job.notify)
+        autospec_method(self.job.watch)
+        yield
 
     def test__init__(self):
         assert str(self.job.output_path).endswith(self.job.name)
 
-    def test_from_config(self):
+    def test_from_config(self, mock_node_repo):
         action = mock.MagicMock(
             name='first',
             command='doit',
@@ -74,18 +79,21 @@ class TestJob(TestCase):
         scheduler = 'scheduler_token'
         parent_context = 'parent_context_token'
         output_path = ["base_path"]
+        mock_action_runner = mock.create_autospec(
+            actioncommand.SubprocessActionRunnerFactory,
+        )
         new_job = job.Job.from_config(
             job_config,
             scheduler,
             parent_context=parent_context,
             output_path=output_path,
-            action_runner=self.action_runner,
+            action_runner=mock_action_runner,
             action_graph=mock.Mock()
         )
 
         assert_equal(new_job.scheduler, scheduler)
         assert_equal(new_job.context.next, parent_context)
-        self.mock_node_repo.get_instance().get_by_name.assert_called_with(
+        mock_node_repo.get_instance().get_by_name.assert_called_with(
             job_config.node,
         )
         assert_equal(new_job.enabled, True)
@@ -234,8 +242,9 @@ class TestJob(TestCase):
         assert_not_equal(first, second)
 
 
-class TestJobScheduler(TestCase):
-    @setup
+class TestJobScheduler:
+
+    @pytest.fixture(autouse=True)
     def setup_job(self):
         mock_graph = mock.Mock(autospec=True)
         mock_graph.get_action_map.return_value = {}
