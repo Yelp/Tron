@@ -95,7 +95,7 @@ class MasterControlProgram(object):
         self.apply_collection_config(
             config_container.get_jobs(),
             self.jobs,
-            Job.NOTIFY_STATE_CHANGE,
+            [Job.NOTIFY_STATE_CHANGE, Job.NOTIFY_NEW_RUN],
             factory,
             reconfigure,
         )

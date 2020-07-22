@@ -242,6 +242,31 @@ class TestJob:
         assert_not_equal(first, second)
 
 
+def test_job_watch_notifies_about_runs(mock_job):
+    # Separate from the above tests because we don't want
+    # watch to be mocked here.
+    new_run = jobrun.JobRun(
+        job_name='test',
+        run_num=1,
+        run_time='some_time',
+        node='node',
+    )
+    with mock.patch.object(
+        mock_job, 'handler',
+    ) as mock_handler, mock.patch.object(
+        mock_job, 'notify',
+    ) as mock_notify:
+        mock_job.watch(new_run)
+
+        # Make sure that the job is still watching correctly
+        # by checking it handles events
+        new_run.notify('test_event', 'test_data')
+        assert mock_handler.call_args_list == [mock.call(new_run, 'test_event', 'test_data')]
+
+        # Check that the job notifies its watchers about a new run
+        assert mock_notify.call_args_list == [mock.call(job.Job.NOTIFY_NEW_RUN, event_data=new_run)]
+
+
 class TestJobScheduler:
 
     @pytest.fixture(autouse=True)

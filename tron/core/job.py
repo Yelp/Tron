@@ -39,6 +39,7 @@ class Job(Observable, Observer):
 
     NOTIFY_STATE_CHANGE = 'notify_state_change'
     NOTIFY_RUN_DONE = 'notify_run_done'
+    NOTIFY_NEW_RUN = 'notify_new_run'
 
     context_class = command_context.JobContext
 
@@ -139,6 +140,13 @@ class Job(Observable, Observer):
             expected_runtime=job_config.expected_runtime,
             run_limit=job_config.run_limit,
         )
+
+    def watch(self, observable, event=True):
+        # Overrides default method from Observer.
+        # Allows job's watchers to handle updates from job runs independently.
+        super().watch(observable, event)
+        if isinstance(observable, jobrun.JobRun):
+            self.notify(self.NOTIFY_NEW_RUN, event_data=observable)
 
     def update_from_job(self, job):
         """Update this Jobs configuration from a new config. This method
