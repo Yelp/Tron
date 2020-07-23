@@ -39,6 +39,7 @@ class JobRun(Observable, Observer):
 
     NOTIFY_DONE = 'notify_done'
     NOTIFY_STATE_CHANGED = 'notify_state_changed'
+    NOTIFY_REMOVED = 'notify_removed'
 
     context_class = command_context.JobRunContext
 
@@ -295,6 +296,7 @@ class JobRun(Observable, Observer):
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
         log.info(f'{self} removed')
+        self.notify(self.NOTIFY_REMOVED)
         self.clear_observers()
         self.action_runs.cleanup()
         self.node = None

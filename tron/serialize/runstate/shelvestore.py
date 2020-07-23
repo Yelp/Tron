@@ -40,6 +40,13 @@ class Py2Shelf(shelve.Shelf):
         pickle.dump(obj=value, file=f, protocol=self._protocol)
         self.dict[key.encode('utf8')] = f.getvalue()
 
+    def delete(self, key):
+        if key in self.cache:
+            del self.cache[key]
+        encoded_key = key.encode('utf8')
+        if encoded_key in self.dict:
+            del self.dict[encoded_key]
+
 
 class ShelveKey(object):
     __slots__ = ['type', 'iden']
@@ -74,7 +81,11 @@ class ShelveStateStore(object):
 
     def save(self, key_value_pairs):
         for key, state_data in key_value_pairs:
-            self.shelve[str(key.key)] = state_data
+            shelve_key = str(key.key)
+            if state_data is None:
+                self.shelve.delete(shelve_key)
+            else:
+                self.shelve[shelve_key] = state_data
         self.shelve.sync()
 
     def restore(self, keys):

@@ -125,6 +125,35 @@ class TestDynamoDBStateStore:
         for key, value in key_value_pairs:
             assert_equal(vals[key], value)
 
+    def test_delete_if_val_is_none(self, store, small_object, large_object):
+        key_value_pairs = [
+            (
+                store.build_key("DynamoDBTest", "two"),
+                small_object,
+            ),
+            (
+                store.build_key("DynamoDBTest2", "four"),
+                small_object,
+            ),
+        ]
+        store.save(key_value_pairs)
+        store._consume_save_queue()
+
+        delete = [
+            (
+                store.build_key("DynamoDBTest", "two"),
+                None,
+            ),
+        ]
+        store.save(delete)
+        store._consume_save_queue()
+
+        assert store.save_errors == 0
+        # Try to restore both, we should just get one back
+        keys = [store.build_key("DynamoDBTest", "two"), store.build_key("DynamoDBTest2", "four")]
+        vals = store.restore(keys)
+        assert vals == {keys[1]: small_object}
+
     def test_save_more_than_4KB(self, store, small_object, large_object):
         key_value_pairs = [
             (
@@ -165,7 +194,7 @@ class TestDynamoDBStateStore:
         for key in keys:
             assert_equal(pickle.dumps(vals[key]), small_object)
 
-    def test_delete(self, store, small_object, large_object):
+    def test_delete_item(self, store, small_object, large_object):
         keys = [store.build_key("thing", i) for i in range(3)]
         value = pickle.loads(large_object)
         pairs = list(zip(keys, (value for i in range(len(keys)))))

@@ -106,7 +106,7 @@ class DynamoDBStateStore(object):
                     log.info(f"save queue size {qlen} > {MAX_SAVE_QUEUE}, sleeping 5s")
                     time.sleep(5)
                     continue
-                self.save_queue[key] = pickle.dumps(val)
+                self.save_queue[key] = val
                 break
 
     def _consume_save_queue(self):
@@ -119,7 +119,8 @@ class DynamoDBStateStore(object):
                 # Remove all previous data with the same partition key
                 # TODO: only remove excess partitions if new data has fewer
                 self._delete_item(key)
-                self[key] = val
+                if val is not None:
+                    self[key] = pickle.dumps(val)
                 # reset errors count if we can successfully save
                 saved += 1
             except Exception as e:

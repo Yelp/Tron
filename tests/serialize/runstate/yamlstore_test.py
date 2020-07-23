@@ -82,6 +82,29 @@ class TestYamlStateStore(TestCase):
             actual = yaml.load(fh)
         assert_equal(actual, expected)
 
+    def test_delete(self):
+        expected = {'state_a': {'five': 'barz'}}
+
+        key_value_pairs = [
+            (yamlstore.YamlKey('state_a', 'five'), 'barz'),
+            (yamlstore.YamlKey('state_c', 'five'), 'delete_all_c'),
+            (yamlstore.YamlKey('state_a', 'six'), 'delete_one_a'),
+        ]
+        # Save first
+        self.store.save(key_value_pairs)
+
+        # Save second
+        key_value_pairs = [
+            (yamlstore.YamlKey('state_c', 'five'), None),
+            (yamlstore.YamlKey('state_a', 'six'), None),
+        ]
+        self.store.save(key_value_pairs)
+
+        assert_equal(self.store.buffer, expected)
+        with open(self.filename, 'r') as fh:
+            actual = yaml.load(fh)
+        assert_equal(actual, expected)
+
 
 if __name__ == "__main__":
     run()

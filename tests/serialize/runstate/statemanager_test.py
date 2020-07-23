@@ -197,6 +197,12 @@ class TestPersistentStateManager(TestCase):
             self.manager.save("something", 'name', mock.Mock())
         assert not self.store.save.mock_calls
 
+    def test_delete(self):
+        name = 'name'
+        self.manager.delete(runstate.JOB_STATE, name)
+        key = '%s%s' % (runstate.JOB_STATE, name)
+        self.store.save.assert_called_with([(key, None)])
+
     def test_cleanup(self):
         self.manager.cleanup()
         self.store.cleanup.assert_called_with()
@@ -341,6 +347,17 @@ class TestStateChangeWatcher(TestCase):
             runstate.JOB_RUN_STATE,
             mock_job_run.name,
             mock_job_run.state_data,
+        )
+
+    def test_handler_job_run_removed(self):
+        mock_job_run = mock.MagicMock(spec_set=JobRun)
+        self.watcher.handler(
+            observable=mock_job_run,
+            event=JobRun.NOTIFY_REMOVED,
+        )
+        self.watcher.state_manager.delete.assert_called_with(
+            runstate.JOB_RUN_STATE,
+            mock_job_run.name,
         )
 
 

@@ -184,6 +184,11 @@ class PersistentStateManager(object):
             for key, state_data in key_to_state_map.items()
         }
 
+    def delete(self, type_enum, name):
+        # A hack to use the save buffer, implementations of save
+        # need to delete if data is None.
+        self.save(type_enum, name, None)
+
     def save(self, type_enum, name, state_data):
         """Persist an items state."""
         key = self._impl.build_key(type_enum, name)
@@ -278,18 +283,24 @@ class StateChangeWatcher(observer.Observer):
                     log.warning(f'Notified of new run, but no run to watch. Got {event_data}')
                 else:
                     log.debug(f'Watching new run {event_data}')
+                    self.save_job_run(event_data)
                     self.watch(event_data)
             else:
                 self.save_job(observable)
         elif isinstance(observable, jobrun.JobRun):
-            self.save_job_run(observable)
+            if event == jobrun.JobRun.NOTIFY_REMOVED:
+                self.delete_job_run(observable)
+            else:
+                self.save_job_run(observable)
 
     def save_job(self, job):
         self._save_object(runstate.JOB_STATE, job)
 
     def save_job_run(self, job_run):
-        log.debug(f'saving {job_run.id}')
         self._save_object(runstate.JOB_RUN_STATE, job_run)
+
+    def delete_job_run(self, job_run):
+        self.state_manager.delete(runstate.JOB_RUN_STATE, job_run.name)
 
     def save_frameworks(self, clusters):
         self._save_object(runstate.MESOS_STATE, clusters)

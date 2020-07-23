@@ -320,6 +320,7 @@ class TestJobRun(TestCase):
         self.job_run.output_path = mock.create_autospec(filehandler.OutputPath)
         self.job_run.cleanup()
 
+        self.job_run.notify.assert_called_with(jobrun.JobRun.NOTIFY_REMOVED)
         self.job_run.clear_observers.assert_called_with()
         self.job_run.output_path.delete.assert_called_with()
         assert not self.job_run.node
