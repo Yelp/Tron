@@ -5,7 +5,7 @@ import pickle
 import threading
 import time
 from collections import defaultdict
-from collections import deque
+from collections import OrderedDict
 
 import boto3
 
@@ -24,7 +24,7 @@ class DynamoDBStateStore(object):
         self.dynamodb_region = dynamodb_region
         self.table = self.dynamodb.Table(name)
         self.stopping = stopping
-        self.save_queue = deque()
+        self.save_queue = OrderedDict()
         self.save_errors = 0
         self.save_thread = threading.Thread(target=self._save_loop, args=(), daemon=True)
         self.save_thread.start()
@@ -106,7 +106,7 @@ class DynamoDBStateStore(object):
                     log.info(f"save queue size {qlen} > {MAX_SAVE_QUEUE}, sleeping 5s")
                     time.sleep(5)
                     continue
-                self.save_queue.append((key, pickle.dumps(val)))
+                self.save_queue[key] = pickle.dumps(val)
                 break
 
     def _consume_save_queue(self):
@@ -115,7 +115,7 @@ class DynamoDBStateStore(object):
         start = time.time()
         for _ in range(qlen):
             try:
-                key, val = self.save_queue.popleft()
+                key, val = self.save_queue.popitem(last=False)
                 # Remove all previous data with the same partition key
                 # TODO: only remove excess partitions if new data has fewer
                 self._delete_item(key)
@@ -128,7 +128,7 @@ class DynamoDBStateStore(object):
                     f'"{key}" to dynamodb:\n{repr(e)}'
                 )
                 log.error(error)
-                self.save_queue.append((key, val))
+                self.save_queue[key] = val
         duration = time.time() - start
         log.info(f"saved {saved} items in {duration}s")
 
