@@ -27,6 +27,10 @@ class Error(Exception):
     pass
 
 
+def get_job_run_id(job_name, run_num):
+    return '%s.%s' % (job_name, run_num)
+
+
 class JobRun(Observable, Observer):
     """A JobRun is an execution of a Job.  It has a list of ActionRuns and is
     responsible for starting ActionRuns in the correct order and managing their
@@ -35,6 +39,7 @@ class JobRun(Observable, Observer):
 
     NOTIFY_DONE = 'notify_done'
     NOTIFY_STATE_CHANGED = 'notify_state_changed'
+    NOTIFY_REMOVED = 'notify_removed'
 
     context_class = command_context.JobRunContext
 
@@ -70,7 +75,12 @@ class JobRun(Observable, Observer):
 
     @property
     def id(self):
-        return '%s.%s' % (self.job_name, self.run_num)
+        return get_job_run_id(self.job_name, self.run_num)
+
+    @property
+    def name(self):
+        """Property used by state manager to identify objects."""
+        return self.id
 
     @classmethod
     def for_job(cls, job, run_num, run_time, node, manual):
@@ -286,6 +296,7 @@ class JobRun(Observable, Observer):
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
         log.info(f'{self} removed')
+        self.notify(self.NOTIFY_REMOVED)
         self.clear_observers()
         self.action_runs.cleanup()
         self.node = None
@@ -461,6 +472,9 @@ class JobRunCollection(object):
 
     def get_action_runs(self, action_name):
         return [job_run.get_action_run(action_name) for job_run in self.runs]
+
+    def get_run_nums(self):
+        return [r.run_num for r in self.runs]
 
     @property
     def state_data(self):

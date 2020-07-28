@@ -5,7 +5,7 @@ from contextlib import contextmanager
 
 from tron.config import schema
 from tron.core import job
-from tron.core.jobrun import JobRun
+from tron.core import jobrun
 from tron.mesos import MesosClusterRepository
 from tron.serialize import runstate
 from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
@@ -145,6 +145,8 @@ class PersistentStateManager(object):
             self._restore_metadata()
 
         jobs = self._restore_dicts(runstate.JOB_STATE, job_names)
+        for job_name, job_state in jobs.items():
+            job_state['runs'] = self._restore_runs_for_job(job_name, job_state)
         frameworks = self._restore_dicts(runstate.MESOS_STATE, ['frameworks'])
 
         state = {
@@ -152,6 +154,17 @@ class PersistentStateManager(object):
             runstate.MESOS_STATE: frameworks,
         }
         return state
+
+    def _restore_runs_for_job(self, job_name, job_state):
+        run_nums = job_state['run_nums']
+        runs = []
+        for run_num in run_nums:
+            key = jobrun.get_job_run_id(job_name, run_num)
+            # If the key isn't there, the list will be empty and we will crash during start up
+            # That's fine because that means the job state is incorrect
+            run_state = list(self._restore_dicts(runstate.JOB_RUN_STATE, [key]).values())[0]
+            runs.append(run_state)
+        return runs
 
     def _restore_metadata(self):
         metadata = self._impl.restore([self.metadata_key])
@@ -170,6 +183,11 @@ class PersistentStateManager(object):
             key_to_item_map[key]: state_data
             for key, state_data in key_to_state_map.items()
         }
+
+    def delete(self, type_enum, name):
+        # A hack to use the save buffer, implementations of save
+        # need to delete if data is None.
+        self.save(type_enum, name, None)
 
     def save(self, type_enum, name, state_data):
         """Persist an items state."""
@@ -261,18 +279,28 @@ class StateChangeWatcher(observer.Observer):
             self.save_frameworks(observable)
         elif isinstance(observable, job.Job):
             if event == job.Job.NOTIFY_NEW_RUN:
-                if event_data is None or not isinstance(event_data, JobRun):
+                if event_data is None or not isinstance(event_data, jobrun.JobRun):
                     log.warning(f'Notified of new run, but no run to watch. Got {event_data}')
                 else:
                     log.debug(f'Watching new run {event_data}')
+                    self.save_job_run(event_data)
                     self.watch(event_data)
             else:
                 self.save_job(observable)
-        elif isinstance(observable, JobRun):
-            pass
+        elif isinstance(observable, jobrun.JobRun):
+            if event == jobrun.JobRun.NOTIFY_REMOVED:
+                self.delete_job_run(observable)
+            else:
+                self.save_job_run(observable)
 
     def save_job(self, job):
         self._save_object(runstate.JOB_STATE, job)
+
+    def save_job_run(self, job_run):
+        self._save_object(runstate.JOB_RUN_STATE, job_run)
+
+    def delete_job_run(self, job_run):
+        self.state_manager.delete(runstate.JOB_RUN_STATE, job_run.name)
 
     def save_frameworks(self, clusters):
         self._save_object(runstate.MESOS_STATE, clusters)

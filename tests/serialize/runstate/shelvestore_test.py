@@ -52,6 +52,35 @@ class TestShelveStateStore(TestCase):
             assert_equal(stored_data[str(key.key)], value)
         stored_data.close()
 
+    def test_delete(self):
+        key_value_pairs = [
+            (
+                ShelveKey("one", "two"),
+                {
+                    'this': 'data',
+                },
+            ),
+            (
+                ShelveKey("three", "four"),
+                {
+                    'this': 'data2',
+                },
+            ),
+            # Delete first key
+            (
+                ShelveKey("one", "two"),
+                None,
+            ),
+        ]
+        self.store.save(key_value_pairs)
+        self.store.cleanup()
+
+        stored_data = Py2Shelf(self.filename)
+        assert stored_data == {
+            str(ShelveKey("three", "four").key): {'this': 'data2'},
+        }
+        stored_data.close()
+
     def test_restore(self):
         self.store.cleanup()
         keys = [ShelveKey("thing", i) for i in range(5)]

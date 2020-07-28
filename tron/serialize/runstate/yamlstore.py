@@ -40,8 +40,18 @@ class YamlStateStore(object):
 
     def save(self, key_value_pairs):
         for key, state_data in key_value_pairs:
-            self.buffer.setdefault(key.type, {})[key.iden] = state_data
+            if state_data is None:
+                self._delete_from_buffer(key)
+            else:
+                self.buffer.setdefault(key.type, {})[key.iden] = state_data
         self._write_buffer()
+
+    def _delete_from_buffer(self, key):
+        data_for_type = self.buffer.get(key.type, {})
+        if data_for_type.get(key.iden):
+            del data_for_type[key.iden]
+        if not data_for_type:  # No remaining data for this type
+            del self.buffer[key.type]
 
     def _write_buffer(self):
         with open(self.filename, 'w') as fh:

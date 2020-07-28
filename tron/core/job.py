@@ -189,9 +189,12 @@ class Job(Observable, Observer):
 
     @property
     def state_data(self):
-        """This data is used to serialize the state of this job."""
+        """
+        This data is used to serialize the state of this job.
+        State of job runs is serialized separately.
+        """
         return {
-            'runs': self.runs.state_data,
+            'run_nums': self.runs.get_run_nums(),
             'enabled': self.enabled,
         }
 

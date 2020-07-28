@@ -320,6 +320,7 @@ class TestJobRun(TestCase):
         self.job_run.output_path = mock.create_autospec(filehandler.OutputPath)
         self.job_run.cleanup()
 
+        self.job_run.notify.assert_called_with(jobrun.JobRun.NOTIFY_REMOVED)
         self.job_run.clear_observers.assert_called_with()
         self.job_run.output_path.delete.assert_called_with()
         assert not self.job_run.node
@@ -678,6 +679,9 @@ class TestJobRunCollection(TestCase):
         assert_equal(runs, expected)
         for job_run in job_runs:
             job_run.get_action_run.assert_called_with(action_name)
+
+    def test_get_run_nums(self):
+        assert self.run_collection.get_run_nums() == [5, 4, 3, 2, 1]
 
 
 class TestJobRunStateTransitions:

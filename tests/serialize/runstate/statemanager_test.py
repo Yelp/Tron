@@ -105,6 +105,54 @@ class TestPersistentStateManager(TestCase):
         keys = ['type%s' % name for name in names]
         assert_equal(key_to_item_map, dict(zip(keys, names)))
 
+    def test_restore(self):
+        job_names = ['one', 'two']
+        with mock.patch.object(
+            self.manager, '_restore_metadata', autospec=True,
+        ) as mock_restore_metadata, mock.patch.object(
+            self.manager, '_restore_dicts', autospec=True,
+        ) as mock_restore_dicts, mock.patch.object(
+            self.manager, '_restore_runs_for_job', autospect=True,
+        ) as mock_restore_runs:
+            mock_restore_dicts.side_effect = [
+                # _restore_dicts for JOB_STATE
+                {
+                    'one': {'key': 'val1'},
+                    'two': {'key': 'val2'},
+                },
+                # _restore_dicts for MESOS_STATE
+                {'frameworks': 'clusters'},
+            ]
+
+            restored_state = self.manager.restore(job_names)
+            mock_restore_metadata.assert_called_once_with()
+            assert mock_restore_dicts.call_args_list == [
+                mock.call(runstate.JOB_STATE, job_names),
+                mock.call(runstate.MESOS_STATE, ['frameworks']),
+            ]
+            assert len(mock_restore_runs.call_args_list) == 2
+            assert restored_state == {
+                runstate.JOB_STATE: {
+                    'one': {'key': 'val1', 'runs': mock_restore_runs.return_value},
+                    'two': {'key': 'val2', 'runs': mock_restore_runs.return_value},
+                },
+                runstate.MESOS_STATE: {'frameworks': 'clusters'},
+            }
+
+    def test_restore_runs_for_job(self):
+        job_state = {'run_nums': [2, 3], 'enabled': True}
+        with mock.patch.object(
+            self.manager, '_restore_dicts', autospec=True,
+        ) as mock_restore_dicts:
+            mock_restore_dicts.side_effect = [{'job_a.2': 'two'}, {'job_a.3': 'three'}]
+            runs = self.manager._restore_runs_for_job('job_a', job_state)
+
+            assert mock_restore_dicts.call_args_list == [
+                mock.call(runstate.JOB_RUN_STATE, ['job_a.2']),
+                mock.call(runstate.JOB_RUN_STATE, ['job_a.3']),
+            ]
+            assert runs == ['two', 'three']
+
     def test_restore_dicts(self):
         names = ['namea', 'nameb']
         autospec_method(self.manager._keys_for_items)
@@ -148,6 +196,12 @@ class TestPersistentStateManager(TestCase):
         with self.manager.disabled():
             self.manager.save("something", 'name', mock.Mock())
         assert not self.store.save.mock_calls
+
+    def test_delete(self):
+        name = 'name'
+        self.manager.delete(runstate.JOB_STATE, name)
+        key = '%s%s' % (runstate.JOB_STATE, name)
+        self.store.save.assert_called_with([(key, None)])
 
     def test_cleanup(self):
         self.manager.cleanup()
@@ -282,6 +336,29 @@ class TestStateChangeWatcher(TestCase):
             )
             mock_watch.assert_called_with(mock_job_run)
             assert mock_save_job.call_count == 0
+
+    def test_handler_job_run_state_change(self):
+        mock_job_run = mock.MagicMock(spec_set=JobRun)
+        self.watcher.handler(
+            observable=mock_job_run,
+            event=JobRun.NOTIFY_STATE_CHANGED,
+        )
+        self.watcher.state_manager.save.assert_called_with(
+            runstate.JOB_RUN_STATE,
+            mock_job_run.name,
+            mock_job_run.state_data,
+        )
+
+    def test_handler_job_run_removed(self):
+        mock_job_run = mock.MagicMock(spec_set=JobRun)
+        self.watcher.handler(
+            observable=mock_job_run,
+            event=JobRun.NOTIFY_REMOVED,
+        )
+        self.watcher.state_manager.delete.assert_called_with(
+            runstate.JOB_RUN_STATE,
+            mock_job_run.name,
+        )
 
 
 if __name__ == "__main__":
