@@ -887,7 +887,7 @@ class SSHActionRun(ActionRun, Observer):
         except node.Error as e:
             log.warning(f"Failed to submit recovery for {self.id}: {e!r}")
 
-    def handle_action_command_state_change(self, action_command, event):
+    def handle_action_command_state_change(self, action_command, event, event_data=None):
         """Observe ActionCommand state changes."""
         log.debug(
             f"{self} action_command state change: {action_command.state}"
@@ -1028,7 +1028,7 @@ class MesosActionRun(ActionRun, Observer):
 
         return '\n'.join(msgs)
 
-    def handle_action_command_state_change(self, action_command, event):
+    def handle_action_command_state_change(self, action_command, event, event_data=None):
         """Observe ActionCommand state changes."""
         log.debug(
             f"{self} action_command state change: {action_command.state}"

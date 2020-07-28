@@ -5,6 +5,7 @@ from contextlib import contextmanager
 
 from tron.config import schema
 from tron.core import job
+from tron.core.jobrun import JobRun
 from tron.mesos import MesosClusterRepository
 from tron.serialize import runstate
 from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
@@ -254,12 +255,21 @@ class StateChangeWatcher(observer.Observer):
         self.config = state_config
         return True
 
-    def handler(self, observable, _event):
+    def handler(self, observable, event, event_data=None):
         """Handle a state change in an observable by saving its state."""
-        if isinstance(observable, job.Job):
-            self.save_job(observable)
-        elif observable == MesosClusterRepository:
+        if observable == MesosClusterRepository:
             self.save_frameworks(observable)
+        elif isinstance(observable, job.Job):
+            if event == job.Job.NOTIFY_NEW_RUN:
+                if event_data is None or not isinstance(event_data, JobRun):
+                    log.warning(f'Notified of new run, but no run to watch. Got {event_data}')
+                else:
+                    log.debug(f'Watching new run {event_data}')
+                    self.watch(event_data)
+            else:
+                self.save_job(observable)
+        elif isinstance(observable, JobRun):
+            pass
 
     def save_job(self, job):
         self._save_object(runstate.JOB_STATE, job)

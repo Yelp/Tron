@@ -94,11 +94,13 @@ class MockObserver(Observer):
         self.event = event
         self.watch(obs, event)
         self.has_watched = 0
+        self.event_data = None
 
-    def handler(self, obs, event):
+    def handler(self, obs, event, event_data):
         assert_equal(obs, self.obs)
         assert_equal(event, self.event)
         self.has_watched += 1
+        self.event_data = event_data
 
 
 class TestObserver(TestCase):
@@ -112,10 +114,12 @@ class TestObserver(TestCase):
 
         self.obs.notify(event)
         assert_equal(handler.has_watched, 1)
+        assert handler.event_data is None
         self.obs.notify("other event")
         assert_equal(handler.has_watched, 1)
-        self.obs.notify(event)
+        self.obs.notify(event, "event_data")
         assert_equal(handler.has_watched, 2)
+        assert handler.event_data == "event_data"
 
 
 if __name__ == "__main__":

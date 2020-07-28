@@ -214,7 +214,7 @@ class JobRun(Observable, Observer):
 
         return started_runs
 
-    def handle_action_run_state_change(self, action_run: ActionRun, event):
+    def handle_action_run_state_change(self, action_run: ActionRun, event, event_data=None):
         """Handle events triggered by JobRuns."""
         log.info(f"{self} got an event: {event}")
         metrics.meter(f'tron.actionrun.{event}')

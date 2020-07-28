@@ -173,7 +173,7 @@ class JobScheduler(Observer):
         job_run.cancel()
         self.schedule()
 
-    def handle_job_events(self, _observable, event):
+    def handle_job_events(self, _observable, event, event_data=None):
         """Handle notifications from observables. If a JobRun has completed
         look for queued JobRuns that may need to start now.
         """
