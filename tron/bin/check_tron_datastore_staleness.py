@@ -9,7 +9,7 @@ import pytz
 
 from tron.config import manager
 from tron.config import schema
-from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
+from tron.serialize.runstate.statemanager import PersistenceManagerFactory
 
 # Default values for arguments
 DEFAULT_WORKING_DIR = '/var/lib/tron/'
@@ -78,12 +78,9 @@ def main():
     # Alert for DynamoDB
     if store_type == schema.StatePersistenceTypes.dynamodb:
         # Fetch job state from dynamodb
-        dynamodb_region = persistence_config.dynamodb_region
-        table_name = persistence_config.table_name
-        store = DynamoDBStateStore(table_name, dynamodb_region)
-        key = store.build_key('job_state', job_name)
+        state_manager = PersistenceManagerFactory.from_config(persistence_config)
         try:
-            job = store.restore([key])[key]
+            job = state_manager.restore(job_names=[job_name])['job_state'][job_name]
         except Exception as e:
             logging.exception(f'UNKN: Failed to retreive status for job {job_name} due to {e}')
             sys.exit(3)
@@ -91,13 +88,13 @@ def main():
         # Exit if the job never runs.
         last_run_time = get_last_run_time(job)
         if not last_run_time:
-            logging.error(f'WARN: No last run for {key} found. If the job was just added, it might take some time for it to run')
+            logging.error(f'WARN: No last run for {job_name} found. If the job was just added, it might take some time for it to run')
             sys.exit(1)
 
         # Alert if timestamp is not updated after staleness_threshold
         stateless_for_secs = time.time() - last_run_time.astimezone(pytz.utc).timestamp()
         if stateless_for_secs > args.staleness_threshold:
-            logging.error(f'CRIT: {key} has not been updated in DynamoDB for {stateless_for_secs} seconds')
+            logging.error(f'CRIT: {job_name} has not been updated in DynamoDB for {stateless_for_secs} seconds')
             sys.exit(2)
         else:
             logging.info(f"OK: DynamoDB is up to date. It's last updated at {last_run_time}")
