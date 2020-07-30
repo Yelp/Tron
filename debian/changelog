@@ -1,3 +1,10 @@
+tron (1.4.1) xenial; urgency=medium
+
+  * 1.4.1 tagged with 'make release'
+    Commit: v1.4.1
+
+ -- root <root@f04de09d1fa0>  Thu, 30 Jul 2020 23:56:44 +0000
+
 tron (1.4.0) xenial; urgency=medium
 
   * 1.4.0 tagged with 'make release'
