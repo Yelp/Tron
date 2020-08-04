@@ -283,7 +283,6 @@ class StateChangeWatcher(observer.Observer):
                     log.warning(f'Notified of new run, but no run to watch. Got {event_data}')
                 else:
                     log.debug(f'Watching new run {event_data}')
-                    self.save_job_run(event_data)
                     self.watch(event_data)
             else:
                 self.save_job(observable)

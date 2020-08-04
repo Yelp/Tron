@@ -5,6 +5,7 @@ from twisted.internet import reactor
 
 from tron.core import recovery
 from tron.core.job import Job
+from tron.core.jobrun import JobRun
 from tron.scheduler import scheduler_from_config
 from tron.serialize import filehandler
 from tron.utils import timeutils
@@ -55,9 +56,12 @@ class JobScheduler(Observer):
         runs_to_schedule = self.get_runs_to_schedule(next_run_time)
         if not runs_to_schedule:
             return
-        for r in runs_to_schedule:
-            self._set_callback(r)
         # Eagerly save new runs in case tron gets restarted
+        # runs_to_schedule is a generator, so we can only iterate
+        # through it once
+        for r in runs_to_schedule:
+            r.notify(JobRun.NOTIFY_STATE_CHANGED)
+            self._set_callback(r)
         self.job.notify(Job.NOTIFY_STATE_CHANGE)
 
     def disable(self):
