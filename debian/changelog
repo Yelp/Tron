@@ -1,3 +1,11 @@
+tron (1.4.2) xenial; urgency=medium
+
+  * 1.4.2 tagged with 'make release'
+    Commit: Merge pull request #765 from Yelp/drmorr/TRON-
+    1554/fix_pypi_url  don't use public pypi for internal builds
+
+ -- root <root@ae9f03491631>  Tue, 04 Aug 2020 18:23:42 +0000
+
 tron (1.4.1) xenial; urgency=medium
 
   * 1.4.1 tagged with 'make release'
