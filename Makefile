@@ -5,6 +5,8 @@ GID:=$(shell id -g)
 
 ifeq ($(findstring .yelpcorp.com,$(shell hostname -f)), .yelpcorp.com)
 	export PIP_INDEX_URL ?= https://pypi.yelpcorp.com/simple
+else
+	export PIP_INDEX_URL ?= https://pypi.python.org/simple
 endif
 
 .PHONY : all clean tests docs dev cluster_itests
@@ -25,7 +27,7 @@ docker_%:
 
 deb_%: clean docker_% coffee_%
 	@echo "Building deb for $*"
-	$(DOCKER_RUN) tron-builder-$* /bin/bash -c ' \
+	$(DOCKER_RUN) -e PIP_INDEX_URL=${PIP_INDEX_URL} tron-builder-$* /bin/bash -c ' \
 		dpkg-buildpackage -d &&                  \
 		mv ../*.deb dist/ &&                     \
 		rm -rf debian/tron &&                    \
