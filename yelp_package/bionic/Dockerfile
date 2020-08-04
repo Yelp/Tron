@@ -19,9 +19,10 @@ RUN apt-get -q update && \
         libssl-dev \
         libffi-dev \
         python3.6-dev \
-        python-pip \
+        python3-pip \
         python-tox \
         wget \
     && apt-get -q clean
 
+RUN pip3 install virtualenv==16.0.0
 WORKDIR /work
