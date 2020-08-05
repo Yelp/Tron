@@ -23,7 +23,7 @@ endif
 docker_%:
 	@echo "Building docker image for $*"
 	[ -d dist ] || mkdir -p dist
-	cd ./yelp_package/$* && docker build -t tron-builder-$* .
+	cd ./yelp_package/$* && docker build --build-arg PIP_INDEX_URL=${PIP_INDEX_URL} -t tron-builder-$* .
 
 deb_%: clean docker_% coffee_%
 	@echo "Building deb for $*"

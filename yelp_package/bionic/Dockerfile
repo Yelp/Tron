@@ -24,5 +24,8 @@ RUN apt-get -q update && \
         wget \
     && apt-get -q clean
 
-RUN pip3 install virtualenv==16.0.0
+ARG PIP_INDEX_URL
+ENV PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.python.org/simple}
+
+RUN pip3 install --index-url ${PIP_INDEX_URL} virtualenv==16.0.0
 WORKDIR /work
