@@ -141,6 +141,11 @@ class JobScheduler(Observer):
             log.info(f"Cancelled {job_run} because job has been disabled.")
             return job_run.cancel()
 
+        # This is a callback on a job run that has been already cleaned up due to
+        # reconfiguration. Do nothing.
+        if not job_run.action_runs:
+            return
+
         # If the JobRun was cancelled we won't run it.  A JobRun may be
         # cancelled if the job was disabled, or manually by a user. It's
         # also possible this job was run (or is running) manually by a user.
