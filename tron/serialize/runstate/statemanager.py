@@ -204,14 +204,11 @@ class PersistentStateManager(object):
         if not key_state_pairs:
             return
 
-        keys = ','.join(str(key) for key, _ in key_state_pairs)
-        log.info("Saving state for %s" % keys)
-
         with self._timeit():
             try:
                 self._impl.save(key_state_pairs)
             except Exception as e:
-                msg = "Failed to save state for %s: %s" % (keys, e)
+                msg = f"Error while saving: {repr(e)}"
                 log.warning(msg)
                 raise PersistenceStoreError(msg)
 
