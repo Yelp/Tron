@@ -207,7 +207,7 @@ class DynamoDBStateStore(object):
                         )
                         raise e
                     else:
-                        log.warning(f'Got error while saving, trying again: {repr(e)}')
+                        log.warning(f'Got error while saving {key}, trying again: {repr(e)}')
         timer(
             name='tron.dynamodb.setitem',
             delta=time.time() - start,
