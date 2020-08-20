@@ -25,7 +25,7 @@ docker_%:
 	[ -d dist ] || mkdir -p dist
 	cd ./yelp_package/$* && docker build --build-arg PIP_INDEX_URL=${PIP_INDEX_URL} -t tron-builder-$* .
 
-deb_%: clean docker_% coffee_%
+deb_%: clean docker_% coffee_% react_%
 	@echo "Building deb for $*"
 	$(DOCKER_RUN) -e PIP_INDEX_URL=${PIP_INDEX_URL} tron-builder-$* /bin/bash -c ' \
 		dpkg-buildpackage -d &&                  \
@@ -41,6 +41,14 @@ coffee_%: docker_%
 		mkdir -p tronweb/js/cs &&                      \
 		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
 		chown -R $(UID):$(GID) tronweb/js/cs/          \
+	'
+
+react_%: docker_%
+	@echo "Building tronweb2"
+	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '       \
+		yarn --cwd tronweb2 &&                         \
+		yarn --cwd tronweb2 build &&                   \
+		chown -R $(UID):$(GID) tronweb2/build/         \
 	'
 
 test:

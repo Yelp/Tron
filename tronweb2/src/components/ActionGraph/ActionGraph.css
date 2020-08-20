@@ -1,0 +1,12 @@
+.link {
+  stroke: #000;
+  stroke-width: 0.8px;
+}
+
+text.internal {
+  font-weight: bold;
+}
+
+text.external {
+  fill: #888;
+}

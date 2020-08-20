@@ -33,4 +33,11 @@ RUN cd /tmp && \
     gdebi -n dh-virtualenv*.deb && \
     rm dh-virtualenv_*.deb
 
+# Get yarn and node
+RUN wget --quiet -O - https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
+RUN wget --quiet -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key | apt-key add -
+RUN echo "deb http://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list
+RUN echo "deb http://deb.nodesource.com/node_8.x xenial main" > /etc/apt/sources.list.d/nodesource.list
+RUN apt-get -q update && apt-get -q install -y --no-install-recommends yarn nodejs
+
 WORKDIR /work
