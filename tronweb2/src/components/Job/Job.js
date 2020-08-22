@@ -9,7 +9,7 @@ import {
 import JobScheduler from '../JobScheduler';
 import JobSettings from '../JobSettings';
 import ActionGraph from '../ActionGraph';
-import {getJobColor} from '../../utils/utils';
+import {getJobColor, fetchFromApi} from '../../utils/utils';
 
 function Job() {
   const [job, setJobData] = useState(undefined);
@@ -17,10 +17,7 @@ function Job() {
 
   useEffect(() => {
     document.title = jobId;
-    var endpoint = '/api/jobs/' + jobId + '?include_action_graph=1';
-    fetch(endpoint)
-      .then(response => response.json())
-      .then(data => setJobData(data));
+    fetchFromApi('/api/jobs/' + jobId + '?include_action_graph=1', setJobData);
   }, [jobId]);
 
   if (job === undefined) {

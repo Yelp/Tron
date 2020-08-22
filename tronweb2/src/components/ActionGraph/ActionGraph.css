@@ -10,3 +10,11 @@ text.internal {
 text.external {
   fill: #888;
 }
+
+text {
+    font-size: 12px;
+}
+
+.tooltip-inner {
+    max-width: none;
+}

@@ -4,16 +4,14 @@ import React,
   useEffect
 } from 'react';
 import {Link} from "react-router-dom";
-import {getJobColor} from '../../utils/utils';
+import {getJobColor, fetchFromApi} from '../../utils/utils';
 import JobScheduler from '../JobScheduler';
 
 function JobsDashboard() {
   const [jobData, setJobData] = useState(undefined);
 
   useEffect(() => {
-    fetch('/api/jobs')
-      .then(response => response.json())
-      .then(data => setJobData(data));
+    fetchFromApi('/api/jobs', setJobData);
   }, []);
 
   if (jobData === undefined) {
