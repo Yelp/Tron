@@ -25,3 +25,8 @@ repos:
         entry: contrib/mock_patch_checker.py
         language: script
         files: ^tests/.*\.py$
+    -   id: eslint
+        name: eslint
+        entry: ./node_modules/.bin/eslint --format=compact --quiet --fix
+        language: system
+        files: ^tronweb2/src/.*\.js$

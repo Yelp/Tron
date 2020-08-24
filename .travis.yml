@@ -11,9 +11,13 @@ python:
 
 before_install:
   - sudo apt-get install -y libdb5.3-dev
+  - nvm install 10.16
   - sudo rm -f /etc/boto.cfg
   - export AWS_SECRET_ACCESS_KEY=foobar_secret
   - export AWS_ACCESS_KEY_ID=foobar_key
+  # Build depedencies required for JS precommit
+  - yarn
+  - yarn --cwd tronweb2
 
 install: pip install tox
 script: make $TARGET

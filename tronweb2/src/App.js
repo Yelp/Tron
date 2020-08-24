@@ -1,12 +1,11 @@
 import React from 'react';
-import { NavBar } from './components'
-import { JobsDashboard } from './components'
-import { Job } from './components'
 import {
   HashRouter as Router,
   Switch,
-  Route
-} from "react-router-dom";
+  Route,
+} from 'react-router-dom';
+import { NavBar, JobsDashboard, Job } from './components';
+
 import './App.css';
 
 function App() {
@@ -17,13 +16,13 @@ function App() {
         <div className="p-3">
           <Switch>
             <Route path="/job/:jobId">
-                <Job />
+              <Job />
             </Route>
             <Route path="/configs">
-                <Configs />
+              <Configs />
             </Route>
             <Route path="/">
-                <JobsDashboard />
+              <JobsDashboard />
             </Route>
           </Switch>
         </div>
