@@ -52,7 +52,16 @@ function JobsDashboard() {
     </div>
   );
   if (jobData !== undefined) {
-    jobContent = buildJobTable(jobData);
+    if ('error' in jobData) {
+      jobContent = (
+        <p>
+          Error:
+          {jobData.error.message}
+        </p>
+      );
+    } else {
+      jobContent = buildJobTable(jobData);
+    }
   }
   return (
     <div>

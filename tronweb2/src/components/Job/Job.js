@@ -76,7 +76,16 @@ function Job() {
     </div>
   );
   if (job !== undefined) {
-    jobContent = jobDisplay(job);
+    if ('error' in job) {
+      jobContent = (
+        <p>
+          Error:
+          {job.error.message}
+        </p>
+      );
+    } else {
+      jobContent = jobDisplay(job);
+    }
   }
 
   return (
