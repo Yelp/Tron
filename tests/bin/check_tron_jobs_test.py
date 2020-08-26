@@ -632,6 +632,65 @@ class TestCheckJobs(TestCase):
         assert_equal(run['id'], 'MASTER.test.1')
         assert_equal(state, State.SUCCEEDED)
 
+    def test_job_next_run_starting_no_queueing_not_stuck(self):
+        job_runs = {
+            'status':
+                'running',
+            'next_run':
+                None,
+            'allow_overlap':
+                False,
+            'queueing':
+                False,
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.3',
+                    'state':
+                        'cancelled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                    'end_time':
+                        None,
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'running',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1200),
+                        ),
+                    'end_time':
+                        None,
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1700),
+                        ),
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run['id'], 'MASTER.test.1')
+        assert_equal(state, State.SUCCEEDED)
+
     def test_job_running_job_exceeds_expected_runtime(self):
         job_runs = {
             'status':
