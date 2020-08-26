@@ -206,7 +206,8 @@ def get_relevant_run_and_state(job_content):
         job_runs=job_runs,
         job_expected_runtime=job_expected_runtime,
         actions_expected_runtime=actions_expected_runtime,
-        allow_overlap=job_content.get('allow_overlap'),
+        allow_overlap=job_content.get('allow_overlap', False),
+        queueing=job_content.get('queueing', True),
     )
     for run in job_runs:
         state = run.get('state', 'unknown')
@@ -229,7 +230,7 @@ def is_action_failed_or_unknown(job_run):
 
 
 def is_job_stuck(
-    job_runs, job_expected_runtime, actions_expected_runtime, allow_overlap
+    job_runs, job_expected_runtime, actions_expected_runtime, allow_overlap, queueing
 ):
     next_run_time = None
     for job_run in job_runs:
@@ -239,7 +240,7 @@ def is_job_stuck(
             ):
                 return job_run
             # check if it is still running at next scheduled job run time
-            if not allow_overlap and next_run_time:
+            if not allow_overlap and queueing and next_run_time:
                 difftime = _timestamp_to_timeobj(next_run_time)
                 if time.time() > time.mktime(difftime):
                     return job_run
