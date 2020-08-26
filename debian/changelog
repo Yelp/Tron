@@ -1,3 +1,12 @@
+tron (1.4.3) xenial; urgency=medium
+
+  * 1.4.3 tagged with 'make release'
+    Commit: Merge pull request #770 from Yelp/TRON-1561-no-overlap-alert-
+    if-queueing  Do not alert for overlapping runs if queueing is
+    disabled
+
+ -- root <root@afcdad7311e7>  Wed, 26 Aug 2020 21:02:42 +0000
+
 tron (1.4.2) xenial; urgency=medium
 
   * 1.4.2 tagged with 'make release'
