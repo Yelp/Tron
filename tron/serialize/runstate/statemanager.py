@@ -160,10 +160,11 @@ class PersistentStateManager(object):
         runs = []
         for run_num in run_nums:
             key = jobrun.get_job_run_id(job_name, run_num)
-            # If the key isn't there, the list will be empty and we will crash during start up
-            # That's fine because that means the job state is incorrect
-            run_state = list(self._restore_dicts(runstate.JOB_RUN_STATE, [key]).values())[0]
-            runs.append(run_state)
+            run_state = list(self._restore_dicts(runstate.JOB_RUN_STATE, [key]).values())
+            if not run_state:
+                log.error(f'Failed to restore {key}, no state found for it')
+            else:
+                runs.append(run_state[0])
         return runs
 
     def _restore_metadata(self):
