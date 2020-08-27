@@ -42,9 +42,7 @@ function buildJobTable(jobData) {
 function JobsDashboard() {
   const [jobData, setJobData] = useState(undefined);
 
-  useEffect(() => {
-    fetchFromApi('/api/jobs', setJobData);
-  }, []);
+  useEffect(() => fetchFromApi('/api/jobs', setJobData), []);
 
   let jobContent = (
     <div className="spinner-border" role="status">

@@ -2,6 +2,13 @@ export function fetchFromApi(endpoint, dataCallback) {
   // Can change for testing
   const apiPrefix = '';
   const url = apiPrefix + endpoint;
+
+  // Return function to skip the callback
+  let cancelled = false;
+  function cancel() {
+    cancelled = true;
+  }
+
   fetch(url)
     .then((response) => {
       if (!response.ok) {
@@ -9,11 +16,19 @@ export function fetchFromApi(endpoint, dataCallback) {
       }
       return response.json();
     })
-    .then((data) => dataCallback(data))
+    .then((data) => {
+      if (!cancelled) {
+        dataCallback(data);
+      }
+    })
     .catch((error) => {
       console.error(`Error fetching ${url}`, error);
-      dataCallback({ error: { message: 'connection error' } });
+      if (!cancelled) {
+        dataCallback({ error: { message: 'connection error' } });
+      }
     });
+
+  return cancel;
 }
 
 export function getJobColor(status) {

@@ -67,7 +67,7 @@ function Job() {
 
   useEffect(() => {
     document.title = jobId;
-    fetchFromApi(`/api/jobs/${jobId}?include_action_graph=1`, setJobData);
+    return fetchFromApi(`/api/jobs/${jobId}?include_action_graph=1`, setJobData);
   }, [jobId]);
 
   let jobContent = (
