@@ -491,6 +491,8 @@ class RootResource(resource.Resource):
         self.mcp = mcp
         self.putChild(b'api', ApiRootResource(self.mcp))
         self.putChild(b'web', static.File(web_path))
+        # Temporarily hard-coded while we build the new UI
+        self.putChild(b'web2', static.File(web_path + '2/build'))
         self.putChild(b'', self)
 
     def render_GET(self, request):

@@ -24,6 +24,7 @@ tron_state
 tron.lock
 manhole.sock
 manhole.sock.lock
+node_modules/
 
 # Example cluster
 example-cluster/config
