@@ -1,3 +1,11 @@
+tron (1.4.4) xenial; urgency=medium
+
+  * 1.4.4 tagged with 'make release'
+    Commit: Merge pull request #769 from Yelp/try-react  Prototype React
+    version of tronweb
+
+ -- root <root@a921747b1922>  Fri, 28 Aug 2020 18:20:16 +0000
+
 tron (1.4.3) xenial; urgency=medium
 
   * 1.4.3 tagged with 'make release'
