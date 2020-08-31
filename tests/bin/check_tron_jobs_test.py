@@ -745,6 +745,60 @@ class TestCheckJobs(TestCase):
         assert_equal(run['id'], 'MASTER.test.99')
         assert_equal(state, State.STUCK)
 
+    def test_job_waiting_job_exceeds_expected_runtime_already_started(self):
+        job_runs = {
+            'status':
+                'running',
+            'next_run':
+                None,
+            'expected_runtime':
+                480.0,
+            'allow_overlap':
+                True,
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.100',
+                    'state':
+                        'scheduled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() + 600),
+                        ),
+                    'end_time':
+                        None,
+                    'start_time':
+                        None,
+                    'duration':
+                        '',
+                },
+                {
+                    'id':
+                        'MASTER.test.99',
+                    'state':
+                        'waiting',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                    'start_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                    'end_time':
+                        None,
+                    'duration':
+                        '0:10:01.883601',
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run['id'], 'MASTER.test.99')
+        assert_equal(state, State.STUCK)
+
     def test_job_running_action_exceeds_expected_runtime(self):
         job_runs = {
             'status':

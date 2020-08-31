@@ -234,7 +234,8 @@ def is_job_stuck(
 ):
     next_run_time = None
     for job_run in job_runs:
-        if job_run.get('state', 'unknown') == "running":
+        states_to_check = {"running", "waiting"}
+        if job_run.get('state', 'unknown') in states_to_check:
             if is_job_run_exceeding_expected_runtime(
                 job_run, job_expected_runtime
             ):
@@ -255,13 +256,11 @@ def is_job_stuck(
 
 
 def is_job_run_exceeding_expected_runtime(job_run, job_expected_runtime):
+    states_to_check = {"running", "waiting"}
     if job_expected_runtime is not None and job_run.get(
         'state', 'unknown'
-    ) == "running":
+    ) in states_to_check:
         duration_seconds = pytimeparse.parse(job_run.get('duration', ''))
-        # TODO: duration_seconds will be None for a running job if it's root
-        # action is waiting for external dependency. Maybe fix by setting
-        # job's start_time to run_time when that happens.
         if duration_seconds and duration_seconds > job_expected_runtime:
             return True
     return False
