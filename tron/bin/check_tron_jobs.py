@@ -397,6 +397,7 @@ def compute_check_result_for_job(client, job, url_index):
         pmap(job['monitoring']).discard(PRECIOUS_JOB_ATTR)
         .discard('check_every')
         .discard('page_for_expected_runtime')
+        .discard('check_oom_events')
     )
     kwargs = kwargs.update(sensu_kwargs)
     hide_stderr = kwargs.get('hide_stderr', False)
