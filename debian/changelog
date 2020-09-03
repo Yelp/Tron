@@ -1,3 +1,12 @@
+tron (1.4.5) xenial; urgency=medium
+
+  * 1.4.5 tagged with 'make release'
+    Commit: Merge pull request #773 from Yelp/TRON-1564-allow-check-oom-
+    events  Skip check_oom_events key from monitoring, which is only
+    used by paasta
+
+ -- root <root@0e092e6866b4>  Thu, 03 Sep 2020 17:30:12 +0000
+
 tron (1.4.4) xenial; urgency=medium
 
   * 1.4.4 tagged with 'make release'
