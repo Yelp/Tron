@@ -6,11 +6,12 @@ import React,
 import { Link } from 'react-router-dom';
 import { getJobColor, fetchFromApi } from '../../utils/utils';
 import JobScheduler from '../JobScheduler';
+import './JobsDashboard.css';
 
 function buildJobTable(jobData) {
   const tableRows = jobData.jobs.map((job) => (
     <tr key={job.name} className="clickable">
-      <td>
+      <td className="name-cell">
         <Link className="text-dark" to={`job/${job.name}`}>{job.name}</Link>
       </td>
       <td className={`text-${getJobColor(job.status)}`}>{job.status}</td>
@@ -21,7 +22,7 @@ function buildJobTable(jobData) {
     </tr>
   ));
   return (
-    <table className="table table-hover">
+    <table className="table table-hover table-responsive">
       <thead className="thead-light">
         <tr>
           <th>Name</th>
