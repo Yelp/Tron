@@ -31,13 +31,6 @@ function setNodeCol(action, actionData, nextColPerLevel) {
   });
 }
 
-function shortenName(name) {
-  if (name.length > 20) {
-    return `${name.substring(0, 20)}...`;
-  }
-  return name;
-}
-
 function extendActionData(actionList) {
   const actionMap = {};
   actionList.forEach((action) => {
@@ -79,21 +72,62 @@ function extendActionData(actionList) {
   return [actionMap, numCols, numLevels];
 }
 
-function buildGraph(actionData, height, width) {
+function shortenName(name) {
+  const maxTextLength = 20;
+  if (name.length > maxTextLength) {
+    return `${name.substring(0, maxTextLength)}...`;
+  }
+  return name;
+}
+
+function actionTooltip(action) {
+  return (
+    <Tooltip>
+      <div className="tooltip-action-name p-2">
+        {action.name}
+      </div>
+      <div className="p-2">
+        command:
+        {' '}
+        {action.command}
+      </div>
+    </Tooltip>
+  );
+}
+
+function buildGraph(actionData, minWidth) {
   const [actionMap, numCols, numLevels] = actionData;
   const nodeList = Object.values(actionMap);
+
+  const actualWidth = Math.max(minWidth, numCols * 80);
+  const actualHeight = (numLevels + 1) * 100;
+
+  const rectHeight = 36;
+  const rectSidePadding = 10;
+
   const nodeYScale = scaleLinear()
     .domain([0, numLevels])
-    .range([0, height - 30]);
+    .range([0, actualHeight - rectHeight - 5]);
   const nodeXScale = scaleLinear()
     .domain([0, numCols])
-    .range([0, width]);
+    .range([0, actualWidth]);
 
   const nodeElements = nodeList.map((d) => (
-    <OverlayTrigger key={d.name} placement="top" overlay={<Tooltip><div>{d.name}</div></Tooltip>}>
+    <OverlayTrigger key={d.name} placement="left" overlay={actionTooltip(d)}>
       <g className="node">
-        <circle r="6" cx={nodeXScale(d.col)} cy={nodeYScale(d.level)} />
-        <text dx={nodeXScale(d.col) + 10} dy={nodeYScale(d.level)} className={d.type}>
+        <rect
+          x={nodeXScale(d.col) - rectSidePadding}
+          y={nodeYScale(d.level) - rectHeight / 2}
+          rx="5"
+          ry="5"
+          width={(shortenName(d.name).length * 7) + (2 * rectSidePadding) + 1}
+          height={rectHeight}
+          stroke="black"
+          fill="#ddd"
+          strokeWidth="2"
+          className={d.type}
+        />
+        <text dx={nodeXScale(d.col)} dy={nodeYScale(d.level) + 4} className={d.type}>
           {shortenName(d.name)}
         </text>
       </g>
@@ -112,19 +146,20 @@ function buildGraph(actionData, height, width) {
       key={`link-${d.source.name}-${d.dest.name}`}
       markerEnd="url(#arrow)"
       x1={nodeXScale(d.source.col)}
-      y1={nodeYScale(d.source.level)}
+      y1={nodeYScale(d.source.level) + rectHeight / 2}
       x2={nodeXScale(d.dest.col)}
-      y2={nodeYScale(d.dest.level)}
+      y2={nodeYScale(d.dest.level) - rectHeight / 2}
     />
   ));
 
+  const transform = `translate(${rectSidePadding + 1}, ${rectHeight / 2 + 1})`;
   const svg = (
-    <svg height={height} width={width}>
+    <svg height={actualHeight} width={actualWidth}>
       <defs>
         <marker
           id="arrow"
           viewBox="0 0 10 10"
-          refX="16"
+          refX="10"
           refY="5"
           markerUnits="strokeWidth"
           markerWidth="15"
@@ -134,11 +169,11 @@ function buildGraph(actionData, height, width) {
           <path d="M 0 2 L 10 5 L 0 8 z" />
         </marker>
       </defs>
-      <g className="nodes" transform="translate(10, 15)">
-        {nodeElements}
-      </g>
-      <g className="links" transform="translate(10, 15)">
+      <g className="links" transform={transform}>
         {linkElements}
+      </g>
+      <g className="nodes" transform={transform}>
+        {nodeElements}
       </g>
     </svg>
   );
@@ -148,10 +183,15 @@ function buildGraph(actionData, height, width) {
 function ActionGraph(props) {
   const { actionData, height, width } = props;
   const dataForGraph = extendActionData(actionData);
-  const graph = buildGraph(dataForGraph, height, width);
+
+  // The div will be up to the given height and stretch to fit horizontally
+  // Overflow of the svg will scroll in both directions within the div
+  const style = { maxHeight: height, width: '100%', overflow: 'scroll' };
+  // Subtract a little from the width for the svg to allow for padding in the div
+  const graph = buildGraph(dataForGraph, width - 50);
 
   return (
-    <div id="action-graph" className="p-3 border">
+    <div id="action-graph" className="p-3 border" style={style}>
       {graph}
     </div>
   );

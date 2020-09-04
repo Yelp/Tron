@@ -55,7 +55,7 @@ function jobDisplay(job) {
       </div>
       <div className="col-md-7">
         <h2>Action Graph</h2>
-        <ActionGraph actionData={job.action_graph} height={400} width={450} />
+        <ActionGraph actionData={job.action_graph} height={450} width={600} />
       </div>
     </div>
   );
