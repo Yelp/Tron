@@ -18,6 +18,7 @@ from tron.config.schema import ConfigVolume
 from tron.config.schema import ExecutorTypes
 from tron.core import actiongraph
 from tron.core import jobrun
+from tron.core.action import ActionCommandConfig
 from tron.core.actionrun import ActionCommand
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunCollection
@@ -135,10 +136,11 @@ class TestActionRunFactory:
         assert collection.run_map['cleanup'].action_name == 'cleanup'
 
     def test_build_run_for_action(self):
+        expected_command = "doit"
         action = MagicMock(
             node_pool=None,
             is_cleanup=False,
-            command="doit",
+            command_config=ActionCommandConfig(command=expected_command),
         )
         action.name = 'theaction'
         action_run = ActionRunFactory.build_run_for_action(
@@ -151,10 +153,15 @@ class TestActionRunFactory:
         assert action_run.node == self.job_run.node
         assert action_run.action_name == action.name
         assert not action_run.is_cleanup
-        assert action_run.command == action.command
+        assert action_run.command == expected_command
 
     def test_build_run_for_action_with_node(self):
-        action = MagicMock(name='theaction', is_cleanup=True, command="doit")
+        expected_command = "doit"
+        action = MagicMock(
+            node_pool=None,
+            is_cleanup=True,
+            command_config=ActionCommandConfig(command=expected_command),
+        )
         action.node_pool = mock.create_autospec(node.NodePool)
         action_run = ActionRunFactory.build_run_for_action(
             self.job_run,
@@ -166,7 +173,7 @@ class TestActionRunFactory:
         assert action_run.node == action.node_pool.next()
         assert action_run.is_cleanup
         assert action_run.action_name == action.name
-        assert action_run.command == action.command
+        assert action_run.command == expected_command
 
     def test_build_run_for_ssh_action(self):
         action = MagicMock(
@@ -182,10 +189,7 @@ class TestActionRunFactory:
         assert action_run.__class__ == SSHActionRun
 
     def test_build_run_for_mesos_action(self):
-        action = MagicMock(
-            name='theaction',
-            command="doit",
-            executor=ExecutorTypes.mesos.value,
+        command_config = MagicMock(
             cpus=10,
             mem=500,
             disk=600,
@@ -200,20 +204,26 @@ class TestActionRunFactory:
                 'path': '/tmp'
             }],
         )
+        action = MagicMock(
+            name='theaction',
+            command="doit",
+            executor=ExecutorTypes.mesos.value,
+            command_config=command_config,
+        )
         action_run = ActionRunFactory.build_run_for_action(
             self.job_run,
             action,
             self.action_runner,
         )
         assert action_run.__class__ == MesosActionRun
-        assert action_run.cpus == action.cpus
-        assert action_run.mem == action.mem
-        assert action_run.disk == action.disk
-        assert action_run.constraints == action.constraints
-        assert action_run.docker_image == action.docker_image
-        assert action_run.docker_parameters == action.docker_parameters
-        assert action_run.env == action.env
-        assert action_run.extra_volumes == action.extra_volumes
+        assert action_run.command_config.cpus == command_config.cpus
+        assert action_run.command_config.mem == command_config.mem
+        assert action_run.command_config.disk == command_config.disk
+        assert action_run.command_config.constraints == command_config.constraints
+        assert action_run.command_config.docker_image == command_config.docker_image
+        assert action_run.command_config.docker_parameters == command_config.docker_parameters
+        assert action_run.command_config.env == command_config.env
+        assert action_run.command_config.extra_volumes == command_config.extra_volumes
 
     def test_action_run_from_state_default(self):
         state_data = self.action_state_data
@@ -243,14 +253,14 @@ class TestActionRunFactory:
         )
 
         assert action_run.job_run_id == state_data['job_run_id']
-        assert action_run.cpus == state_data['cpus']
-        assert action_run.mem == state_data['mem']
-        assert action_run.disk == state_data['disk']
-        assert action_run.constraints == state_data['constraints']
-        assert action_run.docker_image == state_data['docker_image']
-        assert action_run.docker_parameters == state_data['docker_parameters']
-        assert action_run.env == state_data['env']
-        assert action_run.extra_volumes == state_data['extra_volumes']
+        assert action_run.command_config.cpus == state_data['cpus']
+        assert action_run.command_config.mem == state_data['mem']
+        assert action_run.command_config.disk == state_data['disk']
+        assert action_run.command_config.constraints == state_data['constraints']
+        assert action_run.command_config.docker_image == state_data['docker_image']
+        assert action_run.command_config.docker_parameters == state_data['docker_parameters']
+        assert action_run.command_config.env == state_data['env']
+        assert action_run.command_config.extra_volumes == state_data['extra_volumes']
 
         assert not action_run.is_cleanup
         assert action_run.__class__ == MesosActionRun
@@ -266,6 +276,7 @@ class TestActionRun:
             job_run_id="ns.id.0",
             name="action_name",
             node=mock.create_autospec(node.Node),
+            command_config=ActionCommandConfig(command=self.command),
             bare_command=self.command,
             output_path=output_path,
             action_runner=self.action_runner,
@@ -552,6 +563,7 @@ class TestActionRunTriggerTimeout:
         self.action_run = ActionRun(
             job_run_id="ns.id.0",
             name="action_name",
+            command_config=ActionCommandConfig(command=self.command),
             triggered_by=['hello'],
             node=mock.Mock(),
             bare_command=mock.Mock(),
@@ -658,6 +670,7 @@ class TestSSHActionRun:
         self.action_run = SSHActionRun(
             job_run_id="job_name.5",
             name="action_name",
+            command_config=ActionCommandConfig(command=self.command),
             node=mock.create_autospec(node.Node),
             bare_command=self.command,
             output_path=output_path,
@@ -771,6 +784,7 @@ class TestSSHActionRunRecover:
         self.action_run = SSHActionRun(
             job_run_id="job_name.5",
             name="action_name",
+            command_config=ActionCommandConfig(self.command),
             node=mock.create_autospec(node.Node),
             bare_command=self.command,
             output_path=output_path,
@@ -1277,17 +1291,21 @@ class TestMesosActionRun:
                 'TRON_ACTION': 'action_name',
             },
         }
-        self.action_run = MesosActionRun(
-            job_run_id="mynamespace.myjob.42",
-            name="action_name",
-            node=mock.create_autospec(node.Node),
-            rendered_command=self.command,
-            output_path=self.output_path,
-            executor=ExecutorTypes.mesos.value,
+        command_config = ActionCommandConfig(
+            command=self.command,
             extra_volumes=self.extra_volumes,
             constraints=self.constraints,
             docker_parameters=self.docker_parameters,
             **self.other_task_kwargs
+        )
+        self.action_run = MesosActionRun(
+            job_run_id="mynamespace.myjob.42",
+            name="action_name",
+            command_config=command_config,
+            node=mock.create_autospec(node.Node),
+            rendered_command=self.command,
+            output_path=self.output_path,
+            executor=ExecutorTypes.mesos.value,
         )
 
     @mock.patch('tron.core.actionrun.filehandler', autospec=True)

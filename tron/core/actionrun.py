@@ -91,7 +91,8 @@ class ActionRunFactory(object):
             'job_run_id': job_run.id,
             'name': action.name,
             'node': run_node,
-            'bare_command': action.command,
+            'command_config': action.command_config,
+            'bare_command': action.command_config.command,
             'parent_context': job_run.context,
             'output_path': job_run.output_path.clone(),
             'cleanup': action.is_cleanup,
@@ -99,14 +100,6 @@ class ActionRunFactory(object):
             'retries_remaining': action.retries,
             'retries_delay': action.retries_delay,
             'executor': action.executor,
-            'cpus': action.cpus,
-            'mem': action.mem,
-            'disk': action.disk,
-            'constraints': action.constraints,
-            'docker_image': action.docker_image,
-            'docker_parameters': action.docker_parameters,
-            'env': action.env,
-            'extra_volumes': action.extra_volumes,
             'trigger_downstreams': action.trigger_downstreams,
             'triggered_by': action.triggered_by,
             'on_upstream_rerun': action.on_upstream_rerun,
@@ -254,6 +247,7 @@ class ActionRun(Observable):
         job_run_id,
         name,
         node,
+        command_config,
         bare_command=None,
         parent_context=None,
         output_path=None,
@@ -269,14 +263,6 @@ class ActionRun(Observable):
         exit_statuses=None,
         machine=None,
         executor=None,
-        cpus=None,
-        mem=None,
-        disk=None,
-        constraints=None,
-        docker_image=None,
-        docker_parameters=None,
-        env=None,
-        extra_volumes=None,
         mesos_task_id=None,
         trigger_downstreams=None,
         triggered_by=None,
@@ -297,15 +283,9 @@ class ActionRun(Observable):
             ActionRun.STATE_MACHINE, None, run_state
         )
         self.is_cleanup = cleanup
+
         self.executor = executor
-        self.cpus = cpus
-        self.mem = mem
-        self.disk = disk
-        self.constraints = constraints
-        self.docker_image = docker_image
-        self.docker_parameters = docker_parameters
-        self.env = env
-        self.extra_volumes = extra_volumes
+        self.command_config = command_config
         self.mesos_task_id = mesos_task_id
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.action_name)
@@ -338,6 +318,23 @@ class ActionRun(Observable):
         return self.action_name
 
     @classmethod
+    def command_config_from_state(cls, state_data):
+        if 'command_config' in state_data:
+            return state_data['command_config']
+        else:
+            return action.ActionCommandConfig(
+                command=maybe_decode(state_data['command']),
+                cpus=state_data.get('cpus'),
+                mem=state_data.get('mem'),
+                disk=state_data.get('disk'),
+                constraints=state_data.get('constraints'),
+                docker_image=state_data.get('docker_image'),
+                docker_parameters=state_data.get('docker_parameters'),
+                env=state_data.get('env'),
+                extra_volumes=state_data.get('extra_volumes'),
+            )
+
+    @classmethod
     def from_state(
         cls,
         state_data,
@@ -367,6 +364,7 @@ class ActionRun(Observable):
         else:
             action_runner = NoActionRunnerFactory()
 
+        command_config = cls.command_config_from_state(state_data)
         run = cls(
             job_run_id=job_run_id,
             name=action_name,
@@ -374,7 +372,8 @@ class ActionRun(Observable):
             parent_context=parent_context,
             output_path=output_path,
             rendered_command=maybe_decode(state_data.get('rendered_command')),
-            bare_command=maybe_decode(state_data['command']),
+            bare_command=command_config.command,
+            command_config=command_config,
             cleanup=cleanup,
             start_time=state_data['start_time'],
             end_time=state_data['end_time'],
@@ -385,14 +384,6 @@ class ActionRun(Observable):
             exit_statuses=state_data.get('exit_statuses'),
             action_runner=action_runner,
             executor=state_data.get('executor', ExecutorTypes.ssh.value),
-            cpus=state_data.get('cpus'),
-            mem=state_data.get('mem'),
-            disk=state_data.get('disk'),
-            constraints=state_data.get('constraints'),
-            docker_image=state_data.get('docker_image'),
-            docker_parameters=state_data.get('docker_parameters'),
-            env=state_data.get('env'),
-            extra_volumes=state_data.get('extra_volumes'),
             mesos_task_id=state_data.get('mesos_task_id'),
             trigger_downstreams=state_data.get('trigger_downstreams'),
             triggered_by=state_data.get('triggered_by'),
@@ -601,6 +592,7 @@ class ActionRun(Observable):
             'job_run_id': self.job_run_id,
             'action_name': self.action_name,
             'state': self.state,
+            'command_config': self.command_config,
             'start_time': self.start_time,
             'end_time': self.end_time,
             'command': maybe_decode(command),
@@ -612,14 +604,6 @@ class ActionRun(Observable):
             'exit_statuses': self.exit_statuses,
             'action_runner': action_runner,
             'executor': self.executor,
-            'cpus': self.cpus,
-            'mem': self.mem,
-            'disk': self.disk,
-            'constraints': self.constraints,
-            'docker_image': self.docker_image,
-            'docker_parameters': self.docker_parameters,
-            'env': self.env,
-            'extra_volumes': self.extra_volumes,
             'mesos_task_id': self.mesos_task_id,
             'trigger_downstreams': self.trigger_downstreams,
             'triggered_by': self.triggered_by,
@@ -847,6 +831,7 @@ class SSHActionRun(ActionRun, Observer):
             name=f"{self.name}-recovery",
             node=self.node,
             bare_command=recovery_command,
+            command_config=None,
             output_path=self.output_path,
         )
         recovery_action_command = recovery_run.build_action_command()
@@ -918,15 +903,15 @@ class MesosActionRun(ActionRun, Observer):
         return mesos_cluster.create_task(
             action_run_id=self.id,
             command=self.command,
-            cpus=self.cpus,
-            mem=self.mem,
-            disk=1024.0 if self.disk is None else self.disk,
+            cpus=self.command_config.cpus,
+            mem=self.command_config.mem,
+            disk=1024.0 if self.command_config.disk is None else self.command_config.disk,
             constraints=[[c.attribute, c.operator, c.value]
-                         for c in self.constraints],
-            docker_image=self.docker_image,
-            docker_parameters=[e._asdict() for e in self.docker_parameters],
-            env=build_environment(original_env=self.env, run_id=self.id),
-            extra_volumes=[e._asdict() for e in self.extra_volumes],
+                         for c in self.command_config.constraints],
+            docker_image=self.command_config.docker_image,
+            docker_parameters=[e._asdict() for e in self.command_config.docker_parameters],
+            env=build_environment(original_env=self.command_config.env, run_id=self.id),
+            extra_volumes=[e._asdict() for e in self.command_config.extra_volumes],
             serializer=serializer,
             task_id=task_id,
         )
