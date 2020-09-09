@@ -134,10 +134,10 @@ class ActionRunAdapter(RunAdapter):
         self.include_stderr = include_stderr
 
     def get_raw_command(self):
-        return self._obj.bare_command
+        return self._obj.command_config.command
 
     def get_command(self):
-        return self._obj.rendered_command
+        return self._obj.command
 
     @toggle_flag('job_run')
     def get_requirements(self):
@@ -247,8 +247,8 @@ class ActionRunGraphAdapter(object):
             return {
                 'id': action_run.id,
                 'name': action_run.action_name,
-                'command': action_run.rendered_command,
-                'raw_command': action_run.bare_command,
+                'command': action_run.command,
+                'raw_command': action_run.command_config.command,
                 'state': action_run.state,
                 'start_time': action_run.start_time,
                 'end_time': action_run.end_time,
@@ -408,7 +408,7 @@ class JobIndexAdapter(ReprAdapter):
 
     def get_actions(self):
         def adapt_run(run):
-            return {'name': run.action_name, 'command': run.bare_command}
+            return {'name': run.action_name, 'command': run.command_config.command}
 
         job_run = self._obj.get_runs().get_newest()
         if not job_run:

@@ -126,7 +126,7 @@ class TestActionRunAdapter(TestCase):
 
     def test_get_repr(self):
         result = self.adapter.get_repr()
-        assert_equal(result['command'], self.action_run.rendered_command)
+        assert_equal(result['command'], self.action_run.command)
 
 
 class TestActionRunGraphAdapter(TestCase):
@@ -157,6 +157,8 @@ class TestActionRunGraphAdapter(TestCase):
         assert len(result) == 2
         assert self.ar1.id == result[0]['id']
         assert ['a1'] == result[1]['dependencies']
+        assert self.ar1.command == result[0]['command']
+        assert self.ar1.command_config.command == result[0]['raw_command']
 
 
 class TestJobRunAdapter(TestCase):
@@ -234,7 +236,7 @@ class TestJobIndexAdapter(TestCase):
         result = self.adapter.get_actions()
         expected = {
             'name': action_run.action_name,
-            'command': action_run.bare_command,
+            'command': action_run.command_config.command,
         }
         assert_equal(result, [expected])
 
