@@ -1,3 +1,11 @@
+tron (1.4.6) xenial; urgency=medium
+
+  * 1.4.6 tagged with 'make release'
+    Commit: Merge pull request #774 from Yelp/drmorr/TRON-
+    1566/redact_aws_keys  redact AWS credentials from the logs
+
+ -- root <root@60f4e0ad0a16>  Wed, 09 Sep 2020 17:44:42 +0000
+
 tron (1.4.5) xenial; urgency=medium
 
   * 1.4.5 tagged with 'make release'
