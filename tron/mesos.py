@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 import socket
 import time
 from urllib.parse import urlparse
@@ -164,10 +165,14 @@ class MesosTask(ActionCommand):
         self.log = self.get_event_logger()
         self.setup_output_logging()
 
+        config_str = str(self.get_config())
+        # AWS_SECRET_ACCESS_KEYs are base64-encoded so it uses alphanumerics plus +, /, and =
+        config_str = re.sub("'AWS_SECRET_ACCESS_KEY': '[a-zA-Z0-9+/=]+'", 'AWS_SECRET_ACCESS_KEY_REDACTED', config_str)
+        config_str = re.sub("'AWS_ACCESS_KEY_ID': '[a-zA-Z0-9]+'", 'AWS_ACCESS_KEY_ID_REDACTED', config_str)
         self.log.info(
             'Mesos task {} created with config {}'.format(
                 self.get_mesos_id(),
-                self.get_config(),
+                config_str,
             ),
         )
 

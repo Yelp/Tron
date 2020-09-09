@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+from collections import namedtuple
+
 import mock
 import staticconf.testing
 
@@ -107,21 +109,34 @@ def mock_task_event(
 class TestMesosTask(TestCase):
     @setup_teardown
     def setup(self):
+        TaskConfig = namedtuple('TaskConfig', 'cmd task_id cpus mem disk env')
         self.action_run_id = 'my_service.job.1.action'
         self.task_id = '123abcuuid'
-        self.task = MesosTask(
-            id=self.action_run_id,
-            task_config=mock.Mock(
-                cmd='echo hello world',
-                task_id=self.task_id,
-                cpus=0.1,
-                mem=100,
-                disk=100,
-            ),
-        )
-        # Suppress logging
-        with mock.patch.object(self.task, 'log'):
+        with mock.patch('tron.mesos.logging.getLogger', return_value=mock.Mock(handlers=[mock.Mock()]), autospec=None):
+            self.task = MesosTask(
+                id=self.action_run_id,
+                task_config=TaskConfig(
+                    cmd='echo hello world',
+                    task_id=self.task_id,
+                    cpus=0.1,
+                    mem=100,
+                    disk=100,
+                    env={
+                        'INITIAL_VAR': 'baz',
+                        'AWS_SECRET_ACCESS_KEY': 'THISISASECRET',
+                        'SOME_VAR': 'bar',
+                        'AWS_ACCESS_KEY_ID': 'THISISASECRETTOO',
+                        'SOME_OTHER_VAR': 'foo',
+                    }
+                ),
+            )
             yield
+
+    def test_aws_credentials_redacted(self):
+        assert all(['THISISASECRET' not in text[0][0] for text in self.task.log.info.call_args_list])
+        assert all(['foo' in text[0][0] for text in self.task.log.info.call_args_list])
+        assert all(['bar' in text[0][0] for text in self.task.log.info.call_args_list])
+        assert all(['baz' in text[0][0] for text in self.task.log.info.call_args_list])
 
     def test_handle_staging(self):
         event = mock_task_event(
