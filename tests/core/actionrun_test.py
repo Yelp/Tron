@@ -99,7 +99,7 @@ class TestActionRunFactory:
     @pytest.fixture
     def state_data(self):
         # State data with command config and retries.
-        command_config = ActionCommandConfig(command='do action1')
+        command_config = dict(command='do action1')
         yield {
             'job_run_id': 'job_run_id',
             'action_name': 'act1',
@@ -108,7 +108,7 @@ class TestActionRunFactory:
             'start_time': None,
             'end_time': None,
             'command_config': command_config,
-            'attempts': [ActionRunAttempt(command_config=command_config, start_time='start')],
+            'attempts': [dict(command_config=command_config, start_time='start')],
             'node_name': 'anode',
         }
 
@@ -125,7 +125,7 @@ class TestActionRunFactory:
 
     def test_action_run_collection_from_state(self, state_data):
         state_data = [state_data]
-        cleanup_command_config = ActionCommandConfig(command='do action1')
+        cleanup_command_config = dict(command='do action1')
         cleanup_action_state_data = {
             'job_run_id': 'job_run_id',
             'action_name': 'cleanup',
@@ -134,7 +134,7 @@ class TestActionRunFactory:
             'start_time': None,
             'end_time': None,
             'command_config': cleanup_command_config,
-            'attempts': [ActionRunAttempt(
+            'attempts': [dict(
                 command_config=cleanup_command_config,
                 rendered_command='do action1',
                 start_time='start',
@@ -260,22 +260,24 @@ class TestActionRunFactory:
 
     def test_action_run_from_state_mesos(self, state_data):
         state_data['executor'] = ExecutorTypes.mesos.value
-        command_config = state_data['command_config']
-        command_config.cpus = 2
-        command_config.mem = 200
-        command_config.disk = 300
-        command_config.constraints = [['pool', 'LIKE', 'default']]
-        command_config.docker_image = 'fake-docker.com:400/image'
-        command_config.docker_parameters = [{'key': 'test', 'value': 123}]
-        command_config.env = {'TESTING': 'true'}
-        command_config.extra_volumes = [{'path': '/tmp'}]
+        command_config_state = state_data['command_config']
+        command_config_state.update({
+            'cpus': 2,
+            'mem': 200,
+            'disk': 300,
+            'constraints': [['pool', 'LIKE', 'default']],
+            'docker_image': 'fake-docker.com:400/image',
+            'docker_parameters': [{'key': 'test', 'value': 123}],
+            'env': {'TESTING': 'true'},
+            'extra_volumes': [{'path': '/tmp'}],
+        })
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
         )
 
         assert action_run.job_run_id == state_data['job_run_id']
-        assert action_run.command_config == command_config
+        assert action_run.command_config == ActionCommandConfig(**command_config_state)
 
         assert not action_run.is_cleanup
         assert action_run.__class__ == MesosActionRun
@@ -903,7 +905,7 @@ class TestActionRunStateRestore:
     @pytest.fixture
     def state_data(self):
         # State data with command config and retries.
-        command_config = ActionCommandConfig(
+        command_config = dict(
             command='do {actionname}',
             cpus=1,
         )
@@ -916,7 +918,7 @@ class TestActionRunStateRestore:
             'start_time': 'start_time',
             'end_time': 'end',
             'exit_status': 0,
-            'attempts': [ActionRunAttempt(
+            'attempts': [dict(
                 command_config=command_config,
                 rendered_command='do theaction',
                 start_time='start',
@@ -1105,10 +1107,10 @@ class TestActionRunStateRestore:
             self.run_node,
             lambda: None,
         )
-        assert action_run.command_config == state_data['command_config']
-        assert action_run.attempts == state_data['attempts']
+        assert action_run.command_config == ActionCommandConfig(**state_data['command_config'])
+        assert len(action_run.attempts) == len(state_data['attempts'])
         assert action_run.exit_statuses == [0]
-        assert action_run.command == state_data['attempts'][-1].rendered_command
+        assert action_run.command == state_data['attempts'][-1]['rendered_command']
 
 
 class TestActionRunCollection:
@@ -1118,7 +1120,7 @@ class TestActionRunCollection:
             "id",
             name,
             mock_node,
-            self.command,
+            command_config=mock.Mock(),
             output_path=self.output_path,
         )
 

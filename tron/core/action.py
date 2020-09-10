@@ -3,6 +3,7 @@ import logging
 
 from dataclasses import dataclass
 from dataclasses import field
+from dataclasses import fields
 
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
@@ -22,6 +23,13 @@ class ActionCommandConfig:
     docker_parameters: set = field(default_factory=set)
     env: dict = field(default_factory=dict)
     extra_volumes: set = field(default_factory=set)
+
+    @property
+    def state_data(self):
+        return {
+            field.name: getattr(self, field.name)
+            for field in fields(self)
+        }
 
 
 @dataclass

@@ -7,6 +7,7 @@ import os
 from typing import List
 
 from dataclasses import dataclass
+from dataclasses import fields
 from twisted.internet import reactor
 
 from tron import command_context
@@ -142,6 +143,21 @@ class ActionRunAttempt:
     @property
     def display_command(self):
         return self.rendered_command or self.command_config.command
+
+    @property
+    def state_data(self):
+        state_data = {
+            'command_config': self.command_config.state_data,
+        }
+        for field in fields(self):
+            if field.name not in state_data:
+                state_data[field.name] = getattr(self, field.name)
+        return state_data
+
+    @classmethod
+    def from_state(cls, state_data):
+        state_data['command_config'] = action.ActionCommandConfig(**state_data['command_config'])
+        return cls(**state_data)
 
 
 class ActionRun(Observable):
@@ -349,7 +365,7 @@ class ActionRun(Observable):
     @classmethod
     def command_config_from_state(cls, state_data):
         if 'command_config' in state_data:
-            return state_data['command_config']
+            return action.ActionCommandConfig(**state_data['command_config'])
         else:
             return action.ActionCommandConfig(
                 command=maybe_decode(state_data['command']),
@@ -367,7 +383,7 @@ class ActionRun(Observable):
     def attempts_from_state(cls, state_data, command_config_from_state):
         attempts = []
         if 'attempts' in state_data:
-            attempts = state_data['attempts']
+            attempts = [ActionRunAttempt.from_state(a) for a in state_data['attempts']]
         else:
             rendered_command = maybe_decode(state_data.get('rendered_command'))
             exit_statuses = state_data.get('exit_statuses', [])
@@ -650,16 +666,29 @@ class ActionRun(Observable):
                 status_path=self.action_runner.status_path,
                 exec_path=self.action_runner.exec_path,
             )
+
+        # For temporarily saving old keys.
+        if self.last_attempt:
+            rendered_command = self.last_attempt.rendered_command
+            mesos_task_id = self.last_attempt.mesos_task_id
+        else:
+            rendered_command = None
+            mesos_task_id = None
+        if self.exit_statuses:
+            exit_statuses_without_final = self.exit_statuses[:-1]
+        else:
+            exit_statuses_without_final = []
+
         return {
             'job_run_id': self.job_run_id,
             'action_name': self.action_name,
             'state': self.state,
-            'command_config': self.command_config,
+            'command_config': self.command_config.state_data,
             'start_time': self.start_time,
             'end_time': self.end_time,
             'node_name': self.node.get_name() if self.node else None,
             'exit_status': self.exit_status,
-            'attempts': self.attempts,
+            'attempts': [a.state_data for a in self.attempts],
             'retries_remaining': self.retries_remaining,
             'retries_delay': self.retries_delay,
             'action_runner': action_runner,
@@ -668,6 +697,19 @@ class ActionRun(Observable):
             'triggered_by': self.triggered_by,
             'on_upstream_rerun': self.on_upstream_rerun,
             'trigger_timeout_timestamp': self.trigger_timeout_timestamp,
+            # Temporarily save old keys to make the transition rollback safe.
+            'command': self.command,
+            'rendered_command': rendered_command,
+            'exit_statuses': exit_statuses_without_final,
+            'cpus': self.command_config.cpus,
+            'mem': self.command_config.mem,
+            'disk': self.command_config.disk,
+            'constraints': self.command_config.constraints,
+            'docker_image': self.command_config.docker_image,
+            'docker_parameters': self.command_config.docker_parameters,
+            'env': self.command_config.env,
+            'extra_volumes': self.command_config.extra_volumes,
+            'mesos_task_id': mesos_task_id,
         }
 
     def render_template(self, template):
