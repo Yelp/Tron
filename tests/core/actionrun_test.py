@@ -6,7 +6,6 @@ import mock
 import pytest
 from mock import MagicMock
 
-from tests import testingutils
 from tests.assertions import assert_length
 from tests.testingutils import autospec_method
 from tron import actioncommand
@@ -84,19 +83,25 @@ class TestActionRunFactory:
             action_graph=self.action_graph,
         )
 
-        self.action_state_data = {
+        self.action_runner = mock.create_autospec(
+            actioncommand.SubprocessActionRunnerFactory,
+        )
+
+    @pytest.fixture
+    def state_data(self):
+        # State data with command config and retries.
+        command_config = ActionCommandConfig(command='do action1')
+        yield {
             'job_run_id': 'job_run_id',
             'action_name': 'act1',
             'state': 'succeeded',
             'run_time': 'the_run_time',
             'start_time': None,
             'end_time': None,
-            'command': 'do action1',
+            'command_config': command_config,
+            'attempts': [ActionRunAttempt(command_config=command_config, start_time='start')],
             'node_name': 'anode',
         }
-        self.action_runner = mock.create_autospec(
-            actioncommand.SubprocessActionRunnerFactory,
-        )
 
     def test_build_action_run_collection(self):
         collection = ActionRunFactory.build_action_run_collection(
@@ -109,8 +114,9 @@ class TestActionRunFactory:
         assert len(collection.run_map) == 2
         assert collection.run_map['act1'].action_name == 'act1'
 
-    def test_action_run_collection_from_state(self):
-        state_data = [self.action_state_data]
+    def test_action_run_collection_from_state(self, state_data):
+        state_data = [state_data]
+        cleanup_command_config = ActionCommandConfig(command='do action1')
         cleanup_action_state_data = {
             'job_run_id': 'job_run_id',
             'action_name': 'cleanup',
@@ -118,7 +124,14 @@ class TestActionRunFactory:
             'run_time': self.run_time,
             'start_time': None,
             'end_time': None,
-            'command': 'do cleanup',
+            'command_config': cleanup_command_config,
+            'attempts': [ActionRunAttempt(
+                command_config=cleanup_command_config,
+                rendered_command='do action1',
+                start_time='start',
+                end_time='end',
+                exit_status=0,
+            )],
             'node_name': 'anode',
             'action_runner': {
                 'status_path': '/tmp/foo',
@@ -226,8 +239,7 @@ class TestActionRunFactory:
         assert action_run.command_config.env == command_config.env
         assert action_run.command_config.extra_volumes == command_config.extra_volumes
 
-    def test_action_run_from_state_default(self):
-        state_data = self.action_state_data
+    def test_action_run_from_state_ssh(self, state_data):
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
@@ -237,31 +249,24 @@ class TestActionRunFactory:
         assert not action_run.is_cleanup
         assert action_run.__class__ == SSHActionRun
 
-    def test_action_run_from_state_mesos(self):
-        state_data = self.action_state_data
+    def test_action_run_from_state_mesos(self, state_data):
         state_data['executor'] = ExecutorTypes.mesos.value
-        state_data['cpus'] = 2
-        state_data['mem'] = 200
-        state_data['disk'] = 300
-        state_data['constraints'] = [['pool', 'LIKE', 'default']]
-        state_data['docker_image'] = 'fake-docker.com:400/image'
-        state_data['docker_parameters'] = [{'key': 'test', 'value': 123}]
-        state_data['env'] = {'TESTING': 'true'}
-        state_data['extra_volumes'] = [{'path': '/tmp'}]
+        command_config = state_data['command_config']
+        command_config.cpus = 2
+        command_config.mem = 200
+        command_config.disk = 300
+        command_config.constraints = [['pool', 'LIKE', 'default']]
+        command_config.docker_image = 'fake-docker.com:400/image'
+        command_config.docker_parameters = [{'key': 'test', 'value': 123}]
+        command_config.env = {'TESTING': 'true'}
+        command_config.extra_volumes = [{'path': '/tmp'}]
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
         )
 
         assert action_run.job_run_id == state_data['job_run_id']
-        assert action_run.command_config.cpus == state_data['cpus']
-        assert action_run.command_config.mem == state_data['mem']
-        assert action_run.command_config.disk == state_data['disk']
-        assert action_run.command_config.constraints == state_data['constraints']
-        assert action_run.command_config.docker_image == state_data['docker_image']
-        assert action_run.command_config.docker_parameters == state_data['docker_parameters']
-        assert action_run.command_config.env == state_data['env']
-        assert action_run.command_config.extra_volumes == state_data['extra_volumes']
+        assert action_run.command_config == command_config
 
         assert not action_run.is_cleanup
         assert action_run.__class__ == MesosActionRun
@@ -866,7 +871,7 @@ class TestSSHActionRunRecover:
         assert self.action_run.end_time is not None
 
 
-class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
+class TestActionRunStateRestore:
 
     now = datetime.datetime(2012, 3, 14, 15, 19)
 
@@ -874,19 +879,55 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
     def setup_action_run(self):
         self.parent_context = {}
         self.output_path = ['one', 'two']
-        self.state_data = {
+        self.run_node = MagicMock()
+        with mock.patch(
+            'tron.core.actionrun.timeutils.current_time',
+            autospec=True,
+            return_value=self.now,
+        ):
+            yield
+
+    @pytest.fixture
+    def state_data(self):
+        # State data with command config and retries.
+        command_config = ActionCommandConfig(
+            command='do {actionname}',
+            cpus=1,
+        )
+        yield {
             'job_run_id': 'theid',
             'action_name': 'theaction',
             'node_name': 'anode',
-            'command': 'do things',
+            'command_config': command_config,
+            'run_time': 'the_run_time',
             'start_time': 'start_time',
-            'end_time': None,
+            'end_time': 'end',
+            'exit_status': 0,
+            'attempts': [ActionRunAttempt(
+                command_config=command_config,
+                rendered_command='do theaction',
+                start_time='start',
+                end_time='end',
+                exit_status=0,
+            )],
             'state': 'succeeded',
         }
-        self.run_node = MagicMock()
 
-    def test_from_state(self):
-        state_data = self.state_data
+    @pytest.fixture
+    def state_data_old(self):
+        # State data before command config and retries are separate.
+        yield {
+            'job_run_id': 'theid',
+            'action_name': 'theaction',
+            'node_name': 'anode',
+            'command': 'do things {actionname}',
+            'start_time': 'start_time',
+            'end_time': 'end',
+            'state': 'succeeded',
+        }
+
+    def test_from_state_old(self, state_data_old):
+        state_data = state_data_old
         action_run = ActionRun.from_state(
             state_data,
             self.parent_context,
@@ -894,7 +935,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             self.run_node,
         )
 
-        for key, value in self.state_data.items():
+        for key, value in state_data.items():
             if key in ['state', 'node_name']:
                 continue
             assert getattr(action_run, key) == value
@@ -902,37 +943,115 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         assert action_run.is_succeeded
         assert not action_run.is_cleanup
         assert action_run.output_path[:2] == self.output_path
+        assert action_run.command_config.command == state_data['command']
+        assert action_run.command == state_data['command']
 
-    def test_from_state_running(self):
-        self.state_data['state'] = 'running'
+    def test_from_state_old_with_mesos_task_id(self, state_data_old):
+        state_data = state_data_old
+        state_data['mesos_task_id'] = 'task'
         action_run = ActionRun.from_state(
-            self.state_data,
+            state_data,
+            self.parent_context,
+            list(self.output_path),
+            self.run_node,
+        )
+
+        for key, value in state_data.items():
+            if key in ['state', 'node_name', 'mesos_task_id']:
+                continue
+            assert getattr(action_run, key) == value
+
+        assert action_run.is_succeeded
+        assert action_run.last_attempt.mesos_task_id == state_data['mesos_task_id']
+
+    def test_from_state_old_not_started(self, state_data_old):
+        state_data = state_data_old
+        state_data['start_time'] = None
+        state_data['state'] = 'scheduled'
+        action_run = ActionRun.from_state(
+            state_data,
+            self.parent_context,
+            list(self.output_path),
+            self.run_node,
+        )
+
+        for key, value in state_data.items():
+            if key in ['state', 'node_name']:
+                continue
+            assert getattr(action_run, key) == value
+
+        assert action_run.is_scheduled
+        assert action_run.exit_statuses == []
+        assert len(action_run.attempts) == 0
+
+    def test_from_state_old_rendered_and_exited(self, state_data_old):
+        state_data = state_data_old
+        state_data['rendered_command'] = 'do things theaction'
+        state_data['exit_status'] = 0
+        action_run = ActionRun.from_state(
+            state_data,
+            self.parent_context,
+            list(self.output_path),
+            self.run_node,
+        )
+
+        for key, value in state_data.items():
+            if key in ['state', 'node_name', 'command', 'rendered_command']:
+                continue
+            assert getattr(action_run, key) == value
+
+        assert action_run.is_succeeded
+        assert action_run.exit_statuses == [0]
+        assert action_run.command_config.command == state_data['command']
+        assert action_run.command == state_data['rendered_command']
+
+    def test_from_state_old_retries(self, state_data_old):
+        state_data = state_data_old
+        state_data['rendered_command'] = 'do things theaction'
+        state_data['exit_status'] = 0
+        state_data['exit_statuses'] = [1]
+        action_run = ActionRun.from_state(
+            state_data,
+            self.parent_context,
+            list(self.output_path),
+            self.run_node,
+        )
+
+        for key, value in state_data.items():
+            if key in ['state', 'node_name', 'command', 'rendered_command', 'exit_statuses']:
+                continue
+            assert getattr(action_run, key) == value
+
+        assert action_run.is_succeeded
+        assert action_run.exit_statuses == [1, 0]
+        assert len(action_run.attempts) == 2
+
+    def test_from_state_running(self, state_data):
+        state_data['state'] = 'running'
+        action_run = ActionRun.from_state(
+            state_data,
             self.parent_context,
             self.output_path,
             self.run_node,
             lambda: None,
         )
         assert action_run.is_unknown
-        assert action_run.exit_status is None
-        assert action_run.end_time is None
 
-    def test_from_state_starting(self):
-        self.state_data['state'] = 'starting'
+    def test_from_state_starting(self, state_data):
+        state_data['state'] = 'starting'
         action_run = ActionRun.from_state(
-            self.state_data,
+            state_data,
             self.parent_context,
             self.output_path,
             self.run_node,
             lambda: None,
         )
         assert action_run.is_unknown
-        assert action_run.exit_status is None
-        assert action_run.end_time is None
 
-    def test_from_state_queued(self):
-        self.state_data['state'] = 'queued'
+    def test_from_state_queued(self, state_data):
+        state_data['state'] = 'queued'
         action_run = ActionRun.from_state(
-            self.state_data,
+            state_data,
             self.parent_context,
             self.output_path,
             self.run_node,
@@ -940,10 +1059,10 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         )
         assert action_run.is_queued
 
-    def test_from_state_no_node_name(self):
-        del self.state_data['node_name']
+    def test_from_state_no_node_name(self, state_data):
+        del state_data['node_name']
         action_run = ActionRun.from_state(
-            self.state_data,
+            state_data,
             self.parent_context,
             self.output_path,
             self.run_node,
@@ -952,55 +1071,31 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         assert action_run.node == self.run_node
 
     @mock.patch('tron.core.actionrun.node.NodePoolRepository', autospec=True)
-    def test_from_state_with_node_exists(self, mock_store):
+    def test_from_state_with_node_exists(self, mock_store, state_data):
         ActionRun.from_state(
-            self.state_data,
+            state_data,
             self.parent_context,
             self.output_path,
             self.run_node,
             lambda: None,
         )
         mock_store.get_instance().get_node.assert_called_with(
-            self.state_data['node_name'],
+            state_data['node_name'],
             self.run_node,
         )
 
-    def test_from_state_before_rendered_command(self):
+    def test_from_state_after_rendered_command(self, state_data):
         action_run = ActionRun.from_state(
-            self.state_data,
+            state_data,
             self.parent_context,
             self.output_path,
             self.run_node,
             lambda: None,
         )
-        assert action_run.command == self.state_data['command']
-
-    def test_from_state_old_state(self):
-        self.state_data['command'] = 'do things {actionname}'
-        action_run = ActionRun.from_state(
-            self.state_data,
-            self.parent_context,
-            self.output_path,
-            self.run_node,
-            lambda: None,
-        )
-        assert action_run.command == self.state_data['command']
-
-    def test_from_state_after_rendered_command(self):
-        attempt = ActionRunAttempt(
-            command_config=ActionCommandConfig(command='do things {actionname}'),
-            rendered_command='do things theaction',
-        )
-        self.state_data['attempts'] = [attempt]
-        action_run = ActionRun.from_state(
-            self.state_data,
-            self.parent_context,
-            self.output_path,
-            self.run_node,
-            lambda: None,
-        )
-        assert action_run.command_config.command == self.state_data['command']
-        assert action_run.command == attempt.rendered_command
+        assert action_run.command_config == state_data['command_config']
+        assert action_run.attempts == state_data['attempts']
+        assert action_run.exit_statuses == [0]
+        assert action_run.command == state_data['attempts'][-1].rendered_command
 
 
 class TestActionRunCollection:
