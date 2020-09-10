@@ -135,9 +135,9 @@ class ActionRunAttempt:
     exit_status: int = None
     mesos_task_id: str = None
 
-    def exit(self, exit_status):
+    def exit(self, exit_status, end_time=None):
         self.exit_status = exit_status
-        self.end_time = timeutils.current_time()
+        self.end_time = end_time or timeutils.current_time()
 
     @property
     def display_command(self):
@@ -504,7 +504,7 @@ class ActionRun(Observable):
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
             if self.last_attempt is not None and self.last_attempt.end_time is None:
-                self.last_attempt.exit(exit_status)
+                self.last_attempt.exit(exit_status, self.end_time)
             log.info(
                 f"{self} completed with {target}, transitioned to "
                 f"{self.state}, exit status: {exit_status}"

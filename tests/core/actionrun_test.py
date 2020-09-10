@@ -39,6 +39,15 @@ def output_path():
     shutil.rmtree(output_path.base, ignore_errors=True)
 
 
+@pytest.fixture
+def mock_current_time():
+    with mock.patch(
+        'tron.core.actionrun.timeutils.current_time',
+        autospec=True,
+    ) as mock_current_time:
+        yield mock_current_time
+
+
 class TestMinFilter:
     def test_min_filter(self):
         seq = [None, 2, None, 7, None, 9, 10, 12, 1]
@@ -441,7 +450,9 @@ class TestActionRun:
         with pytest.raises(AttributeError):
             self.action_run.__getattr__('is_not_a_real_state')
 
-    def test_auto_retry(self):
+    def test_auto_retry(self, mock_current_time):
+        # One timestamp for start and end of each attempt, plus final end time
+        mock_current_time.side_effect = [1, 2, 3, 4, 5, 6, 7]
         self.action_run.retries_remaining = 2
         self.action_run.create_attempt()
         self.action_run.machine.transition('start')
@@ -459,6 +470,10 @@ class TestActionRun:
         assert self.action_run.is_failed
 
         assert self.action_run.exit_statuses == [-1, -1, -2]
+        assert len(self.action_run.attempts) == 3
+        for i, attempt in enumerate(self.action_run.attempts):
+            assert attempt.start_time == i * 2 + 1
+            assert attempt.end_time == (i + 1) * 2
 
     def test_no_auto_retry_on_fail_not_running(self):
         self.action_run.retries_remaining = 2
@@ -596,22 +611,20 @@ class TestActionRunTriggerTimeout:
         assert not eventbus.subscribe.called
         assert eventbus.has_event.call_args_list == [mock.call('hello')]
 
-    @mock.patch('tron.core.actionrun.timeutils', autospec=True)
     @mock.patch('tron.core.actionrun.reactor', autospec=True)
-    def test_setup_subscriptions_timeout_in_future(self, reactor, timeutils):
+    def test_setup_subscriptions_timeout_in_future(self, reactor, mock_current_time):
         now = datetime.datetime.now()
-        timeutils.current_time.return_value = now
+        mock_current_time.return_value = now
         self.action_run.trigger_timeout_timestamp = now.timestamp() + 10
         self.action_run.setup_subscriptions()
         reactor.callLater.assert_called_once_with(
             10.0, self.action_run.trigger_timeout_reached
         )
 
-    @mock.patch('tron.core.actionrun.timeutils', autospec=True)
     @mock.patch('tron.core.actionrun.reactor', autospec=True)
-    def test_setup_subscriptions_timeout_in_past(self, reactor, timeutils):
+    def test_setup_subscriptions_timeout_in_past(self, reactor, mock_current_time):
         now = datetime.datetime.now()
-        timeutils.current_time.return_value = now
+        mock_current_time.return_value = now
         self.action_run.trigger_timeout_timestamp = now.timestamp() - 10
         self.action_run.setup_subscriptions()
         reactor.callLater.assert_called_once_with(
@@ -881,16 +894,11 @@ class TestActionRunStateRestore:
     now = datetime.datetime(2012, 3, 14, 15, 19)
 
     @pytest.fixture(autouse=True)
-    def setup_action_run(self):
+    def setup_action_run(self, mock_current_time):
         self.parent_context = {}
         self.output_path = ['one', 'two']
         self.run_node = MagicMock()
-        with mock.patch(
-            'tron.core.actionrun.timeutils.current_time',
-            autospec=True,
-            return_value=self.now,
-        ):
-            yield
+        mock_current_time.return_value = self.now
 
     @pytest.fixture
     def state_data(self):
