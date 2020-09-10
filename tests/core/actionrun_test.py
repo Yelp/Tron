@@ -794,10 +794,15 @@ class TestSSHActionRunRecover:
         self.action_run.end_time = 1000
         self.action_run.exit_status = 0
         self.action_run.machine.state = ActionRun.UNKNOWN
+        last_attempt = self.action_run.create_attempt()
+        last_attempt.end_time = 1000
+        last_attempt.exit_status = 0
         assert self.action_run.recover()
         assert self.action_run.machine.state == ActionRun.RUNNING
         assert self.action_run.end_time is None
         assert self.action_run.exit_status is None
+        assert last_attempt.end_time is None
+        assert last_attempt.exit_status is None
         self.action_run.node.submit_command.assert_called_once()
 
         # Check recovery command
@@ -1449,8 +1454,12 @@ class TestMesosActionRun:
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_recover(self, mock_cluster_repo, mock_filehandler):
         self.action_run.machine.state = ActionRun.UNKNOWN
+        self.action_run.end_time = 1000
+        self.action_run.exit_status = 0
         last_attempt = self.action_run.create_attempt()
         last_attempt.mesos_task_id = 'my_mesos_id'
+        last_attempt.end_time = 1000
+        last_attempt.exit_status = 0
         serializer = mock_filehandler.OutputStreamSerializer.return_value
         with mock.patch.object(
             self.action_run,
@@ -1477,6 +1486,9 @@ class TestMesosActionRun:
 
         assert self.action_run.is_running
         assert self.action_run.end_time is None
+        assert self.action_run.exit_status is None
+        assert last_attempt.end_time is None
+        assert last_attempt.exit_status is None
         mock_filehandler.OutputStreamSerializer.assert_called_with(
             self.action_run.output_path,
         )

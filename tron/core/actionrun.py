@@ -750,6 +750,14 @@ class ActionRun(Observable):
     def is_blocked_on_trigger(self):
         return not self.is_done and bool(self.remaining_triggers)
 
+    def clear_end_state(self):
+        self.exit_status = None
+        self.end_time = None
+        last_attempt = self.last_attempt
+        if last_attempt:
+            last_attempt.exit_status = None
+            last_attempt.end_time = None
+
     def __getattr__(self, name: str):
         """Support convenience properties for checking if this ActionRun is in
         a specific state (Ex: self.is_running would check if self.state is
@@ -900,8 +908,7 @@ class SSHActionRun(ActionRun, Observer):
         # and updates its internal state according to its result.
         self.watch(recovery_action_command)
 
-        self.exit_status = None
-        self.end_time = None
+        self.clear_end_state()
         self.machine.transition('running')
 
         # Still want the action to appear running while we're waiting to submit the recovery
@@ -1022,8 +1029,7 @@ class MesosActionRun(ActionRun, Observer):
         mesos_cluster.recover(task)
 
         # Reset status
-        self.exit_status = None
-        self.end_time = None
+        self.clear_end_state()
         self.transition_and_notify('running')
 
         return task
