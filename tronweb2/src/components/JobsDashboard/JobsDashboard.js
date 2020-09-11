@@ -3,17 +3,14 @@ import React,
   useState,
   useEffect,
 } from 'react';
-import { Link } from 'react-router-dom';
 import { getJobColor, fetchFromApi } from '../../utils/utils';
 import JobScheduler from '../JobScheduler';
 import './JobsDashboard.css';
 
 function buildJobTable(jobsList) {
   const tableRows = jobsList.map((job) => (
-    <tr key={job.name} className="clickable">
-      <td className="name-cell">
-        <Link className="text-dark" to={`job/${job.name}`}>{job.name}</Link>
-      </td>
+    <tr key={job.name} onClick={() => window.location.assign(`#/job/${job.name}`)}>
+      <td className="name-cell">{job.name}</td>
       <td className={`text-${getJobColor(job.status)}`}>{job.status}</td>
       <td><JobScheduler scheduler={job.scheduler} /></td>
       <td>{job.node_pool.name}</td>
