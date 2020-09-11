@@ -4,6 +4,7 @@ import {
   Link,
 } from 'react-router-dom';
 import Autosuggest from 'react-autosuggest';
+import Fuse from 'fuse.js';
 import { fetchFromApi } from '../../utils/utils';
 
 function jobLink(jobName) {
@@ -26,10 +27,11 @@ function NavBar() {
   }
 
   function getSuggestedJobNames(string) {
-    const trimmed = string.trim().toLowerCase();
-    const { length } = string;
-    return length === 0 ? [] : jobNames
-      .filter((jobName) => jobName.toLowerCase().slice(0, length) === trimmed)
+    // Require close to exact match, but allow anywhere in the substring
+    const searchOptions = { threshold: 0.2, ignoreLocation: true };
+    const fuseSearch = new Fuse(jobNames, searchOptions);
+    return fuseSearch.search(string)
+      .map((result) => result.item)
       .slice(0, maxSuggestions);
   }
 

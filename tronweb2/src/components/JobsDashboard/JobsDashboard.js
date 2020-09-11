@@ -3,6 +3,7 @@ import React,
   useState,
   useEffect,
 } from 'react';
+import Fuse from 'fuse.js';
 import { getJobColor, fetchFromApi } from '../../utils/utils';
 import JobScheduler from '../JobScheduler';
 import './JobsDashboard.css';
@@ -50,10 +51,10 @@ function JobsDashboard() {
   );
 
   function filterJobs(string) {
-    const trimmed = string.trim().toLowerCase();
-    const { length } = string;
-    return length === 0 ? [] : jobData.jobs
-      .filter((job) => job.name.toLowerCase().slice(0, length) === trimmed);
+    // Require close to exact match, but allow anywhere in the substring
+    const searchOptions = { keys: ['name'], threshold: 0.2, ignoreLocation: true };
+    const fuseSearch = new Fuse(jobData.jobs, searchOptions);
+    return fuseSearch.search(string).map((result) => result.item);
   }
 
   if (jobData !== undefined) {
