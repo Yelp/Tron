@@ -8,8 +8,8 @@ import { getJobColor, fetchFromApi } from '../../utils/utils';
 import JobScheduler from '../JobScheduler';
 import './JobsDashboard.css';
 
-function buildJobTable(jobData) {
-  const tableRows = jobData.jobs.map((job) => (
+function buildJobTable(jobsList) {
+  const tableRows = jobsList.map((job) => (
     <tr key={job.name} className="clickable">
       <td className="name-cell">
         <Link className="text-dark" to={`job/${job.name}`}>{job.name}</Link>
@@ -42,6 +42,7 @@ function buildJobTable(jobData) {
 
 function JobsDashboard() {
   const [jobData, setJobData] = useState(undefined);
+  const [inputValue, setInputValue] = useState('');
 
   useEffect(() => fetchFromApi('/api/jobs', setJobData), []);
 
@@ -50,6 +51,14 @@ function JobsDashboard() {
       <span className="sr-only">Loading...</span>
     </div>
   );
+
+  function filterJobs(string) {
+    const trimmed = string.trim().toLowerCase();
+    const { length } = string;
+    return length === 0 ? [] : jobData.jobs
+      .filter((job) => job.name.toLowerCase().slice(0, length) === trimmed);
+  }
+
   if (jobData !== undefined) {
     if ('error' in jobData) {
       jobContent = (
@@ -59,7 +68,18 @@ function JobsDashboard() {
         </p>
       );
     } else {
-      jobContent = buildJobTable(jobData);
+      let jobsListToShow = jobData.jobs;
+      if (inputValue !== '') {
+        jobsListToShow = filterJobs(inputValue);
+      }
+      jobContent = (
+        <div>
+          <div className="mb-3">
+            <input type="text" className="form-control" placeholder="Search jobs" onInput={(e) => setInputValue(e.target.value)} />
+          </div>
+          {buildJobTable(jobsListToShow)}
+        </div>
+      );
     }
   }
   return (
