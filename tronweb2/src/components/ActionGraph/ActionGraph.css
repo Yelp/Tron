@@ -3,18 +3,33 @@
   stroke-width: 0.8px;
 }
 
-text.internal {
-  font-weight: bold;
+text {
+  font-family: 'Droid Sans Mono', monospace;
+  font-size: 12px;
 }
 
 text.external {
-  fill: #888;
+  fill: #fff;
 }
 
-text {
-    font-size: 12px;
+rect.external{
+  fill: #555;
+}
+
+.tooltip.show {
+  opacity: 1;
 }
 
 .tooltip-inner {
-    max-width: none;
+  min-width: 20em;
+  text-align: left;
+  background-color: white;
+  border: solid black;
+  color: black;
+  font-family: 'Droid Sans Mono', monospace;
+  padding: 0;
+}
+
+.tooltip-action-name {
+  background-color: #ddd;
 }
