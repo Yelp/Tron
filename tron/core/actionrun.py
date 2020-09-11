@@ -362,6 +362,12 @@ class ActionRun(Observable):
         else:
             return self.command_config.command
 
+    @property
+    def rendered_command(self):
+        if self.attempts:
+            return self.attempts[-1].rendered_command
+        return None
+
     @classmethod
     def command_config_from_state(cls, state_data):
         if 'command_config' in state_data:
