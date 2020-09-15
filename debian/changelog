@@ -1,3 +1,11 @@
+tron (1.5.0) xenial; urgency=medium
+
+  * 1.5.0 tagged with 'make release'
+    Commit: Merge pull request #775 from Yelp/TRON-1563-retries-separate
+    TRON-1563: save state and configs for retries independently
+
+ -- root <root@a4d896662a63>  Tue, 15 Sep 2020 00:33:05 +0000
+
 tron (1.4.6) xenial; urgency=medium
 
   * 1.4.6 tagged with 'make release'
