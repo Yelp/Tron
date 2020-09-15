@@ -6,6 +6,8 @@ import logging
 import os
 from typing import List
 
+from dataclasses import dataclass
+from dataclasses import fields
 from twisted.internet import reactor
 
 from tron import command_context
@@ -91,7 +93,7 @@ class ActionRunFactory(object):
             'job_run_id': job_run.id,
             'name': action.name,
             'node': run_node,
-            'bare_command': action.command,
+            'command_config': action.command_config,
             'parent_context': job_run.context,
             'output_path': job_run.output_path.clone(),
             'cleanup': action.is_cleanup,
@@ -99,14 +101,6 @@ class ActionRunFactory(object):
             'retries_remaining': action.retries,
             'retries_delay': action.retries_delay,
             'executor': action.executor,
-            'cpus': action.cpus,
-            'mem': action.mem,
-            'disk': action.disk,
-            'constraints': action.constraints,
-            'docker_image': action.docker_image,
-            'docker_parameters': action.docker_parameters,
-            'env': action.env,
-            'extra_volumes': action.extra_volumes,
             'trigger_downstreams': action.trigger_downstreams,
             'triggered_by': action.triggered_by,
             'on_upstream_rerun': action.on_upstream_rerun,
@@ -130,6 +124,41 @@ class ActionRunFactory(object):
         if state_data.get('executor') == ExecutorTypes.mesos.value:
             return MesosActionRun.from_state(**args)
         return SSHActionRun.from_state(**args)
+
+
+@dataclass
+class ActionRunAttempt:
+    """Stores state about one try of an action run."""
+    command_config: action.ActionCommandConfig
+    start_time: datetime.datetime = None
+    end_time: datetime.datetime = None
+    rendered_command: str = None
+    exit_status: int = None
+    mesos_task_id: str = None
+
+    def exit(self, exit_status, end_time=None):
+        if self.end_time is None:
+            self.exit_status = exit_status
+            self.end_time = end_time or timeutils.current_time()
+
+    @property
+    def display_command(self):
+        return self.rendered_command or self.command_config.command
+
+    @property
+    def state_data(self):
+        state_data = {
+            'command_config': self.command_config.state_data,
+        }
+        for field in fields(self):
+            if field.name not in state_data:
+                state_data[field.name] = getattr(self, field.name)
+        return state_data
+
+    @classmethod
+    def from_state(cls, state_data):
+        state_data['command_config'] = action.ActionCommandConfig(**state_data['command_config'])
+        return cls(**state_data)
 
 
 class ActionRun(Observable):
@@ -254,30 +283,20 @@ class ActionRun(Observable):
         job_run_id,
         name,
         node,
-        bare_command=None,
+        command_config,
         parent_context=None,
         output_path=None,
         cleanup=False,
         start_time=None,
         end_time=None,
         run_state=SCHEDULED,
-        rendered_command=None,
         exit_status=None,
+        attempts=None,
         action_runner=None,
         retries_remaining=None,
         retries_delay=None,
-        exit_statuses=None,
         machine=None,
         executor=None,
-        cpus=None,
-        mem=None,
-        disk=None,
-        constraints=None,
-        docker_image=None,
-        docker_parameters=None,
-        env=None,
-        extra_volumes=None,
-        mesos_task_id=None,
         trigger_downstreams=None,
         triggered_by=None,
         on_upstream_rerun=None,
@@ -290,37 +309,25 @@ class ActionRun(Observable):
         self.start_time = start_time
         self.end_time = end_time
         self.exit_status = exit_status
-        self.bare_command = maybe_decode(bare_command)
-        self.rendered_command = rendered_command
         self.action_runner = action_runner or NoActionRunnerFactory()
         self.machine = machine or Machine.from_machine(
             ActionRun.STATE_MACHINE, None, run_state
         )
         self.is_cleanup = cleanup
+
         self.executor = executor
-        self.cpus = cpus
-        self.mem = mem
-        self.disk = disk
-        self.constraints = constraints
-        self.docker_image = docker_image
-        self.docker_parameters = docker_parameters
-        self.env = env
-        self.extra_volumes = extra_volumes
-        self.mesos_task_id = mesos_task_id
+        self.command_config = command_config
+        self.attempts = attempts or []
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.action_name)
         self.context = command_context.build_context(self, parent_context)
         self.retries_remaining = retries_remaining
         self.retries_delay = retries_delay
-        self.exit_statuses = exit_statuses
         self.trigger_downstreams = trigger_downstreams
         self.triggered_by = triggered_by
         self.on_upstream_rerun = on_upstream_rerun
         self.trigger_timeout_timestamp = trigger_timeout_timestamp
         self.trigger_timeout_call = None
-
-        if self.exit_statuses is None:
-            self.exit_statuses = []
 
         self.action_command = None
         self.in_delay = None
@@ -336,6 +343,71 @@ class ActionRun(Observable):
     @property
     def name(self):
         return self.action_name
+
+    @property
+    def last_attempt(self):
+        if self.attempts:
+            return self.attempts[-1]
+        return None
+
+    @property
+    def exit_statuses(self):
+        if self.attempts:
+            return [a.exit_status for a in self.attempts if a.end_time]
+        return []
+
+    @property
+    def command(self):
+        if self.attempts:
+            return self.attempts[-1].display_command
+        else:
+            return self.command_config.command
+
+    @property
+    def rendered_command(self):
+        if self.attempts:
+            return self.attempts[-1].rendered_command
+        return None
+
+    @classmethod
+    def command_config_from_state(cls, state_data):
+        if 'command_config' in state_data:
+            return action.ActionCommandConfig(**state_data['command_config'])
+        else:
+            return action.ActionCommandConfig(
+                command=maybe_decode(state_data['command']),
+                cpus=state_data.get('cpus'),
+                mem=state_data.get('mem'),
+                disk=state_data.get('disk'),
+                constraints=state_data.get('constraints'),
+                docker_image=state_data.get('docker_image'),
+                docker_parameters=state_data.get('docker_parameters'),
+                env=state_data.get('env'),
+                extra_volumes=state_data.get('extra_volumes'),
+            )
+
+    @classmethod
+    def attempts_from_state(cls, state_data, command_config_from_state):
+        attempts = []
+        if 'attempts' in state_data:
+            attempts = [ActionRunAttempt.from_state(a) for a in state_data['attempts']]
+        else:
+            rendered_command = maybe_decode(state_data.get('rendered_command'))
+            exit_statuses = state_data.get('exit_statuses', [])
+            # If the action has started, add an attempt for the final try
+            if state_data.get('start_time'):
+                exit_statuses = exit_statuses + [state_data.get('exit_status')]
+            for exit_status in exit_statuses:
+                attempts.append(ActionRunAttempt(
+                    command_config=command_config_from_state,
+                    rendered_command=rendered_command,
+                    exit_status=exit_status,
+                    start_time='unknown',
+                    end_time='unknown',
+                ))
+            if attempts:
+                attempts[-1].mesos_task_id = state_data.get('mesos_task_id')
+        return attempts
 
     @classmethod
     def from_state(
@@ -367,33 +439,25 @@ class ActionRun(Observable):
         else:
             action_runner = NoActionRunnerFactory()
 
+        command_config = cls.command_config_from_state(state_data)
+        attempts = cls.attempts_from_state(state_data, command_config)
         run = cls(
             job_run_id=job_run_id,
             name=action_name,
             node=job_run_node,
             parent_context=parent_context,
             output_path=output_path,
-            rendered_command=maybe_decode(state_data.get('rendered_command')),
-            bare_command=maybe_decode(state_data['command']),
+            command_config=command_config,
             cleanup=cleanup,
             start_time=state_data['start_time'],
             end_time=state_data['end_time'],
             run_state=state_data['state'],
             exit_status=state_data.get('exit_status'),
+            attempts=attempts,
             retries_remaining=state_data.get('retries_remaining'),
             retries_delay=state_data.get('retries_delay'),
-            exit_statuses=state_data.get('exit_statuses'),
             action_runner=action_runner,
             executor=state_data.get('executor', ExecutorTypes.ssh.value),
-            cpus=state_data.get('cpus'),
-            mem=state_data.get('mem'),
-            disk=state_data.get('disk'),
-            constraints=state_data.get('constraints'),
-            docker_image=state_data.get('docker_image'),
-            docker_parameters=state_data.get('docker_parameters'),
-            env=state_data.get('env'),
-            extra_volumes=state_data.get('extra_volumes'),
-            mesos_task_id=state_data.get('mesos_task_id'),
             trigger_downstreams=state_data.get('trigger_downstreams'),
             triggered_by=state_data.get('triggered_by'),
             on_upstream_rerun=state_data.get('on_upstream_rerun'),
@@ -416,22 +480,34 @@ class ActionRun(Observable):
         if not self.machine.check('start'):
             return False
 
-        if len(self.exit_statuses) == 0:
+        if len(self.attempts) == 0:
             log.info(f"{self} starting")
         else:
-            log.info(f"{self} restarting, retry {len(self.exit_statuses)}")
+            log.info(f"{self} restarting, retry {len(self.attempts)}")
 
-        self.start_time = timeutils.current_time()
+        new_attempt = self.create_attempt()
+        self.start_time = new_attempt.start_time
         self.transition_and_notify('start')
 
-        if not self.is_valid_command:
-            log.error(f"{self} invalid command: {self.bare_command}")
+        if not self.is_valid_command(new_attempt.rendered_command):
+            log.error(f"{self} invalid command: {new_attempt.command_config.command}")
             self.fail(self.EXIT_INVALID_COMMAND)
             return
 
-        return self.submit_command()
+        return self.submit_command(new_attempt)
 
-    def submit_command(self):
+    def create_attempt(self):
+        current_time = timeutils.current_time()
+        rendered_command = self.render_command(self.command_config.command)
+        new_attempt = ActionRunAttempt(
+            command_config=self.command_config,
+            start_time=current_time,
+            rendered_command=rendered_command,
+        )
+        self.attempts.append(new_attempt)
+        return new_attempt
+
+    def submit_command(self, attempt):
         raise NotImplementedError()
 
     def stop(self):
@@ -450,6 +526,8 @@ class ActionRun(Observable):
             self.clear_trigger_timeout()
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
+            if self.last_attempt is not None and self.last_attempt.end_time is None:
+                self.last_attempt.exit(exit_status, self.end_time)
             log.info(
                 f"{self} completed with {target}, transitioned to "
                 f"{self.state}, exit status: {exit_status}"
@@ -512,15 +590,16 @@ class ActionRun(Observable):
                 f'state "{self.state}", not retrying',
             )
             return
+        if self.last_attempt is not None:
+            self.last_attempt.exit(exit_status)
         if self.retries_remaining is not None:
             if self.retries_remaining > 0:
                 self.retries_remaining -= 1
-                self.exit_statuses.append(exit_status)
                 return self.restart()
             else:
                 log.info(
                     "Reached maximum number of retries: {}".format(
-                        len(self.exit_statuses),
+                        len(self.attempts),
                     )
                 )
         if exit_status is None:
@@ -586,7 +665,6 @@ class ActionRun(Observable):
     @property
     def state_data(self):
         """This data is used to serialize the state of this action run."""
-        rendered_command = self.rendered_command
 
         if isinstance(self.action_runner, NoActionRunnerFactory):
             action_runner = None
@@ -595,64 +673,67 @@ class ActionRun(Observable):
                 status_path=self.action_runner.status_path,
                 exec_path=self.action_runner.exec_path,
             )
-        # Freeze command after it's run
-        command = rendered_command if rendered_command else self.bare_command
+
+        # For temporarily saving old keys.
+        if self.last_attempt:
+            rendered_command = self.last_attempt.rendered_command
+            mesos_task_id = self.last_attempt.mesos_task_id
+        else:
+            rendered_command = None
+            mesos_task_id = None
+        if self.exit_statuses:
+            exit_statuses_without_final = self.exit_statuses[:-1]
+        else:
+            exit_statuses_without_final = []
+
         return {
             'job_run_id': self.job_run_id,
             'action_name': self.action_name,
             'state': self.state,
+            'command_config': self.command_config.state_data,
             'start_time': self.start_time,
             'end_time': self.end_time,
-            'command': maybe_decode(command),
-            'rendered_command': maybe_decode(self.rendered_command),
             'node_name': self.node.get_name() if self.node else None,
             'exit_status': self.exit_status,
+            'attempts': [a.state_data for a in self.attempts],
             'retries_remaining': self.retries_remaining,
             'retries_delay': self.retries_delay,
-            'exit_statuses': self.exit_statuses,
             'action_runner': action_runner,
             'executor': self.executor,
-            'cpus': self.cpus,
-            'mem': self.mem,
-            'disk': self.disk,
-            'constraints': self.constraints,
-            'docker_image': self.docker_image,
-            'docker_parameters': self.docker_parameters,
-            'env': self.env,
-            'extra_volumes': self.extra_volumes,
-            'mesos_task_id': self.mesos_task_id,
             'trigger_downstreams': self.trigger_downstreams,
             'triggered_by': self.triggered_by,
             'on_upstream_rerun': self.on_upstream_rerun,
             'trigger_timeout_timestamp': self.trigger_timeout_timestamp,
+            # Temporarily save old keys to make the transition rollback safe.
+            'command': self.command,
+            'rendered_command': rendered_command,
+            'exit_statuses': exit_statuses_without_final,
+            'cpus': self.command_config.cpus,
+            'mem': self.command_config.mem,
+            'disk': self.command_config.disk,
+            'constraints': self.command_config.constraints,
+            'docker_image': self.command_config.docker_image,
+            'docker_parameters': self.command_config.docker_parameters,
+            'env': self.command_config.env,
+            'extra_volumes': self.command_config.extra_volumes,
+            'mesos_task_id': mesos_task_id,
         }
 
     def render_template(self, template):
         """Render our configured command using the command context."""
         return StringFormatter(self.context).format(template)
 
-    def render_command(self):
+    def render_command(self, command):
         """Render our configured command using the command context."""
-        return self.render_template(self.bare_command)
-
-    @property
-    def command(self):
-        if self.rendered_command:
-            return self.rendered_command
         try:
-            self.rendered_command = self.render_command()
+            return self.render_template(command)
         except Exception as e:
             log.error(f"{self} failed rendering command: {e}")
             # Return a command string that will always fail
-            self.rendered_command = self.FAILED_RENDER
-        return self.rendered_command
+            return self.FAILED_RENDER
 
-    @property
-    def is_valid_command(self):
-        """Returns True if the bare_command was rendered without any errors.
-        This has the side effect of actually rendering the bare_command.
-        """
-        return self.command != self.FAILED_RENDER
+    def is_valid_command(self, command):
+        return command != self.FAILED_RENDER
 
     @property
     def is_done(self):
@@ -718,6 +799,14 @@ class ActionRun(Observable):
     def is_blocked_on_trigger(self):
         return not self.is_done and bool(self.remaining_triggers)
 
+    def clear_end_state(self):
+        self.exit_status = None
+        self.end_time = None
+        last_attempt = self.last_attempt
+        if last_attempt:
+            last_attempt.exit_status = None
+            last_attempt.end_time = None
+
     def __getattr__(self, name: str):
         """Support convenience properties for checking if this ActionRun is in
         a specific state (Ex: self.is_running would check if self.state is
@@ -751,8 +840,8 @@ class SSHActionRun(ActionRun, Observer):
         super(SSHActionRun, self).__init__(*args, **kwargs)
         self.recover_tries = 0
 
-    def submit_command(self):
-        action_command = self.build_action_command()
+    def submit_command(self, attempt):
+        action_command = self.build_action_command(attempt)
         try:
             self.node.submit_command(action_command)
         except node.Error as e:
@@ -787,12 +876,12 @@ class SSHActionRun(ActionRun, Observer):
         )
         self.node.submit_command(kill_command)
 
-    def build_action_command(self):
+    def build_action_command(self, attempt):
         """Create a new ActionCommand instance to send to the node."""
         serializer = filehandler.OutputStreamSerializer(self.output_path)
         self.action_command = self.action_runner.create(
             id=self.id,
-            command=self.command,
+            command=attempt.rendered_command,
             serializer=serializer,
         )
         self.watch(self.action_command)
@@ -836,6 +925,12 @@ class SSHActionRun(ActionRun, Observer):
 
     def do_recover(self, delay):
         recovery_command = f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"
+        command_config = action.ActionCommandConfig(command=recovery_command)
+        rendered_command = self.render_command(recovery_command)
+        attempt = ActionRunAttempt(
+            command_config=command_config,
+            rendered_command=rendered_command,
+        )
 
         # Put the "recovery" output at the same directory level as the original action_run's output
         self.output_path.parts = []
@@ -846,10 +941,10 @@ class SSHActionRun(ActionRun, Observer):
             job_run_id=self.job_run_id,
             name=f"{self.name}-recovery",
             node=self.node,
-            bare_command=recovery_command,
+            command_config=command_config,
             output_path=self.output_path,
         )
-        recovery_action_command = recovery_run.build_action_command()
+        recovery_action_command = recovery_run.build_action_command(attempt)
         recovery_action_command.write_stdout(
             f"Recovering action run {self.id}",
         )
@@ -862,8 +957,7 @@ class SSHActionRun(ActionRun, Observer):
         # and updates its internal state according to its result.
         self.watch(recovery_action_command)
 
-        self.exit_status = None
-        self.end_time = None
+        self.clear_end_state()
         self.machine.transition('running')
 
         # Still want the action to appear running while we're waiting to submit the recovery
@@ -914,32 +1008,33 @@ class SSHActionRun(ActionRun, Observer):
 class MesosActionRun(ActionRun, Observer):
     """An ActionRun that executes the command on a Mesos cluster.
     """
-    def _create_mesos_task(self, mesos_cluster, serializer, task_id=None):
+    def _create_mesos_task(self, mesos_cluster, serializer, attempt, task_id=None):
+        command_config = attempt.command_config
         return mesos_cluster.create_task(
             action_run_id=self.id,
-            command=self.command,
-            cpus=self.cpus,
-            mem=self.mem,
-            disk=1024.0 if self.disk is None else self.disk,
+            command=attempt.rendered_command,
+            cpus=command_config.cpus,
+            mem=command_config.mem,
+            disk=1024.0 if command_config.disk is None else command_config.disk,
             constraints=[[c.attribute, c.operator, c.value]
-                         for c in self.constraints],
-            docker_image=self.docker_image,
-            docker_parameters=[e._asdict() for e in self.docker_parameters],
-            env=build_environment(original_env=self.env, run_id=self.id),
-            extra_volumes=[e._asdict() for e in self.extra_volumes],
+                         for c in command_config.constraints],
+            docker_image=command_config.docker_image,
+            docker_parameters=[e._asdict() for e in command_config.docker_parameters],
+            env=build_environment(original_env=command_config.env, run_id=self.id),
+            extra_volumes=[e._asdict() for e in command_config.extra_volumes],
             serializer=serializer,
             task_id=task_id,
         )
 
-    def submit_command(self):
+    def submit_command(self, attempt):
         serializer = filehandler.OutputStreamSerializer(self.output_path)
         mesos_cluster = MesosClusterRepository.get_cluster()
-        task = self._create_mesos_task(mesos_cluster, serializer)
+        task = self._create_mesos_task(mesos_cluster, serializer, attempt)
         if not task:  # Mesos is disabled
             self.fail(self.EXIT_MESOS_DISABLED)
             return
 
-        self.mesos_task_id = task.get_mesos_id()
+        attempt.mesos_task_id = task.get_mesos_id()
 
         # Watch before submitting, in case submit causes a transition
         self.watch(task)
@@ -954,10 +1049,12 @@ class MesosActionRun(ActionRun, Observer):
             )
             return
 
-        if self.mesos_task_id is None:
+        if not self.attempts or self.attempts[-1].mesos_task_id is None:
             log.error(f'{self} no task ID, cannot recover')
             self.fail_unknown()
             return
+
+        last_attempt = self.attempts[-1]
 
         log.info(f'{self} recovering Mesos run')
 
@@ -966,12 +1063,13 @@ class MesosActionRun(ActionRun, Observer):
         task = self._create_mesos_task(
             mesos_cluster,
             serializer,
-            self.mesos_task_id,
+            last_attempt,
+            last_attempt.mesos_task_id,
         )
         if not task:
             log.warning(
                 f'{self} cannot recover, Mesos is disabled or '
-                f'invalid task ID {self.mesos_task_id!r}'
+                f'invalid task ID {last_attempt.mesos_task_id!r}'
             )
             self.fail_unknown()
             return
@@ -980,8 +1078,7 @@ class MesosActionRun(ActionRun, Observer):
         mesos_cluster.recover(task)
 
         # Reset status
-        self.exit_status = None
-        self.end_time = None
+        self.clear_end_state()
         self.transition_and_notify('running')
 
         return task
@@ -1012,11 +1109,12 @@ class MesosActionRun(ActionRun, Observer):
             )
 
         mesos_cluster = MesosClusterRepository.get_cluster()
-        if self.mesos_task_id is None:
+        last_attempt = self.last_attempt
+        if last_attempt is None or last_attempt.mesos_task_id is None:
             msgs.append("Error: Can't find task id for the action.")
         else:
-            msgs.append(f"Sending kill for {self.mesos_task_id}...")
-            succeeded = mesos_cluster.kill(self.mesos_task_id)
+            msgs.append(f"Sending kill for {last_attempt.mesos_task_id}...")
+            succeeded = mesos_cluster.kill(last_attempt.mesos_task_id)
             if succeeded:
                 msgs.append(
                     "Sent! It can take up to docker_stop_timeout (current setting is 2 mins) to stop."

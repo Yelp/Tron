@@ -48,19 +48,21 @@ class TestAction:
         )
         new_action = Action.from_config(config)
         assert new_action.name == config.name
-        assert new_action.command == config.command
         assert new_action.node_pool is None
         assert new_action.executor == config.executor
-        assert new_action.cpus == config.cpus
-        assert new_action.mem == config.mem
-        assert new_action.disk == (600. if disk else 1024.)
-        assert new_action.constraints == {('pool', 'LIKE', 'default')}
-        assert new_action.docker_image == config.docker_image
-        assert new_action.docker_parameters == {('test', 123)}
-        assert new_action.env == config.env
-        assert new_action.extra_volumes == {('/nail/tmp', '/tmp', 'RO')}
         assert new_action.trigger_downstreams is True
         assert new_action.triggered_by == ['foo.bar']
+
+        command_config = new_action.command_config
+        assert command_config.command == config.command
+        assert command_config.cpus == config.cpus
+        assert command_config.mem == config.mem
+        assert command_config.disk == (600. if disk else 1024.)
+        assert command_config.constraints == {('pool', 'LIKE', 'default')}
+        assert command_config.docker_image == config.docker_image
+        assert command_config.docker_parameters == {('test', 123)}
+        assert command_config.env == config.env
+        assert command_config.extra_volumes == {('/nail/tmp', '/tmp', 'RO')}
 
     def test_from_config_none_values(self):
         config = ConfigAction(
@@ -71,10 +73,11 @@ class TestAction:
         )
         new_action = Action.from_config(config)
         assert new_action.name == config.name
-        assert new_action.command == config.command
         assert new_action.executor == config.executor
-        assert new_action.constraints == set()
-        assert new_action.docker_image is None
-        assert new_action.docker_parameters == set()
-        assert new_action.env == {}
-        assert new_action.extra_volumes == set()
+        command_config = new_action.command_config
+        assert command_config.command == config.command
+        assert command_config.constraints == set()
+        assert command_config.docker_image is None
+        assert command_config.docker_parameters == set()
+        assert command_config.env == {}
+        assert command_config.extra_volumes == set()

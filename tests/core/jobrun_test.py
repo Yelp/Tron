@@ -698,9 +698,9 @@ class TestJobRunStateTransitions:
 
     @pytest.fixture
     def job_run(self, tmpdir, mock_event_bus):
-        action_foo = action.Action('foo', 'command', None)
-        action_after_foo = action.Action('after_foo', 'command', None)
-        action_bar = action.Action('bar', 'command', None, triggered_by={'trigger'})
+        action_foo = action.Action('foo', action.ActionCommandConfig('command'), None)
+        action_after_foo = action.Action('after_foo', action.ActionCommandConfig('command'), None)
+        action_bar = action.Action('bar', action.ActionCommandConfig('command'), None, triggered_by={'trigger'})
         action_graph = actiongraph.ActionGraph(
             action_map={
                 'foo': action_foo,

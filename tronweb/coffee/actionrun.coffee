@@ -178,7 +178,7 @@ class module.ActionRunView extends Backbone.View
                             <%= modules.actionrun.formatExit(exit_status) %>
                             <% if (exit_statuses) { %>
                                 <small>
-                                    (exits of failed attempts:
+                                    (exits of all attempts:
                                     <%= _.map(
                                             _.sortBy(
                                                 exit_statuses,
