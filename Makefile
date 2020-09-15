@@ -48,7 +48,7 @@ react_%: docker_%
 	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '       \
 		yarn --cwd tronweb2 &&                         \
 		yarn --cwd tronweb2 build &&                   \
-		chown -R $(UID):$(GID) tronweb2/build/ node_modules tronweb2/node_modules         \
+		chown -R $(UID):$(GID) tronweb2/build/ tronweb2/node_modules         \
 	'
 
 test:
