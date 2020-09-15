@@ -137,8 +137,9 @@ class ActionRunAttempt:
     mesos_task_id: str = None
 
     def exit(self, exit_status, end_time=None):
-        self.exit_status = exit_status
-        self.end_time = end_time or timeutils.current_time()
+        if self.end_time is None:
+            self.exit_status = exit_status
+            self.end_time = end_time or timeutils.current_time()
 
     @property
     def display_command(self):

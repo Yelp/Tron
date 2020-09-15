@@ -519,15 +519,22 @@ class TestActionRun:
         # Still succeeded, not starting
         assert self.action_run.is_succeeded
 
-    def test_manual_retry(self):
+    def test_manual_retry(self, mock_current_time):
+        mock_current_time.side_effect = [1, 2, 3, 4]
         self.action_run.retries_remaining = None
-        self.action_run.create_attempt()
+        failed_attempt = self.action_run.create_attempt()
         self.action_run.machine.transition('start')
         self.action_run.fail(-1)
+        assert failed_attempt.end_time == 2
+        assert failed_attempt.exit_status == -1
+
         self.action_run.retry()
         assert self.action_run.is_starting
         assert self.action_run.exit_statuses == [-1]
         assert self.action_run.retries_remaining == 0
+        # Last attempt should be unchanged
+        assert failed_attempt.end_time == 2
+        assert failed_attempt.exit_status == -1
 
     @mock.patch('twisted.internet.reactor.callLater', autospec=True)
     def test_retries_delay(self, callLater):
