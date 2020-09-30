@@ -22,7 +22,7 @@ class JobCollection:
             ],
         )
 
-    def load_from_config(self, job_configs, factory, reconfigure):
+    def update_from_config(self, job_configs, factory, reconfigure, namespace_to_reconfigure=None):
         """Apply a configuration to this collection and return a generator of
         jobs which were added.
         """
@@ -34,7 +34,13 @@ class JobCollection:
                     job_scheduler.schedule()
                 yield job_scheduler.get_job()
 
-        seq = (factory.build(config) for config in job_configs.values())
+        def reconfigure_filter(config):
+            if not reconfigure or not namespace_to_reconfigure:
+                return True
+            else:
+                return config.namespace == namespace_to_reconfigure
+
+        seq = (factory.build(config) for config in job_configs.values() if reconfigure_filter(config))
         return map_to_job_and_schedule(filter(self.add, seq))
 
     def add(self, job_scheduler):

@@ -5,6 +5,7 @@ from tron import actioncommand
 from tron import command_context
 from tron import node
 from tron.config import manager
+from tron.config.schema import MASTER_NAMESPACE
 from tron.core.job import Job
 from tron.core.job_collection import JobCollection
 from tron.core.job_scheduler import JobSchedulerFactory
@@ -42,19 +43,19 @@ class MasterControlProgram(object):
         EventBus.shutdown()
         self.state_watcher.shutdown()
 
-    def reconfigure(self):
+    def reconfigure(self, namespace=None):
         """Reconfigure MCP while Tron is already running."""
         log.info("reconfigured")
         try:
-            self._load_config(reconfigure=True)
+            self._load_config(reconfigure=True, namespace_to_reconfigure=namespace)
         except Exception as e:
             log.exception(f"reconfigure failure: {e.__class__.__name__}: {e}")
             raise e
 
-    def _load_config(self, reconfigure=False):
+    def _load_config(self, reconfigure=False, namespace_to_reconfigure=None):
         """Read config data and apply it."""
         with self.state_watcher.disabled():
-            self.apply_config(self.config.load(), reconfigure=reconfigure)
+            self.apply_config(self.config.load(), reconfigure=reconfigure, namespace_to_reconfigure=namespace_to_reconfigure)
 
     def initial_setup(self):
         """When the MCP is initialized the config is applied before the state.
@@ -70,7 +71,7 @@ class MasterControlProgram(object):
         # without any state will be scheduled here.
         self.jobs.run_queue_schedule()
 
-    def apply_config(self, config_container, reconfigure=False):
+    def apply_config(self, config_container, reconfigure=False, namespace_to_reconfigure=None):
         """Apply a configuration."""
         master_config_directives = [
             (self.update_state_watcher_config, 'state_persistence'),
@@ -89,20 +90,20 @@ class MasterControlProgram(object):
 
         self.state_watcher.watch(MesosClusterRepository)
 
+        # If the master namespace was updated, we should update jobs in all namespaces
+        if namespace_to_reconfigure == MASTER_NAMESPACE:
+            namespace_to_reconfigure = None
+
         # TODO: unify NOTIFY_STATE_CHANGE and simplify this
         self.job_graph = JobGraph(config_container)
         factory = self.build_job_scheduler_factory(master_config, self.job_graph)
-        self.apply_collection_config(
+        updated_jobs = self.jobs.update_from_config(
             config_container.get_jobs(),
-            self.jobs,
-            [Job.NOTIFY_STATE_CHANGE, Job.NOTIFY_NEW_RUN],
             factory,
             reconfigure,
+            namespace_to_reconfigure,
         )
-
-    def apply_collection_config(self, config, collection, notify_type, *args):
-        items = collection.load_from_config(config, *args)
-        self.state_watcher.watch_all(items, notify_type)
+        self.state_watcher.watch_all(updated_jobs, [Job.NOTIFY_STATE_CHANGE, Job.NOTIFY_NEW_RUN])
 
     def build_job_scheduler_factory(self, master_config, job_graph):
         output_stream_dir = master_config.output_stream_dir or self.working_dir

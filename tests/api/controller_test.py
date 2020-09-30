@@ -189,15 +189,15 @@ class TestConfigController:
         assert resp['hash'] == self.manager.get_hash.return_value
 
     def test_update_config(self):
-        name, content, config_hash = None, mock.Mock(), mock.Mock()
+        name, content, config_hash = 'foo_namespace', mock.Mock(), mock.Mock()
         self.manager.get_hash.return_value = config_hash
         assert not self.controller.update_config(name, content, config_hash)
         self.manager.get_hash.assert_called_with(name)
         self.manager.write_config.assert_called_with(name, content)
-        self.mcp.reconfigure.assert_called_with()
+        self.mcp.reconfigure.assert_called_with(name)
 
     def test_update_config_failure(self):
-        name, content, old_content, config_hash = None, mock.Mock(), mock.Mock(), mock.Mock()
+        name, content, old_content, config_hash = 'foo_namespace', mock.Mock(), mock.Mock(), mock.Mock()
         self.manager.get_hash.return_value = config_hash
         self.manager.write_config.side_effect = [ConfigError("It broke"), None]
         self.controller.read_config = mock.Mock(return_value={'config': old_content})
@@ -209,22 +209,23 @@ class TestConfigController:
         assert error == "It broke"
         self.manager.write_config.call_args_list = [(name, content), (name, old_content)]
         assert self.mcp.reconfigure.call_count == 1
+        self.mcp.reconfigure.assert_called_with(name)
 
     def test_update_config_hash_mismatch(self):
-        name, content, config_hash = None, mock.Mock(), mock.Mock()
+        name, content, config_hash = 'foo_namespace', mock.Mock(), mock.Mock()
         error = self.controller.update_config(name, content, config_hash)
         assert error == "Configuration has changed. Please try again."
 
     def test_delete_config(self):
-        name, content, config_hash = None, "", mock.Mock()
+        name, content, config_hash = 'foo_namespace', "", mock.Mock()
         self.manager.get_hash.return_value = config_hash
         assert not self.controller.delete_config(name, content, config_hash)
         self.manager.delete_config.assert_called_with(name)
-        self.mcp.reconfigure.assert_called_with()
+        self.mcp.reconfigure.assert_called_with(name)
         self.manager.get_hash.assert_called_with(name)
 
     def test_delete_config_failure(self):
-        name, content, config_hash = None, "", mock.Mock()
+        name, content, config_hash = 'foo_namespace', "", mock.Mock()
         self.manager.get_hash.return_value = config_hash
         self.manager.delete_config.side_effect = Exception("some error")
         error = self.controller.delete_config(name, content, config_hash)
@@ -233,12 +234,12 @@ class TestConfigController:
         assert not self.mcp.reconfigure.call_count
 
     def test_delete_config_hash_mismatch(self):
-        name, content, config_hash = None, "", mock.Mock()
+        name, content, config_hash = 'foo_namespace', "", mock.Mock()
         error = self.controller.delete_config(name, content, config_hash)
         assert error == "Configuration has changed. Please try again."
 
     def test_delete_config_content_not_empty(self):
-        name, content, config_hash = None, "content", mock.Mock()
+        name, content, config_hash = 'foo_namespace', "", mock.Mock()
         error = self.controller.delete_config(name, content, config_hash)
         assert error
 
