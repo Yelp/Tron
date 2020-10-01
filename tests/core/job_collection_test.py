@@ -2,8 +2,6 @@ import mock
 
 from testifycompat import setup
 from testifycompat import TestCase
-from tests.assertions import assert_length
-from tests.assertions import assert_mock_calls
 from tests.testingutils import autospec_method
 from tron.core.job import Job
 from tron.core.job_collection import JobCollection
@@ -16,18 +14,37 @@ class TestJobCollection(TestCase):
     def setup_collection(self):
         self.collection = JobCollection()
 
-    def test_load_from_config(self):
+    def test_update_from_config(self):
         autospec_method(self.collection.jobs.filter_by_name)
         autospec_method(self.collection.add)
         factory = mock.create_autospec(JobSchedulerFactory)
         job_configs = {'a': mock.Mock(), 'b': mock.Mock()}
-        result = self.collection.load_from_config(job_configs, factory, True)
+        result = self.collection.update_from_config(job_configs, factory, True)
         result = list(result)
+        assert len(result) == len(job_configs)
         self.collection.jobs.filter_by_name.assert_called_with(job_configs)
         expected_calls = [mock.call(v) for v in job_configs.values()]
-        assert_mock_calls(expected_calls, factory.build.mock_calls)
-        assert_length(self.collection.add.mock_calls, len(job_configs) * 2)
-        assert_length(result, len(job_configs))
+        assert factory.build.call_args_list == expected_calls
+        assert self.collection.add.call_count == 2
+        job_schedulers = [
+            call[1][0] for call in self.collection.add.mock_calls[::2]
+        ]
+        for job_scheduler in job_schedulers:
+            job_scheduler.schedule.assert_called_with()
+            job_scheduler.get_job.assert_called_with()
+
+    def test_update_from_config_reconfigure_one_namespace(self):
+        autospec_method(self.collection.jobs.filter_by_name)
+        autospec_method(self.collection.add)
+        factory = mock.create_autospec(JobSchedulerFactory)
+        job_configs = {'a.foo': mock.Mock(namespace='a'), 'b.foo': mock.Mock(namespace='b')}
+        result = self.collection.update_from_config(job_configs, factory, True, namespace_to_reconfigure='a')
+        result = list(result)
+        assert len(result) == 1
+        self.collection.jobs.filter_by_name.assert_called_with(job_configs)
+        expected_calls = [mock.call(job_configs['a.foo'])]
+        assert factory.build.call_args_list == expected_calls
+        assert self.collection.add.call_count == 1
         job_schedulers = [
             call[1][0] for call in self.collection.add.mock_calls[::2]
         ]

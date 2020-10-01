@@ -190,14 +190,15 @@ class ConfigController(object):
 
         old_config = self.read_config(name)['config']
         try:
+            log.info(f"Reconfiguring namespace {name}")
             self.config_manager.write_config(name, content)
-            self.mcp.reconfigure()
+            self.mcp.reconfigure(namespace=name)
         except Exception as e:
-            log.error("Configuration update failed: %s" % e)
+            log.error(f"Configuration for {name} update failed: {e}")
             log.error("Reconfiguring with the previous good configuration")
             try:
                 self.config_manager.write_config(name, old_config)
-                self.mcp.reconfigure()
+                self.mcp.reconfigure(namespace=name)
             except Exception as e:
                 log.error("Could not restore old config: %s" % e)
                 return str(e)
@@ -212,8 +213,9 @@ class ConfigController(object):
             return "Configuration content is not empty, will not delete."
 
         try:
+            log.info(f"Deleting namespace {name}")
             self.config_manager.delete_config(name)
-            self.mcp.reconfigure()
+            self.mcp.reconfigure(namespace=name)
         except Exception as e:
             log.error("Deleting configuration for %s failed: %s" % (name, e))
             return str(e)
