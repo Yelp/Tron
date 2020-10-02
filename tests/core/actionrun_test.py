@@ -1121,13 +1121,13 @@ class TestActionRunStateRestore:
 
 
 class TestActionRunCollection:
-    def _build_run(self, name):
+    def _build_run(self, action):
         mock_node = mock.create_autospec(node.Node)
         return ActionRun(
             "id",
-            name,
+            action.name,
             mock_node,
-            command_config=mock.Mock(),
+            command_config=action.command_config,
             output_path=self.output_path,
         )
 
@@ -1135,20 +1135,20 @@ class TestActionRunCollection:
     def setup_runs(self, output_path):
         action_names = ['action_name', 'second_name', 'cleanup']
 
-        action_graph = []
+        actions = []
         for name in action_names:
-            m = mock.Mock(name=name, required_actions=[])
+            m = mock.Mock(name=name, required_actions=[], command_config=ActionCommandConfig(command='old'))
             m.name = name
-            action_graph.append(m)
+            actions.append(m)
 
         self.action_graph = actiongraph.ActionGraph(
-            {a.name: a for a in action_graph},
+            {a.name: a for a in actions},
             {'action_name': set(), 'second_name': set(), 'cleanup': set()},
             {'action_name': set(), 'second_name': set(), 'cleanup': set()},
         )
         self.output_path = output_path
         self.command = "do command"
-        self.action_runs = [self._build_run(name) for name in action_names]
+        self.action_runs = [self._build_run(action) for action in actions]
         self.run_map = {a.action_name: a for a in self.action_runs}
         self.run_map['cleanup'].is_cleanup = True
         self.collection = ActionRunCollection(self.action_graph, self.run_map)
@@ -1175,6 +1175,36 @@ class TestActionRunCollection:
 
     def test_cleanup_action_run(self):
         assert self.action_runs[2] == self.collection.cleanup_action_run
+
+    def test_update_action_config_no_changes(self):
+        assert self.collection.update_action_config(self.action_graph) is False
+
+    def test_update_action_config(self):
+        # Latest config has 'new_name' instead of 'action_name'
+        new_action_names = ['new_name', 'second_name', 'cleanup']
+        new_actions = []
+        for name in new_action_names:
+            action = mock.Mock(name=name, required_actions=[], command_config=ActionCommandConfig(command='new'))
+            action.name = name
+            new_actions.append(action)
+
+        new_action_graph = actiongraph.ActionGraph(
+            {a.name: a for a in new_actions},
+            {'new_name': set(), 'second_name': set(), 'cleanup': set()},
+            {'new_name': set(), 'second_name': set(), 'cleanup': set()},
+        )
+        assert self.collection.update_action_config(new_action_graph) is True
+        assert self.collection.action_graph != new_action_graph
+
+        updated_action_runs = self.collection.action_runs_with_cleanup
+        # Action names should be unchanged
+        assert sorted([run.name for run in updated_action_runs]) == sorted([run.name for run in self.action_runs])
+
+        for run in updated_action_runs:
+            if run.name == 'action_name':
+                assert run.command_config.command == 'old'
+            else:
+                assert run.command_config.command == 'new'
 
     def test_state_data(self):
         state_data = self.collection.state_data

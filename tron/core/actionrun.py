@@ -1206,6 +1206,17 @@ class ActionRunCollection(object):
 
     action_runs = property(get_action_runs)
 
+    def update_action_config(self, action_graph):
+        # If there are new command configs that match the action name, update them
+        # Do not update the actual action_graph
+        updated = False
+        for action_run in self.get_action_runs_with_cleanup():
+            new_action = action_graph.action_map.get(action_run.action_name)
+            if new_action and new_action.command_config != action_run.command_config:
+                action_run.command_config = new_action.command_config
+                updated = True
+        return updated
+
     @property
     def cleanup_action_run(self) -> ActionRun:
         return self.run_map.get(action.CLEANUP_ACTION_NAME)

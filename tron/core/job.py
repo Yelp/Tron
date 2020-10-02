@@ -156,10 +156,16 @@ class Job(Observable, Observer):
         for attr in self.equality_attributes:
             setattr(self, attr, getattr(job, attr))
 
+        self.update_action_config()
+
         # the run_limit is a property on the JobRunCollection, not on the
         # Job itself so we need to handle that separately
         self.runs.run_limit = job.run_limit
         log.info(f'{self} reconfigured')
+
+    def update_action_config(self):
+        for job_run in self.runs:
+            job_run.update_action_config(self.action_graph)
 
     @property
     def status(self):
