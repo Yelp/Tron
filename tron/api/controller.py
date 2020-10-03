@@ -46,7 +46,7 @@ class ActionRunController(object):
         self.action_run = action_run
         self.job_run = job_run
 
-    def handle_command(self, command):
+    def handle_command(self, command, **kwargs):
         if command not in self.mapped_commands:
             raise UnknownCommandError(f"Unknown command {command}. You can only do one of the following to Action runs: {self.mapped_commands}")
 
@@ -65,7 +65,8 @@ class ActionRunController(object):
             return self.handle_termination(command)
 
         if command == 'retry':
-            return self.handle_retry()
+            original_command = not kwargs.get('use_latest_command', False)
+            return self.handle_retry(original_command)
 
         if getattr(self.action_run, command)():
             msg = "%s now in state %s"
@@ -86,12 +87,12 @@ class ActionRunController(object):
             msg = "Failed to %s: %s"
             return msg % (command, e)
 
-    def handle_retry(self):
+    def handle_retry(self, original_command):
         cleanup_run = self.job_run.action_runs.cleanup_action_run
         if cleanup_run and cleanup_run.is_done:
             return "JobRun has run a cleanup action, use rerun instead"
 
-        if self.action_run.retry():
+        if self.action_run.retry(original_command=original_command):
             return "Retrying %s" % self.action_run
         else:
             return "Failed to schedule retry for %s" % self.action_run

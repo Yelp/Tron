@@ -140,7 +140,8 @@ class ActionRunResource(resource.Resource):
 
     @AsyncResource.exclusive
     def render_POST(self, request):
-        return handle_command(request, self.controller, self.action_run)
+        use_latest_command = requestargs.get_bool(request, 'use_latest_command', False)
+        return handle_command(request, self.controller, self.action_run, use_latest_command=use_latest_command)
 
 
 class JobRunResource(resource.Resource):

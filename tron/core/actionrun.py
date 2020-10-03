@@ -301,6 +301,7 @@ class ActionRun(Observable):
         triggered_by=None,
         on_upstream_rerun=None,
         trigger_timeout_timestamp=None,
+        original_command=None,
     ):
         super().__init__()
         self.job_run_id = maybe_decode(job_run_id)
@@ -317,6 +318,7 @@ class ActionRun(Observable):
 
         self.executor = executor
         self.command_config = command_config
+        self.original_command = original_command or command_config.command
         self.attempts = attempts or []
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.action_name)
@@ -448,6 +450,7 @@ class ActionRun(Observable):
             parent_context=parent_context,
             output_path=output_path,
             command_config=command_config,
+            original_command=state_data.get('original_command'),
             cleanup=cleanup,
             start_time=state_data['start_time'],
             end_time=state_data['end_time'],
@@ -470,7 +473,7 @@ class ActionRun(Observable):
             run.transition_and_notify('fail_unknown')
         return run
 
-    def start(self):
+    def start(self, original_command=True):
         """Start this ActionRun."""
         if self.in_delay is not None:
             log.warning(f"{self} cancelling suspend timer")
@@ -485,7 +488,7 @@ class ActionRun(Observable):
         else:
             log.info(f"{self} restarting, retry {len(self.attempts)}")
 
-        new_attempt = self.create_attempt()
+        new_attempt = self.create_attempt(original_command=original_command)
         self.start_time = new_attempt.start_time
         self.transition_and_notify('start')
 
@@ -496,11 +499,14 @@ class ActionRun(Observable):
 
         return self.submit_command(new_attempt)
 
-    def create_attempt(self):
+    def create_attempt(self, original_command=True):
         current_time = timeutils.current_time()
-        rendered_command = self.render_command(self.command_config.command)
+        command_config = self.command_config.copy()
+        if original_command:
+            command_config.command = self.original_command
+        rendered_command = self.render_command(command_config.command)
         new_attempt = ActionRunAttempt(
-            command_config=self.command_config,
+            command_config=command_config,
             start_time=current_time,
             rendered_command=rendered_command,
         )
@@ -538,7 +544,7 @@ class ActionRun(Observable):
                 f"{self} cannot transition from {self.state} via {target}"
             )
 
-    def retry(self):
+    def retry(self, original_command=True):
         """Invoked externally (via API) when action needs to be re-tried
         manually.
         """
@@ -554,7 +560,7 @@ class ActionRun(Observable):
 
         if self.is_done:
             self.machine.reset()
-            return self._exit_unsuccessful(self.exit_status)
+            return self._exit_unsuccessful(self.exit_status, retry_original_command=original_command)
         else:
             log.info(f"{self} getting killed for a retry")
             return self.kill(final=False)
@@ -565,8 +571,8 @@ class ActionRun(Observable):
         self.in_delay = None
         self.start()
 
-    def restart(self):
-        """Used by `fail` when action run has to be re-tried."""
+    def restart(self, original_command=True):
+        """Used by `fail` when action run has to be re-tried"""
         if self.retries_delay is not None:
             self.in_delay = reactor.callLater(
                 self.retries_delay.total_seconds(), self.start_after_delay
@@ -575,7 +581,7 @@ class ActionRun(Observable):
             return True
         else:
             self.machine.reset()
-            return self.start()
+            return self.start(original_command=original_command)
 
     def fail(self, exit_status=None):
         if self.retries_remaining:
@@ -583,7 +589,7 @@ class ActionRun(Observable):
 
         return self._done('fail', exit_status)
 
-    def _exit_unsuccessful(self, exit_status=None):
+    def _exit_unsuccessful(self, exit_status=None, retry_original_command=True):
         if self.is_done:
             log.info(
                 f'{self} got exit code {exit_status} but already in terminal '
@@ -595,7 +601,7 @@ class ActionRun(Observable):
         if self.retries_remaining is not None:
             if self.retries_remaining > 0:
                 self.retries_remaining -= 1
-                return self.restart()
+                return self.restart(original_command=retry_original_command)
             else:
                 log.info(
                     "Reached maximum number of retries: {}".format(
@@ -691,6 +697,7 @@ class ActionRun(Observable):
             'action_name': self.action_name,
             'state': self.state,
             'command_config': self.command_config.state_data,
+            'original_command': self.original_command,
             'start_time': self.start_time,
             'end_time': self.end_time,
             'node_name': self.node.get_name() if self.node else None,

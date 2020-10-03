@@ -21,9 +21,9 @@ from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
 
 COMMAND_HELP = (
-    ('start', 'Start the selected job, job run, or action. Will use the latest code and tron config available.'),
-    ('rerun', 'Re-run a full job (all actions) with a new job id. Will use new code and new tron config.'),
-    ('retry', 'Re-run a job action within an existing job run. Uses the exact same code and tron config as the previous runs.'),
+    ('start', 'Start the selected job, job run, or action.'),
+    ('rerun', 'Re-run a full job (all actions) with a new job id.'),
+    ('retry', 'Re-run a job action within an existing job run. Uses latest code/config except the command by default. Add --use-latest-command to use the latest command.'),
     ('recover', 'Ask Tron to start tracking an UNKNOWN action run again'),
     ('cancel', 'Cancel the selected job run.'),
     ('backfill', 'Print tronctl commands for starting many jobs for a particular date range'),
@@ -79,6 +79,13 @@ def parse_cli():
         dest="end_date",
         help=
         "For backfills, what should the last run-date be (note: many jobs operate on date-1). Defaults to today.",
+    )
+    parser.add_argument(
+        "--use-latest-command",
+        action='store_true',
+        default=False,
+        help=
+        "For a retry, use the latest command in tronfig rather than the original command when the action run was created",
     )
     parser.add_argument(
         'command',
@@ -143,6 +150,8 @@ def control_objects(args):
         data = dict(command=args.command)
         if args.command == "start" and args.run_date:
             data['run_time'] = str(args.run_date)
+        if args.command == "retry":
+            data['use_latest_command'] = int(args.use_latest_command)
         yield request(urljoin(args.server, tron_id.url), data)
 
 

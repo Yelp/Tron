@@ -65,6 +65,7 @@ class TestActionRunController:
             self.action_run,
             self.job_run,
         )
+        self.job_run.action_runs.cleanup_action_run = None
 
     def test_handle_command_start_failed(self):
         self.job_run.is_scheduled = True
@@ -104,6 +105,14 @@ class TestActionRunController:
         result = self.controller.handle_termination('kill')
         assert "Attempting to kill" in result
         assert "Warning Message" in result
+
+    def test_handle_retry_default(self):
+        self.controller.handle_command('retry')
+        self.action_run.retry.assert_called_once_with(original_command=True)
+
+    def test_handle_retry_new_command(self):
+        self.controller.handle_command('retry', use_latest_command=True)
+        self.action_run.retry.assert_called_once_with(original_command=False)
 
 
 class TestJobRunController:

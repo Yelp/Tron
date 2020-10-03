@@ -322,7 +322,7 @@ class TestActionRun:
 
     @mock.patch('tron.core.actionrun.log', autospec=True)
     def test_start_invalid_command(self, _log):
-        self.action_run.command_config.command = "{notfound}"
+        self.action_run.original_command = "{notfound}"
         self.action_run.machine.transition('ready')
         assert not self.action_run.start()
         assert self.action_run.is_failed
@@ -477,6 +477,22 @@ class TestActionRun:
             assert attempt.start_time == i * 2 + 1
             assert attempt.end_time == (i + 1) * 2
 
+    def test_auto_retry_command_config_change(self, mock_current_time):
+        self.action_run.retries_remaining = 1
+        self.action_run.create_attempt()
+        self.action_run.machine.transition('start')
+
+        # If the command_config gets reconfigured later, auto retry
+        # still uses the original command by default.
+        self.action_run.command_config = ActionCommandConfig(command='new')
+
+        assert self.action_run._exit_unsuccessful(-1)
+        assert self.action_run._exit_unsuccessful(-1)
+        assert len(self.action_run.attempts) == 2
+
+        for i, attempt in enumerate(self.action_run.attempts):
+            assert attempt.rendered_command == self.rendered_command
+
     def test_no_auto_retry_on_fail_not_running(self):
         self.action_run.retries_remaining = 2
 
@@ -535,6 +551,19 @@ class TestActionRun:
         # Last attempt should be unchanged
         assert failed_attempt.end_time == 2
         assert failed_attempt.exit_status == -1
+
+    def test_manual_retry_use_new_command(self, mock_current_time):
+        mock_current_time.side_effect = [1, 2, 3, 4]
+        self.action_run.retries_remaining = None
+        self.action_run.create_attempt()
+        self.action_run.machine.transition('start')
+        self.action_run.fail(-1)
+
+        # Change the command config
+        self.action_run.command_config = ActionCommandConfig(command='new')
+        self.action_run.retry(original_command=False)
+        assert self.action_run.is_starting
+        assert self.action_run.last_attempt.rendered_command == 'new'
 
     @mock.patch('twisted.internet.reactor.callLater', autospec=True)
     def test_retries_delay(self, callLater):
@@ -1325,7 +1354,7 @@ class TestActionRunCollectionIsRunBlocked:
             "id",
             name,
             mock_node,
-            self.command,
+            self.command_config,
             output_path=self.output_path,
         )
 
@@ -1348,7 +1377,7 @@ class TestActionRunCollectionIsRunBlocked:
         )
 
         self.output_path = output_path
-        self.command = "do command"
+        self.command_config = ActionCommandConfig(command="do command")
         self.action_runs = [self._build_run(name) for name in action_names]
         self.run_map = {a.action_name: a for a in self.action_runs}
         self.run_map['cleanup'].is_cleanup = True
