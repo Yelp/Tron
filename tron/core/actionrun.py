@@ -119,6 +119,7 @@ class ActionRunFactory(object):
             'output_path': job_run.output_path.clone(),
             'job_run_node': job_run.node,
             'cleanup': cleanup,
+            'action_graph': job_run.action_graph,
         }
 
         if state_data.get('executor') == ExecutorTypes.mesos.value:
@@ -372,23 +373,6 @@ class ActionRun(Observable):
         return None
 
     @classmethod
-    def command_config_from_state(cls, state_data):
-        if 'command_config' in state_data:
-            return action.ActionCommandConfig(**state_data['command_config'])
-        else:
-            return action.ActionCommandConfig(
-                command=maybe_decode(state_data['command']),
-                cpus=state_data.get('cpus'),
-                mem=state_data.get('mem'),
-                disk=state_data.get('disk'),
-                constraints=state_data.get('constraints'),
-                docker_image=state_data.get('docker_image'),
-                docker_parameters=state_data.get('docker_parameters'),
-                env=state_data.get('env'),
-                extra_volumes=state_data.get('extra_volumes'),
-            )
-
-    @classmethod
     def attempts_from_state(cls, state_data, command_config_from_state):
         attempts = []
         if 'attempts' in state_data:
@@ -418,6 +402,7 @@ class ActionRun(Observable):
         parent_context,
         output_path,
         job_run_node,
+        action_graph,
         cleanup=False,
     ):
         """Restore the state of this ActionRun from a serialized state."""
@@ -441,7 +426,12 @@ class ActionRun(Observable):
         else:
             action_runner = NoActionRunnerFactory()
 
-        command_config = cls.command_config_from_state(state_data)
+        action_config = action_graph.action_map.get(action_name)
+        if action_config:
+            command_config = action_config.command_config
+        else:
+            command_config = action.ActionCommandConfig(command='')
+
         attempts = cls.attempts_from_state(state_data, command_config)
         run = cls(
             job_run_id=job_run_id,
@@ -491,6 +481,10 @@ class ActionRun(Observable):
         new_attempt = self.create_attempt(original_command=original_command)
         self.start_time = new_attempt.start_time
         self.transition_and_notify('start')
+
+        if not self.command_config.command:
+            log.error(f"{self} no longer configured in tronfig, cannot run")
+            self.fail(self.EXIT_INVALID_COMMAND)
 
         if not self.is_valid_command(new_attempt.rendered_command):
             log.error(f"{self} invalid command: {new_attempt.command_config.command}")
