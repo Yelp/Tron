@@ -21,8 +21,8 @@ from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
 
 COMMAND_HELP = (
-    ('start', 'Start the selected job, job run, or action.'),
-    ('rerun', 'Re-run a full job (all actions) with a new job id.'),
+    ('start', 'Start the selected job, job run, or action. Creates a new job run if starting a job.'),
+    ('rerun', 'Start a new job run with the same start time command context as the given job run.'),
     ('retry', 'Re-run a job action within an existing job run. Uses latest code/config except the command by default. Add --use-latest-command to use the latest command.'),
     ('recover', 'Ask Tron to start tracking an UNKNOWN action run again'),
     ('cancel', 'Cancel the selected job run.'),
