@@ -167,10 +167,12 @@ class module.ActionRunView extends Backbone.View
                         <td><%= formatState(state) %><%= formatDelay(in_delay) %></td></tr>
                     <tr><td>Node</td>
                         <td><%= displayNode(node) %></td></tr>
-                    <tr><td>Raw command</td>
+                    <tr><td>Raw original command</td>
+                        <td><code class="command"><%= original_command %></code></td></tr>
+                    <tr><td>Config command</td>
                         <td><code class="command"><%= raw_command %></code></td></tr>
                     <% if (command) { %>
-                    <tr><td>Command</td>
+                    <tr><td>Last run command</td>
                         <td><code class="command"><%= command %></code></td></tr>
                     <% } %>
                     <tr><td>Exit codes</td>

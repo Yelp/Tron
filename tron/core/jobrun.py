@@ -182,6 +182,15 @@ class JobRun(Observable, Observer):
         _del_action_runs,
     )
 
+    def update_action_config(self, action_graph):
+        self.action_graph = action_graph
+        updated = self.action_runs.update_action_config(action_graph)
+
+        # Saving the state is only for rollback safety
+        # Remove after this change is verified and we do not use the command config state
+        if updated:
+            self.notify(self.NOTIFY_STATE_CHANGED)
+
     def seconds_until_run_time(self):
         run_time = self.run_time
         if run_time.tzinfo:

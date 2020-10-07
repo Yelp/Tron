@@ -339,7 +339,7 @@ class TestJobRun(TestCase):
 class TestJobRunFromState(TestCase):
     @setup
     def setup_jobrun(self):
-        self.action_graph = mock.create_autospec(actiongraph.ActionGraph)
+        self.action_graph = mock.create_autospec(actiongraph.ActionGraph, action_map={})
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         self.path = ['base', 'path']
         self.output_path = mock.create_autospec(filehandler.OutputPath)

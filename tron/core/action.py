@@ -31,6 +31,9 @@ class ActionCommandConfig:
             for field in fields(self)
         }
 
+    def copy(self):
+        return ActionCommandConfig(**self.state_data)
+
 
 @dataclass
 class Action:

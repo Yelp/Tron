@@ -100,6 +100,7 @@ class ActionRunAdapter(RunAdapter):
         'action_name',
         'exit_statuses',
         'retries_remaining',
+        'original_command',
     ]
 
     translated_field_names = [

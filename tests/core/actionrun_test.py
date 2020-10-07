@@ -74,6 +74,7 @@ class TestActionRunFactory:
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         a1 = MagicMock()
         a1.name = 'act1'
+        a1.command_config = ActionCommandConfig(command='do action1')
         a2 = MagicMock()
         a2.name = 'act2'
         actions = [a1, a2]
@@ -98,8 +99,8 @@ class TestActionRunFactory:
 
     @pytest.fixture
     def state_data(self):
+        command_config = self.action_graph.action_map['act1'].command_config.state_data
         # State data with command config and retries.
-        command_config = dict(command='do action1')
         yield {
             'job_run_id': 'job_run_id',
             'action_name': 'act1',
@@ -107,7 +108,6 @@ class TestActionRunFactory:
             'run_time': 'the_run_time',
             'start_time': None,
             'end_time': None,
-            'command_config': command_config,
             'attempts': [dict(command_config=command_config, start_time='start')],
             'node_name': 'anode',
         }
@@ -133,7 +133,6 @@ class TestActionRunFactory:
             'run_time': self.run_time,
             'start_time': None,
             'end_time': None,
-            'command_config': cleanup_command_config,
             'attempts': [dict(
                 command_config=cleanup_command_config,
                 rendered_command='do action1',
@@ -260,24 +259,14 @@ class TestActionRunFactory:
 
     def test_action_run_from_state_mesos(self, state_data):
         state_data['executor'] = ExecutorTypes.mesos.value
-        command_config_state = state_data['command_config']
-        command_config_state.update({
-            'cpus': 2,
-            'mem': 200,
-            'disk': 300,
-            'constraints': [['pool', 'LIKE', 'default']],
-            'docker_image': 'fake-docker.com:400/image',
-            'docker_parameters': [{'key': 'test', 'value': 123}],
-            'env': {'TESTING': 'true'},
-            'extra_volumes': [{'path': '/tmp'}],
-        })
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
         )
 
         assert action_run.job_run_id == state_data['job_run_id']
-        assert action_run.command_config == ActionCommandConfig(**command_config_state)
+        action_name = state_data['action_name']
+        assert action_run.command_config == self.action_graph.action_map[action_name].command_config
 
         assert not action_run.is_cleanup
         assert action_run.__class__ == MesosActionRun
@@ -322,7 +311,7 @@ class TestActionRun:
 
     @mock.patch('tron.core.actionrun.log', autospec=True)
     def test_start_invalid_command(self, _log):
-        self.action_run.command_config.command = "{notfound}"
+        self.action_run.original_command = "{notfound}"
         self.action_run.machine.transition('ready')
         assert not self.action_run.start()
         assert self.action_run.is_failed
@@ -477,6 +466,22 @@ class TestActionRun:
             assert attempt.start_time == i * 2 + 1
             assert attempt.end_time == (i + 1) * 2
 
+    def test_auto_retry_command_config_change(self, mock_current_time):
+        self.action_run.retries_remaining = 1
+        self.action_run.create_attempt()
+        self.action_run.machine.transition('start')
+
+        # If the command_config gets reconfigured later, auto retry
+        # still uses the original command by default.
+        self.action_run.command_config = ActionCommandConfig(command='new')
+
+        assert self.action_run._exit_unsuccessful(-1)
+        assert self.action_run._exit_unsuccessful(-1)
+        assert len(self.action_run.attempts) == 2
+
+        for i, attempt in enumerate(self.action_run.attempts):
+            assert attempt.rendered_command == self.rendered_command
+
     def test_no_auto_retry_on_fail_not_running(self):
         self.action_run.retries_remaining = 2
 
@@ -535,6 +540,19 @@ class TestActionRun:
         # Last attempt should be unchanged
         assert failed_attempt.end_time == 2
         assert failed_attempt.exit_status == -1
+
+    def test_manual_retry_use_new_command(self, mock_current_time):
+        mock_current_time.side_effect = [1, 2, 3, 4]
+        self.action_run.retries_remaining = None
+        self.action_run.create_attempt()
+        self.action_run.machine.transition('start')
+        self.action_run.fail(-1)
+
+        # Change the command config
+        self.action_run.command_config = ActionCommandConfig(command='new')
+        self.action_run.retry(original_command=False)
+        assert self.action_run.is_starting
+        assert self.action_run.last_attempt.rendered_command == 'new'
 
     @mock.patch('twisted.internet.reactor.callLater', autospec=True)
     def test_retries_delay(self, callLater):
@@ -908,25 +926,30 @@ class TestActionRunStateRestore:
         self.output_path = ['one', 'two']
         self.run_node = MagicMock()
         mock_current_time.return_value = self.now
+        self.command_config = ActionCommandConfig(
+            command='do {actionname}',
+            cpus=1,
+        )
+        self.action_config = mock.Mock(command_config=self.command_config)
+        self.action_graph = actiongraph.ActionGraph(
+            {'theaction': self.action_config},
+            {'theaction': set()},
+            {'theaction': set()},
+        )
 
     @pytest.fixture
     def state_data(self):
         # State data with command config and retries.
-        command_config = dict(
-            command='do {actionname}',
-            cpus=1,
-        )
         yield {
             'job_run_id': 'theid',
             'action_name': 'theaction',
             'node_name': 'anode',
-            'command_config': command_config,
             'run_time': 'the_run_time',
             'start_time': 'start_time',
             'end_time': 'end',
             'exit_status': 0,
             'attempts': [dict(
-                command_config=command_config,
+                command_config=self.command_config.state_data,
                 rendered_command='do theaction',
                 start_time='start',
                 end_time='end',
@@ -942,7 +965,7 @@ class TestActionRunStateRestore:
             'job_run_id': 'theid',
             'action_name': 'theaction',
             'node_name': 'anode',
-            'command': 'do things {actionname}',
+            'command': 'do {actionname}',
             'start_time': 'start_time',
             'end_time': 'end',
             'state': 'succeeded',
@@ -955,6 +978,7 @@ class TestActionRunStateRestore:
             self.parent_context,
             list(self.output_path),
             self.run_node,
+            self.action_graph,
         )
 
         for key, value in state_data.items():
@@ -976,6 +1000,7 @@ class TestActionRunStateRestore:
             self.parent_context,
             list(self.output_path),
             self.run_node,
+            self.action_graph,
         )
 
         for key, value in state_data.items():
@@ -995,6 +1020,7 @@ class TestActionRunStateRestore:
             self.parent_context,
             list(self.output_path),
             self.run_node,
+            self.action_graph,
         )
 
         for key, value in state_data.items():
@@ -1015,6 +1041,7 @@ class TestActionRunStateRestore:
             self.parent_context,
             list(self.output_path),
             self.run_node,
+            self.action_graph,
         )
 
         for key, value in state_data.items():
@@ -1037,6 +1064,7 @@ class TestActionRunStateRestore:
             self.parent_context,
             list(self.output_path),
             self.run_node,
+            self.action_graph,
         )
 
         for key, value in state_data.items():
@@ -1055,6 +1083,7 @@ class TestActionRunStateRestore:
             self.parent_context,
             self.output_path,
             self.run_node,
+            self.action_graph,
             lambda: None,
         )
         assert action_run.is_unknown
@@ -1066,6 +1095,7 @@ class TestActionRunStateRestore:
             self.parent_context,
             self.output_path,
             self.run_node,
+            self.action_graph,
             lambda: None,
         )
         assert action_run.is_unknown
@@ -1077,6 +1107,7 @@ class TestActionRunStateRestore:
             self.parent_context,
             self.output_path,
             self.run_node,
+            self.action_graph,
             lambda: None,
         )
         assert action_run.is_queued
@@ -1088,6 +1119,7 @@ class TestActionRunStateRestore:
             self.parent_context,
             self.output_path,
             self.run_node,
+            self.action_graph,
             lambda: None,
         )
         assert action_run.node == self.run_node
@@ -1099,6 +1131,7 @@ class TestActionRunStateRestore:
             self.parent_context,
             self.output_path,
             self.run_node,
+            self.action_graph,
             lambda: None,
         )
         mock_store.get_instance().get_node.assert_called_with(
@@ -1112,22 +1145,36 @@ class TestActionRunStateRestore:
             self.parent_context,
             self.output_path,
             self.run_node,
+            self.action_graph,
             lambda: None,
         )
-        assert action_run.command_config == ActionCommandConfig(**state_data['command_config'])
+        assert action_run.command_config == self.command_config
         assert len(action_run.attempts) == len(state_data['attempts'])
         assert action_run.exit_statuses == [0]
         assert action_run.command == state_data['attempts'][-1]['rendered_command']
 
+    def test_from_state_action_config_gone(self, state_data):
+        state_data['action_name'] = 'old_action'
+        action_run = ActionRun.from_state(
+            state_data,
+            self.parent_context,
+            self.output_path,
+            self.run_node,
+            self.action_graph,
+            lambda: None,
+        )
+        assert action_run.command_config.command == ''
+        assert action_run.command == state_data['attempts'][-1]['rendered_command']
+
 
 class TestActionRunCollection:
-    def _build_run(self, name):
+    def _build_run(self, action):
         mock_node = mock.create_autospec(node.Node)
         return ActionRun(
             "id",
-            name,
+            action.name,
             mock_node,
-            command_config=mock.Mock(),
+            command_config=action.command_config,
             output_path=self.output_path,
         )
 
@@ -1135,20 +1182,20 @@ class TestActionRunCollection:
     def setup_runs(self, output_path):
         action_names = ['action_name', 'second_name', 'cleanup']
 
-        action_graph = []
+        actions = []
         for name in action_names:
-            m = mock.Mock(name=name, required_actions=[])
+            m = mock.Mock(name=name, required_actions=[], command_config=ActionCommandConfig(command='old'))
             m.name = name
-            action_graph.append(m)
+            actions.append(m)
 
         self.action_graph = actiongraph.ActionGraph(
-            {a.name: a for a in action_graph},
+            {a.name: a for a in actions},
             {'action_name': set(), 'second_name': set(), 'cleanup': set()},
             {'action_name': set(), 'second_name': set(), 'cleanup': set()},
         )
         self.output_path = output_path
         self.command = "do command"
-        self.action_runs = [self._build_run(name) for name in action_names]
+        self.action_runs = [self._build_run(action) for action in actions]
         self.run_map = {a.action_name: a for a in self.action_runs}
         self.run_map['cleanup'].is_cleanup = True
         self.collection = ActionRunCollection(self.action_graph, self.run_map)
@@ -1175,6 +1222,36 @@ class TestActionRunCollection:
 
     def test_cleanup_action_run(self):
         assert self.action_runs[2] == self.collection.cleanup_action_run
+
+    def test_update_action_config_no_changes(self):
+        assert self.collection.update_action_config(self.action_graph) is False
+
+    def test_update_action_config(self):
+        # Latest config has 'new_name' instead of 'action_name'
+        new_action_names = ['new_name', 'second_name', 'cleanup']
+        new_actions = []
+        for name in new_action_names:
+            action = mock.Mock(name=name, required_actions=[], command_config=ActionCommandConfig(command='new'))
+            action.name = name
+            new_actions.append(action)
+
+        new_action_graph = actiongraph.ActionGraph(
+            {a.name: a for a in new_actions},
+            {'new_name': set(), 'second_name': set(), 'cleanup': set()},
+            {'new_name': set(), 'second_name': set(), 'cleanup': set()},
+        )
+        assert self.collection.update_action_config(new_action_graph) is True
+        assert self.collection.action_graph != new_action_graph
+
+        updated_action_runs = self.collection.action_runs_with_cleanup
+        # Action names should be unchanged
+        assert sorted([run.name for run in updated_action_runs]) == sorted([run.name for run in self.action_runs])
+
+        for run in updated_action_runs:
+            if run.name == 'action_name':
+                assert run.command_config.command == 'old'
+            else:
+                assert run.command_config.command == 'new'
 
     def test_state_data(self):
         state_data = self.collection.state_data
@@ -1295,7 +1372,7 @@ class TestActionRunCollectionIsRunBlocked:
             "id",
             name,
             mock_node,
-            self.command,
+            self.command_config,
             output_path=self.output_path,
         )
 
@@ -1318,7 +1395,7 @@ class TestActionRunCollectionIsRunBlocked:
         )
 
         self.output_path = output_path
-        self.command = "do command"
+        self.command_config = ActionCommandConfig(command="do command")
         self.action_runs = [self._build_run(name) for name in action_names]
         self.run_map = {a.action_name: a for a in self.action_runs}
         self.run_map['cleanup'].is_cleanup = True
