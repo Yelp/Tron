@@ -1,3 +1,11 @@
+tron (1.6.0) xenial; urgency=medium
+
+  * 1.6.0 tagged with 'make release'
+    Commit: Merge pull request #778 from Yelp/TRON-1161-retry-configs
+    TRON-1161: update configs for retries
+
+ -- root <root@d2aa77443876>  Wed, 07 Oct 2020 20:23:20 +0000
+
 tron (1.5.1) xenial; urgency=medium
 
   * 1.5.1 tagged with 'make release'
