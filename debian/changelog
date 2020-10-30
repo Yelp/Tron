@@ -1,3 +1,12 @@
+tron (1.6.1) xenial; urgency=medium
+
+  * 1.6.1 tagged with 'make release'
+    Commit: Merge pull request #780 from Yelp/TRON-1570-remove-old-state
+    Stop saving command config and fields replaced by command config and
+    …
+
+ -- root <root@413c12b9e90f>  Fri, 30 Oct 2020 16:39:41 +0000
+
 tron (1.6.0) xenial; urgency=medium
 
   * 1.6.0 tagged with 'make release'
