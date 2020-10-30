@@ -373,7 +373,7 @@ class ActionRun(Observable):
         return None
 
     @classmethod
-    def attempts_from_state(cls, state_data, command_config_from_state):
+    def attempts_from_state(cls, state_data, command_config):
         attempts = []
         if 'attempts' in state_data:
             attempts = [ActionRunAttempt.from_state(a) for a in state_data['attempts']]
@@ -385,7 +385,7 @@ class ActionRun(Observable):
                 exit_statuses = exit_statuses + [state_data.get('exit_status')]
             for exit_status in exit_statuses:
                 attempts.append(ActionRunAttempt(
-                    command_config=command_config_from_state,
+                    command_config=command_config,
                     rendered_command=rendered_command,
                     exit_status=exit_status,
                     start_time='unknown',
@@ -674,23 +674,10 @@ class ActionRun(Observable):
                 exec_path=self.action_runner.exec_path,
             )
 
-        # For temporarily saving old keys.
-        if self.last_attempt:
-            rendered_command = self.last_attempt.rendered_command
-            mesos_task_id = self.last_attempt.mesos_task_id
-        else:
-            rendered_command = None
-            mesos_task_id = None
-        if self.exit_statuses:
-            exit_statuses_without_final = self.exit_statuses[:-1]
-        else:
-            exit_statuses_without_final = []
-
         return {
             'job_run_id': self.job_run_id,
             'action_name': self.action_name,
             'state': self.state,
-            'command_config': self.command_config.state_data,
             'original_command': self.original_command,
             'start_time': self.start_time,
             'end_time': self.end_time,
@@ -705,19 +692,6 @@ class ActionRun(Observable):
             'triggered_by': self.triggered_by,
             'on_upstream_rerun': self.on_upstream_rerun,
             'trigger_timeout_timestamp': self.trigger_timeout_timestamp,
-            # Temporarily save old keys to make the transition rollback safe.
-            'command': self.command,
-            'rendered_command': rendered_command,
-            'exit_statuses': exit_statuses_without_final,
-            'cpus': self.command_config.cpus,
-            'mem': self.command_config.mem,
-            'disk': self.command_config.disk,
-            'constraints': self.command_config.constraints,
-            'docker_image': self.command_config.docker_image,
-            'docker_parameters': self.command_config.docker_parameters,
-            'env': self.command_config.env,
-            'extra_volumes': self.command_config.extra_volumes,
-            'mesos_task_id': mesos_task_id,
         }
 
     def render_template(self, template):
