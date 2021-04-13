@@ -79,6 +79,11 @@ def handle_command(request, api_controller, obj, **kwargs):
         return respond(
             request=request, response={'error': error_msg}, code=http.NOT_IMPLEMENTED
         )
+    except controller.InvalidCommandForActionState as e:
+        log.warning(e.message)
+        return respond(
+            request=request, response={"error": e.message}, code=http.CONFLICT,
+        )
     except Exception as e:
         log.exception('%r while executing command %s for %s', e, command, obj)
         trace = traceback.format_exc()

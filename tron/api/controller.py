@@ -13,6 +13,20 @@ class UnknownCommandError(Exception):
     """Exception raised when a controller received an unknown command."""
 
 
+class InvalidCommandForActionState(Exception):
+    """
+    Exception raised when a controller attempts a command on an action in a state
+    that does not support that command (e.g., skipping a successful run).
+    """
+
+    def __init__(self, command: str, action_name: str, action_state: str) -> None:
+        self.command = command
+        self.action_name = action_name
+        self.action_state = action_state
+        self.message = f"Failed to {command} on {action_name}. State is {action_state}."
+        super().__init__()
+
+
 class JobCollectionController(object):
     def __init__(self, job_collection):
         self.job_collection = job_collection
@@ -72,8 +86,7 @@ class ActionRunController(object):
             msg = "%s now in state %s"
             return msg % (self.action_run, self.action_run.state)
 
-        msg = "Failed to %s on %s. State is %s."
-        return msg % (command, self.action_run, self.action_run.state)
+        raise InvalidCommandForActionState(command=command, action_name=self.action_run.name, action_state=self.action_run.state)
 
     def handle_termination(self, command):
         try:
