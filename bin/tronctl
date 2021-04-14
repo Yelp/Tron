@@ -153,8 +153,8 @@ def _get_triggers_for_action(server: str, action_identifier: str) -> Optional[Tu
         return None
 
     # triggers are returned by the API as comma-separated values with a space after every comma, which is
-    # not automation-friendly - thus the string-manipulation
-    triggers = trigger_response.content.get('trigger_downstreams', '').replace(" ", "").split(',')
+    # not automation-friendly - thus the non-standard multi-character split
+    triggers = trigger_response.content.get('trigger_downstreams', '').split(', ')
 
     # the API will return an empty string for actions with no triggers to emit, but splitting '' yields [''],
     # so we want to make sure that we return an empty iterable in this case
