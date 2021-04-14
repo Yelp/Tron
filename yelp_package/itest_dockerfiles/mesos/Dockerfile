@@ -24,9 +24,12 @@ RUN apt-get update > /dev/null && \
 
 RUN echo "deb http://repos.mesosphere.com/ubuntu xenial main" > /etc/apt/sources.list.d/mesosphere.list && \
     apt-key adv --keyserver keyserver.ubuntu.com --recv 81026D0004C44CF7EF55ADF8DF7D54CBE56151BF && \
+    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
+    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu xenial stable" > /etc/apt/sources.list.d/docker.list && \
     apt-get update > /dev/null && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        docker.io=18.09.7-0ubuntu1~16.04.5 \
+        docker-ce \
+        docker-ce-cli \
         libsasl2-modules \
         libstdc++6 \
         mesos=1.7.2-2.0.1 > /dev/null && \
