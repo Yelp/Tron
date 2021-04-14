@@ -4,12 +4,15 @@
 Part of the command line interface to the tron daemon. Provides the interface
 to controlling jobs and runs.
 """
+import argparse
 import datetime
 import logging
 import sys
 from collections import defaultdict
 from typing import Any
 from typing import Dict
+from typing import Optional
+from typing import Tuple
 from urllib.parse import urljoin
 
 import argcomplete
@@ -132,7 +135,33 @@ def event_discard(args):
         )
 
 
-def control_objects(args):
+def _get_triggers_for_action(server: str, action_identifier: str) -> Optional[Tuple[str, ...]]:
+    try:
+        namespace, job_name, run_number, action_name = action_identifier.split('.')
+    except ValueError:
+        print(f"Unable to fully decompose {action_identifier}: expected an identifier of the form (namespace).(job).(run).(action)")
+        return None
+
+    trigger_response = client.request(
+        uri=urljoin(
+            server,
+            f"/api/jobs/{namespace}.{job_name}/{run_number}/{action_name}",
+        ),
+    )
+    if trigger_response.error:
+        print(f"Unable to fetch downstream triggers for {action_identifier}: {trigger_response.error}")
+        return None
+
+    # triggers are returned by the API as comma-separated values with a space after every comma, which is
+    # not automation-friendly - thus the string-manipulation
+    triggers = trigger_response.content.get('trigger_downstreams', '').replace(" ", "").split(',')
+
+    # the API will return an empty string for actions with no triggers to emit, but splitting '' yields [''],
+    # so we want to make sure that we return an empty iterable in this case
+    return tuple(f"{namespace}.{job_name}.{action_name}.{trigger}" for trigger in triggers if trigger)
+
+
+def control_objects(args: argparse.Namespace):
     tron_client = client.Client(args.server)
     url_index = tron_client.index()
     for identifier in args.id:
@@ -160,37 +189,33 @@ def control_objects(args):
             ):
                 # a single action can have 0..N triggers to publish and these can be arbitrarily named, so we need to
                 # query the API and figure out what triggers exist
-
-                try:
-                    namespace, job_name, run_number, action_name = identifier.split('.')
-                except ValueError:
-                    print(f"Unable to fully decompose {identifier}: expected an identifier of the form (namespace).(job).(run).(action)")
+                triggers = _get_triggers_for_action(server=args.server, action_identifier=identifier)
+                if triggers is None:
+                    # tronctl allows for multiple ids to be passed in for commands, but we want to make it obvious that
+                    # we failed to get the downstream triggers so that users know to take action (and don't miss the
+                    # error amongst other tronctl output).
+                    print("Encountered error getting triggers to publish.")
                     yield False
+                elif not triggers:
+                    # TODO: should we check this up-front and refuse to skip if there are no triggers that will be
+                    # published rather than carry on under the assumption that the user copy-pasted/typo'd the identifier?
+                    print(f"{identifier} has no triggers to publish.")
+                    yield True
 
-                trigger_response = client.request(
-                    uri=urljoin(
-                        args.server,
-                        f"/api/jobs/{namespace}.{job_name}/{run_number}/{action_name}",
-                    ),
-                )
-                if trigger_response.error:
-                    print(f"Unable to fetch downstream triggers for {identifier}: {trigger_response.error}")
-                    yield False
-
-                # triggers are returned by the API as comma-separated values with a space after every comma, which is
-                # not automation-friendly - thus the string-manipulation
-                triggers = trigger_response.content.get(
-                    'trigger_downstreams',
-                ).replace(" ", "").split(',')
-
+                # TODO: this loop should use event_publish(), but we'd need to refactor how the CLI works and stop passing
+                # around the full set of args everywhere to do so
                 for trigger in triggers:
                     yield request(
                         url=urljoin(args.server, "/api/events"),
-                        data={"command": "publish", "event": f"{namespace}.{job_name}.{action_name}.{trigger}"},
+                        data={"command": "publish", "event": trigger}
                     )
             else:
-                print(f"Unable to skip {tron_id.url}")
+                # again, tronctl allows for multiple ids to be passed in for commands, but we want to make it obvious that
+                # we failed to skip something so that users know to take action (and don't miss the error amongst other
+                # tronctl output)
+                print(f"Unable to skip {identifier}.")
                 yield False
+
         else:
             data = dict(command=args.command)
             if args.command == "start" and args.run_date:
