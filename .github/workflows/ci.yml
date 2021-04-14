@@ -45,5 +45,5 @@ jobs:
       # the container provided by GitHub doesn't include utilities
       # needed for dpkg building, so we need to install `devscripts`
       # to bring those in
-      - run: sudo apt-get install --quiet --assume-yes make
+      - run: sudo apt-get install --quiet --assume-yes devscripts
       - run: make itest_${{ matrix.dist }}
