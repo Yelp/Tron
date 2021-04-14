@@ -646,9 +646,12 @@ class ActionRun(Observable):
         ]
 
     def success(self):
-        if self.trigger_downstreams:
-            self.emit_triggers()
-        return self._done('success')
+        transition_valid = self._done('success')
+        if transition_valid:
+            if self.trigger_downstreams:
+                self.emit_triggers()
+
+        return transition_valid
 
     def fail_unknown(self):
         """Failed with unknown reason."""

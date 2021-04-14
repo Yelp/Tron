@@ -337,6 +337,14 @@ class TestActionRun:
         assert self.action_run.success()
         assert self.action_run.emit_triggers.call_count == 0
 
+    def test_sucess_emits_not_invalid_transition(self):
+        self.action_run.trigger_downstreams = True
+        self.action_run.machine.check = mock.Mock(return_value=False)
+        self.action_run.emit_triggers = mock.Mock()
+
+        assert not self.action_run.success()
+        assert self.action_run.emit_triggers.call_count == 0
+
     def test_success_emits_on_true(self):
         self.action_run.machine.transition('start')
         self.action_run.machine.transition('started')
