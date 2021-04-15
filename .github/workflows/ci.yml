@@ -1,0 +1,49 @@
+---
+name: tron-ci
+on: [push, release]
+jobs:
+  tox:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        toxenv:
+          - py36,docs
+          - cluster_itests
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+      # we have a pre-commit hook that runs eslint over our FE files, but our
+      # current setup means that the necessary binaries won't be installed
+      # automatically, so we manually invoke yarn to install things
+      - run: yarn install && yarn --cwd tronweb2 install
+      # GHA won't setup tox for us and we use tox-pip-extensions for venv-update
+      - run: pip install tox==3.2 tox-pip-extensions==1.3.0
+        # there are no pre-built wheels for bsddb3, so we need to install
+        # its dpkg dependencies so that we can build a wheel when we're
+        # creating our env. Once we get rid of bsddb3 as a Python dependency,
+        # then we can also get rid of this dpkg
+      - run: sudo apt-get install --quiet --assume-yes libdb5.3-dev
+        # we explictly attempt to import the C extensions for some PyYAML
+        # functionality, so we need the LibYAML bindings provided by this
+        # package
+      - run: sudo apt-get install --quiet --assume-yes libyaml-dev
+      - run: tox -e ${{ matrix.toxenv }}
+  build_debs:
+    runs-on: ubuntu-20.04
+    strategy:
+      fail-fast: false
+      matrix:
+        dist: [xenial, bionic]
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions/setup-python@v2
+        with:
+          python-version: 3.6
+      # the container provided by GitHub doesn't include utilities
+      # needed for dpkg building, so we need to install `devscripts`
+      # to bring those in
+      - run: sudo apt-get install --quiet --assume-yes devscripts
+      - run: make itest_${{ matrix.dist }}
