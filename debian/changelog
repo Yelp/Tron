@@ -1,3 +1,17 @@
+tron (1.7.0) xenial; urgency=medium
+
+  * 1.7.0 tagged with 'make release'
+    Commit: Implementation of skip-and-publish (#789)  Skipping an
+    action that has downstream triggers is error-prone as its easy to
+    forget that you have triggers to emit and what triggers to emit. You
+    probably need to go check your tronfig definitions to see what
+    triggers exist and converting the trigger name to a trigger command
+    can be a little tricky (with date magic).  To solve this, we add a
+    new tronctl command that will skip an action and then publish all
+    triggers for that action.
+
+ -- root <root@ac177ec48467>  Thu, 15 Apr 2021 17:15:50 +0000
+
 tron (1.6.1) xenial; urgency=medium
 
   * 1.6.1 tagged with 'make release'
