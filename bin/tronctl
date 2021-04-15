@@ -192,9 +192,6 @@ def control_objects(args: argparse.Namespace):
                 triggers = _get_triggers_for_action(server=args.server, action_identifier=identifier)
                 if triggers is None:
                     print("Encountered error getting triggers to publish.")
-                    # tronctl allows for multiple ids to be passed in for commands, but we want to make it obvious that
-                    # we failed to get the downstream triggers so that users know to take action (and don't miss the
-                    # error amongst other tronctl output).
                     yield False
                 elif not triggers:
                     print(f"{identifier} has no triggers to publish.")
@@ -211,9 +208,6 @@ def control_objects(args: argparse.Namespace):
                     )
             else:
                 print(f"Unable to skip {identifier}.")
-                # again, tronctl allows for multiple ids to be passed in for commands, but we want to make it obvious that
-                # we failed to skip something so that users know to take action (and don't miss the error amongst other
-                # tronctl output)
                 yield False
 
         else:
