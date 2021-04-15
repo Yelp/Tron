@@ -191,15 +191,15 @@ def control_objects(args: argparse.Namespace):
                 # query the API and figure out what triggers exist
                 triggers = _get_triggers_for_action(server=args.server, action_identifier=identifier)
                 if triggers is None:
+                    print("Encountered error getting triggers to publish.")
                     # tronctl allows for multiple ids to be passed in for commands, but we want to make it obvious that
                     # we failed to get the downstream triggers so that users know to take action (and don't miss the
                     # error amongst other tronctl output).
-                    print("Encountered error getting triggers to publish.")
                     yield False
                 elif not triggers:
+                    print(f"{identifier} has no triggers to publish.")
                     # TODO: should we check this up-front and refuse to skip if there are no triggers that will be
                     # published rather than carry on under the assumption that the user copy-pasted/typo'd the identifier?
-                    print(f"{identifier} has no triggers to publish.")
                     yield True
 
                 # TODO: this loop should use event_publish(), but we'd need to refactor how the CLI works and stop passing
@@ -210,10 +210,10 @@ def control_objects(args: argparse.Namespace):
                         data={"command": "publish", "event": trigger}
                     )
             else:
+                print(f"Unable to skip {identifier}.")
                 # again, tronctl allows for multiple ids to be passed in for commands, but we want to make it obvious that
                 # we failed to skip something so that users know to take action (and don't miss the error amongst other
                 # tronctl output)
-                print(f"Unable to skip {identifier}.")
                 yield False
 
         else:
