@@ -4,10 +4,15 @@
 Part of the command line interface to the tron daemon. Provides the interface
 to controlling jobs and runs.
 """
+import argparse
 import datetime
 import logging
 import sys
 from collections import defaultdict
+from typing import Any
+from typing import Dict
+from typing import Optional
+from typing import Tuple
 from urllib.parse import urljoin
 
 import argcomplete
@@ -32,6 +37,7 @@ COMMAND_HELP = (
     ('fail', 'Mark an UNKNOWN job or action as failed. Does not publish action triggers.'),
     ('success', 'Mark an UNKNOWN job or action as having succeeded. Will publish action triggers.'),
     ('skip', 'Skip a failed action, unblocks dependent actions. Does *not* publish action triggers.'),
+    ('skip-and-publish', 'Skip a failed action, unblocks dependent actions. *Does* publish action triggers.'),
     ('stop', 'Stop the action run (SIGTERM)'),
     ('kill', 'Force kill the action run (SIGKILL)'),
     ('move', 'Rename a job'),
@@ -104,11 +110,11 @@ def parse_cli():
     return args
 
 
-def request(url, data, headers=None, method=None):
+def request(url: str, data: Dict[str, Any], headers=None, method=None) -> bool:
     response = client.request(url, data=data, headers=headers, method=method)
     if response.error:
         print(f'Error: {response.content}')
-        return
+        return False
     print(response.content.get('result', 'OK'))
     return True
 
@@ -129,7 +135,33 @@ def event_discard(args):
         )
 
 
-def control_objects(args):
+def _get_triggers_for_action(server: str, action_identifier: str) -> Optional[Tuple[str, ...]]:
+    try:
+        namespace, job_name, run_number, action_name = action_identifier.split('.')
+    except ValueError:
+        print(f"Unable to fully decompose {action_identifier}: expected an identifier of the form (namespace).(job).(run).(action)")
+        return None
+
+    trigger_response = client.request(
+        uri=urljoin(
+            server,
+            f"/api/jobs/{namespace}.{job_name}/{run_number}/{action_name}",
+        ),
+    )
+    if trigger_response.error:
+        print(f"Unable to fetch downstream triggers for {action_identifier}: {trigger_response.error}")
+        return None
+
+    # triggers are returned by the API as comma-separated values with a space after every comma, which is
+    # not automation-friendly - thus the non-standard multi-character split
+    triggers = trigger_response.content.get('trigger_downstreams', '').split(', ')
+
+    # the API will return an empty string for actions with no triggers to emit, but splitting '' yields [''],
+    # so we want to make sure that we return an empty iterable in this case
+    return tuple(f"{namespace}.{job_name}.{action_name}.{trigger}" for trigger in triggers if trigger)
+
+
+def control_objects(args: argparse.Namespace):
     tron_client = client.Client(args.server)
     url_index = tron_client.index()
     for identifier in args.id:
@@ -147,12 +179,44 @@ def control_objects(args):
             )
             raise SystemExit(f"Error: {e}{suggestions}")
 
-        data = dict(command=args.command)
-        if args.command == "start" and args.run_date:
-            data['run_time'] = str(args.run_date)
-        if args.command == "retry":
-            data['use_latest_command'] = int(args.use_latest_command)
-        yield request(urljoin(args.server, tron_id.url), data)
+        if args.command == "skip-and-publish":
+            # this command is more of a pseudo-command - skip and publish are handled in two different resources
+            # and changing the API would be painful, so instead we call skip + publish separately from the client
+            # (i.e., this file) to implement this functionality
+            if request(
+                url=urljoin(args.server, tron_id.url),
+                data={"command": "skip"}
+            ):
+                # a single action can have 0..N triggers to publish and these can be arbitrarily named, so we need to
+                # query the API and figure out what triggers exist
+                triggers = _get_triggers_for_action(server=args.server, action_identifier=identifier)
+                if triggers is None:
+                    print("Encountered error getting triggers to publish.")
+                    yield False
+                elif not triggers:
+                    print(f"{identifier} has no triggers to publish.")
+                    # TODO: should we check this up-front and refuse to skip if there are no triggers that will be
+                    # published rather than carry on under the assumption that the user copy-pasted/typo'd the identifier?
+                    yield True
+
+                # TODO: this loop should use event_publish(), but we'd need to refactor how the CLI works and stop passing
+                # around the full set of args everywhere to do so
+                for trigger in triggers:
+                    yield request(
+                        url=urljoin(args.server, "/api/events"),
+                        data={"command": "publish", "event": trigger}
+                    )
+            else:
+                print(f"Unable to skip {identifier}.")
+                yield False
+
+        else:
+            data = dict(command=args.command)
+            if args.command == "start" and args.run_date:
+                data['run_time'] = str(args.run_date)
+            if args.command == "retry":
+                data['use_latest_command'] = int(args.use_latest_command)
+            yield request(urljoin(args.server, tron_id.url), data)
 
 
 def move(args):

@@ -5,6 +5,7 @@ from tron import mcp
 from tron.api import controller
 from tron.api.controller import ConfigController
 from tron.api.controller import EventsController
+from tron.api.controller import InvalidCommandForActionState
 from tron.api.controller import JobCollectionController
 from tron.api.controller import UnknownCommandError
 from tron.config import ConfigError
@@ -86,9 +87,8 @@ class TestActionRunController:
 
     def test_handle_command_mapped_command_failed(self):
         self.action_run.cancel.return_value = False
-        result = self.controller.handle_command('cancel')
-        self.action_run.cancel.assert_called_with()
-        assert "Failed to cancel" in result
+        with pytest.raises(InvalidCommandForActionState):
+            self.controller.handle_command('cancel')
 
     def test_handle_termination_not_implemented(self):
         self.action_run.stop.side_effect = NotImplementedError
