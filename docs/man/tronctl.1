@@ -83,7 +83,11 @@ runs start.
 .TP
 .B skip <action_run_id>
 Marks the specified action run as skipped.  This allows dependant actions
-to run.
+to run, but will not publish any downstream triggers.
+.TP
+.B skip-and-publish <action_run_id>
+Marks the specified action run as skipped.  This allows dependant actions
+to run and will publish downstream triggers.
 .TP
 .B fail <job_run_id | action_run_id>
 Marks the specified job run or action run as failed.  This behaves the same

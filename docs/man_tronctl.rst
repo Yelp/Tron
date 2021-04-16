@@ -84,7 +84,11 @@ success <job_run_id | action_run_id>
 
 skip <action_run_id>
     Marks the specified action run as skipped.  This allows dependent actions
-    to run.
+    to run, but will not publish any downstream triggers.
+
+skip-and-publish <action_run_id>
+    Marks the specified action run as skipped.  This allows dependent actions
+    to run and will publish downstream triggers.
 
 fail <job_run_id | action_run_id>
     Marks the specified job run or action run as failed.  This behaves the same
