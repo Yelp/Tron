@@ -20,6 +20,7 @@ override_dh_virtualenv:
 	dh_virtualenv --index-url $(PIP_INDEX_URL) \
                 --python=/usr/bin/python3.6 \
                 --preinstall no-manylinux1 \
+                --preinstall cython \
                 --preinstall pip-custom-platform \
                 --preinstall pip==9.0.1 \
                 --preinstall setuptools==46.1.3 \
