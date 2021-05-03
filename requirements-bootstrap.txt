@@ -1,0 +1,12 @@
+# we don't need cython pinned internally since we only use wheels, but unless we
+# decide to get rid of no-manylinux1 for external purposes, we need this to build
+# PyYAML wheels in GH Actions
+cython==0.29.21
+# we technically don't need this since we don't have manylinux wheels internally
+# but it does make things safer for people outside of Yelp
+no-manylinux1==1.0.0
+pip==18.1
+setuptools==49.2.1
+venv-update==3.2.4
+virtualenv==16.7.7
+wheel==0.33.6

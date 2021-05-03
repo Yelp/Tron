@@ -12,12 +12,12 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM docker-dev.yelpcorp.com/bionic_pkgbuild
+FROM ubuntu:xenial
 
-RUN apt-get --quiet update && \
+RUN apt-get update > /dev/null && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-         zookeeper && \
-    apt-get --quiet clean
+         zookeeper > /dev/null && \
+    apt-get clean
 
 EXPOSE 2181
 CMD ["/usr/share/zookeeper/bin/zkServer.sh", "start-foreground"]

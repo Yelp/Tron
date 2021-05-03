@@ -12,28 +12,15 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-FROM ubuntu:xenial
+FROM docker-dev.yelpcorp.com/bionic_pkgbuild
 
-RUN apt-get update > /dev/null && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
-        apt-transport-https \
-        ca-certificates \
-        curl \
-        software-properties-common && \
-    rm -rf /var/lib/apt/lists/*
-
-RUN echo "deb http://repos.mesosphere.com/ubuntu xenial main" > /etc/apt/sources.list.d/mesosphere.list && \
-    apt-key adv --keyserver keyserver.ubuntu.com --recv 81026D0004C44CF7EF55ADF8DF7D54CBE56151BF && \
-    curl -fsSL https://download.docker.com/linux/ubuntu/gpg | gpg --dearmor -o /usr/share/keyrings/docker-archive-keyring.gpg && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/docker-archive-keyring.gpg] https://download.docker.com/linux/ubuntu xenial stable" > /etc/apt/sources.list.d/docker.list && \
-    apt-get update > /dev/null && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y \
+RUN apt-get --quiet update && \
+    DEBIAN_FRONTEND=noninteractive apt-get --quiet install --yes \
         docker-ce \
         docker-ce-cli \
         libsasl2-modules \
-        libstdc++6 \
-        mesos=1.7.2-2.0.1 > /dev/null && \
-    rm -rf /var/lib/apt/lists/*
+        mesos \
+    && apt-get --quiet clean
 
 COPY mesos-secrets mesos-slave-secret /etc/
 RUN echo '{}' > /root/.dockercfg

@@ -3,17 +3,19 @@
 set -euxo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
-
 apt-get update
-apt-get install -y software-properties-common gdebi-core curl
-add-apt-repository -y ppa:deadsnakes/ppa
-apt-get update
-
-gdebi --non-interactive /work/dist/*.deb
+if [ ! -d "/nail" ]  # if we're not in a yelpy env, we need to install some extra things
+then
+    apt-get install --yes software-properties-common gdebi-core curl
+    add-apt-repository --yes ppa:deadsnakes/ppa
+    apt-get update
+fi
 
 # TODO: change default MASTER config to not require ssh agent
 apt-get install -y ssh
 service ssh start
+gdebi --non-interactive /work/dist/$(lsb_release --codename --short)/*.deb
+
 eval $(ssh-agent)
 
 trond --help
@@ -30,7 +32,8 @@ export TRON_WORKDIR=/nail/tron
 mkdir -p $TRON_WORKDIR
 export TRON_START_TIME=$(date +%s)
 
-trond --working-dir=$TRON_WORKDIR &
+# we use dev logging since we're not going to have syslog setup in our pkgbuild container
+trond --working-dir=$TRON_WORKDIR --log-conf /work/dev/logging.conf &
 TRON_PID=$!
 
 for i in {1..5}; do

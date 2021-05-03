@@ -1,13 +1,14 @@
+ifeq ($(findstring .yelpcorp.com,$(shell hostname -f)), .yelpcorp.com)
+       export DOCKERFILE_PREFIX ?=
+       # export DOCKERFILE_PREFIX ?= open-source.
+else
+       export DOCKERFILE_PREFIX ?= open-source.
+endif
+
 VERSION=$(shell python setup.py --version)
 DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw -v $(CURDIR)/.tox-indocker:/work/.tox:rw
 UID:=$(shell id -u)
 GID:=$(shell id -g)
-
-ifeq ($(findstring .yelpcorp.com,$(shell hostname -f)), .yelpcorp.com)
-	export PIP_INDEX_URL ?= https://pypi.yelpcorp.com/simple
-else
-	export PIP_INDEX_URL ?= https://pypi.python.org/simple
-endif
 
 .PHONY : all clean tests docs dev cluster_itests
 
@@ -23,13 +24,14 @@ endif
 docker_%:
 	@echo "Building docker image for $*"
 	[ -d dist ] || mkdir -p dist
-	cd ./yelp_package/$* && docker build --build-arg PIP_INDEX_URL=${PIP_INDEX_URL} -t tron-builder-$* .
+	cd ./yelp_package/$* && docker build --tag tron-builder-$* --file $(DOCKERFILE_PREFIX)Dockerfile .
 
 deb_%: clean docker_% coffee_% react_%
 	@echo "Building deb for $*"
-	$(DOCKER_RUN) -e PIP_INDEX_URL=${PIP_INDEX_URL} tron-builder-$* /bin/bash -c ' \
+	mkdir --parents dist/$*
+	$(DOCKER_RUN) tron-builder-$* /bin/bash -c ' \
 		dpkg-buildpackage -d &&                  \
-		mv ../*.deb dist/ &&                     \
+		mv ../*.deb dist/$* &&                   \
 		rm -rf debian/tron &&                    \
 		chown -R $(UID):$(GID) dist debian       \
 	'
@@ -61,7 +63,11 @@ tox_%:
 	tox -e $*
 
 _itest_%:
+ifeq ($(findstring .yelpcorp.com,$(shell hostname -f)), .yelpcorp.com)
+	$(DOCKER_RUN) docker-dev.yelpcorp.com/$*_pkgbuild /work/itest.sh
+else
 	$(DOCKER_RUN) ubuntu:$* /work/itest.sh
+endif
 
 debitest_%: deb_% _itest_%
 	@echo "Package for $* looks good"
