@@ -163,6 +163,7 @@ def make_job(**kwargs):
     kwargs.setdefault('allow_overlap', False)
     kwargs.setdefault('time_zone', None)
     kwargs.setdefault('expected_runtime', datetime.timedelta(0, 3600))
+    kwargs.setdefault('use_k8s', True)
     return schema.ConfigJob(**kwargs)
 
 
