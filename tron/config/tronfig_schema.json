@@ -130,7 +130,7 @@
         "properties": {
           "use_k8s": {
             "type": "boolean",
-            "default": true
+            "default": false
           },
           "name": {
             "type": "string"

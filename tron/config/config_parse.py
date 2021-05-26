@@ -560,7 +560,7 @@ class ValidateJob(Validator):
         'monitoring': {},
         'time_zone': None,
         'expected_runtime': datetime.timedelta(hours=24),
-        'use_k8s': True,
+        'use_k8s': False,
     }
 
     validators = {
