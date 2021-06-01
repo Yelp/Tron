@@ -185,7 +185,7 @@ def valid_master_address(value, config_context):
 
 
 def valid_k8s_master_address(value: str, config_context: ConfigContext) -> str:
-    """Validates and normalizes Mesos master address.
+    """Validates and normalizes Kubernetes master address.
 
     Must be HTTP or not include a scheme, and only include
     a host, without any path components.
