@@ -48,6 +48,7 @@ TronConfig = config_object_factory(
         'node_pools',  # dict of ConfigNodePool
         'jobs',  # dict of ConfigJob
         'mesos_options',  # ConfigMesos
+        'k8s_options',  # ConfigKubernetes
         'eventbus_enabled',  # bool or None
     ],
 )
@@ -114,6 +115,14 @@ ConfigMesos = config_object_factory(
     ],
 )
 
+ConfigKubernetes = config_object_factory(
+    name='ConfigKubernetes',
+    optional=[
+        'master_address',
+        'enabled',
+    ],
+)
+
 ConfigJob = config_object_factory(
     name='ConfigJob',
     required=[
@@ -134,6 +143,8 @@ ConfigJob = config_object_factory(
         'max_runtime',  # datetime.Timedelta
         'time_zone',  # pytz time zone
         'expected_runtime',  # datetime.Timedelta
+        # TODO: cleanup once we're fully off of Mesos and all non-SSH jobs *only* use k8s
+        'use_k8s'  # bool
     ],
 )
 

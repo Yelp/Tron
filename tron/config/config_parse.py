@@ -35,6 +35,7 @@ from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigCleanupAction
 from tron.config.schema import ConfigConstraint
 from tron.config.schema import ConfigJob
+from tron.config.schema import ConfigKubernetes
 from tron.config.schema import ConfigMesos
 from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigSSHOptions
@@ -178,6 +179,41 @@ def valid_master_address(value, config_context):
 
     if not netloc:
         msg = f"Mesos master address is missing host, got {value}"
+        raise ConfigError(msg)
+
+    return f'{scheme}://{netloc}'
+
+
+def valid_k8s_master_address(value: str, config_context: ConfigContext) -> str:
+    """Validates and normalizes Kubernetes master address.
+
+    Must be HTTP or not include a scheme, and only include
+    a host, without any path components.
+    """
+    valid_string(value, config_context)
+
+    # Parse with HTTP as default, only HTTPS allowed.
+    scheme, netloc, path, params, query, fragment = urlparse(url=value, scheme='https')
+    if scheme != 'http':
+        msg = f"Only HTTPS supported for Kubernetes master address, got {value}"
+        raise ConfigError(msg)
+
+    if params or query or fragment:
+        msg = f"Kubernetes master address may not contain path components, got {value}"
+        raise ConfigError(msg)
+
+    # Only one of netloc or path allowed, and no / except trailing ones.
+    path = path.rstrip('/')
+    if (netloc and path) or '/' in path:
+        msg = f"Kubernetes master address may not contain path components, got {value}"
+        raise ConfigError(msg)
+
+    # netloc is empty if there's no scheme, so we fallback to path.
+    if not netloc and path:
+        netloc = path
+
+    if not netloc:
+        msg = f"Kubernetes master address is missing host, got {value}"
         raise ConfigError(msg)
 
     return f'{scheme}://{netloc}'
@@ -524,6 +560,7 @@ class ValidateJob(Validator):
         'monitoring': {},
         'time_zone': None,
         'expected_runtime': datetime.timedelta(hours=24),
+        'use_k8s': False,
     }
 
     validators = {
@@ -541,6 +578,7 @@ class ValidateJob(Validator):
         'monitoring': valid_dict,
         'time_zone': valid_time_zone,
         'expected_runtime': config_utils.valid_time_delta,
+        'use_k8s': valid_bool,
     }
 
     def cast(self, in_dict, config_context):
@@ -673,6 +711,23 @@ class ValidateMesos(Validator):
 valid_mesos_options = ValidateMesos()
 
 
+class ValidateKubernetes(Validator):
+    config_class = ConfigKubernetes
+    optional = True
+    defaults = {
+        'master_address': None,
+        'enabled': False,
+    }
+
+    validators = {
+        'master_address': valid_k8s_master_address,
+        'enabled': valid_bool,
+    }
+
+
+valid_kubernetes_options = ValidateKubernetes()
+
+
 def validate_jobs(config, config_context):
     """Validate jobs"""
     valid_jobs = build_dict_name_validator(valid_job, allow_empty=True)
@@ -728,6 +783,7 @@ class ValidateConfig(Validator):
         'nodes': nodes,
         'node_pools': node_pools,
         'mesos_options': valid_mesos_options,
+        'k8s_options': valid_kubernetes_options,
         'eventbus_enabled': valid_bool,
     }
     optional = False
