@@ -5,10 +5,10 @@ from tron.core.action import Action
 from tron.core.actiongraph import ActionGraph
 from tron.utils import maybe_decode
 
-AdjListEntry = namedtuple('AdjListEntry', ['action_name', 'is_trigger'])
+AdjListEntry = namedtuple("AdjListEntry", ["action_name", "is_trigger"])
 
 
-class JobGraph(object):
+class JobGraph:
     """ A JobGraph stores the entire DAG of jobs and actions, including
     cross-job dependencies (aka triggers)
     """
@@ -29,11 +29,11 @@ class JobGraph(object):
                 all_actions.add(full_name)
 
                 for required_action in action_config.requires or []:
-                    required_action_name = f'{job_name}.{required_action}'
+                    required_action_name = f"{job_name}.{required_action}"
                     self._rev_adj_list[full_name].append(AdjListEntry(required_action_name, False))
 
                 for trigger in action_config.triggered_by or []:
-                    trigger_action_name = '.'.join(trigger.split('.')[:3])
+                    trigger_action_name = ".".join(trigger.split(".")[:3])
                     self._rev_adj_list[full_name].append(AdjListEntry(trigger_action_name, True))
 
                 for parent_action, is_trigger in self._rev_adj_list[full_name]:
@@ -53,23 +53,19 @@ class JobGraph(object):
             error_messages = []
             for action_name, child_action_names in missing_dependent_actions.items():
                 error_messages.append(
-                    'Action {0} is dependency of actions:\n{1}'.format(
+                    "Action {} is dependency of actions:\n{}".format(
                         action_name,
-                        '\n'.join(
-                            ['  - {}'.format(child_action_name) for child_action_name in child_action_names]
-                        )
-                    )
+                        "\n".join([f"  - {child_action_name}" for child_action_name in child_action_names],),
+                    ),
                 )
 
             if error_messages:
                 raise ValueError(
                     (
-                        'The following actions are dependencies of other actions but missing:\n'
-                        '{0}\n'
-                        'Please check if you have deleted/renamed any of them or their containing jobs.'
-                    ).format(
-                        '\n'.join(error_messages),
-                    )
+                        "The following actions are dependencies of other actions but missing:\n"
+                        "{}\n"
+                        "Please check if you have deleted/renamed any of them or their containing jobs."
+                    ).format("\n".join(error_messages),),
                 )
 
     def get_action_graph_for_job(self, job_name):
@@ -79,12 +75,10 @@ class JobGraph(object):
 
         for action_name in self._actions_for_job[job_name]:
             # Any actions that belong to _this job_ are not prefixed by the job name
-            short_action_name = action_name.split('.')[-1]
+            short_action_name = action_name.split(".")[-1]
             job_action_map[short_action_name] = self.action_map[action_name]
             required_actions[short_action_name] = {
-                entry.action_name.split('.')[-1]
-                for entry in self._rev_adj_list[action_name]
-                if not entry.is_trigger
+                entry.action_name.split(".")[-1] for entry in self._rev_adj_list[action_name] if not entry.is_trigger
             }
 
             # We call this twice to build the complete DAG for the job; the first time
@@ -96,7 +90,7 @@ class JobGraph(object):
 
     def _save_action(self, action_name, job_name, config):
         action_name = maybe_decode(action_name)
-        full_name = f'{job_name}.{action_name}'
+        full_name = f"{job_name}.{action_name}"
         self.action_map[full_name] = Action.from_config(config)
         self._actions_for_job[job_name].append(full_name)
         return full_name
@@ -119,7 +113,7 @@ class JobGraph(object):
                     stack.append(next_action)
 
                 if current_action == action_name:
-                    current_action = current_action.split('.')[-1]
+                    current_action = current_action.split(".")[-1]
 
                 if search_up:
                     triggers[current_action].add(next_action)

@@ -1,9 +1,7 @@
 """Utilities for creating classes that proxy function calls."""
-from __future__ import absolute_import
-from __future__ import unicode_literals
 
 
-class CollectionProxy(object):
+class CollectionProxy:
     """Proxy attribute lookups to a sequence of objects."""
 
     def __init__(self, obj_list_getter, definition_list=None):
@@ -39,9 +37,7 @@ class CollectionProxy(object):
             return aggregate_func(getattr(i, name) for i in obj_list())
 
         def func(*args, **kwargs):
-            return aggregate_func(
-                getattr(item, name)(*args, **kwargs) for item in obj_list()
-            )
+            return aggregate_func(getattr(item, name)(*args, **kwargs) for item in obj_list())
 
         return func
 
@@ -54,7 +50,7 @@ def attr_proxy(name, func):
     return name, func, False
 
 
-class AttributeProxy(object):
+class AttributeProxy:
     """Proxy attribute lookups to another object."""
 
     def __init__(self, dest_obj, attribute_list=None):

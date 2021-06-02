@@ -22,22 +22,24 @@ def teardown(func):
     def teardown_(*args, **kwargs):
         yield
         func(*args, **kwargs)
+
     return pytest.yield_fixture(autouse=True)(teardown_)
 
 
 def class_setup(func):
-    return pytest.fixture(autouse=True, scope='class')(func)
+    return pytest.fixture(autouse=True, scope="class")(func)
 
 
 def class_setup_teardown(func):
-    return pytest.yield_fixture(autouse=True, scope='class')(func)
+    return pytest.yield_fixture(autouse=True, scope="class")(func)
 
 
 def class_teardown(func):
     def teardown_(*args, **kwargs):
         yield
         func(*args, **kwargs)
-    return pytest.yield_fixture(autouse=True, scope='class')(teardown_)
+
+    return pytest.yield_fixture(autouse=True, scope="class")(teardown_)
 
 
 def suite(name, reason=None):
@@ -46,7 +48,7 @@ def suite(name, reason=None):
     skipped test. For other suites it will return a  `pytest.mark.<name>`
     decorator.
     """
-    if name == 'disabled':
+    if name == "disabled":
         return pytest.mark.skipif(True, reason=reason)
 
     return getattr(pytest.mark, name)

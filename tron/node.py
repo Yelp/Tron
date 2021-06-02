@@ -40,6 +40,7 @@ class Error(Exception):
 
 class ConnectError(Error):
     """There was a problem connecting, run was never started"""
+
     pass
 
 
@@ -49,10 +50,11 @@ class ResultError(Error):
     We did try to execute the command, but we don't know if it succeeded or
     failed.
     """
+
     pass
 
 
-class NodePoolRepository(object):
+class NodePoolRepository:
     """A Singleton to store Node and NodePool objects."""
 
     _instance = None
@@ -60,9 +62,9 @@ class NodePoolRepository(object):
     def __init__(self):
         if self._instance is not None:
             raise ValueError("NodePoolRepository is already instantiated.")
-        super(NodePoolRepository, self).__init__()
-        self.nodes = collections.MappingCollection('nodes')
-        self.pools = collections.MappingCollection('pools')
+        super().__init__()
+        self.nodes = collections.MappingCollection("nodes")
+        self.pools = collections.MappingCollection("pools")
 
     @classmethod
     def get_instance(cls):
@@ -72,9 +74,7 @@ class NodePoolRepository(object):
 
     def filter_by_name(self, node_configs, node_pool_configs):
         self.nodes.filter_by_name(node_configs)
-        self.pools.filter_by_name(
-            list(node_configs.keys()) + list(node_pool_configs.keys()),
-        )
+        self.pools.filter_by_name(list(node_configs.keys()) + list(node_pool_configs.keys()),)
 
     @classmethod
     def update_from_config(cls, node_configs, node_pool_configs, ssh_config):
@@ -83,19 +83,12 @@ class NodePoolRepository(object):
         known_hosts = KnownHosts.from_path(ssh_config.known_hosts_file)
         instance.filter_by_name(node_configs, node_pool_configs)
         instance._update_nodes(
-            node_configs,
-            ssh_options,
-            known_hosts,
-            ssh_config,
+            node_configs, ssh_options, known_hosts, ssh_config,
         )
         instance._update_node_pools(node_pool_configs)
 
     def _update_nodes(
-        self,
-        node_configs,
-        ssh_options,
-        known_hosts,
-        ssh_config,
+        self, node_configs, ssh_options, known_hosts, ssh_config,
     ):
         for config in node_configs.values():
             pub_key = known_hosts.get_public_key(config.hostname)
@@ -129,13 +122,13 @@ class NodePoolRepository(object):
         self.pools.clear()
 
 
-class NodePool(object):
+class NodePool:
     """A pool of Node objects."""
 
     def __init__(self, nodes, name):
         self.nodes = nodes
         self.disabled = False
-        self.name = name or '_'.join(n.get_name() for n in nodes)
+        self.name = name or "_".join(n.get_name() for n in nodes)
         self.iter = itertools.cycle(self.nodes)
 
     @classmethod
@@ -195,7 +188,7 @@ class KnownHosts(KnownHostsFile):
         log.warning("Missing host key for: %s", hostname)
 
 
-class RunState(object):
+class RunState:
     def __init__(self, action_run):
         self.run = action_run
         self.state = RUN_STATE_CONNECTING
@@ -203,11 +196,7 @@ class RunState(object):
         self.channel = None
 
     def __repr__(self):
-        return "RunState(run: %r, state: %r, channel: %r)" % (
-            self.run,
-            self.state,
-            self.channel,
-        )
+        return f"RunState(run: {self.run!r}, state: {self.state!r}, channel: {self.channel!r})"
 
 
 def determine_jitter(count, node_settings):
@@ -219,7 +208,7 @@ def determine_jitter(count, node_settings):
     return random.random() * float(max_jitter)
 
 
-class Node(object):
+class Node:
     """A node is tron's interface to communicating with an actual machine.
     """
 
@@ -273,10 +262,10 @@ class Node(object):
         if not isinstance(other, self.__class__):
             return False
         return (
-            self.config == other.config and
-            self.conch_options == other.conch_options and
-            self.pub_key == other.pub_key and
-            self.node_settings == other.node_settings
+            self.config == other.config
+            and self.conch_options == other.conch_options
+            and self.pub_key == other.pub_key
+            and self.node_settings == other.node_settings
         )
 
     def __ne__(self, other):
@@ -308,9 +297,7 @@ class Node(object):
 
         if run.id in self.run_states:
             log.warning(
-                "Run %s(%r) already running !?!",
-                run.id,
-                self.run_states[run.id],
+                "Run %s(%r) already running !?!", run.id, self.run_states[run.id],
             )
 
         if self.idle_timer and self.idle_timer.active():
@@ -319,17 +306,12 @@ class Node(object):
         self.run_states[run.id] = RunState(run)
 
         # TODO: have this return a runner instead of number
-        fudge_factor = determine_jitter(
-            len(self.run_states),
-            self.node_settings,
-        )
+        fudge_factor = determine_jitter(len(self.run_states), self.node_settings,)
         if fudge_factor == 0.0:
             self._do_run(run)
         else:
             log.info(
-                "Delaying execution of %s for %.2f secs",
-                run.id,
-                fudge_factor,
+                "Delaying execution of %s for %.2f secs", run.id, fudge_factor,
             )
             reactor.callLater(fudge_factor, self._do_run, run)
 
@@ -362,8 +344,7 @@ class Node(object):
 
         if not self.run_states:
             self.idle_timer = reactor.callLater(
-                self.node_settings.idle_connection_timeout,
-                self._connection_idle_timeout,
+                self.node_settings.idle_connection_timeout, self._connection_idle_timeout,
             )
 
     def _connection_idle_timeout(self):
@@ -409,21 +390,14 @@ class Node(object):
 
         def connect_fail(result):
             log.warning(
-                "Cannot run %s, Failed to connect to %s: %s",
-                run,
-                self.hostname,
-                repr(result)
+                "Cannot run %s, Failed to connect to %s: %s", run, self.hostname, repr(result),
             )
             self.connection_defer = None
             self._fail_run(
                 run,
                 failure.Failure(
                     exc_value=ConnectError(
-                        "Connection to %s@%s:%d failed" % (
-                            self.username,
-                            self.hostname,
-                            self.port,
-                        ),
+                        "Connection to %s@%s:%d failed" % (self.username, self.hostname, self.port,),
                     ),
                 ),
             )
@@ -460,9 +434,7 @@ class Node(object):
                 else:
                     # Doesn't seem like this should ever happen.
                     log.warning(
-                        "Run %r caught in starting state, but"
-                        " start_defer is over.",
-                        run_id,
+                        "Run %r caught in starting state, but" " start_defer is over.", run_id,
                     )
                     self._fail_run(run, None)
             else:
@@ -470,9 +442,7 @@ class Node(object):
                 # this (and cleanup) themselves, so if there should not be any
                 # runs except those waiting to connect
                 raise Error(
-                    "Run %s in state %s when service stopped",
-                    run_id,
-                    run.state,
+                    "Run %s in state %s when service stopped", run_id, run.state,
                 )
 
     def _connect(self):
@@ -483,16 +453,10 @@ class Node(object):
         #  3. The connection service is started, so we can use it
 
         client_creator = protocol.ClientCreator(
-            reactor,
-            ssh.ClientTransport,
-            self.username,
-            self.conch_options,
-            self.pub_key,
+            reactor, ssh.ClientTransport, self.username, self.conch_options, self.pub_key,
         )
         create_defer = client_creator.connectTCP(
-            self.hostname,
-            self.config.port,
-            timeout=self.node_settings.connect_timeout,
+            self.hostname, self.config.port, timeout=self.node_settings.connect_timeout,
         )
 
         # We're going to create a deferred, returned to the caller, that will
@@ -500,8 +464,7 @@ class Node(object):
         # for opening channels. The value will be this instance of node.
         connect_defer = defer.Deferred()
         twistedutils.defer_timeout(
-            connect_defer,
-            self.node_settings.connect_timeout,
+            connect_defer, self.node_settings.connect_timeout,
         )
 
         def on_service_started(connection):
@@ -617,10 +580,7 @@ class Node(object):
         Once all the runs have closed out we can try to reconnect.
         """
         log.error(
-            "Error running %s, disconnecting from %s: %s",
-            run.id,
-            self.hostname,
-            repr(result),
+            "Error running %s, disconnecting from %s: %s", run.id, self.hostname, repr(result),
         )
 
         # We clear out the deferred that likely called us because there are
@@ -631,13 +591,7 @@ class Node(object):
         self._fail_run(
             run,
             failure.Failure(
-                exc_value=ConnectError(
-                    "Connection to %s@%s:%d failed" % (
-                        self.username,
-                        self.hostname,
-                        self.port,
-                    ),
-                ),
+                exc_value=ConnectError("Connection to %s@%s:%d failed" % (self.username, self.hostname, self.port,),),
             ),
         )
 
@@ -647,11 +601,7 @@ class Node(object):
         # self.connection.transport.connectionLost(failure.Failure())
 
     def __str__(self):
-        return "Node:%s@%s:%s" % (
-            self.username or "<default>",
-            self.hostname,
-            self.config.port,
-        )
+        return "Node:{}@{}:{}".format(self.username or "<default>", self.hostname, self.config.port,)
 
     def __repr__(self):
         return self.__str__()

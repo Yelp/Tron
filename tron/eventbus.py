@@ -31,9 +31,7 @@ class EventBus:
             log.warning(f"creating {eb.log_dir}")
             os.mkdir(eb.log_dir)
 
-        if not os.path.exists(eb.log_current) or not os.path.exists(
-            os.readlink(eb.log_current)
-        ):
+        if not os.path.exists(eb.log_current) or not os.path.exists(os.readlink(eb.log_current),):
             log.warning(f"creating {eb.log_current}")
             eb.sync_save_log("initial save")
 
@@ -111,7 +109,7 @@ class EventBus:
 
     def _publish(self, event):
         if isinstance(event, str):
-            event = {'id': event}
+            event = {"id": event}
         if isinstance(event, dict):
             self.publish_queue.append(event)
             log.debug(f"publish of {event['id']} enqueued")
@@ -139,7 +137,7 @@ class EventBus:
 
     def sync_load_log(self):
         started = time.time()
-        with open(self.log_current, 'rb') as f:
+        with open(self.log_current, "rb") as f:
             self.event_log = pickle.load(f)
         duration = time.time() - started
         log.info(f"log read from disk, took {duration:.4}s")
@@ -148,13 +146,13 @@ class EventBus:
         started = time.time()
         new_file = os.path.join(self.log_dir, f"{int(started)}.pickle")
         try:
-            with open(new_file, 'xb') as f:
+            with open(new_file, "xb") as f:
                 pickle.dump(self.event_log, f)
         except FileExistsError:
             log.exception(
                 f"unable to dump the log, file {new_file} already exists, "
                 f"too many updates/sec? current: {self.log_updates}, "
-                f"threshold: {self.log_save_updates}"
+                f"threshold: {self.log_save_updates}",
             )
             return False
 
@@ -187,10 +185,7 @@ class EventBus:
         save_reason = None
         if time.time() > self.log_last_save + self.log_save_interval:
             if self.log_updates > 0:
-                save_reason = (
-                    f"{self.log_save_interval}s passed, "
-                    f"{self.log_updates} updates"
-                )
+                save_reason = f"{self.log_save_interval}s passed, " f"{self.log_updates} updates"
             else:
                 self.log_last_save = time.time()
                 log.debug("skipping save, no updates")
@@ -203,14 +198,14 @@ class EventBus:
 
         consume_dequeue(self.subscribe_queue, self.sync_subscribe)
         consume_dequeue(
-            self.clear_subscription_queue, self.sync_clear_subscriptions
+            self.clear_subscription_queue, self.sync_clear_subscriptions,
         )
         consume_dequeue(self.publish_queue, self.sync_publish)
 
     def sync_publish(self, event):
         event = pickle.loads(pickle.dumps(event))
-        event_id = event['id']
-        del event['id']
+        event_id = event["id"]
+        del event["id"]
         if event_id in self.event_log:
             if self.event_log[event_id] != event:
                 log.info(f"replacing event: {event_id}")
@@ -236,10 +231,7 @@ class EventBus:
             log.debug(f"can't unsubscribe, not found for prefix {prefix}")
             return
 
-        new_subs = [
-            sub_cb for sub_cb in self.event_subscribers[prefix]
-            if sub_cb[0] != sub
-        ]
+        new_subs = [sub_cb for sub_cb in self.event_subscribers[prefix] if sub_cb[0] != sub]
         if new_subs:
             self.event_subscribers[prefix] = new_subs
         else:

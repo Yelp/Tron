@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import atexit
 import datetime
 import itertools
@@ -11,18 +8,18 @@ from unittest.mock import MagicMock
 
 class MockAction(MagicMock):
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault('name', 'action_name')
-        kwargs.setdefault('required_actions', [])
-        kwargs.setdefault('dependent_actions', [])
-        super(MockAction, self).__init__(*args, **kwargs)
+        kwargs.setdefault("name", "action_name")
+        kwargs.setdefault("required_actions", [])
+        kwargs.setdefault("dependent_actions", [])
+        super().__init__(*args, **kwargs)
 
 
 class MockActionGraph(MagicMock):
     def __init__(self, *args, **kwargs):
         action = MockAction()
-        kwargs.setdefault('graph', [action])
-        kwargs.setdefault('action_map', {action.name: action})
-        super(MockActionGraph, self).__init__(*args, **kwargs)
+        kwargs.setdefault("graph", [action])
+        kwargs.setdefault("action_map", {action.name: action})
+        super().__init__(*args, **kwargs)
 
     def __getitem__(self, item):
         action = MockAction(name=item)
@@ -35,18 +32,18 @@ class MockActionGraph(MagicMock):
 
 class MockActionRun(MagicMock):
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault('output_path', [tempfile.mkdtemp()])
-        kwargs.setdefault('start_time', datetime.datetime.now())
-        kwargs.setdefault('end_time', datetime.datetime.now())
-        atexit.register(lambda: shutil.rmtree(kwargs['output_path'][0]))
-        super(MockActionRun, self).__init__(*args, **kwargs)
+        kwargs.setdefault("output_path", [tempfile.mkdtemp()])
+        kwargs.setdefault("start_time", datetime.datetime.now())
+        kwargs.setdefault("end_time", datetime.datetime.now())
+        atexit.register(lambda: shutil.rmtree(kwargs["output_path"][0]))
+        super().__init__(*args, **kwargs)
 
 
 class MockActionRunCollection(MagicMock):
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault('action_graph', MockActionGraph())
-        kwargs.setdefault('run_map', {})
-        super(MockActionRunCollection, self).__init__(*args, **kwargs)
+        kwargs.setdefault("action_graph", MockActionGraph())
+        kwargs.setdefault("run_map", {})
+        super().__init__(*args, **kwargs)
 
     def __getitem__(self, item):
         action_run = MockActionRun(name=item)
@@ -56,19 +53,17 @@ class MockActionRunCollection(MagicMock):
 
 class MockJobRun(MagicMock):
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault('output_path', [tempfile.mkdtemp()])
-        kwargs.setdefault('action_graph', MockActionGraph())
-        action_runs = MockActionRunCollection(
-            action_graph=kwargs['action_graph'],
-        )
-        kwargs.setdefault('action_runs', action_runs)
-        atexit.register(lambda: shutil.rmtree(kwargs['output_path'][0]))
-        super(MockJobRun, self).__init__(*args, **kwargs)
+        kwargs.setdefault("output_path", [tempfile.mkdtemp()])
+        kwargs.setdefault("action_graph", MockActionGraph())
+        action_runs = MockActionRunCollection(action_graph=kwargs["action_graph"],)
+        kwargs.setdefault("action_runs", action_runs)
+        atexit.register(lambda: shutil.rmtree(kwargs["output_path"][0]))
+        super().__init__(*args, **kwargs)
 
 
 class MockNode(MagicMock):
     def __init__(self, hostname=None):
-        super(MockNode, self).__init__()
+        super().__init__()
         self.name = self.hostname = hostname
 
     def run(self, runnable):
@@ -76,7 +71,7 @@ class MockNode(MagicMock):
         return type(self)()
 
 
-class MockNodePool(object):
+class MockNodePool:
     _node = None
 
     def __init__(self, *node_names):

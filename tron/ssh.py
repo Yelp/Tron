@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
 import struct
 
@@ -13,7 +10,7 @@ from twisted.conch.ssh import transport
 from twisted.internet import defer
 from twisted.python import failure
 
-log = logging.getLogger('tron.ssh')
+log = logging.getLogger("tron.ssh")
 
 
 class Error(Exception):
@@ -23,10 +20,11 @@ class Error(Exception):
 class ChannelClosedEarlyError(Error):
     """Indicates the SSH Channel has closed before we were done handling the
     command"""
+
     pass
 
 
-class SSHAuthOptions(object):
+class SSHAuthOptions:
     """An options class which can be used by NoPasswordAuthClient. This supports
     the interface provided by: twisted.conch.client.options.ConchOptions.
     """
@@ -40,15 +38,12 @@ class SSHAuthOptions(object):
         return cls(ssh_config.identities, ssh_config.agent)
 
     def __getitem__(self, item):
-        if item != 'noagent':
+        if item != "noagent":
             raise KeyError(item)
         return not self.use_agent
 
     def __eq__(self, other):
-        return other and (
-            self.use_agent == other.use_agent and
-            self.identitys == other.identitys
-        )
+        return other and (self.use_agent == other.use_agent and self.identitys == other.identitys)
 
     def __ne__(self, other):
         return not self == other
@@ -60,7 +55,8 @@ class SSHAuthOptions(object):
 
 class NoPasswordAuthClient(default.SSHUserAuthClient):
     """Only support passwordless auth."""
-    preferredOrder = ['publickey', 'keyboard-interactive']
+
+    preferredOrder = ["publickey", "keyboard-interactive"]
     auth_password = None
 
     def getGenericAnswers(self, name, instruction, prompts):
@@ -90,10 +86,7 @@ class ClientTransport(transport.SSHClientTransport):
         if self.expected_pub_key == keys.Key.fromString(public_key):
             return defer.succeed(2)
 
-        msg = "Public key mismatch got %s expected %s" % (
-            fingerprint,
-            self.expected_pub_key.fingerprint(),
-        )
+        msg = f"Public key mismatch got {fingerprint} expected {self.expected_pub_key.fingerprint()}"
         log.error(msg)
         return defer.fail(ValueError(msg))
 
@@ -160,7 +153,7 @@ class ClientConnection(connection.SSHConnection):
 
         Handles missing local channel.
         """
-        localChannel = struct.unpack('>L', packet[:4])[0]
+        localChannel = struct.unpack(">L", packet[:4])[0]
         if localChannel not in self.channels:
             requestType, _ = common.getNS(packet[4:])
             host = self.transport.transport.getPeer()
@@ -172,7 +165,7 @@ class ClientConnection(connection.SSHConnection):
 
 class ExecChannel(channel.SSHChannel):
 
-    name = b'session'
+    name = b"session"
     exit_defer = None
     start_defer = None
 
@@ -195,14 +188,9 @@ class ExecChannel(channel.SSHChannel):
             log.debug("Channel %s is open, calling deferred", self.id)
             self.start_defer.callback(self)
 
-            self.command = self.command.encode('utf-8')
+            self.command = self.command.encode("utf-8")
 
-            req = self.conn.sendRequest(
-                self,
-                b'exec',
-                common.NS(self.command),
-                wantReply=True,
-            )
+            req = self.conn.sendRequest(self, b"exec", common.NS(self.command), wantReply=True,)
             req.addCallback(self._cbExecSendRequest)
         else:
             # A missing start defer means that we are no longer expected to do
@@ -231,7 +219,7 @@ class ExecChannel(channel.SSHChannel):
 
     def request_exit_status(self, data):
         # exit status is a 32-bit unsigned int in network byte format
-        status = struct.unpack_from(b'>L', data, 0)[0]
+        status = struct.unpack_from(b">L", data, 0)[0]
 
         log.debug("Received exit status request: %d", status)
         self.exit_status = status
@@ -253,14 +241,8 @@ class ExecChannel(channel.SSHChannel):
         return "".join(self.data)
 
     def closed(self):
-        if (
-            self.exit_status is None and self.running and self.exit_defer and
-            not self.exit_defer.called
-        ):
-            log.warning(
-                "Channel has been closed without receiving an exit"
-                " status",
-            )
+        if self.exit_status is None and self.running and self.exit_defer and not self.exit_defer.called:
+            log.warning("Channel has been closed without receiving an exit" " status",)
             f = failure.Failure(exc_value=ChannelClosedEarlyError())
             self.exit_defer.errback(f)
 

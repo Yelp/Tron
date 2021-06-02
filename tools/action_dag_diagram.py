@@ -16,16 +16,12 @@ from tron.config import schema
 
 def parse_args():
     parser = optparse.OptionParser()
-    parser.add_option('-c', '--config', help="Tron configuration path.")
+    parser.add_option("-c", "--config", help="Tron configuration path.")
     parser.add_option(
-        '-n',
-        '--name',
-        help="Job name to graph. Also used as output filename.",
+        "-n", "--name", help="Job name to graph. Also used as output filename.",
     )
     parser.add_option(
-        '--namespace',
-        default=schema.MASTER_NAMESPACE,
-        help="Configuration namespace which contains the job.",
+        "--namespace", default=schema.MASTER_NAMESPACE, help="Configuration namespace which contains the job.",
     )
     opts, _ = parser.parse_args()
 
@@ -40,12 +36,12 @@ def build_diagram(job_config):
     edges, nodes = [], []
 
     for action in job_config.actions.values():
-        shape = 'invhouse' if not action.requires else 'rect'
-        nodes.append("node [shape = %s]; %s" % (shape, action.name))
+        shape = "invhouse" if not action.requires else "rect"
+        nodes.append(f"node [shape = {shape}]; {action.name}")
         for required_action in action.requires:
-            edges.append("%s -> %s" % (required_action, action.name))
+            edges.append(f"{required_action} -> {action.name}")
 
-    return "digraph g{%s\n%s}" % ('\n'.join(nodes), '\n'.join(edges))
+    return "digraph g{{{}\n{}}}".format("\n".join(nodes), "\n".join(edges))
 
 
 def get_job(config_container, namespace, job_name):
@@ -59,7 +55,7 @@ def get_job(config_container, namespace, job_name):
     return config.jobs[job_name]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     opts = parse_args()
 
     config_manager = manager.ConfigManager(opts.config)
@@ -67,5 +63,5 @@ if __name__ == '__main__':
     job_config = get_job(container, opts.namespace, opts.name)
     graph = build_diagram(job_config)
 
-    with open('%s.dot' % opts.name, 'w') as fh:
+    with open("%s.dot" % opts.name, "w") as fh:
         fh.write(graph)

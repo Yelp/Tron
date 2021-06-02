@@ -13,20 +13,20 @@ log = logging.getLogger(__name__)
 
 
 class Py2Shelf(shelve.Shelf):
-    def __init__(self, filename, flag='c', protocol=2, writeback=False):
+    def __init__(self, filename, flag="c", protocol=2, writeback=False):
         db = bsddb3.hashopen(filename, flag)
         args = [self, db, protocol, writeback]
         if sys.version_info[0] == 3:
-            args.append('utf8')
+            args.append("utf8")
         shelve.Shelf.__init__(*args)
 
     def __getitem__(self, key):
         try:
             value = self.cache[key]
         except KeyError:
-            f = BytesIO(self.dict[key.encode('utf8')])
+            f = BytesIO(self.dict[key.encode("utf8")])
             if sys.version_info[0] == 3:
-                value = pickle.load(f, encoding='bytes')
+                value = pickle.load(f, encoding="bytes")
             else:
                 value = pickle.load(f)
             if self.writeback:
@@ -38,18 +38,18 @@ class Py2Shelf(shelve.Shelf):
             self.cache[key] = value
         f = BytesIO()
         pickle.dump(obj=value, file=f, protocol=self._protocol)
-        self.dict[key.encode('utf8')] = f.getvalue()
+        self.dict[key.encode("utf8")] = f.getvalue()
 
     def delete(self, key):
         if key in self.cache:
             del self.cache[key]
-        encoded_key = key.encode('utf8')
+        encoded_key = key.encode("utf8")
         if encoded_key in self.dict:
             del self.dict[encoded_key]
 
 
-class ShelveKey(object):
-    __slots__ = ['type', 'iden']
+class ShelveKey:
+    __slots__ = ["type", "iden"]
 
     def __init__(self, type, iden):
         self.type = maybe_decode(type)
@@ -57,10 +57,10 @@ class ShelveKey(object):
 
     @property
     def key(self):
-        return "%s___%s" % (self.type, self.iden)
+        return f"{self.type}___{self.iden}"
 
     def __str__(self):
-        return "%s %s" % (self.type, self.iden)
+        return f"{self.type} {self.iden}"
 
     def __eq__(self, other):
         return self.type == other.type and self.iden == other.iden
@@ -69,7 +69,7 @@ class ShelveKey(object):
         return hash(self.key)
 
 
-class ShelveStateStore(object):
+class ShelveStateStore:
     """Persist state using `shelve`."""
 
     def __init__(self, filename):
@@ -89,10 +89,7 @@ class ShelveStateStore(object):
         self.shelve.sync()
 
     def restore(self, keys):
-        items = zip(
-            keys,
-            (self.shelve.get(str(key.key)) for key in keys),
-        )
+        items = zip(keys, (self.shelve.get(str(key.key)) for key in keys),)
         return dict(filter(operator.itemgetter(1), items))
 
     def cleanup(self):

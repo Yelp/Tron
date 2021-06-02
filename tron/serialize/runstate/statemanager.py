@@ -24,7 +24,7 @@ class PersistenceStoreError(ValueError):
     """Raised if the store can not be created or fails a read or write."""
 
 
-class PersistenceManagerFactory(object):
+class PersistenceManagerFactory:
     """Create a PersistentStateManager."""
 
     @classmethod
@@ -49,11 +49,12 @@ class PersistenceManagerFactory(object):
         return PersistentStateManager(store, buffer)
 
 
-class StateMetadata(object):
+class StateMetadata:
     """A data object for saving state metadata. Conforms to the same
     RunState interface as Jobs and Services.
     """
-    name = 'StateMetadata'
+
+    name = "StateMetadata"
 
     # State schema version, only first component counts,
     # for backwards compatibility
@@ -61,8 +62,8 @@ class StateMetadata(object):
 
     def __init__(self):
         self.state_data = {
-            'version': self.version,
-            'create_time': time.time(),
+            "version": self.version,
+            "create_time": time.time(),
         }
 
     @classmethod
@@ -73,17 +74,12 @@ class StateMetadata(object):
         if not metadata:
             return
 
-        if metadata['version'][0] > cls.version[0]:
+        if metadata["version"][0] > cls.version[0]:
             msg = "State version %s, expected <= %s"
-            raise VersionMismatchError(
-                msg % (
-                    metadata['version'],
-                    cls.version,
-                ),
-            )
+            raise VersionMismatchError(msg % (metadata["version"], cls.version,),)
 
 
-class StateSaveBuffer(object):
+class StateSaveBuffer:
     """Buffer calls to save, and perform the saves when buffer reaches
     buffer size. This buffer will only store one state_data for each key.
     """
@@ -102,12 +98,11 @@ class StateSaveBuffer(object):
 
     def __iter__(self):
         """Return all buffered data and clear the buffer."""
-        for key, item in self.buffer.items():
-            yield key, item
+        yield from self.buffer.items()
         self.buffer.clear()
 
 
-class PersistentStateManager(object):
+class PersistentStateManager:
     """Provides an interface to persist the state of Tron.
 
     The implementation of persisting and restoring the state from disk is
@@ -133,10 +128,7 @@ class PersistentStateManager(object):
         self.enabled = True
         self._buffer = buffer
         self._impl = persistence_impl
-        self.metadata_key = self._impl.build_key(
-            runstate.MCP_STATE,
-            StateMetadata.name,
-        )
+        self.metadata_key = self._impl.build_key(runstate.MCP_STATE, StateMetadata.name,)
 
     def restore(self, job_names, skip_validation=False):
         """Return the most recent serialized state."""
@@ -146,8 +138,8 @@ class PersistentStateManager(object):
 
         jobs = self._restore_dicts(runstate.JOB_STATE, job_names)
         for job_name, job_state in jobs.items():
-            job_state['runs'] = self._restore_runs_for_job(job_name, job_state)
-        frameworks = self._restore_dicts(runstate.MESOS_STATE, ['frameworks'])
+            job_state["runs"] = self._restore_runs_for_job(job_name, job_state)
+        frameworks = self._restore_dicts(runstate.MESOS_STATE, ["frameworks"])
 
         state = {
             runstate.JOB_STATE: jobs,
@@ -156,13 +148,13 @@ class PersistentStateManager(object):
         return state
 
     def _restore_runs_for_job(self, job_name, job_state):
-        run_nums = job_state['run_nums']
+        run_nums = job_state["run_nums"]
         runs = []
         for run_num in run_nums:
             key = jobrun.get_job_run_id(job_name, run_num)
             run_state = list(self._restore_dicts(runstate.JOB_RUN_STATE, [key]).values())
             if not run_state:
-                log.error(f'Failed to restore {key}, no state found for it')
+                log.error(f"Failed to restore {key}, no state found for it")
             else:
                 runs.append(run_state[0])
         return runs
@@ -180,10 +172,7 @@ class PersistentStateManager(object):
         """Return a dict mapping of the items name to its state data."""
         key_to_item_map = self._keys_for_items(item_type, items)
         key_to_state_map = self._impl.restore(key_to_item_map.keys())
-        return {
-            key_to_item_map[key]: state_data
-            for key, state_data in key_to_state_map.items()
-        }
+        return {key_to_item_map[key]: state_data for key, state_data in key_to_state_map.items()}
 
     def delete(self, type_enum, name):
         # A hack to use the save buffer, implementations of save
@@ -223,7 +212,7 @@ class PersistentStateManager(object):
         start_time = time.time()
         yield
         duration = time.time() - start_time
-        log.info("State saved using %s in %0.3fs." % (self._impl, duration))
+        log.info(f"State saved using {self._impl} in {duration:0.3f}s.")
 
     @contextmanager
     def disabled(self):
@@ -235,7 +224,7 @@ class PersistentStateManager(object):
             self.enabled = prev_enabled
 
 
-class NullStateManager(object):
+class NullStateManager:
     enabled = False
 
     @staticmethod
@@ -265,9 +254,7 @@ class StateChangeWatcher(observer.Observer):
             return False
 
         self.shutdown()
-        self.state_manager = PersistenceManagerFactory.from_config(
-            state_config,
-        )
+        self.state_manager = PersistenceManagerFactory.from_config(state_config,)
         self.config = state_config
         return True
 
@@ -278,9 +265,9 @@ class StateChangeWatcher(observer.Observer):
         elif isinstance(observable, job.Job):
             if event == job.Job.NOTIFY_NEW_RUN:
                 if event_data is None or not isinstance(event_data, jobrun.JobRun):
-                    log.warning(f'Notified of new run, but no run to watch. Got {event_data}')
+                    log.warning(f"Notified of new run, but no run to watch. Got {event_data}")
                 else:
-                    log.debug(f'Watching new run {event_data}')
+                    log.debug(f"Watching new run {event_data}")
                     self.watch(event_data)
             else:
                 self.save_job(observable)

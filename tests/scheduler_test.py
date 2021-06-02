@@ -1,10 +1,7 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import calendar
 import datetime
+from unittest import mock
 
-import mock
 import pytz
 
 from testifycompat import assert_equal
@@ -27,7 +24,7 @@ from tron.utils import timeutils
 class TestSchedulerFromConfig(TestCase):
     def test_cron_scheduler(self):
         line = "cron */5 * * 7,8 *"
-        config_context = mock.Mock(path='test')
+        config_context = mock.Mock(path="test")
         config = schedule_parse.valid_schedule(line, config_context)
         sched = scheduler.scheduler_from_config(config=config, time_zone=None)
         start_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
@@ -60,7 +57,7 @@ class GeneralSchedulerTestCase(testingutils.MockTimeTestCase):
 
     @setup
     def build_scheduler(self):
-        self.scheduler = scheduler.GeneralScheduler(timestr='14:30')
+        self.scheduler = scheduler.GeneralScheduler(timestr="14:30")
         one_day = datetime.timedelta(days=1)
         self.today = self.now.date()
         self.yesterday = self.now - one_day
@@ -73,7 +70,7 @@ class GeneralSchedulerTestCase(testingutils.MockTimeTestCase):
         next_run = self.scheduler.next_run_time(self.yesterday)
         assert_equal(self.expected_time(self.today), next_run)
 
-    @mock.patch('tron.scheduler.get_jitter', autospec=True)
+    @mock.patch("tron.scheduler.get_jitter", autospec=True)
     def test_next_run_time_with_jitter(self, mock_jitter):
         mock_jitter.return_value = delta = datetime.timedelta(seconds=-300)
         self.scheduler.jitter = datetime.timedelta(seconds=400)
@@ -95,7 +92,7 @@ class GeneralSchedulerTimeTestBase(testingutils.MockTimeTestCase):
 
     @setup
     def build_scheduler(self):
-        self.scheduler = scheduler.GeneralScheduler(timestr='14:30')
+        self.scheduler = scheduler.GeneralScheduler(timestr="14:30")
 
 
 class GeneralSchedulerTodayTest(GeneralSchedulerTimeTestBase):
@@ -108,12 +105,7 @@ class GeneralSchedulerTodayTest(GeneralSchedulerTimeTestBase):
         next_run_date = run_time.date()
 
         assert_equal(next_run_date, self.now.date())
-        earlier_time = datetime.datetime(
-            self.now.year,
-            self.now.month,
-            self.now.day,
-            hour=13,
-        )
+        earlier_time = datetime.datetime(self.now.year, self.now.month, self.now.day, hour=13,)
         assert_lte(earlier_time, run_time)
 
 
@@ -128,12 +120,7 @@ class GeneralSchedulerTomorrowTest(GeneralSchedulerTimeTestBase):
         tomorrow = self.now.date() + datetime.timedelta(days=1)
 
         assert_equal(next_run_date, tomorrow)
-        earlier_time = datetime.datetime(
-            year=tomorrow.year,
-            month=tomorrow.month,
-            day=tomorrow.day,
-            hour=13,
-        )
+        earlier_time = datetime.datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day, hour=13,)
         assert_lte(earlier_time, run_time)
 
 
@@ -158,7 +145,7 @@ class GeneralSchedulerLongJobRunTest(GeneralSchedulerTimeTestBase):
 class GeneralSchedulerDSTTest(testingutils.MockTimeTestCase):
 
     now = datetime.datetime(2011, 11, 6, 1, 10, 0)
-    now_utc = timeutils.current_time(tz=pytz.timezone('UTC'))
+    now_utc = timeutils.current_time(tz=pytz.timezone("UTC"))
 
     def hours_until_time(self, run_time, sch):
         tz = sch.time_zone
@@ -187,7 +174,7 @@ class GeneralSchedulerDSTTest(testingutils.MockTimeTestCase):
         savings time 'fall back' point, when the system time zone changes
         from (e.g.) PDT to PST.
         """
-        sch = scheduler.GeneralScheduler(time_zone=pytz.timezone('US/Pacific'))
+        sch = scheduler.GeneralScheduler(time_zone=pytz.timezone("US/Pacific"))
 
         # Exact crossover time:
         # datetime.datetime(2011, 11, 6, 9, 0, 0, tzinfo=pytz.utc)
@@ -206,7 +193,7 @@ class GeneralSchedulerDSTTest(testingutils.MockTimeTestCase):
         self._assert_range(s1a - s2a, 1.39, 1.41)
 
     def test_correct_time(self):
-        sch = scheduler.GeneralScheduler(time_zone=pytz.timezone('US/Pacific'))
+        sch = scheduler.GeneralScheduler(time_zone=pytz.timezone("US/Pacific"))
         next_run_time = sch.next_run_time(self.now)
         assert_equal(next_run_time.hour, 0)
 
@@ -215,7 +202,7 @@ class GeneralSchedulerDSTTest(testingutils.MockTimeTestCase):
         savings time 'spring forward' point, when the system time zone changes
         from (e.g.) PST to PDT.
         """
-        sch = scheduler.GeneralScheduler(time_zone=pytz.timezone('US/Pacific'))
+        sch = scheduler.GeneralScheduler(time_zone=pytz.timezone("US/Pacific"))
 
         # Exact crossover time:
         # datetime.datetime(2011, 3, 13, 2, 0, 0, tzinfo=pytz.utc)
@@ -234,7 +221,7 @@ class GeneralSchedulerDSTTest(testingutils.MockTimeTestCase):
         self._assert_range(s1a - s2a, -0.61, -0.59)
 
     def test_handles_tz_specific_jobs_with_tz_specific_start_time(self):
-        sch = scheduler.GeneralScheduler(time_zone=pytz.timezone('UTC'))
+        sch = scheduler.GeneralScheduler(time_zone=pytz.timezone("UTC"))
         next_run_time = sch.next_run_time(self.now_utc)
         assert_equal(next_run_time.hour, 0)
 
@@ -244,15 +231,15 @@ class GeneralSchedulerDSTTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_time.hour, 0)
 
     def test_handles_changing_the_time_zone(self):
-        pacific_now = datetime.datetime.now(pytz.timezone('US/Pacific'))
+        pacific_now = datetime.datetime.now(pytz.timezone("US/Pacific"))
         pacific_offset = pacific_now.utcoffset().total_seconds() / 60 / 60
-        sch = scheduler.GeneralScheduler(time_zone=pytz.timezone('US/Pacific'))
+        sch = scheduler.GeneralScheduler(time_zone=pytz.timezone("US/Pacific"))
         next_run_time = sch.next_run_time(self.now_utc)
         assert_equal(next_run_time.hour, -pacific_offset)
 
 
 def parse_groc(config):
-    config = schedule_parse.ConfigGenericSchedule('groc daily', config, None)
+    config = schedule_parse.ConfigGenericSchedule("groc daily", config, None)
     return parse_groc_expression(config, NullConfigContext)
 
 
@@ -265,55 +252,52 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
     now = datetime.datetime(2011, 6, 1)
 
     def test_parse_all(self):
-        config_string = '1st,2nd,3rd,4th monday,Tue of march,apr,September at 00:00'
+        config_string = "1st,2nd,3rd,4th monday,Tue of march,apr,September at 00:00"
         cfg = parse_groc(config_string)
         assert_equal(cfg.ordinals, {1, 2, 3, 4})
         assert_equal(cfg.monthdays, None)
         assert_equal(cfg.weekdays, {1, 2})
         assert_equal(cfg.months, {3, 4, 9})
-        assert_equal(cfg.timestr, '00:00')
+        assert_equal(cfg.timestr, "00:00")
         assert_equal(
-            scheduler_from_config(config_string),
-            scheduler_from_config(config_string),
+            scheduler_from_config(config_string), scheduler_from_config(config_string),
         )
 
     def test_parse_no_weekday(self):
-        cfg = parse_groc(
-            '1st,2nd,3rd,10th day of march,apr,September at 00:00',
-        )
+        cfg = parse_groc("1st,2nd,3rd,10th day of march,apr,September at 00:00",)
         assert_equal(cfg.ordinals, None)
         assert_equal(cfg.monthdays, {1, 2, 3, 10})
         assert_equal(cfg.weekdays, None)
         assert_equal(cfg.months, {3, 4, 9})
-        assert_equal(cfg.timestr, '00:00')
+        assert_equal(cfg.timestr, "00:00")
 
     def test_parse_no_month(self):
-        cfg = parse_groc('1st,2nd,3rd,10th day at 00:00')
+        cfg = parse_groc("1st,2nd,3rd,10th day at 00:00")
         assert_equal(cfg.ordinals, None)
         assert_equal(cfg.monthdays, {1, 2, 3, 10})
         assert_equal(cfg.weekdays, None)
         assert_equal(cfg.months, None)
-        assert_equal(cfg.timestr, '00:00')
+        assert_equal(cfg.timestr, "00:00")
 
     def test_parse_monthly(self):
-        for test_str in ('1st day', '1st day of month'):
+        for test_str in ("1st day", "1st day of month"):
             cfg = parse_groc(test_str)
             assert_equal(cfg.ordinals, None)
             assert_equal(cfg.monthdays, {1})
             assert_equal(cfg.weekdays, None)
             assert_equal(cfg.months, None)
-            assert_equal(cfg.timestr, '00:00')
+            assert_equal(cfg.timestr, "00:00")
 
     def test_wildcards(self):
-        cfg = parse_groc('every day')
+        cfg = parse_groc("every day")
         assert_equal(cfg.ordinals, None)
         assert_equal(cfg.monthdays, None)
         assert_equal(cfg.weekdays, None)
         assert_equal(cfg.months, None)
-        assert_equal(cfg.timestr, '00:00')
+        assert_equal(cfg.timestr, "00:00")
 
     def test_daily(self):
-        sch = scheduler_from_config('every day')
+        sch = scheduler_from_config("every day")
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)
@@ -322,7 +306,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_date.hour, 0)
 
     def test_daily_with_time(self):
-        sch = scheduler_from_config('every day at 02:00')
+        sch = scheduler_from_config("every day at 02:00")
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)
@@ -333,21 +317,16 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_date.minute, 0)
 
     def test_weekly(self):
-        sch = scheduler_from_config('every monday at 01:00')
+        sch = scheduler_from_config("every monday at 01:00")
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)
         assert_equal(
-            calendar.weekday(
-                next_run_date.year,
-                next_run_date.month,
-                next_run_date.day,
-            ),
-            0,
+            calendar.weekday(next_run_date.year, next_run_date.month, next_run_date.day,), 0,
         )
 
     def test_weekly_in_month(self):
-        sch = scheduler_from_config('every monday of January at 00:01')
+        sch = scheduler_from_config("every monday of January at 00:01")
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)
@@ -356,21 +335,16 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_date.hour, 0)
         assert_equal(next_run_date.minute, 1)
         assert_equal(
-            calendar.weekday(
-                next_run_date.year,
-                next_run_date.month,
-                next_run_date.day,
-            ),
-            0,
+            calendar.weekday(next_run_date.year, next_run_date.month, next_run_date.day,), 0,
         )
 
     def test_monthly(self):
-        sch = scheduler_from_config('1st day')
+        sch = scheduler_from_config("1st day")
         next_run_date = sch.next_run_time(None)
 
         assert_gt(next_run_date, self.now)
         assert_equal(next_run_date.month, 7)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     run()

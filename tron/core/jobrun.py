@@ -20,7 +20,7 @@ from tron.utils.observer import Observable
 from tron.utils.observer import Observer
 
 log = logging.getLogger(__name__)
-state_logger = logging.getLogger(f'{__name__}.state_changes')
+state_logger = logging.getLogger(f"{__name__}.state_changes")
 
 
 class Error(Exception):
@@ -28,7 +28,7 @@ class Error(Exception):
 
 
 def get_job_run_id(job_name, run_num):
-    return '%s.%s' % (job_name, run_num)
+    return f"{job_name}.{run_num}"
 
 
 class JobRun(Observable, Observer):
@@ -37,9 +37,9 @@ class JobRun(Observable, Observer):
     dependencies.
     """
 
-    NOTIFY_DONE = 'notify_done'
-    NOTIFY_STATE_CHANGED = 'notify_state_changed'
-    NOTIFY_REMOVED = 'notify_removed'
+    NOTIFY_DONE = "notify_done"
+    NOTIFY_STATE_CHANGED = "notify_state_changed"
+    NOTIFY_REMOVED = "notify_removed"
 
     context_class = command_context.JobRunContext
 
@@ -56,7 +56,7 @@ class JobRun(Observable, Observer):
         action_graph=None,
         manual=None,
     ):
-        super(JobRun, self).__init__()
+        super().__init__()
         self.job_name = maybe_decode(job_name)
         self.run_num = run_num
         self.run_time = run_time
@@ -95,41 +95,31 @@ class JobRun(Observable, Observer):
             action_graph=job.action_graph,
             manual=manual,
         )
-        action_runs = ActionRunFactory.build_action_run_collection(
-            run,
-            job.action_runner,
-        )
+        action_runs = ActionRunFactory.build_action_run_collection(run, job.action_runner,)
         run.action_runs = action_runs
         return run
 
     @classmethod
     def from_state(
-        cls,
-        state_data,
-        action_graph,
-        output_path,
-        context,
-        run_node,
+        cls, state_data, action_graph, output_path, context, run_node,
     ):
         """Restore a JobRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
-        run_node = pool_repo.get_node(state_data.get('node_name'), run_node)
-        job_name = state_data['job_name']
+        run_node = pool_repo.get_node(state_data.get("node_name"), run_node)
+        job_name = state_data["job_name"]
 
         job_run = cls(
             job_name,
-            state_data['run_num'],
-            state_data['run_time'],
+            state_data["run_num"],
+            state_data["run_time"],
             run_node,
             action_graph=action_graph,
-            manual=state_data.get('manual', False),
+            manual=state_data.get("manual", False),
             output_path=output_path,
             base_context=context,
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
-            job_run,
-            state_data['runs'],
-            state_data['cleanup_run'],
+            job_run, state_data["runs"], state_data["cleanup_run"],
         )
         job_run.action_runs = action_runs
         return job_run
@@ -138,13 +128,13 @@ class JobRun(Observable, Observer):
     def state_data(self):
         """This data is used to serialize the state of this job run."""
         return {
-            'job_name': self.job_name,
-            'run_num': self.run_num,
-            'run_time': self.run_time,
-            'node_name': self.node.get_name() if self.node else None,
-            'runs': self.action_runs.state_data,
-            'cleanup_run': self.action_runs.cleanup_action_state_data,
-            'manual': self.manual,
+            "job_name": self.job_name,
+            "run_num": self.run_num,
+            "run_time": self.run_time,
+            "node_name": self.node.get_name() if self.node else None,
+            "runs": self.action_runs.state_data,
+            "cleanup_run": self.action_runs.cleanup_action_state_data,
+            "manual": self.manual,
         }
 
     def _get_action_runs(self):
@@ -161,26 +151,14 @@ class JobRun(Observable, Observer):
             action_run.setup_subscriptions()
 
         self.action_runs_proxy = proxy.AttributeProxy(
-            run_collection,
-            [
-                'queue',
-                'cancel',
-                'success',
-                'fail',
-                'start_time',
-                'end_time',
-            ],
+            run_collection, ["queue", "cancel", "success", "fail", "start_time", "end_time",],
         )
 
     def _del_action_runs(self):
         self._action_runs = None
         self.action_runs_proxy = None
 
-    action_runs = property(
-        _get_action_runs,
-        _set_action_runs,
-        _del_action_runs,
-    )
+    action_runs = property(_get_action_runs, _set_action_runs, _del_action_runs,)
 
     def update_action_config(self, action_graph):
         self.action_graph = action_graph
@@ -195,7 +173,7 @@ class JobRun(Observable, Observer):
         return max(0, timeutils.delta_total_seconds(run_time - now))
 
     def start(self):
-        self.log_state_update(state='start')
+        self.log_state_update(state="start")
         if self._do_start():
             return True
 
@@ -203,7 +181,7 @@ class JobRun(Observable, Observer):
         log.info(f"{self} starting")
         self.action_runs.ready()
         if any(self._start_action_runs()):
-            log.info(f'{self} started')
+            log.info(f"{self} started")
             return True
 
     def stop(self):
@@ -215,11 +193,7 @@ class JobRun(Observable, Observer):
         """Start all startable action runs, and return any that were
         successfully started.
         """
-        started_runs = [
-            action_run
-            for action_run in self.action_runs.get_startable_action_runs()
-            if action_run.start()
-        ]
+        started_runs = [action_run for action_run in self.action_runs.get_startable_action_runs() if action_run.start()]
 
         if not started_runs:
             for r in self.action_runs:
@@ -231,7 +205,7 @@ class JobRun(Observable, Observer):
     def handle_action_run_state_change(self, action_run: ActionRun, event, event_data=None):
         """Handle events triggered by JobRuns."""
         log.info(f"{self} got an event: {event}")
-        metrics.meter(f'tron.actionrun.{event}')
+        metrics.meter(f"tron.actionrun.{event}")
 
         if event == ActionRun.NOTIFY_TRIGGER_READY:
             if self.is_scheduled or self.is_queued:
@@ -240,17 +214,13 @@ class JobRun(Observable, Observer):
 
             started = self._start_action_runs()
             if any(started):
-                log.info(
-                    f"{self} action runs triggered: "
-                    f"{', '.join(str(s) for s in started)}"
-                )
+                log.info(f"{self} action runs triggered: " f"{', '.join(str(s) for s in started)}",)
             return
 
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
         self.log_state_update(
-            state=action_run.state,
-            action_name=action_run.name,
+            state=action_run.state, action_name=action_run.name,
         )
 
         if not action_run.is_done:
@@ -262,10 +232,7 @@ class JobRun(Observable, Observer):
         if not action_run.is_broken:
             started = self._start_action_runs()
             if any(started):
-                log.info(
-                    f"{self} action runs started: "
-                    f"{', '.join(str(s) for s in started)}"
-                )
+                log.info(f"{self} action runs started: " f"{', '.join(str(s) for s in started)}",)
                 return
 
         if not self.action_runs.is_done:
@@ -289,9 +256,9 @@ class JobRun(Observable, Observer):
         Triggers an event to notifies the Job that is is done.
         """
         if self.action_runs.is_failed:
-            log.error(f'{self} failed')
+            log.error(f"{self} failed")
         else:
-            log.info(f'{self} succeeded')
+            log.info(f"{self} succeeded")
 
         # Notify Job that this JobRun is complete
         self.notify(self.NOTIFY_DONE)
@@ -299,7 +266,7 @@ class JobRun(Observable, Observer):
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
-        log.info(f'{self} removed')
+        log.info(f"{self} removed")
         self.notify(self.NOTIFY_REMOVED)
         self.clear_observers()
         self.action_runs.cleanup()
@@ -313,16 +280,16 @@ class JobRun(Observable, Observer):
 
     def log_state_update(self, state, action_name=None):
         if action_name is None:
-            state = f'job_{state}'
+            state = f"job_{state}"
         else:
             action_name = str(action_name)
 
         data = {
-            'job_name': str(self.job_name),
-            'run_num': str(self.run_num),
-            'action_name': action_name,
-            'state': str(state),
-            'timestamp': time.time(),
+            "job_name": str(self.job_name),
+            "run_num": str(self.run_num),
+            "action_name": action_name,
+            "state": str(state),
+            "timestamp": time.time(),
         }
         state_logger.info(json.dumps(data))
 
@@ -357,7 +324,7 @@ class JobRun(Observable, Observer):
         return self.action_runs.cancel()
 
     def __getattr__(self, name):
-        if name.startswith('is_'):
+        if name.startswith("is_"):
             state_name = name[3:]
             if state_name not in ActionRun.STATE_MACHINE.states:
                 raise RuntimeError(f"{state_name} not in ActionRun.VALID_STATES")
@@ -371,7 +338,7 @@ class JobRun(Observable, Observer):
         return f"JobRun:{self.id}"
 
 
-class JobRunCollection(object):
+class JobRunCollection:
     """A JobRunCollection is a deque of JobRun objects. Responsible for
     ordering and logic related to a group of JobRuns which should all be runs
     for the same Job.
@@ -432,9 +399,7 @@ class JobRunCollection(object):
 
     def get_newest(self, include_manual=True):
         """Returns the most recently created JobRun."""
-        return next_or_none(
-            r for r in self.runs if include_manual or not r.manual
-        )
+        return next_or_none(r for r in self.runs if include_manual or not r.manual)
 
     def get_pending(self):
         """Return the job runs that are queued or scheduled."""
@@ -446,15 +411,11 @@ class JobRunCollection(object):
 
     def get_active(self, node=None):
         active_states = {ActionRun.RUNNING, ActionRun.STARTING, ActionRun.WAITING}
-        return [
-            r for r in self.runs if (r.state in active_states) and
-            (not node or r.node == node)
-        ]
+        return [r for r in self.runs if (r.state in active_states) and (not node or r.node == node)]
 
     def get_first_queued(self, node=None):
         return next_or_none(
-            r for r in reversed(self.runs)
-            if (not node or r.node == node) and r.state == ActionRun.QUEUED
+            r for r in reversed(self.runs) if (not node or r.node == node) and r.state == ActionRun.QUEUED
         )
 
     def get_scheduled(self):
@@ -497,25 +458,10 @@ class JobRunCollection(object):
         return iter(self.runs)
 
     def __str__(self):
-        return "%s[%s]" % (
-            type(self).__name__,
-            ', '.join("%s(%s)" % (r.run_num, r.state) for r in self.runs),
-        )
+        return "{}[{}]".format(type(self).__name__, ", ".join(f"{r.run_num}({r.state})" for r in self.runs),)
 
 
 def job_runs_from_state(
-    runs,
-    action_graph,
-    output_path,
-    context,
-    node_pool,
+    runs, action_graph, output_path, context, node_pool,
 ):
-    return [
-        JobRun.from_state(
-            run,
-            action_graph,
-            output_path.clone(),
-            context,
-            node_pool.next(),
-        ) for run in runs
-    ]
+    return [JobRun.from_state(run, action_graph, output_path.clone(), context, node_pool.next(),) for run in runs]

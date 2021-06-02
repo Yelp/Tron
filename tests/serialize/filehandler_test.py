@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import os
 import shutil
 import time
@@ -26,7 +23,7 @@ from tron.serialize.filehandler import OutputStreamSerializer
 class TestFileHandleWrapper(TestCase):
     @setup
     def setup_fh_wrapper(self):
-        self.file = NamedTemporaryFile('r')
+        self.file = NamedTemporaryFile("r")
         self.manager = FileHandleManager.get_instance()
         self.fh_wrapper = self.manager.open(self.file.name)
 
@@ -89,8 +86,8 @@ class TestFileHandleManager(TestCase):
     @setup
     def setup_fh_manager(self):
         FileHandleManager.reset()
-        self.file1 = NamedTemporaryFile('r')
-        self.file2 = NamedTemporaryFile('r')
+        self.file1 = NamedTemporaryFile("r")
+        self.file2 = NamedTemporaryFile("r")
         FileHandleManager.set_max_idle_time(2)
         self.manager = FileHandleManager.get_instance()
 
@@ -143,9 +140,9 @@ class TestFileHandleManager(TestCase):
         fh_wrappers = [
             self.manager.open(self.file1.name),
             self.manager.open(self.file2.name),
-            self.manager.open(NamedTemporaryFile('r').name),
-            self.manager.open(NamedTemporaryFile('r').name),
-            self.manager.open(NamedTemporaryFile('r').name),
+            self.manager.open(NamedTemporaryFile("r").name),
+            self.manager.open(NamedTemporaryFile("r").name),
+            self.manager.open(NamedTemporaryFile("r").name),
         ]
         for i, fh_wrapper in enumerate(fh_wrappers):
             fh_wrapper.last_accessed = 123456 + i
@@ -207,14 +204,12 @@ class TestFileHandleManager(TestCase):
         fh_wrapper1 = self.manager.open(self.file1.name)
         fh_wrapper2 = self.manager.open(self.file2.name)
         assert_equal(
-            list(self.manager.cache.keys()),
-            [fh_wrapper1.name, fh_wrapper2.name],
+            list(self.manager.cache.keys()), [fh_wrapper1.name, fh_wrapper2.name],
         )
 
         self.manager.update(fh_wrapper1)
         assert_equal(
-            list(self.manager.cache.keys()),
-            [fh_wrapper2.name, fh_wrapper1.name],
+            list(self.manager.cache.keys()), [fh_wrapper2.name, fh_wrapper1.name],
         )
 
 
@@ -225,16 +220,14 @@ class TestOutputStreamSerializer(TestCase):
         self.serial = OutputStreamSerializer([self.test_dir])
         self.filename = "STARS"
         self.content = "123\n456\n789"
-        self.expected = [
-            line for line in self.content.split('\n')
-        ]
+        self.expected = [line for line in self.content.split("\n")]
 
     @teardown
     def teardown_test_dir(self):
         shutil.rmtree(self.test_dir)
 
     def _write_contents(self):
-        with open(self.serial.full_path(self.filename), 'w') as f:
+        with open(self.serial.full_path(self.filename), "w") as f:
             f.write(self.content)
 
     def test_open(self):
@@ -244,9 +237,9 @@ class TestOutputStreamSerializer(TestCase):
         with open(self.serial.full_path(self.filename)) as f:
             assert_equal(f.read(), self.content)
 
-    @suite('integration')
+    @suite("integration")
     def test_init_with_output_path(self):
-        path = OutputPath(self.test_dir, 'one', 'two', 'three')
+        path = OutputPath(self.test_dir, "one", "two", "three")
         stream = OutputStreamSerializer(path)
         assert_equal(stream.base_path, str(path))
 
@@ -259,47 +252,47 @@ class TestOutputStreamSerializer(TestCase):
         assert_equal(self.serial.tail(self.filename, 1), self.expected[-1:])
 
     def test_tail_file_does_not_exist(self):
-        file_dne = 'bogusfile123'
+        file_dne = "bogusfile123"
         assert_equal(self.serial.tail(file_dne), [])
 
 
 class TestOutputPath(TestCase):
     @setup
     def setup_path(self):
-        self.path = OutputPath('one', 'two', 'three')
+        self.path = OutputPath("one", "two", "three")
 
     def test__init__(self):
-        assert_equal(self.path.base, 'one')
-        assert_equal(self.path.parts, ['two', 'three'])
+        assert_equal(self.path.base, "one")
+        assert_equal(self.path.parts, ["two", "three"])
 
-        path = OutputPath('base')
-        assert_equal(path.base, 'base')
+        path = OutputPath("base")
+        assert_equal(path.base, "base")
         assert_equal(path.parts, [])
 
     def test__iter__(self):
-        assert_equal(list(self.path), ['one', 'two', 'three'])
+        assert_equal(list(self.path), ["one", "two", "three"])
 
     def test__str__(self):
         # Breaks in windows probably,
-        assert_equal('one/two/three', str(self.path))
+        assert_equal("one/two/three", str(self.path))
 
     def test_append(self):
-        self.path.append('four')
-        assert_equal(self.path.parts, ['two', 'three', 'four'])
+        self.path.append("four")
+        assert_equal(self.path.parts, ["two", "three", "four"])
 
     def test_clone(self):
         new_path = self.path.clone()
         assert_equal(str(new_path), str(self.path))
 
-        self.path.append('alpha')
-        assert_equal(str(new_path), 'one/two/three')
+        self.path.append("alpha")
+        assert_equal(str(new_path), "one/two/three")
 
-        new_path.append('beta')
-        assert_equal(str(self.path), 'one/two/three/alpha')
+        new_path.append("beta")
+        assert_equal(str(self.path), "one/two/three/alpha")
 
     def test_clone_with_parts(self):
-        new_path = self.path.clone('seven', 'ten')
-        assert_equal(list(new_path), ['one/two/three', 'seven', 'ten'])
+        new_path = self.path.clone("seven", "ten")
+        assert_equal(list(new_path), ["one/two/three", "seven", "ten"])
 
     def test_delete(self):
         tmp_dir = mkdtemp()
@@ -308,11 +301,11 @@ class TestOutputPath(TestCase):
         assert not os.path.exists(tmp_dir)
 
     def test__eq__(self):
-        other = mock.MagicMock(base='one', parts=['two', 'three'])
+        other = mock.MagicMock(base="one", parts=["two", "three"])
         assert_equal(self.path, other)
 
     def test__ne__(self):
-        other = mock.MagicMock(base='one/two', parts=['three'])
+        other = mock.MagicMock(base="one/two", parts=["three"])
         assert_not_equal(self.path, other)
 
 

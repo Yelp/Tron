@@ -7,9 +7,6 @@ python tools/migration/migrate_config_0.5.1_to_0.5.2.py \
     --source old_config_filename \
     --dest new_config_dir
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import optparse
 import os
 
@@ -18,11 +15,9 @@ from tron.config import manager
 
 def parse_options():
     parser = optparse.OptionParser()
-    parser.add_option('-s', '--source', help="Path to old configuration file.")
+    parser.add_option("-s", "--source", help="Path to old configuration file.")
     parser.add_option(
-        '-d',
-        '--dest',
-        help="Path to new configuration directory.",
+        "-d", "--dest", help="Path to new configuration directory.",
     )
     opts, _ = parser.parse_args()
 

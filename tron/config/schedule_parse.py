@@ -11,26 +11,15 @@ from tron.config import ConfigError
 from tron.config import schema
 from tron.utils import crontab
 
-ConfigGenericSchedule = schema.config_object_factory(
-    'ConfigGenericSchedule',
-    ['type', 'value'],
-    ['jitter'],
-)
+ConfigGenericSchedule = schema.config_object_factory("ConfigGenericSchedule", ["type", "value"], ["jitter"],)
 
-ConfigGrocScheduler = namedtuple(
-    'ConfigGrocScheduler',
-    'original ordinals weekdays monthdays months timestr jitter',
-)
+ConfigGrocScheduler = namedtuple("ConfigGrocScheduler", "original ordinals weekdays monthdays months timestr jitter",)
 
 ConfigCronScheduler = namedtuple(
-    'ConfigCronScheduler',
-    'original minutes hours monthdays months weekdays ordinals jitter',
+    "ConfigCronScheduler", "original minutes hours monthdays months weekdays ordinals jitter",
 )
 
-ConfigDailyScheduler = namedtuple(
-    'ConfigDailyScheduler',
-    'original hour minute second days jitter',
-)
+ConfigDailyScheduler = namedtuple("ConfigDailyScheduler", "original hour minute second days jitter",)
 
 
 class ScheduleParseError(ConfigError):
@@ -46,13 +35,9 @@ def pad_sequence(seq, size, padding=None):
 def schedule_config_from_string(schedule, config_context):
     """Return a scheduler config object from a string."""
     schedule = schedule.strip()
-    name, schedule_config = pad_sequence(
-        schedule.split(None, 1),
-        2,
-        padding='',
-    )
+    name, schedule_config = pad_sequence(schedule.split(None, 1), 2, padding="",)
     if name not in schedulers:
-        config = ConfigGenericSchedule('groc daily', schedule, jitter=None)
+        config = ConfigGenericSchedule("groc daily", schedule, jitter=None)
         return parse_groc_expression(config, config_context)
 
     config = ConfigGenericSchedule(name, schedule_config, jitter=None)
@@ -66,22 +51,22 @@ def validate_generic_schedule_config(config, config_context):
 # TODO: remove in 0.7
 def schedule_config_from_legacy_dict(schedule, config_context):
     """Support old style schedules as dicts."""
-    if 'start_time' in schedule or 'days' in schedule:
-        start_time = schedule.get('start_time', '00:00:00')
-        days = schedule.get('days', '')
-        scheduler_config = '%s %s' % (start_time, days)
-        config = ConfigGenericSchedule('daily', scheduler_config, None)
+    if "start_time" in schedule or "days" in schedule:
+        start_time = schedule.get("start_time", "00:00:00")
+        days = schedule.get("days", "")
+        scheduler_config = f"{start_time} {days}"
+        config = ConfigGenericSchedule("daily", scheduler_config, None)
         return valid_daily_scheduler(config, config_context)
 
     path = config_context.path
-    raise ConfigError("Unknown scheduler at %s: %s" % (path, schedule))
+    raise ConfigError(f"Unknown scheduler at {path}: {schedule}")
 
 
 def valid_schedule(schedule, config_context):
     if isinstance(schedule, str):
         return schedule_config_from_string(schedule, config_context)
 
-    if 'type' not in schedule:
+    if "type" not in schedule:
         return schedule_config_from_legacy_dict(schedule, config_context)
 
     schedule = ScheduleValidator().validate(schedule, config_context)
@@ -92,29 +77,19 @@ def valid_daily_scheduler(config, config_context):
     """Daily scheduler, accepts a time of day and an optional list of days."""
     schedule_config = config.value
     time_string, days = pad_sequence(schedule_config.split(), 2)
-    time_string = time_string or '00:00:00'
+    time_string = time_string or "00:00:00"
     time_spec = config_utils.valid_time(time_string, config_context)
     days = config_utils.valid_string(days or "", config_context)
 
     def valid_day(day):
         if day not in CONVERT_DAYS_INT:
-            raise ConfigError(
-                "Unknown day %s at %s" % (
-                    day,
-                    config_context.path,
-                )
-            )
+            raise ConfigError(f"Unknown day {day} at {config_context.path}",)
         return CONVERT_DAYS_INT[day]
 
-    original = "%s %s" % (time_string, days)
+    original = f"{time_string} {days}"
     weekdays = {valid_day(day) for day in days or ()}
     return ConfigDailyScheduler(
-        original,
-        time_spec.hour,
-        time_spec.minute,
-        time_spec.second,
-        weekdays,
-        jitter=config.jitter,
+        original, time_spec.hour, time_spec.minute, time_spec.second, weekdays, jitter=config.jitter,
     )
 
 
@@ -130,24 +105,8 @@ def day_canonicalization_map():
     weekday_lists = [
         normalize_weekdays(calendar.day_name),
         normalize_weekdays(calendar.day_abbr),
-        (
-            'u',
-            'm',
-            't',
-            'w',
-            'r',
-            'f',
-            's',
-        ),
-        (
-            'su',
-            'mo',
-            'tu',
-            'we',
-            'th',
-            'fr',
-            'sa',
-        ),
+        ("u", "m", "t", "w", "r", "f", "s",),
+        ("su", "mo", "tu", "we", "th", "fr", "sa",),
     ]
     for day_list in weekday_lists:
         for day_name_synonym, day_index in zip(day_list, range(7)):
@@ -202,33 +161,24 @@ def build_groc_schedule_parser_re():
     """
 
     # m|mon|monday|...|day
-    DAY_VALUES = '|'.join(list(CONVERT_DAYS_INT.keys()) + ['day'])
+    DAY_VALUES = "|".join(list(CONVERT_DAYS_INT.keys()) + ["day"])
 
     # jan|january|...|month
-    MONTH_VALUES = '|'.join(list(CONVERT_MONTHS.keys()) + ['month'])
+    MONTH_VALUES = "|".join(list(CONVERT_MONTHS.keys()) + ["month"])
 
-    DATE_SUFFIXES = 'st|nd|rd|th'
+    DATE_SUFFIXES = "st|nd|rd|th"
 
     # every|1st|2nd|3rd (also would accept 3nd, 1rd, 4st)
-    MONTH_DAYS_EXPR = r'(?P<month_days>every|((\d+(%s),?)+))?' % DATE_SUFFIXES
-    DAYS_EXPR = r'((?P<days>((%s),?)+))?' % DAY_VALUES
-    MONTHS_EXPR = r'((in|of)\s+(?P<months>((%s),?)+))?' % MONTH_VALUES
+    MONTH_DAYS_EXPR = r"(?P<month_days>every|((\d+(%s),?)+))?" % DATE_SUFFIXES
+    DAYS_EXPR = r"((?P<days>((%s),?)+))?" % DAY_VALUES
+    MONTHS_EXPR = r"((in|of)\s+(?P<months>((%s),?)+))?" % MONTH_VALUES
 
     # [at] 00:00
-    TIME_EXPR = r'((at\s+)?(?P<time>\d\d:\d\d))?'
+    TIME_EXPR = r"((at\s+)?(?P<time>\d\d:\d\d))?"
 
-    DAILY_SCHEDULE_EXPR = ''.join([
-        r'^',
-        MONTH_DAYS_EXPR,
-        r'\s*',
-        DAYS_EXPR,
-        r'\s*',
-        MONTHS_EXPR,
-        r'\s*',
-        TIME_EXPR,
-        r'\s*',
-        r'$',
-    ])
+    DAILY_SCHEDULE_EXPR = "".join(
+        [r"^", MONTH_DAYS_EXPR, r"\s*", DAYS_EXPR, r"\s*", MONTHS_EXPR, r"\s*", TIME_EXPR, r"\s*", r"$",]
+    )
     return re.compile(DAILY_SCHEDULE_EXPR)
 
 
@@ -239,7 +189,7 @@ DAILY_SCHEDULE_RE = build_groc_schedule_parser_re()
 
 
 def _parse_number(day):
-    return int(''.join(c for c in day if c.isdigit()))
+    return int("".join(c for c in day if c.isdigit()))
 
 
 def parse_groc_expression(config, config_context):
@@ -250,32 +200,32 @@ def parse_groc_expression(config, config_context):
     expression = config.value
     m = DAILY_SCHEDULE_RE.match(expression.lower())
     if not m:
-        msg = 'Schedule at %s is not a valid expression: %s'
+        msg = "Schedule at %s is not a valid expression: %s"
         raise ScheduleParseError(msg % (config_context.path, expression))
 
-    timestr = m.group('time')
+    timestr = m.group("time")
     if timestr is None:
-        timestr = '00:00'
+        timestr = "00:00"
 
-    if m.group('days') in (None, 'day'):
+    if m.group("days") in (None, "day"):
         weekdays = None
     else:
-        weekdays = {CONVERT_DAYS_INT[d] for d in m.group('days').split(',')}
+        weekdays = {CONVERT_DAYS_INT[d] for d in m.group("days").split(",")}
 
     monthdays = None
     ordinals = None
 
-    if m.group('month_days') != 'every':
-        values = {_parse_number(n) for n in m.group('month_days').split(',')}
+    if m.group("month_days") != "every":
+        values = {_parse_number(n) for n in m.group("month_days").split(",")}
         if weekdays is None:
             monthdays = values
         else:
             ordinals = values
 
-    if m.group('months') in (None, 'month'):
+    if m.group("months") in (None, "month"):
         months = None
     else:
-        months = {CONVERT_MONTHS[mo] for mo in m.group('months').split(',')}
+        months = {CONVERT_MONTHS[mo] for mo in m.group("months").split(",")}
 
     return ConfigGrocScheduler(
         original=expression,
@@ -292,28 +242,27 @@ def valid_cron_scheduler(config, config_context):
     """Parse a cron schedule."""
     try:
         crontab_kwargs = crontab.parse_crontab(config.value)
-        return ConfigCronScheduler(
-            original=config.value, jitter=config.jitter, **crontab_kwargs
-        )
+        return ConfigCronScheduler(original=config.value, jitter=config.jitter, **crontab_kwargs,)
     except ValueError as e:
         msg = "Invalid cron scheduler %s: %s"
         raise ConfigError(msg % (config_context.path, e))
 
 
 schedulers = {
-    'daily': valid_daily_scheduler,
-    'cron': valid_cron_scheduler,
-    'groc daily': parse_groc_expression,
+    "daily": valid_daily_scheduler,
+    "cron": valid_cron_scheduler,
+    "groc daily": parse_groc_expression,
 }
 
 
 class ScheduleValidator(config_utils.Validator):
     """Validate the structure of a scheduler config."""
+
     config_class = ConfigGenericSchedule
     defaults = {
-        'jitter': datetime.timedelta(),
+        "jitter": datetime.timedelta(),
     }
     validators = {
-        'type': config_utils.build_enum_validator(schedulers.keys()),
-        'jitter': config_utils.valid_time_delta,
+        "type": config_utils.build_enum_validator(schedulers.keys()),
+        "jitter": config_utils.valid_time_delta,
     }

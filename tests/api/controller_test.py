@@ -1,4 +1,5 @@
-import mock
+from unittest import mock
+
 import pytest
 
 from tron import mcp
@@ -19,132 +20,107 @@ from tron.core.job_scheduler import JobScheduler
 class TestJobCollectionController:
     @pytest.fixture(autouse=True)
     def setup_controller(self):
-        self.collection = mock.create_autospec(
-            JobCollection,
-            enable=mock.Mock(),
-            disable=mock.Mock(),
-        )
+        self.collection = mock.create_autospec(JobCollection, enable=mock.Mock(), disable=mock.Mock(),)
         self.controller = JobCollectionController(self.collection)
 
     def test_handle_command_unknown(self):
         with pytest.raises(UnknownCommandError):
-            self.controller.handle_command('enableall')
-            self.controller.handle_command('disableall')
+            self.controller.handle_command("enableall")
+            self.controller.handle_command("disableall")
 
     def test_handle_command_move_non_existing_job(self):
         self.collection.get_names.return_value = []
-        result = self.controller.handle_command(
-            'move', old_name='old.test', new_name='new.test'
-        )
+        result = self.controller.handle_command("move", old_name="old.test", new_name="new.test",)
         assert "doesn't exist" in result
 
     def test_handle_command_move_to_existing_job(self):
-        self.collection.get_names.return_value = ['old.test', 'new.test']
-        result = self.controller.handle_command(
-            'move', old_name='old.test', new_name='new.test'
-        )
+        self.collection.get_names.return_value = ["old.test", "new.test"]
+        result = self.controller.handle_command("move", old_name="old.test", new_name="new.test",)
         assert "exists already" in result
 
     def test_handle_command_move(self):
-        self.collection.get_names.return_value = ['old.test']
-        result = self.controller.handle_command(
-            'move', old_name='old.test', new_name='new.test'
-        )
+        self.collection.get_names.return_value = ["old.test"]
+        result = self.controller.handle_command("move", old_name="old.test", new_name="new.test",)
         assert "Error" not in result
 
 
 class TestActionRunController:
     @pytest.fixture(autouse=True)
     def setup_controller(self):
-        self.action_run = mock.create_autospec(
-            actionrun.ActionRun,
-            cancel=mock.Mock(),
-        )
+        self.action_run = mock.create_autospec(actionrun.ActionRun, cancel=mock.Mock(),)
         self.job_run = mock.create_autospec(jobrun.JobRun)
         self.job_run.is_scheduled = False
-        self.controller = controller.ActionRunController(
-            self.action_run,
-            self.job_run,
-        )
+        self.controller = controller.ActionRunController(self.action_run, self.job_run,)
         self.job_run.action_runs.cleanup_action_run = None
 
     def test_handle_command_start_failed(self):
         self.job_run.is_scheduled = True
-        result = self.controller.handle_command('start')
+        result = self.controller.handle_command("start")
         assert not self.action_run.start.mock_calls
         assert "cannot be started" in result
 
     def test_handle_command_recover_failed(self):
         self.action_run.is_unknown = False
-        result = self.controller.handle_command('recover')
+        result = self.controller.handle_command("recover")
         assert not self.action_run.recover.mock_calls
         assert "cannot be recovered" in result
 
     def test_handle_command_mapped_command(self):
-        result = self.controller.handle_command('cancel')
+        result = self.controller.handle_command("cancel")
         self.action_run.cancel.assert_called_with()
         assert "now in state" in result
 
     def test_handle_command_mapped_command_failed(self):
         self.action_run.cancel.return_value = False
         with pytest.raises(InvalidCommandForActionState):
-            self.controller.handle_command('cancel')
+            self.controller.handle_command("cancel")
 
     def test_handle_termination_not_implemented(self):
         self.action_run.stop.side_effect = NotImplementedError
-        result = self.controller.handle_termination('stop')
+        result = self.controller.handle_termination("stop")
         assert "Failed to stop" in result
 
     def test_handle_termination_success_without_extra_msg(self):
         self.action_run.kill.return_value = None
-        result = self.controller.handle_termination('kill')
+        result = self.controller.handle_termination("kill")
         assert "Attempting to kill" in result
 
     def test_handle_termination_success_with_extra_msg(self):
         self.action_run.kill.return_value = "Warning Message"
-        result = self.controller.handle_termination('kill')
+        result = self.controller.handle_termination("kill")
         assert "Attempting to kill" in result
         assert "Warning Message" in result
 
     def test_handle_retry_default(self):
-        self.controller.handle_command('retry')
+        self.controller.handle_command("retry")
         self.action_run.retry.assert_called_once_with(original_command=True)
 
     def test_handle_retry_new_command(self):
-        self.controller.handle_command('retry', use_latest_command=True)
+        self.controller.handle_command("retry", use_latest_command=True)
         self.action_run.retry.assert_called_once_with(original_command=False)
 
 
 class TestJobRunController:
     @pytest.fixture(autouse=True)
     def setup_controller(self):
-        self.job_run = mock.create_autospec(
-            jobrun.JobRun,
-            run_time=mock.Mock(),
-            cancel=mock.Mock(),
-        )
+        self.job_run = mock.create_autospec(jobrun.JobRun, run_time=mock.Mock(), cancel=mock.Mock(),)
         self.job_scheduler = mock.create_autospec(JobScheduler)
-        self.controller = controller.JobRunController(
-            self.job_run,
-            self.job_scheduler,
-        )
+        self.controller = controller.JobRunController(self.job_run, self.job_scheduler,)
 
     def test_handle_command_restart(self):
-        self.controller.handle_command('restart')
-        self.job_scheduler.manual_start.assert_called_with(
-            self.job_run.run_time,
-        )
+        self.controller.handle_command("restart")
+        self.job_scheduler.manual_start.assert_called_with(self.job_run.run_time,)
 
     def test_handle_mapped_command(self):
-        result = self.controller.handle_command('start')
+        result = self.controller.handle_command("start")
         self.job_run.start.assert_called_with()
-        assert 'now in state' in result
+        assert "now in state" in result
 
     def test_handle_mapped_command_failure(self):
         self.job_run.cancel.return_value = False
-        result = self.controller.handle_command('cancel')
+        result = self.controller.handle_command("cancel")
         self.job_run.cancel.assert_called_with()
-        assert 'Failed to cancel' in result
+        assert "Failed to cancel" in result
 
 
 class TestJobController:
@@ -154,16 +130,16 @@ class TestJobController:
         self.controller = controller.JobController(self.job_scheduler)
 
     def test_handle_command_enable(self):
-        self.controller.handle_command('enable')
+        self.controller.handle_command("enable")
         self.job_scheduler.enable.assert_called_with()
 
     def test_handle_command_disable(self):
-        self.controller.handle_command('disable')
+        self.controller.handle_command("disable")
         self.job_scheduler.disable.assert_called_with()
 
     def test_handle_command_start(self):
         run_time = mock.Mock()
-        self.controller.handle_command('start', run_time)
+        self.controller.handle_command("start", run_time)
         self.job_scheduler.manual_start.assert_called_with(run_time=run_time)
 
 
@@ -177,28 +153,28 @@ class TestConfigController:
 
     def test_get_config_content_new(self):
         self.manager.__contains__.return_value = False
-        content = self.controller._get_config_content('name')
+        content = self.controller._get_config_content("name")
         assert content == self.controller.DEFAULT_NAMED_CONFIG
         assert not self.manager.read_raw_config.call_count
 
     def test_get_config_content_old(self):
         self.manager.__contains__.return_value = True
-        name = 'the_name'
+        name = "the_name"
         content = self.controller._get_config_content(name)
         assert content == self.manager.read_raw_config.return_value
         self.manager.read_raw_config.assert_called_with(name)
 
     def test_read_config(self):
         self.manager.__contains__.return_value = True
-        name = 'MASTER'
+        name = "MASTER"
         resp = self.controller.read_config(name)
         self.manager.read_raw_config.assert_called_with(name)
         self.manager.get_hash.assert_called_with(name)
-        assert resp['config'] == self.manager.read_raw_config.return_value
-        assert resp['hash'] == self.manager.get_hash.return_value
+        assert resp["config"] == self.manager.read_raw_config.return_value
+        assert resp["hash"] == self.manager.get_hash.return_value
 
     def test_update_config(self):
-        name, content, config_hash = 'foo_namespace', mock.Mock(), mock.Mock()
+        name, content, config_hash = "foo_namespace", mock.Mock(), mock.Mock()
         self.manager.get_hash.return_value = config_hash
         assert not self.controller.update_config(name, content, config_hash)
         self.manager.get_hash.assert_called_with(name)
@@ -206,27 +182,31 @@ class TestConfigController:
         self.mcp.reconfigure.assert_called_with(name)
 
     def test_update_config_failure(self):
-        name, content, old_content, config_hash = 'foo_namespace', mock.Mock(), mock.Mock(), mock.Mock()
+        name, content, old_content, config_hash = (
+            "foo_namespace",
+            mock.Mock(),
+            mock.Mock(),
+            mock.Mock(),
+        )
         self.manager.get_hash.return_value = config_hash
         self.manager.write_config.side_effect = [ConfigError("It broke"), None]
-        self.controller.read_config = mock.Mock(return_value={'config': old_content})
-        error = self.controller.update_config(
-            name,
-            content,
-            config_hash,
-        )
+        self.controller.read_config = mock.Mock(return_value={"config": old_content})
+        error = self.controller.update_config(name, content, config_hash,)
         assert error == "It broke"
-        self.manager.write_config.call_args_list = [(name, content), (name, old_content)]
+        self.manager.write_config.call_args_list = [
+            (name, content),
+            (name, old_content),
+        ]
         assert self.mcp.reconfigure.call_count == 1
         self.mcp.reconfigure.assert_called_with(name)
 
     def test_update_config_hash_mismatch(self):
-        name, content, config_hash = 'foo_namespace', mock.Mock(), mock.Mock()
+        name, content, config_hash = "foo_namespace", mock.Mock(), mock.Mock()
         error = self.controller.update_config(name, content, config_hash)
         assert error == "Configuration has changed. Please try again."
 
     def test_delete_config(self):
-        name, content, config_hash = 'foo_namespace', "", mock.Mock()
+        name, content, config_hash = "foo_namespace", "", mock.Mock()
         self.manager.get_hash.return_value = config_hash
         assert not self.controller.delete_config(name, content, config_hash)
         self.manager.delete_config.assert_called_with(name)
@@ -234,7 +214,7 @@ class TestConfigController:
         self.manager.get_hash.assert_called_with(name)
 
     def test_delete_config_failure(self):
-        name, content, config_hash = 'foo_namespace', "", mock.Mock()
+        name, content, config_hash = "foo_namespace", "", mock.Mock()
         self.manager.get_hash.return_value = config_hash
         self.manager.delete_config.side_effect = Exception("some error")
         error = self.controller.delete_config(name, content, config_hash)
@@ -243,12 +223,12 @@ class TestConfigController:
         assert not self.mcp.reconfigure.call_count
 
     def test_delete_config_hash_mismatch(self):
-        name, content, config_hash = 'foo_namespace', "", mock.Mock()
+        name, content, config_hash = "foo_namespace", "", mock.Mock()
         error = self.controller.delete_config(name, content, config_hash)
         assert error == "Configuration has changed. Please try again."
 
     def test_delete_config_content_not_empty(self):
-        name, content, config_hash = 'foo_namespace', "", mock.Mock()
+        name, content, config_hash = "foo_namespace", "", mock.Mock()
         error = self.controller.delete_config(name, content, config_hash)
         assert error
 
@@ -261,7 +241,7 @@ class TestConfigController:
 class TestEventsController:
     @pytest.fixture(autouse=True)
     def setup(self):
-        with mock.patch('tron.api.controller.EventBus', autospec=True) as eb:
+        with mock.patch("tron.api.controller.EventBus", autospec=True) as eb:
             eb.instance = mock.Mock()
             self.eventbus = eb
             self.controller = EventsController()
@@ -269,7 +249,7 @@ class TestEventsController:
 
     def test_info(self):
         self.eventbus.instance = None
-        assert self.controller.info() == dict(error='EventBus disabled')
+        assert self.controller.info() == dict(error="EventBus disabled")
 
         self.eventbus.instance = mock.Mock()
         assert self.controller.info() == dict(response=self.eventbus.instance.event_log)
@@ -280,19 +260,19 @@ class TestEventsController:
         self.eventbus.has_event.return_value = True
         self.eventbus.publish.return_value = False
 
-        assert self.controller.info() == dict(error='EventBus disabled')
+        assert self.controller.info() == dict(error="EventBus disabled")
         assert len(self.eventbus.publish.mock_calls) == 0
 
         self.eventbus.instance = mock.Mock()
-        assert self.controller.publish(event) == dict(response=f'event {event} already published')
+        assert self.controller.publish(event) == dict(response=f"event {event} already published")
         assert len(self.eventbus.publish.mock_calls) == 0
 
         self.eventbus.has_event.return_value = False
-        assert self.controller.publish(event) == dict(error=f'could not publish {event}')
+        assert self.controller.publish(event) == dict(error=f"could not publish {event}")
         assert len(self.eventbus.publish.mock_calls) == 1
 
         self.eventbus.publish.return_value = True
-        assert self.controller.publish(event) == dict(response='OK')
+        assert self.controller.publish(event) == dict(response="OK")
         assert len(self.eventbus.publish.mock_calls) == 2
 
     def test_discard(self):
@@ -300,13 +280,13 @@ class TestEventsController:
         self.eventbus.instance = None
         self.eventbus.discard.return_value = False
 
-        assert self.controller.info() == dict(error='EventBus disabled')
+        assert self.controller.info() == dict(error="EventBus disabled")
         assert len(self.eventbus.discard.mock_calls) == 0
 
         self.eventbus.instance = mock.Mock()
-        assert self.controller.discard(event) == dict(error=f'could not discard {event}')
+        assert self.controller.discard(event) == dict(error=f"could not discard {event}")
         assert len(self.eventbus.discard.mock_calls) == 1
 
         self.eventbus.discard.return_value = True
-        assert self.controller.discard(event) == dict(response='OK')
+        assert self.controller.discard(event) == dict(response="OK")
         assert len(self.eventbus.discard.mock_calls) == 2

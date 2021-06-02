@@ -20,14 +20,14 @@ from behave import then
 from behave import when
 
 
-@given(u'a working mesos cluster')
+@given("a working mesos cluster")
 def working_mesos_cluster(context):
     pass
 
 
-@when(u'we run tronctl {command}')
+@when("we run tronctl {command}")
 def run_tronctl_command(context, command):
-    full_command = f'tronctl --server http://tronmaster:8089 {command}'
+    full_command = f"tronctl --server http://tronmaster:8089 {command}"
     exit_code, context.output = itest_utils.run(full_command)
     print(full_command)
     print(exit_code)
@@ -35,18 +35,18 @@ def run_tronctl_command(context, command):
     assert exit_code == 0, context.output
 
 
-@then(u'we should see {framework_string} in the list of frameworks')
+@then("we should see {framework_string} in the list of frameworks")
 def see_framework_in_list(context, framework_string):
     frameworks = list_active_frameworks()
     assert any(framework_string in f for f in frameworks), frameworks
 
 
-@when(u'we sleep {num:d} seconds')
+@when("we sleep {num:d} seconds")
 def sleep(context, num):
     time.sleep(num)
 
 
-@then(u'we should see {num:d} frameworks')
+@then("we should see {num:d} frameworks")
 def see_num_frameworks(context, num):
     frameworks = list_active_frameworks()
     assert len(frameworks) == num, frameworks
@@ -54,10 +54,10 @@ def see_num_frameworks(context, num):
 
 def list_active_frameworks():
     framework_info = fetch_frameworks_endpoint()["frameworks"]
-    return [f['name'] for f in framework_info]
+    return [f["name"] for f in framework_info]
 
 
 def fetch_frameworks_endpoint():
-    url = 'http://mesosmaster:5050/state/frameworks.json'
+    url = "http://mesosmaster:5050/state/frameworks.json"
     resp = requests.get(url=url)
     return resp.json()

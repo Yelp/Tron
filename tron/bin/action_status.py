@@ -6,9 +6,9 @@ import signal
 
 from tron import yaml
 
-log = logging.getLogger('tron.action_status')
+log = logging.getLogger("tron.action_status")
 
-STATUS_FILE = 'status'
+STATUS_FILE = "status"
 
 
 def get_field(field, status_file):
@@ -23,7 +23,7 @@ def print_status_file(status_file):
 
 
 def send_signal(signal_num, status_file):
-    pid = get_field('pid', status_file)
+    pid = get_field("pid", status_file)
     if pid:
         try:
             os.killpg(os.getpgid(pid), signal_num)
@@ -33,32 +33,24 @@ def send_signal(signal_num, status_file):
 
 
 commands = {
-    'print':
-        print_status_file,
-    'pid':
-        lambda statusfile: print(get_field('pid', statusfile)),
-    'return_code':
-        lambda statusfile: print(get_field('return_code', statusfile)),
-    'terminate':
-        lambda statusfile: send_signal(signal.SIGTERM, statusfile),
-    'kill':
-        lambda statusfile: send_signal(signal.SIGKILL, statusfile),
+    "print": print_status_file,
+    "pid": lambda statusfile: print(get_field("pid", statusfile)),
+    "return_code": lambda statusfile: print(get_field("return_code", statusfile)),
+    "terminate": lambda statusfile: send_signal(signal.SIGTERM, statusfile),
+    "kill": lambda statusfile: send_signal(signal.SIGKILL, statusfile),
 }
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Action Status for Tron')
+    parser = argparse.ArgumentParser(description="Action Status for Tron")
     parser.add_argument(
-        'output_dir',
-        help='The directory where the state of the action run is',
+        "output_dir", help="The directory where the state of the action run is",
     )
     parser.add_argument(
-        'command',
-        help='the command to run',
+        "command", help="the command to run",
     )
     parser.add_argument(
-        'run_id',
-        help='run_id of the action',
+        "run_id", help="run_id of the action",
     )
     return parser.parse_args()
 

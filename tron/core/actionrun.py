@@ -34,7 +34,7 @@ MAX_RECOVER_TRIES = 5
 INITIAL_RECOVER_DELAY = 3
 
 
-class ActionRunFactory(object):
+class ActionRunFactory:
     """Construct ActionRuns and ActionRunCollections for a JobRun and
     ActionGraph.
     """
@@ -43,46 +43,26 @@ class ActionRunFactory(object):
     def build_action_run_collection(cls, job_run, action_runner):
         """Create an ActionRunCollection from an ActionGraph and JobRun."""
         action_run_map = {
-            maybe_decode(name): cls.build_run_for_action(
-                job_run,
-                action_inst,
-                action_runner,
-            )
+            maybe_decode(name): cls.build_run_for_action(job_run, action_inst, action_runner,)
             for name, action_inst in job_run.action_graph.action_map.items()
         }
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
     @classmethod
     def action_run_collection_from_state(
-        cls,
-        job_run,
-        runs_state_data,
-        cleanup_action_state_data,
+        cls, job_run, runs_state_data, cleanup_action_state_data,
     ):
-        action_runs = [
-            cls.action_run_from_state(job_run, state_data)
-            for state_data in runs_state_data
-        ]
+        action_runs = [cls.action_run_from_state(job_run, state_data) for state_data in runs_state_data]
         if cleanup_action_state_data:
-            action_runs.append(
-                cls.action_run_from_state(
-                    job_run,
-                    cleanup_action_state_data,
-                    cleanup=True,
-                ),
-            )
+            action_runs.append(cls.action_run_from_state(job_run, cleanup_action_state_data, cleanup=True,),)
 
-        action_run_map = {
-            maybe_decode(action_run.action_name): action_run
-            for action_run in action_runs
-        }
+        action_run_map = {maybe_decode(action_run.action_name): action_run for action_run in action_runs}
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
     @classmethod
     def build_run_for_action(cls, job_run, action, action_runner):
         """Create an ActionRun for a JobRun and Action."""
-        run_node = action.node_pool.next(
-        ) if action.node_pool else job_run.node
+        run_node = action.node_pool.next() if action.node_pool else job_run.node
 
         if action.trigger_timeout:
             trigger_timeout = job_run.run_time + action.trigger_timeout
@@ -90,21 +70,21 @@ class ActionRunFactory(object):
             trigger_timeout = job_run.run_time + datetime.timedelta(days=1)
 
         args = {
-            'job_run_id': job_run.id,
-            'name': action.name,
-            'node': run_node,
-            'command_config': action.command_config,
-            'parent_context': job_run.context,
-            'output_path': job_run.output_path.clone(),
-            'cleanup': action.is_cleanup,
-            'action_runner': action_runner,
-            'retries_remaining': action.retries,
-            'retries_delay': action.retries_delay,
-            'executor': action.executor,
-            'trigger_downstreams': action.trigger_downstreams,
-            'triggered_by': action.triggered_by,
-            'on_upstream_rerun': action.on_upstream_rerun,
-            'trigger_timeout_timestamp': trigger_timeout.timestamp(),
+            "job_run_id": job_run.id,
+            "name": action.name,
+            "node": run_node,
+            "command_config": action.command_config,
+            "parent_context": job_run.context,
+            "output_path": job_run.output_path.clone(),
+            "cleanup": action.is_cleanup,
+            "action_runner": action_runner,
+            "retries_remaining": action.retries,
+            "retries_delay": action.retries_delay,
+            "executor": action.executor,
+            "trigger_downstreams": action.trigger_downstreams,
+            "triggered_by": action.triggered_by,
+            "on_upstream_rerun": action.on_upstream_rerun,
+            "trigger_timeout_timestamp": trigger_timeout.timestamp(),
         }
         if action.executor == ExecutorTypes.mesos.value:
             return MesosActionRun(**args)
@@ -114,15 +94,15 @@ class ActionRunFactory(object):
     def action_run_from_state(cls, job_run, state_data, cleanup=False):
         """Restore an ActionRun for this JobRun from the state data."""
         args = {
-            'state_data': state_data,
-            'parent_context': job_run.context,
-            'output_path': job_run.output_path.clone(),
-            'job_run_node': job_run.node,
-            'cleanup': cleanup,
-            'action_graph': job_run.action_graph,
+            "state_data": state_data,
+            "parent_context": job_run.context,
+            "output_path": job_run.output_path.clone(),
+            "job_run_node": job_run.node,
+            "cleanup": cleanup,
+            "action_graph": job_run.action_graph,
         }
 
-        if state_data.get('executor') == ExecutorTypes.mesos.value:
+        if state_data.get("executor") == ExecutorTypes.mesos.value:
             return MesosActionRun.from_state(**args)
         return SSHActionRun.from_state(**args)
 
@@ -130,6 +110,7 @@ class ActionRunFactory(object):
 @dataclass
 class ActionRunAttempt:
     """Stores state about one try of an action run."""
+
     command_config: action.ActionCommandConfig
     start_time: datetime.datetime = None
     end_time: datetime.datetime = None
@@ -149,7 +130,7 @@ class ActionRunAttempt:
     @property
     def state_data(self):
         state_data = {
-            'command_config': self.command_config.state_data,
+            "command_config": self.command_config.state_data,
         }
         for field in fields(self):
             if field.name not in state_data:
@@ -158,7 +139,7 @@ class ActionRunAttempt:
 
     @classmethod
     def from_state(cls, state_data):
-        state_data['command_config'] = action.ActionCommandConfig(**state_data['command_config'])
+        state_data["command_config"] = action.ActionCommandConfig(**state_data["command_config"])
         return cls(**state_data)
 
 
@@ -168,67 +149,30 @@ class ActionRun(Observable):
     ActionRun's state machine is observed by a parent JobRun.
     """
 
-    CANCELLED = 'cancelled'
-    FAILED = 'failed'
-    QUEUED = 'queued'
-    RUNNING = 'running'
-    SCHEDULED = 'scheduled'
-    SKIPPED = 'skipped'
-    STARTING = 'starting'
-    SUCCEEDED = 'succeeded'
-    WAITING = 'waiting'
-    UNKNOWN = 'unknown'
+    CANCELLED = "cancelled"
+    FAILED = "failed"
+    QUEUED = "queued"
+    RUNNING = "running"
+    SCHEDULED = "scheduled"
+    SKIPPED = "skipped"
+    STARTING = "starting"
+    SUCCEEDED = "succeeded"
+    WAITING = "waiting"
+    UNKNOWN = "unknown"
 
     default_transitions = dict(fail=FAILED, success=SUCCEEDED)
     STATE_MACHINE = Machine(
         SCHEDULED,
         **{
-            CANCELLED:
-                dict(skip=SKIPPED),
-            FAILED:
-                dict(skip=SKIPPED),
-            RUNNING:
-                dict(
-                    cancel=CANCELLED,
-                    fail_unknown=UNKNOWN,
-                    **default_transitions,
-                ),
-            STARTING:
-                dict(
-                    started=RUNNING,
-                    fail=FAILED,
-                    fail_unknown=UNKNOWN,
-                    cancel=CANCELLED,
-                ),
-            UNKNOWN:
-                dict(
-                    running=RUNNING,
-                    fail_unknown=UNKNOWN,
-                    **default_transitions
-                ),
-            WAITING:
-                dict(
-                    cancel=CANCELLED,
-                    start=STARTING,
-                    **default_transitions,
-                ),
-            QUEUED:
-                dict(
-                    ready=WAITING,
-                    cancel=CANCELLED,
-                    start=STARTING,
-                    schedule=SCHEDULED,
-                    **default_transitions,
-                ),
-            SCHEDULED:
-                dict(
-                    ready=WAITING,
-                    queue=QUEUED,
-                    cancel=CANCELLED,
-                    start=STARTING,
-                    **default_transitions,
-                ),
-        }
+            CANCELLED: dict(skip=SKIPPED),
+            FAILED: dict(skip=SKIPPED),
+            RUNNING: dict(cancel=CANCELLED, fail_unknown=UNKNOWN, **default_transitions,),
+            STARTING: dict(started=RUNNING, fail=FAILED, fail_unknown=UNKNOWN, cancel=CANCELLED,),
+            UNKNOWN: dict(running=RUNNING, fail_unknown=UNKNOWN, **default_transitions,),
+            WAITING: dict(cancel=CANCELLED, start=STARTING, **default_transitions,),
+            QUEUED: dict(ready=WAITING, cancel=CANCELLED, start=STARTING, schedule=SCHEDULED, **default_transitions,),
+            SCHEDULED: dict(ready=WAITING, queue=QUEUED, cancel=CANCELLED, start=STARTING, **default_transitions,),
+        },
     )
 
     # The set of states that are considered end states. Technically some of
@@ -236,8 +180,8 @@ class ActionRun(Observable):
     END_STATES = {FAILED, SUCCEEDED, CANCELLED, SKIPPED, UNKNOWN}
 
     # Failed render command is false to ensure that it will fail when run
-    FAILED_RENDER = 'false # Command failed to render correctly. See the Tron error log.'
-    NOTIFY_TRIGGER_READY = 'trigger_ready'
+    FAILED_RENDER = "false # Command failed to render correctly. See the Tron error log."
+    NOTIFY_TRIGGER_READY = "trigger_ready"
 
     EXIT_INVALID_COMMAND = -1
     EXIT_NODE_ERROR = -2
@@ -246,11 +190,11 @@ class ActionRun(Observable):
     EXIT_MESOS_DISABLED = -5
 
     EXIT_REASONS = {
-        EXIT_INVALID_COMMAND: 'Invalid command',
-        EXIT_NODE_ERROR: 'Node error',
-        EXIT_STOP_KILL: 'Stopped or killed',
-        EXIT_TRIGGER_TIMEOUT: 'Timed out waiting for trigger',
-        EXIT_MESOS_DISABLED: 'Mesos disabled',
+        EXIT_INVALID_COMMAND: "Invalid command",
+        EXIT_NODE_ERROR: "Node error",
+        EXIT_STOP_KILL: "Stopped or killed",
+        EXIT_TRIGGER_TIMEOUT: "Timed out waiting for trigger",
+        EXIT_MESOS_DISABLED: "Mesos disabled",
     }
 
     # This is a list of "alternate locations" that we can look for stdout/stderr in
@@ -258,21 +202,16 @@ class ActionRun(Observable):
     # the format of the stdout/stderr paths
     STDOUT_PATHS = [
         os.path.join(
-            '{namespace}.{jobname}',
-            '{namespace}.{jobname}.{run_num}',
-            '{namespace}.{jobname}.{run_num}.{action}',
+            "{namespace}.{jobname}", "{namespace}.{jobname}.{run_num}", "{namespace}.{jobname}.{run_num}.{action}",
         ),  # old style paths (pre-#735 PR)
         os.path.join(
-            '{namespace}.{jobname}',
-            '{namespace}.{jobname}.{run_num}',
-            '{namespace}.{jobname}.{run_num}.{action}',
-            '{namespace}.{jobname}.{run_num}.recovery-{namespace}.{jobname}.{run_num}.{action}',
+            "{namespace}.{jobname}",
+            "{namespace}.{jobname}.{run_num}",
+            "{namespace}.{jobname}.{run_num}.{action}",
+            "{namespace}.{jobname}.{run_num}.recovery-{namespace}.{jobname}.{run_num}.{action}",
         ),  # old style recovery paths (pre-#735 PR)
         os.path.join(
-            '{namespace}',
-            '{jobname}',
-            '{run_num}',
-            '{action}-recovery',
+            "{namespace}", "{jobname}", "{run_num}", "{action}-recovery",
         ),  # new style recovery paths (post-#735 PR)
     ]
 
@@ -312,9 +251,7 @@ class ActionRun(Observable):
         self.end_time = end_time
         self.exit_status = exit_status
         self.action_runner = action_runner or NoActionRunnerFactory()
-        self.machine = machine or Machine.from_machine(
-            ActionRun.STATE_MACHINE, None, run_state
-        )
+        self.machine = machine or Machine.from_machine(ActionRun.STATE_MACHINE, None, run_state,)
         self.is_cleanup = cleanup
 
         self.executor = executor
@@ -375,52 +312,45 @@ class ActionRun(Observable):
     @classmethod
     def attempts_from_state(cls, state_data, command_config):
         attempts = []
-        if 'attempts' in state_data:
-            attempts = [ActionRunAttempt.from_state(a) for a in state_data['attempts']]
+        if "attempts" in state_data:
+            attempts = [ActionRunAttempt.from_state(a) for a in state_data["attempts"]]
         else:
-            rendered_command = maybe_decode(state_data.get('rendered_command'))
-            exit_statuses = state_data.get('exit_statuses', [])
+            rendered_command = maybe_decode(state_data.get("rendered_command"))
+            exit_statuses = state_data.get("exit_statuses", [])
             # If the action has started, add an attempt for the final try
-            if state_data.get('start_time'):
-                exit_statuses = exit_statuses + [state_data.get('exit_status')]
+            if state_data.get("start_time"):
+                exit_statuses = exit_statuses + [state_data.get("exit_status")]
             for exit_status in exit_statuses:
-                attempts.append(ActionRunAttempt(
-                    command_config=command_config,
-                    rendered_command=rendered_command,
-                    exit_status=exit_status,
-                    start_time='unknown',
-                    end_time='unknown',
-                ))
+                attempts.append(
+                    ActionRunAttempt(
+                        command_config=command_config,
+                        rendered_command=rendered_command,
+                        exit_status=exit_status,
+                        start_time="unknown",
+                        end_time="unknown",
+                    ),
+                )
             if attempts:
-                attempts[-1].mesos_task_id = state_data.get('mesos_task_id')
+                attempts[-1].mesos_task_id = state_data.get("mesos_task_id")
         return attempts
 
     @classmethod
     def from_state(
-        cls,
-        state_data,
-        parent_context,
-        output_path,
-        job_run_node,
-        action_graph,
-        cleanup=False,
+        cls, state_data, parent_context, output_path, job_run_node, action_graph, cleanup=False,
     ):
         """Restore the state of this ActionRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
 
         # Support state from older version
-        if 'id' in state_data:
-            job_run_id, action_name = state_data['id'].rsplit('.', 1)
+        if "id" in state_data:
+            job_run_id, action_name = state_data["id"].rsplit(".", 1)
         else:
-            job_run_id = state_data['job_run_id']
-            action_name = state_data['action_name']
+            job_run_id = state_data["job_run_id"]
+            action_name = state_data["action_name"]
 
-        job_run_node = pool_repo.get_node(
-            state_data.get('node_name'),
-            job_run_node,
-        )
+        job_run_node = pool_repo.get_node(state_data.get("node_name"), job_run_node,)
 
-        action_runner_data = state_data.get('action_runner')
+        action_runner_data = state_data.get("action_runner")
         if action_runner_data:
             action_runner = SubprocessActionRunnerFactory(**action_runner_data)
         else:
@@ -430,7 +360,7 @@ class ActionRun(Observable):
         if action_config:
             command_config = action_config.command_config
         else:
-            command_config = action.ActionCommandConfig(command='')
+            command_config = action.ActionCommandConfig(command="")
 
         attempts = cls.attempts_from_state(state_data, command_config)
         run = cls(
@@ -440,27 +370,27 @@ class ActionRun(Observable):
             parent_context=parent_context,
             output_path=output_path,
             command_config=command_config,
-            original_command=state_data.get('original_command'),
+            original_command=state_data.get("original_command"),
             cleanup=cleanup,
-            start_time=state_data['start_time'],
-            end_time=state_data['end_time'],
-            run_state=state_data['state'],
-            exit_status=state_data.get('exit_status'),
+            start_time=state_data["start_time"],
+            end_time=state_data["end_time"],
+            run_state=state_data["state"],
+            exit_status=state_data.get("exit_status"),
             attempts=attempts,
-            retries_remaining=state_data.get('retries_remaining'),
-            retries_delay=state_data.get('retries_delay'),
+            retries_remaining=state_data.get("retries_remaining"),
+            retries_delay=state_data.get("retries_delay"),
             action_runner=action_runner,
-            executor=state_data.get('executor', ExecutorTypes.ssh.value),
-            trigger_downstreams=state_data.get('trigger_downstreams'),
-            triggered_by=state_data.get('triggered_by'),
-            on_upstream_rerun=state_data.get('on_upstream_rerun'),
-            trigger_timeout_timestamp=state_data.get('trigger_timeout_timestamp'),
+            executor=state_data.get("executor", ExecutorTypes.ssh.value),
+            trigger_downstreams=state_data.get("trigger_downstreams"),
+            triggered_by=state_data.get("triggered_by"),
+            on_upstream_rerun=state_data.get("on_upstream_rerun"),
+            trigger_timeout_timestamp=state_data.get("trigger_timeout_timestamp"),
         )
 
         # Transition running to fail unknown because exit status was missed
         # Recovery will look for unknown runs
         if run.is_active:
-            run.transition_and_notify('fail_unknown')
+            run.transition_and_notify("fail_unknown")
         return run
 
     def start(self, original_command=True):
@@ -470,7 +400,7 @@ class ActionRun(Observable):
             self.in_delay.cancel()
             self.in_delay = None
 
-        if not self.machine.check('start'):
+        if not self.machine.check("start"):
             return False
 
         if len(self.attempts) == 0:
@@ -480,7 +410,7 @@ class ActionRun(Observable):
 
         new_attempt = self.create_attempt(original_command=original_command)
         self.start_time = new_attempt.start_time
-        self.transition_and_notify('start')
+        self.transition_and_notify("start")
 
         if not self.command_config.command:
             log.error(f"{self} no longer configured in tronfig, cannot run")
@@ -500,9 +430,7 @@ class ActionRun(Observable):
             command_config.command = self.original_command
         rendered_command = self.render_command(command_config.command)
         new_attempt = ActionRunAttempt(
-            command_config=command_config,
-            start_time=current_time,
-            rendered_command=rendered_command,
+            command_config=command_config, start_time=current_time, rendered_command=rendered_command,
         )
         self.attempts.append(new_attempt)
         return new_attempt
@@ -528,15 +456,10 @@ class ActionRun(Observable):
             self.end_time = timeutils.current_time()
             if self.last_attempt is not None and self.last_attempt.end_time is None:
                 self.last_attempt.exit(exit_status, self.end_time)
-            log.info(
-                f"{self} completed with {target}, transitioned to "
-                f"{self.state}, exit status: {exit_status}"
-            )
+            log.info(f"{self} completed with {target}, transitioned to " f"{self.state}, exit status: {exit_status}",)
             return self.transition_and_notify(target)
         else:
-            log.debug(
-                f"{self} cannot transition from {self.state} via {target}"
-            )
+            log.debug(f"{self} cannot transition from {self.state} via {target}",)
 
     def retry(self, original_command=True):
         """Invoked externally (via API) when action needs to be re-tried
@@ -568,9 +491,7 @@ class ActionRun(Observable):
     def restart(self, original_command=True):
         """Used by `fail` when action run has to be re-tried"""
         if self.retries_delay is not None:
-            self.in_delay = reactor.callLater(
-                self.retries_delay.total_seconds(), self.start_after_delay
-            )
+            self.in_delay = reactor.callLater(self.retries_delay.total_seconds(), self.start_after_delay,)
             log.info(f"{self} delaying for a retry in {self.retries_delay}s")
             return True
         else:
@@ -581,13 +502,12 @@ class ActionRun(Observable):
         if self.retries_remaining:
             self.retries_remaining = -1
 
-        return self._done('fail', exit_status)
+        return self._done("fail", exit_status)
 
     def _exit_unsuccessful(self, exit_status=None, retry_original_command=True):
         if self.is_done:
             log.info(
-                f'{self} got exit code {exit_status} but already in terminal '
-                f'state "{self.state}", not retrying',
+                f"{self} got exit code {exit_status} but already in terminal " f'state "{self.state}", not retrying',
             )
             return
         if self.last_attempt is not None:
@@ -597,15 +517,11 @@ class ActionRun(Observable):
                 self.retries_remaining -= 1
                 return self.restart(original_command=retry_original_command)
             else:
-                log.info(
-                    "Reached maximum number of retries: {}".format(
-                        len(self.attempts),
-                    )
-                )
+                log.info(f"Reached maximum number of retries: {len(self.attempts)}",)
         if exit_status is None:
-            return self._done('fail_unknown', exit_status)
+            return self._done("fail_unknown", exit_status)
         else:
-            return self._done('fail', exit_status)
+            return self._done("fail", exit_status)
 
     def triggers_to_emit(self) -> List[str]:
         if not self.trigger_downstreams:
@@ -614,9 +530,7 @@ class ActionRun(Observable):
         if isinstance(self.trigger_downstreams, bool):
             templates = ["shortdate.{shortdate}"]
         elif isinstance(self.trigger_downstreams, dict):
-            templates = [
-                f"{k}.{v}" for k, v in self.trigger_downstreams.items()
-            ]
+            templates = [f"{k}.{v}" for k, v in self.trigger_downstreams.items()]
         else:
             log.error(f"{self} trigger_downstreams must be true or dict")
 
@@ -628,7 +542,7 @@ class ActionRun(Observable):
             return
 
         log.info(f"{self} publishing triggers: [{', '.join(triggers)}]")
-        job_id = '.'.join(self.job_run_id.split('.')[:-1])
+        job_id = ".".join(self.job_run_id.split(".")[:-1])
         for trigger in triggers:
             EventBus.publish(f"{job_id}.{self.action_name}.{trigger}")
 
@@ -640,13 +554,10 @@ class ActionRun(Observable):
     # TODO: subscribe for events and maintain a list of remaining triggers
     @property
     def remaining_triggers(self):
-        return [
-            trig for trig in self.rendered_triggers
-            if not EventBus.has_event(trig)
-        ]
+        return [trig for trig in self.rendered_triggers if not EventBus.has_event(trig)]
 
     def success(self):
-        transition_valid = self._done('success')
+        transition_valid = self._done("success")
         if transition_valid:
             if self.trigger_downstreams:
                 self.emit_triggers()
@@ -656,7 +567,7 @@ class ActionRun(Observable):
     def fail_unknown(self):
         """Failed with unknown reason."""
         log.warning(f"{self} failed with no exit code")
-        return self._done('fail_unknown', None)
+        return self._done("fail_unknown", None)
 
     def cancel_delay(self):
         if self.in_delay is not None:
@@ -672,29 +583,26 @@ class ActionRun(Observable):
         if isinstance(self.action_runner, NoActionRunnerFactory):
             action_runner = None
         else:
-            action_runner = dict(
-                status_path=self.action_runner.status_path,
-                exec_path=self.action_runner.exec_path,
-            )
+            action_runner = dict(status_path=self.action_runner.status_path, exec_path=self.action_runner.exec_path,)
 
         return {
-            'job_run_id': self.job_run_id,
-            'action_name': self.action_name,
-            'state': self.state,
-            'original_command': self.original_command,
-            'start_time': self.start_time,
-            'end_time': self.end_time,
-            'node_name': self.node.get_name() if self.node else None,
-            'exit_status': self.exit_status,
-            'attempts': [a.state_data for a in self.attempts],
-            'retries_remaining': self.retries_remaining,
-            'retries_delay': self.retries_delay,
-            'action_runner': action_runner,
-            'executor': self.executor,
-            'trigger_downstreams': self.trigger_downstreams,
-            'triggered_by': self.triggered_by,
-            'on_upstream_rerun': self.on_upstream_rerun,
-            'trigger_timeout_timestamp': self.trigger_timeout_timestamp,
+            "job_run_id": self.job_run_id,
+            "action_name": self.action_name,
+            "state": self.state,
+            "original_command": self.original_command,
+            "start_time": self.start_time,
+            "end_time": self.end_time,
+            "node_name": self.node.get_name() if self.node else None,
+            "exit_status": self.exit_status,
+            "attempts": [a.state_data for a in self.attempts],
+            "retries_remaining": self.retries_remaining,
+            "retries_delay": self.retries_delay,
+            "action_runner": action_runner,
+            "executor": self.executor,
+            "trigger_downstreams": self.trigger_downstreams,
+            "triggered_by": self.triggered_by,
+            "on_upstream_rerun": self.on_upstream_rerun,
+            "trigger_timeout_timestamp": self.trigger_timeout_timestamp,
         }
 
     def render_template(self, template):
@@ -749,9 +657,7 @@ class ActionRun(Observable):
         if self.trigger_timeout_timestamp:
             now = timeutils.current_time().timestamp()
             delay = max(self.trigger_timeout_timestamp - now, 1)
-            self.trigger_timeout_call = reactor.callLater(
-                delay, self.trigger_timeout_reached
-            )
+            self.trigger_timeout_call = reactor.callLater(delay, self.trigger_timeout_reached,)
         else:
             log.error(f"{self} has no trigger_timeout_timestamp")
 
@@ -761,9 +667,7 @@ class ActionRun(Observable):
     def trigger_timeout_reached(self):
         if self.remaining_triggers:
             self.trigger_timeout_call = None
-            log.warning(
-                f"{self} reached timeout waiting for: {self.remaining_triggers}"
-            )
+            log.warning(f"{self} reached timeout waiting for: {self.remaining_triggers}",)
             self.fail(self.EXIT_TRIGGER_TIMEOUT)
         else:
             self.notify(ActionRun.NOTIFY_TRIGGER_READY)
@@ -793,8 +697,8 @@ class ActionRun(Observable):
         if name in self.machine.transition_names:
             return lambda: self.transition_and_notify(name)
 
-        if name.startswith('is_'):
-            state_name = name.replace('is_', '')
+        if name.startswith("is_"):
+            state_name = name.replace("is_", "")
             if state_name not in self.machine.states:
                 raise AttributeError(f"{name} is not a state")
             return self.state == state_name
@@ -815,7 +719,7 @@ class SSHActionRun(ActionRun, Observer):
     """
 
     def __init__(self, *args, **kwargs):
-        super(SSHActionRun, self).__init__(*args, **kwargs)
+        super().__init__(*args, **kwargs)
         self.recover_tries = 0
 
     def submit_command(self, attempt):
@@ -835,10 +739,7 @@ class SSHActionRun(ActionRun, Observer):
         if self.cancel_delay():
             return
 
-        stop_command = self.action_runner.build_stop_action_command(
-            self.id,
-            'terminate',
-        )
+        stop_command = self.action_runner.build_stop_action_command(self.id, "terminate",)
         self.node.submit_command(stop_command)
 
     def kill(self, final=True):
@@ -848,67 +749,55 @@ class SSHActionRun(ActionRun, Observer):
         if self.cancel_delay():
             return
 
-        kill_command = self.action_runner.build_stop_action_command(
-            self.id,
-            'kill',
-        )
+        kill_command = self.action_runner.build_stop_action_command(self.id, "kill",)
         self.node.submit_command(kill_command)
 
     def build_action_command(self, attempt):
         """Create a new ActionCommand instance to send to the node."""
         serializer = filehandler.OutputStreamSerializer(self.output_path)
         self.action_command = self.action_runner.create(
-            id=self.id,
-            command=attempt.rendered_command,
-            serializer=serializer,
+            id=self.id, command=attempt.rendered_command, serializer=serializer,
         )
         self.watch(self.action_command)
         return self.action_command
 
     def handle_unknown(self):
         if isinstance(self.action_runner, NoActionRunnerFactory):
-            log.info(
-                f"Unable to recover action_run {self.id}: "
-                "action_run has no action_runner"
-            )
+            log.info(f"Unable to recover action_run {self.id}: " "action_run has no action_runner",)
             return self.fail_unknown()
 
         if self.recover_tries >= MAX_RECOVER_TRIES:
-            log.info(f'Reached maximum tries {MAX_RECOVER_TRIES} for recovering {self.id}')
+            log.info(f"Reached maximum tries {MAX_RECOVER_TRIES} for recovering {self.id}")
             return self.fail_unknown()
 
         desired_delay = INITIAL_RECOVER_DELAY * (3 ** self.recover_tries)
         self.recover_tries += 1
-        log.info(f'Starting try #{self.recover_tries} to recover {self.id}, waiting {desired_delay}')
+        log.info(f"Starting try #{self.recover_tries} to recover {self.id}, waiting {desired_delay}")
         return self.do_recover(delay=desired_delay)
 
     def recover(self):
         log.info(f"Creating recovery run for actionrun {self.id}")
         if isinstance(self.action_runner, NoActionRunnerFactory):
-            log.info(
-                f"Unable to recover action_run {self.id}: "
-                "action_run has no action_runner"
-            )
+            log.info(f"Unable to recover action_run {self.id}: " "action_run has no action_runner",)
             return None
 
-        if not self.machine.check('running'):
+        if not self.machine.check("running"):
             log.error(
-                f'Unable to transition action run {self.id} '
-                f'from {self.machine.state} to running. '
-                f'Only UNKNOWN actions can be recovered. '
+                f"Unable to transition action run {self.id} "
+                f"from {self.machine.state} to running. "
+                f"Only UNKNOWN actions can be recovered. ",
             )
             return None
 
         return self.do_recover(delay=0)
 
     def do_recover(self, delay):
-        recovery_command = f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"
+        recovery_command = (
+            f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"
+        )
         command_config = action.ActionCommandConfig(command=recovery_command)
         rendered_command = self.render_command(recovery_command)
-        attempt = ActionRunAttempt(
-            command_config=command_config,
-            rendered_command=rendered_command,
-        )
+        attempt = ActionRunAttempt(command_config=command_config, rendered_command=rendered_command,)
 
         # Put the "recovery" output at the same directory level as the original action_run's output
         self.output_path.parts = []
@@ -923,9 +812,7 @@ class SSHActionRun(ActionRun, Observer):
             output_path=self.output_path,
         )
         recovery_action_command = recovery_run.build_action_command(attempt)
-        recovery_action_command.write_stdout(
-            f"Recovering action run {self.id}",
-        )
+        recovery_action_command.write_stdout(f"Recovering action run {self.id}",)
         # Put action command in "running" state so if it fails to connect
         # and exits with no exit code, the real action run will not retry.
         recovery_action_command.started()
@@ -936,37 +823,32 @@ class SSHActionRun(ActionRun, Observer):
         self.watch(recovery_action_command)
 
         self.clear_end_state()
-        self.machine.transition('running')
+        self.machine.transition("running")
 
         # Still want the action to appear running while we're waiting to submit the recovery
         # So we do the delay at the end, after the transition to 'running' above
         if not delay:
             return self.submit_recovery_command(recovery_run, recovery_action_command)
         else:
-            return reactor.callLater(delay, self.submit_recovery_command, recovery_run, recovery_action_command)
+            return reactor.callLater(delay, self.submit_recovery_command, recovery_run, recovery_action_command,)
 
     def submit_recovery_command(self, recovery_run, recovery_action_command):
         log.info(
-            f"Submitting recovery job with command {recovery_action_command.command} "
-            f"to node {recovery_run.node}"
+            f"Submitting recovery job with command {recovery_action_command.command} " f"to node {recovery_run.node}",
         )
         try:
             deferred = recovery_run.node.submit_command(recovery_action_command)
-            deferred.addCallback(
-                lambda x: log.info(f"Completed recovery run {recovery_run.id}")
-            )
+            deferred.addCallback(lambda x: log.info(f"Completed recovery run {recovery_run.id}"),)
             return True
         except node.Error as e:
             log.warning(f"Failed to submit recovery for {self.id}: {e!r}")
 
     def handle_action_command_state_change(self, action_command, event, event_data=None):
         """Observe ActionCommand state changes."""
-        log.debug(
-            f"{self} action_command state change: {action_command.state}"
-        )
+        log.debug(f"{self} action_command state change: {action_command.state}",)
 
         if event == ActionCommand.RUNNING:
-            return self.transition_and_notify('started')
+            return self.transition_and_notify("started")
 
         if event == ActionCommand.FAILSTART:
             return self._exit_unsuccessful(self.EXIT_NODE_ERROR)
@@ -986,6 +868,7 @@ class SSHActionRun(ActionRun, Observer):
 class MesosActionRun(ActionRun, Observer):
     """An ActionRun that executes the command on a Mesos cluster.
     """
+
     def _create_mesos_task(self, mesos_cluster, serializer, attempt, task_id=None):
         command_config = attempt.command_config
         return mesos_cluster.create_task(
@@ -994,8 +877,7 @@ class MesosActionRun(ActionRun, Observer):
             cpus=command_config.cpus,
             mem=command_config.mem,
             disk=1024.0 if command_config.disk is None else command_config.disk,
-            constraints=[[c.attribute, c.operator, c.value]
-                         for c in command_config.constraints],
+            constraints=[[c.attribute, c.operator, c.value] for c in command_config.constraints],
             docker_image=command_config.docker_image,
             docker_parameters=[e._asdict() for e in command_config.docker_parameters],
             env=build_environment(original_env=command_config.env, run_id=self.id),
@@ -1020,34 +902,25 @@ class MesosActionRun(ActionRun, Observer):
         return task
 
     def recover(self):
-        if not self.machine.check('running'):
-            log.error(
-                f'{self} unable to transition from {self.machine.state}'
-                'to running for recovery'
-            )
+        if not self.machine.check("running"):
+            log.error(f"{self} unable to transition from {self.machine.state}" "to running for recovery",)
             return
 
         if not self.attempts or self.attempts[-1].mesos_task_id is None:
-            log.error(f'{self} no task ID, cannot recover')
+            log.error(f"{self} no task ID, cannot recover")
             self.fail_unknown()
             return
 
         last_attempt = self.attempts[-1]
 
-        log.info(f'{self} recovering Mesos run')
+        log.info(f"{self} recovering Mesos run")
 
         serializer = filehandler.OutputStreamSerializer(self.output_path)
         mesos_cluster = MesosClusterRepository.get_cluster()
-        task = self._create_mesos_task(
-            mesos_cluster,
-            serializer,
-            last_attempt,
-            last_attempt.mesos_task_id,
-        )
+        task = self._create_mesos_task(mesos_cluster, serializer, last_attempt, last_attempt.mesos_task_id,)
         if not task:
             log.warning(
-                f'{self} cannot recover, Mesos is disabled or '
-                f'invalid task ID {last_attempt.mesos_task_id!r}'
+                f"{self} cannot recover, Mesos is disabled or " f"invalid task ID {last_attempt.mesos_task_id!r}",
             )
             self.fail_unknown()
             return
@@ -1057,7 +930,7 @@ class MesosActionRun(ActionRun, Observer):
 
         # Reset status
         self.clear_end_state()
-        self.transition_and_notify('running')
+        self.transition_and_notify("running")
 
         return task
 
@@ -1082,9 +955,7 @@ class MesosActionRun(ActionRun, Observer):
     def _kill_mesos_task(self):
         msgs = []
         if not self.is_active:
-            msgs.append(
-                f'Action is {self.state}, not running. Continuing anyway.'
-            )
+            msgs.append(f"Action is {self.state}, not running. Continuing anyway.",)
 
         mesos_cluster = MesosClusterRepository.get_cluster()
         last_attempt = self.last_attempt
@@ -1094,24 +965,18 @@ class MesosActionRun(ActionRun, Observer):
             msgs.append(f"Sending kill for {last_attempt.mesos_task_id}...")
             succeeded = mesos_cluster.kill(last_attempt.mesos_task_id)
             if succeeded:
-                msgs.append(
-                    "Sent! It can take up to docker_stop_timeout (current setting is 2 mins) to stop."
-                )
+                msgs.append("Sent! It can take up to docker_stop_timeout (current setting is 2 mins) to stop.",)
             else:
-                msgs.append(
-                    "Error while sending kill request. Please try again."
-                )
+                msgs.append("Error while sending kill request. Please try again.",)
 
-        return '\n'.join(msgs)
+        return "\n".join(msgs)
 
     def handle_action_command_state_change(self, action_command, event, event_data=None):
         """Observe ActionCommand state changes."""
-        log.debug(
-            f"{self} action_command state change: {action_command.state}"
-        )
+        log.debug(f"{self} action_command state change: {action_command.state}",)
 
         if event == ActionCommand.RUNNING:
-            return self.transition_and_notify('started')
+            return self.transition_and_notify("started")
 
         if event == ActionCommand.FAILSTART:
             return self._exit_unsuccessful(action_command.exit_status)
@@ -1139,7 +1004,7 @@ def eager_all(seq):
     return all(list(seq))
 
 
-class ActionRunCollection(object):
+class ActionRunCollection:
     """A collection of ActionRuns used by a JobRun."""
 
     def __init__(self, action_graph, run_map):
@@ -1149,30 +1014,28 @@ class ActionRunCollection(object):
         self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
             self.get_action_runs_with_cleanup,
             [
-                proxy.attr_proxy('is_running', any),
-                proxy.attr_proxy('is_starting', any),
-                proxy.attr_proxy('is_scheduled', any),
-                proxy.attr_proxy('is_cancelled', any),
-                proxy.attr_proxy('is_active', any),
-                proxy.attr_proxy('is_waiting', any),
-                proxy.attr_proxy('is_queued', all),
-                proxy.attr_proxy('is_complete', all),
-                proxy.func_proxy('queue', eager_all),
-                proxy.func_proxy('cancel', eager_all),
-                proxy.func_proxy('success', eager_all),
-                proxy.func_proxy('fail', eager_all),
-                proxy.func_proxy('ready', eager_all),
-                proxy.func_proxy('cleanup', eager_all),
-                proxy.func_proxy('stop', eager_all),
-                proxy.attr_proxy('start_time', min_filter),
-                proxy.attr_proxy('state_data', eager_all),
+                proxy.attr_proxy("is_running", any),
+                proxy.attr_proxy("is_starting", any),
+                proxy.attr_proxy("is_scheduled", any),
+                proxy.attr_proxy("is_cancelled", any),
+                proxy.attr_proxy("is_active", any),
+                proxy.attr_proxy("is_waiting", any),
+                proxy.attr_proxy("is_queued", all),
+                proxy.attr_proxy("is_complete", all),
+                proxy.func_proxy("queue", eager_all),
+                proxy.func_proxy("cancel", eager_all),
+                proxy.func_proxy("success", eager_all),
+                proxy.func_proxy("fail", eager_all),
+                proxy.func_proxy("ready", eager_all),
+                proxy.func_proxy("cleanup", eager_all),
+                proxy.func_proxy("stop", eager_all),
+                proxy.attr_proxy("start_time", min_filter),
+                proxy.attr_proxy("state_data", eager_all),
             ],
         )
 
     def action_runs_for_actions(self, actions):
-        return (
-            self.run_map[a.name] for a in actions if a.name in self.run_map
-        )
+        return (self.run_map[a.name] for a in actions if a.name in self.run_map)
 
     def get_action_runs_with_cleanup(self):
         return self.run_map.values()
@@ -1211,10 +1074,7 @@ class ActionRunCollection(object):
     def get_startable_action_runs(self):
         """Returns any actions that are scheduled or queued that can be run."""
 
-        return [
-            r for r in self.action_runs
-            if r.machine.check('start') and not self._is_run_blocked(r)
-        ]
+        return [r for r in self.action_runs if r.machine.check("start") and not self._is_run_blocked(r)]
 
     @property
     def has_startable_action_runs(self):
@@ -1230,9 +1090,7 @@ class ActionRunCollection(object):
         if action_run.is_done or action_run.is_active:
             return False
 
-        required_actions = self.action_graph.get_dependencies(
-            action_run.action_name,
-        )
+        required_actions = self.action_graph.get_dependencies(action_run.action_name,)
 
         if required_actions:
             required_runs = self.action_runs_for_actions(required_actions)
@@ -1282,21 +1140,14 @@ class ActionRunCollection(object):
     def end_time(self):
         if not self.is_done:
             return None
-        end_times = list(
-            run.end_time
-            for run in self.get_action_runs_with_cleanup()
-            if run.end_time
-        )
+        end_times = list(run.end_time for run in self.get_action_runs_with_cleanup() if run.end_time)
         return max(end_times) if any(end_times) else None
 
     def __str__(self):
         def blocked_state(action_run):
             return ":blocked" if self._is_run_blocked(action_run) else ""
 
-        run_states = ', '.join(
-            f"{a.action_name}({a.state}{blocked_state(a)})"
-            for a in self.run_map.values()
-        )
+        run_states = ", ".join(f"{a.action_name}({a.state}{blocked_state(a)})" for a in self.run_map.values())
         return f"{self.__class__.__name__}[{run_states}]"
 
     def __getattr__(self, name):

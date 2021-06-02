@@ -28,18 +28,14 @@ def replace(pattern, repl):
 
 replaces = [
     # Replace imports
-    replace(r'^from testify import ', 'from testifycompat import '),
-    replace(r'^from testify.assertions import ', 'from testifycompat import '),
-    replace(r'^import testify as T', 'import testifycompat as T'),
-
+    replace(r"^from testify import ", "from testifycompat import "),
+    replace(r"^from testify.assertions import ", "from testifycompat import "),
+    replace(r"^import testify as T", "import testifycompat as T"),
     # Replace test classes
-    replace(r'^class (?:Test)?(\w+)(?:Test|TestCase)\((?:T\.)?TestCase\):$',
-            'class Test\\1(object):'),
-    replace(r'^class (?:Test)?(\w+)(?:Test|TestCase)(\(\w+TestCase\)):$',
-            'class Test\\1\\2:'),
-
+    replace(r"^class (?:Test)?(\w+)(?:Test|TestCase)\((?:T\.)?TestCase\):$", "class Test\\1(object):",),
+    replace(r"^class (?:Test)?(\w+)(?:Test|TestCase)(\(\w+TestCase\)):$", "class Test\\1\\2:",),
     # Replace some old assertions
-    replace(r'self.assert_\((.*)\)', 'assert \\1')
+    replace(r"self.assert_\((.*)\)", "assert \\1"),
 ]
 
 
@@ -53,20 +49,20 @@ def run_replacement(contents):
 def strip_if_main_run(contents):
     if len(contents) < 2:
         return contents
-    if 'run()' in contents[-1] and 'if __name__ == ' in contents[-2]:
+    if "run()" in contents[-1] and "if __name__ == " in contents[-2]:
         return contents[:-2]
     return contents
 
 
 def run_migration_on_file(filename):
-    with open(filename, 'r') as fh:
-        lines = fh.read().split('\n')
+    with open(filename) as fh:
+        lines = fh.read().split("\n")
 
     lines = list(run_replacement(lines))
     lines = strip_if_main_run(lines)
 
-    with open(filename, 'w') as fh:
-        fh.write('\n'.join(lines))
+    with open(filename, "w") as fh:
+        fh.write("\n".join(lines))
 
 
 if __name__ == "__main__":
