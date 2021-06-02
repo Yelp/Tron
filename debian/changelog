@@ -1,3 +1,19 @@
+tron (1.8.0) xenial; urgency=medium
+
+  * 1.8.0 tagged with 'make release'
+    Commit: Add initial k8s config + global k8s toggle + job opt-out
+    (#802)  We'll be adding two toggles to control Tron's usage of k8s:
+    * a global killswitch (k8s_options['enabled']) for when we want to
+    go   back to Mesos for an entire cluster (and, in the future, for
+    when we   want to quickly stop all Tronjobs). * a per-job opt-out ()
+    for any jobs that encounter issues with   k8s or that we want to
+    migrate at a specific time.  Since I was adding a k8s config section
+    to the Tron master config, I also went ahead and added a way to
+    configure what the k8s API address should be (i.e., the 'master'
+    address).
+
+ -- root <root@74d959c3dc13>  Wed, 02 Jun 2021 16:01:28 +0000
+
 tron (1.7.0) xenial; urgency=medium
 
   * 1.7.0 tagged with 'make release'
