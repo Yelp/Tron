@@ -237,7 +237,7 @@ StatePersistenceTypes = Enum(
     'StatePersistenceTypes', dict(shelve='shelve', yaml='yaml', dynamodb='dynamodb')
 )
 
-ExecutorTypes = Enum('ExecutorTypes', dict(ssh='ssh', mesos='mesos'))
+ExecutorTypes = Enum('ExecutorTypes', dict(ssh='ssh', mesos='mesos', kubernetes='kubernetes'))
 
 ActionRunnerTypes = Enum('ActionRunnerTypes', dict(none='none', subprocess='subprocess'))
 
