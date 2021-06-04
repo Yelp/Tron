@@ -180,10 +180,9 @@ ConfigVolume = config_object_factory(
 
 ConfigParameter = config_object_factory(name="ConfigParameter", required=["key", "value",], optional=[],)
 
-
 StatePersistenceTypes = Enum("StatePersistenceTypes", dict(shelve="shelve", yaml="yaml", dynamodb="dynamodb"),)
 
-ExecutorTypes = Enum("ExecutorTypes", dict(ssh="ssh", mesos="mesos"))
+ExecutorTypes = Enum('ExecutorTypes', dict(ssh='ssh', mesos='mesos', kubernetes='kubernetes'))
 
 ActionRunnerTypes = Enum("ActionRunnerTypes", dict(none="none", subprocess="subprocess"))
 
