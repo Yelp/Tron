@@ -25,6 +25,7 @@ from tron.core.actionrun import ActionRunCollection
 from tron.core.actionrun import ActionRunFactory
 from tron.core.actionrun import eager_all
 from tron.core.actionrun import INITIAL_RECOVER_DELAY
+from tron.core.actionrun import KubernetesActionRun
 from tron.core.actionrun import MAX_RECOVER_TRIES
 from tron.core.actionrun import MesosActionRun
 from tron.core.actionrun import min_filter
@@ -1522,3 +1523,61 @@ class TestMesosActionRun:
         self.action_run.machine.transition("start")
         assert self.action_run.handler(self.action_run.action_command, ActionCommand.FAILSTART,)
         assert self.action_run.is_failed
+
+
+class TestKubernetesActionRun:
+    @pytest.fixture
+    def mock_k8s_action_run(self):
+        command_config = ActionCommandConfig(
+            command="mock_command",
+            extra_volumes=set(),
+            constraints=set(),
+            docker_parameters=set(),
+            cpus=1,
+            mem=50,
+            disk=42,
+            docker_image="container:v2",
+            env={
+                "TESTING": "true",
+                "TRON_JOB_NAMESPACE": "mock_namespace",
+                "TRON_JOB_NAME": "mock_job",
+                "TRON_RUN_NUM": "42",
+                "TRON_ACTION": "mock_action_name",
+            },
+        )
+
+        return KubernetesActionRun(
+            job_run_id="mock_namespace.mock_job.42",
+            name="mock_action_name",
+            command_config=command_config,
+            node=mock.create_autospec(node.Node),
+            output_path=mock.create_autospec(filehandler.OutputPath),
+            executor=ExecutorTypes.kubernetes.value,
+        )
+
+    def test_k8s_handler_exiting_unknown(self, mock_k8s_action_run):
+        mock_k8s_action_run.action_command = mock.create_autospec(actioncommand.ActionCommand, exit_status=None,)
+        mock_k8s_action_run.machine.transition("start")
+        mock_k8s_action_run.machine.transition("started")
+        assert mock_k8s_action_run.handler(mock_k8s_action_run.action_command, ActionCommand.EXITING,)
+        assert mock_k8s_action_run.is_unknown
+        assert mock_k8s_action_run.exit_status is None
+        assert mock_k8s_action_run.end_time is not None
+
+    def test_handler_exiting_unknown_retry(self, mock_k8s_action_run):
+        mock_k8s_action_run.action_command = mock.create_autospec(actioncommand.ActionCommand, exit_status=None,)
+        mock_k8s_action_run.retries_remaining = 1
+        mock_k8s_action_run.start = mock.Mock()
+
+        mock_k8s_action_run.machine.transition("start")
+        mock_k8s_action_run.machine.transition("started")
+        assert mock_k8s_action_run.handler(mock_k8s_action_run.action_command, ActionCommand.EXITING,)
+        assert mock_k8s_action_run.retries_remaining == 0
+        assert not mock_k8s_action_run.is_unknown
+        assert mock_k8s_action_run.start.call_count == 1
+
+    def test_handler_exiting_failstart_failed(self, mock_k8s_action_run):
+        mock_k8s_action_run.action_command = mock.create_autospec(actioncommand.ActionCommand, exit_status=1,)
+        mock_k8s_action_run.machine.transition("start")
+        assert mock_k8s_action_run.handler(mock_k8s_action_run.action_command, ActionCommand.FAILSTART,)
+        assert mock_k8s_action_run.is_failed
