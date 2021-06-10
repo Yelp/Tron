@@ -1,3 +1,15 @@
+tron (1.8.1) xenial; urgency=medium
+
+  * 1.8.1 tagged with 'make release'
+    Commit: Add black for formatting + some additional linters (#805)
+    We don't have any automatically enforced formatting (yapf is
+    optional and not part of our pre-commit), so let's use black since
+    that seems to be what we've settled on.  Additionally, I've added
+    some other 'standard' pre-commit hooks (as well as reformatted the
+    pre-commit config file.)
+
+ -- root <root@4602d2a09117>  Thu, 10 Jun 2021 18:52:48 +0000
+
 tron (1.8.0) xenial; urgency=medium
 
   * 1.8.0 tagged with 'make release'
