@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import contextlib
 import fcntl
 import logging
@@ -33,7 +30,7 @@ def next_or_none(iterable):
 def flock(fd):
     close = False
     if isinstance(fd, str):
-        fd = open(fd, 'a')
+        fd = open(fd, "a")
         close = True
 
     try:

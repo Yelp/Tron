@@ -2,10 +2,6 @@
 """
 print a list of all the tron jobs, to be saved as a cache for tab completion
 """
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import argcomplete
 
 from tron.commands import cmd_utils
@@ -20,12 +16,12 @@ def main():
 
     client = Client(args.server)
     for job in client.jobs(include_job_runs=True, include_action_runs=True):
-        print(job['name'])
-        for run in job['runs']:
+        print(job["name"])
+        for run in job["runs"]:
             print(run["id"])
             for action in run["runs"]:
                 print(action["id"])
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

@@ -1,8 +1,5 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
-import mock
-from mock import Mock
+from unittest import mock
+from unittest.mock import Mock
 
 from testifycompat import setup
 from testifycompat import TestCase
@@ -65,38 +62,28 @@ class TestRecovery(TestCase):
         ]
 
     def test_filter_action_runs_needing_recovery(self):
-        assert filter_action_runs_needing_recovery(self.action_runs) == (
-            [self.action_runs[0]],
-            [self.action_runs[3]],
-        )
+        assert filter_action_runs_needing_recovery(self.action_runs) == ([self.action_runs[0]], [self.action_runs[3]],)
 
-    @mock.patch('tron.core.recovery.filter_action_runs_needing_recovery', autospec=True)
+    @mock.patch("tron.core.recovery.filter_action_runs_needing_recovery", autospec=True)
     def test_launch_recovery_actionruns_for_job_runs(self, mock_filter):
         mock_actions = (
             [
+                mock.Mock(action_runner=NoActionRunnerFactory(), spec=SSHActionRun,),
                 mock.Mock(
-                    action_runner=NoActionRunnerFactory(), spec=SSHActionRun
-                ),
-                mock.Mock(
-                    action_runner=SubprocessActionRunnerFactory(
-                        status_path='/tmp/foo', exec_path=('/tmp/foo')
-                    ),
+                    action_runner=SubprocessActionRunnerFactory(status_path="/tmp/foo", exec_path=("/tmp/foo"),),
                     spec=SSHActionRun,
                 ),
             ],
-            [
-                mock.Mock(
-                    action_runner=NoActionRunnerFactory(), spec=MesosActionRun
-                ),
-            ],
+            [mock.Mock(action_runner=NoActionRunnerFactory(), spec=MesosActionRun,),],
         )
 
         mock_filter.return_value = mock_actions
         mock_action_runner = mock.Mock(autospec=True)
 
         mock_job_run = mock.Mock()
-        launch_recovery_actionruns_for_job_runs([mock_job_run],
-                                                mock_action_runner)
+        launch_recovery_actionruns_for_job_runs(
+            [mock_job_run], mock_action_runner,
+        )
         ssh_runs = mock_actions[0]
         for run in ssh_runs:
             assert run.recover.call_count == 1
@@ -104,7 +91,7 @@ class TestRecovery(TestCase):
         mesos_run = mock_actions[1][0]
         assert mesos_run.recover.call_count == 1
 
-    @mock.patch('tron.core.recovery.filter_action_runs_needing_recovery', autospec=True)
+    @mock.patch("tron.core.recovery.filter_action_runs_needing_recovery", autospec=True)
     def test_launch_recovery_actionruns_empty_job_run(self, mock_filter):
         """_action_runs=None shouldn't prevent other job runs from being recovered"""
         empty_job_run = mock.Mock(_action_runs=None)
@@ -113,7 +100,6 @@ class TestRecovery(TestCase):
         mock_filter.return_value = ([], [])
 
         launch_recovery_actionruns_for_job_runs(
-            [empty_job_run, other_job_run],
-            mock_action_runner,
+            [empty_job_run, other_job_run], mock_action_runner,
         )
         mock_filter.assert_called_with(other_job_run._action_runs)

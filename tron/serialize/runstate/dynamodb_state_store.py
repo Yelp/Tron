@@ -16,10 +16,10 @@ MAX_SAVE_QUEUE = 500
 log = logging.getLogger(__name__)
 
 
-class DynamoDBStateStore(object):
+class DynamoDBStateStore:
     def __init__(self, name, dynamodb_region, stopping=False) -> None:
-        self.dynamodb = boto3.resource('dynamodb', region_name=dynamodb_region)
-        self.client = boto3.client('dynamodb', region_name=dynamodb_region)
+        self.dynamodb = boto3.resource("dynamodb", region_name=dynamodb_region)
+        self.client = boto3.client("dynamodb", region_name=dynamodb_region)
         self.name = name
         self.dynamodb_region = dynamodb_region
         self.table = self.dynamodb.Table(name)
@@ -50,36 +50,35 @@ class DynamoDBStateStore(object):
         items = []
         for i in range(0, len(keys), 100):
             count = 0
-            cand_keys = keys[i:min(len(keys), i + 100)]
+            cand_keys = keys[i : min(len(keys), i + 100)]
             while True:
                 resp = self.client.batch_get_item(
-                    RequestItems={
-                        self.name: {
-                            'Keys': cand_keys,
-                            'ConsistentRead': True
-                        },
-                    }
+                    RequestItems={self.name: {"Keys": cand_keys, "ConsistentRead": True,},},
                 )
-                items.extend(resp['Responses'][self.name])
-                if resp['UnprocessedKeys'].get(self.name) and count < 10:
-                    cand_keys = resp['UnprocessedKeys'][self.name]['Keys']
+                items.extend(resp["Responses"][self.name])
+                if resp["UnprocessedKeys"].get(self.name) and count < 10:
+                    cand_keys = resp["UnprocessedKeys"][self.name]["Keys"]
                     count += 1
                 elif count >= 10:
-                    error = Exception(f'tron_dynamodb_restore_failure: failed to retrieve items with keys \n{cand_keys}\n from dynamodb\n{resp}')
+                    error = Exception(
+                        f"tron_dynamodb_restore_failure: failed to retrieve items with keys \n{cand_keys}\n from dynamodb\n{resp}"
+                    )
                     raise error
                 else:
                     break
         return items
 
     def _get_first_partitions(self, keys: list):
-        new_keys = [{'key': {'S': key}, 'index': {'N': '0'}} for key in keys]
+        new_keys = [{"key": {"S": key}, "index": {"N": "0"}} for key in keys]
         return self._get_items(new_keys)
 
     def _get_remaining_partitions(self, items: list):
         keys_for_remaining_items = []
         for item in items:
-            remaining_items = [{'key': {'S': str(item['key']['S'])}, 'index': {'N': str(i)}}
-                               for i in range(1, int(item['num_partitions']['N']))]
+            remaining_items = [
+                {"key": {"S": str(item["key"]["S"])}, "index": {"N": str(i)}}
+                for i in range(1, int(item["num_partitions"]["N"]))
+            ]
             keys_for_remaining_items.extend(remaining_items)
         return self._get_items(keys_for_remaining_items)
 
@@ -90,12 +89,12 @@ class DynamoDBStateStore(object):
         if remaining_items:
             first_items.extend(remaining_items)
         for item in first_items:
-            key = item['key']['S']
+            key = item["key"]["S"]
             items[key].append(item)
         for key, item in items.items():
-            item.sort(key=lambda x: int(x['index']['N']))
+            item.sort(key=lambda x: int(x["index"]["N"]))
             for val in item:
-                raw_items[key] += bytes(val['val']['B'])
+                raw_items[key] += bytes(val["val"]["B"])
         deserialized_items = {k: pickle.loads(v) for k, v in raw_items.items()}
         return deserialized_items
 
@@ -127,10 +126,7 @@ class DynamoDBStateStore(object):
                 # reset errors count if we can successfully save
                 saved += 1
             except Exception as e:
-                error = (
-                    'tron_dynamodb_save_failure: failed to save key'
-                    f'"{key}" to dynamodb:\n{repr(e)}'
-                )
+                error = "tron_dynamodb_save_failure: failed to save key" f'"{key}" to dynamodb:\n{repr(e)}'
                 log.error(error)
                 with self.save_lock:
                     self.save_queue[key] = val
@@ -172,22 +168,14 @@ class DynamoDBStateStore(object):
         items = []
         for index in range(num_partitions):
             item = {
-                'Put': {
-                    'Item': {
-                        'key': {
-                            'S': key,
-                        },
-                        'index': {
-                            'N': str(index),
-                        },
-                        'val': {
-                            'B': val[index * OBJECT_SIZE:min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],
-                        },
-                        'num_partitions': {
-                            'N': str(num_partitions),
-                        }
+                "Put": {
+                    "Item": {
+                        "key": {"S": key,},
+                        "index": {"N": str(index),},
+                        "val": {"B": val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],},
+                        "num_partitions": {"N": str(num_partitions),},
                     },
-                    'TableName': self.name,
+                    "TableName": self.name,
                 },
             }
             count = 0
@@ -202,15 +190,13 @@ class DynamoDBStateStore(object):
                     count += 1
                     if count > 3:
                         timer(
-                            name='tron.dynamodb.setitem',
-                            delta=time.time() - start,
+                            name="tron.dynamodb.setitem", delta=time.time() - start,
                         )
                         raise e
                     else:
-                        log.warning(f'Got error while saving {key}, trying again: {repr(e)}')
+                        log.warning(f"Got error while saving {key}, trying again: {repr(e)}")
         timer(
-            name='tron.dynamodb.setitem',
-            delta=time.time() - start,
+            name="tron.dynamodb.setitem", delta=time.time() - start,
         )
 
     def _delete_item(self, key: str) -> None:
@@ -218,16 +204,10 @@ class DynamoDBStateStore(object):
         try:
             with self.table.batch_writer() as batch:
                 for index in range(self._get_num_of_partitions(key)):
-                    batch.delete_item(
-                        Key={
-                            'key': key,
-                            'index': index,
-                        }
-                    )
+                    batch.delete_item(Key={"key": key, "index": index,},)
         finally:
             timer(
-                name='tron.dynamodb.delete',
-                delta=time.time() - start,
+                name="tron.dynamodb.delete", delta=time.time() - start,
             )
 
     def _get_num_of_partitions(self, key: str) -> int:
@@ -236,14 +216,9 @@ class DynamoDBStateStore(object):
         """
         try:
             partition = self.table.get_item(
-                Key={
-                    'key': key,
-                    'index': 0,
-                },
-                ProjectionExpression='num_partitions',
-                ConsistentRead=True
+                Key={"key": key, "index": 0,}, ProjectionExpression="num_partitions", ConsistentRead=True,
             )
-            return int(partition.get('Item', {}).get('num_partitions', 0))
+            return int(partition.get("Item", {}).get("num_partitions", 0))
         except self.client.exceptions.ResourceNotFoundException:
             return 0
 

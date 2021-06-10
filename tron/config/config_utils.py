@@ -9,7 +9,7 @@ from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
 
 MAX_IDENTIFIER_LENGTH = 255
-IDENTIFIER_RE = re.compile(r'^[A-Za-z_][\w\-]{0,254}$')
+IDENTIFIER_RE = re.compile(r"^[A-Za-z_][\w\-]{0,254}$")
 
 
 class StringFormatter(Formatter):
@@ -78,10 +78,10 @@ def valid_number(type_func, value, config_context):
         value = type_func(value)
     except TypeError:
         name = type_func.__name__
-        raise ConfigError('Value at %s is not an %s: %s' % (path, name, value))
+        raise ConfigError(f"Value at {path} is not an {name}: {value}")
 
     if value < 0:
-        raise ConfigError('%s must be a positive int.' % path)
+        raise ConfigError("%s must be a positive int." % path)
 
     return value
 
@@ -90,34 +90,21 @@ valid_int = functools.partial(valid_number, int)
 valid_float = functools.partial(valid_number, float)
 
 valid_identifier = build_type_validator(
-    lambda s: isinstance(s, str) and IDENTIFIER_RE.match(s),
-    'Identifier at %s is not a valid identifier: %s',
+    lambda s: isinstance(s, str) and IDENTIFIER_RE.match(s), "Identifier at %s is not a valid identifier: %s",
 )
 
-valid_list = build_type_validator(
-    lambda s: isinstance(s, list),
-    'Value at %s is not a list: %s',
-)
+valid_list = build_type_validator(lambda s: isinstance(s, list), "Value at %s is not a list: %s",)
 
-valid_string = build_type_validator(
-    lambda s: isinstance(s, str),
-    'Value at %s is not a string: %s',
-)
+valid_string = build_type_validator(lambda s: isinstance(s, str), "Value at %s is not a string: %s",)
 
-valid_dict = build_type_validator(
-    lambda s: isinstance(s, dict),
-    'Value at %s is not a dictionary: %s',
-)
+valid_dict = build_type_validator(lambda s: isinstance(s, dict), "Value at %s is not a dictionary: %s",)
 
-valid_bool = build_type_validator(
-    lambda s: isinstance(s, bool),
-    'Value at %s is not a boolean: %s',
-)
+valid_bool = build_type_validator(lambda s: isinstance(s, bool), "Value at %s is not a boolean: %s",)
 
 
 def build_enum_validator(enum):
     enum = set(enum)
-    msg = 'Value at %%s is not in %s: %%s.' % str(enum)
+    msg = "Value at %%s is not in %s: %%s." % str(enum)
     return build_type_validator(enum.__contains__, msg)
 
 
@@ -126,36 +113,31 @@ def build_real_enum_validator(enum):
         try:
             return enum(value).value
         except Exception:
-            raise ConfigError(
-                f'Value at {config_context.path} is not in {enum!r}: {value!r}'
-            )
+            raise ConfigError(f"Value at {config_context.path} is not in {enum!r}: {value!r}",)
+
     return enum_validator
 
 
 def valid_time(value, config_context):
     valid_string(value, config_context)
-    for format in ['%H:%M', '%H:%M:%S']:
+    for format in ["%H:%M", "%H:%M:%S"]:
         try:
             return datetime.datetime.strptime(value, format)
         except ValueError:
             pass
-    msg = 'Value at %s is not a valid time'
+    msg = "Value at %s is not a valid time"
     raise ConfigError(msg % config_context.path)
 
 
 # Translations from possible configuration units to the argument to
 # datetime.timedelta
 TIME_INTERVAL_MAPPING = {
-    'days': ['d', 'day', 'days'],
-    'hours': ['h', 'hr', 'hrs', 'hour', 'hours'],
-    'minutes': ['m', 'min', 'mins', 'minute', 'minutes'],
-    'seconds': ['s', 'sec', 'secs', 'second', 'seconds'],
+    "days": ["d", "day", "days"],
+    "hours": ["h", "hr", "hrs", "hour", "hours"],
+    "minutes": ["m", "min", "mins", "minute", "minutes"],
+    "seconds": ["s", "sec", "secs", "second", "seconds"],
 }
-TIME_INTERVAL_UNITS = {
-    short: long
-    for (long, short_list) in TIME_INTERVAL_MAPPING.items()
-    for short in short_list
-}
+TIME_INTERVAL_UNITS = {short: long for (long, short_list) in TIME_INTERVAL_MAPPING.items() for short in short_list}
 
 TIME_INTERVAL_RE = re.compile(r"^\s*(?P<value>\d+)\s*(?P<units>[a-zA-Z]+)\s*$")
 
@@ -166,11 +148,11 @@ def valid_time_delta(value, config_context):
     if not matches:
         raise ConfigError(error_msg % (config_context.path, value))
 
-    units = matches.group('units')
+    units = matches.group("units")
     if units not in TIME_INTERVAL_UNITS:
         raise ConfigError(error_msg % (config_context.path, value))
 
-    time_spec = {TIME_INTERVAL_UNITS[units]: int(matches.group('value'))}
+    time_spec = {TIME_INTERVAL_UNITS[units]: int(matches.group("value"))}
     return datetime.timedelta(**time_spec)
 
 
@@ -178,7 +160,7 @@ def valid_name_identifier(value, config_context):
     valid_identifier(value, config_context)
     if config_context.partial:
         return value
-    return '%s.%s' % (config_context.namespace, value)
+    return f"{config_context.namespace}.{value}"
 
 
 def build_list_of_type_validator(item_validator, allow_empty=False):
@@ -204,10 +186,7 @@ def build_dict_name_validator(item_validator, allow_empty=False):
 
     def validator(value, config_context):
         if isinstance(value, dict):
-            value = [{
-                'name': name,
-                **config
-            } for name, config in value.items()]
+            value = [{"name": name, **config,} for name, config in value.items()]
 
         msg = "Duplicate name %%s at %s" % config_context.path
         name_dict = UniqueNameDict(msg)
@@ -218,11 +197,12 @@ def build_dict_name_validator(item_validator, allow_empty=False):
     return validator
 
 
-class ConfigContext(object):
+class ConfigContext:
     """An object to encapsulate the context in a configuration file. Supplied
     to Validators to perform validation which requires knowledge of
     configuration outside of the immediate configuration dictionary.
     """
+
     partial = False
 
     def __init__(self, path, nodes, command_context, namespace):
@@ -233,17 +213,18 @@ class ConfigContext(object):
 
     def build_child_context(self, path):
         """Construct a new ConfigContext based on this one."""
-        path = '%s.%s' % (self.path, path)
+        path = f"{self.path}.{path}"
         args = path, self.nodes, self.command_context, self.namespace
         return ConfigContext(*args)
 
 
-class PartialConfigContext(object):
+class PartialConfigContext:
     """A context object which has only a partial context. It is missing
     command_context and nodes.  This is likely because it is being used in
     a named configuration fragment that does not have access to those pieces
     of the configuration.
     """
+
     partial = True
 
     def __init__(self, path, namespace):
@@ -251,12 +232,12 @@ class PartialConfigContext(object):
         self.namespace = namespace
 
     def build_child_context(self, path):
-        path = '%s.%s' % (self.path, path)
+        path = f"{self.path}.{path}"
         return PartialConfigContext(path, self.namespace)
 
 
-class NullConfigContext(object):
-    path = ''
+class NullConfigContext:
+    path = ""
     nodes = set()
     command_context = {}
     namespace = MASTER_NAMESPACE
@@ -268,10 +249,11 @@ class NullConfigContext(object):
 
 
 # TODO: extract code
-class Validator(object):
+class Validator:
     """Base class for validating a collection and creating a mutable
     collection from the source.
     """
+
     config_class = None
     defaults = {}
     validators = {}
@@ -323,7 +305,7 @@ class Validator(object):
         return in_dict
 
     def build_context(self, in_dict, config_context):
-        path = self.path_name(in_dict.get('name'))
+        path = self.path_name(in_dict.get("name"))
         return config_context.build_child_context(path)
 
     def validate_required_keys(self, in_dict):
@@ -332,10 +314,10 @@ class Validator(object):
         if not missing_keys:
             return
 
-        missing_key_str = ', '.join(missing_keys)
-        if 'name' in self.all_keys and 'name' in in_dict:
+        missing_key_str = ", ".join(missing_keys)
+        if "name" in self.all_keys and "name" in in_dict:
             msg = "%s %s is missing options: %s"
-            name = in_dict['name']
+            name = in_dict["name"]
             raise ConfigError(msg % (self.type_name, name, missing_key_str))
 
         msg = "Nameless %s is missing options: %s"
@@ -348,8 +330,8 @@ class Validator(object):
             return
 
         msg = "Unknown keys in %s %s: %s"
-        name = in_dict.get('name', '')
-        raise ConfigError(msg % (self.type_name, name, ', '.join(extra_keys)))
+        name = in_dict.get("name", "")
+        raise ConfigError(msg % (self.type_name, name, ", ".join(extra_keys)))
 
     def set_defaults(self, output_dict, _config_context):
         """Set any default values for any optional values that were not
@@ -359,7 +341,7 @@ class Validator(object):
             output_dict.setdefault(key, value)
 
     def path_name(self, name=None):
-        return '%s.%s' % (self.type_name, name) if name else self.type_name
+        return f"{self.type_name}.{name}" if name else self.type_name
 
     def post_validation(self, valid_input, config_context):
         """Hook to perform additional validation steps after key validation

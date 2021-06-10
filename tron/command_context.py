@@ -1,9 +1,6 @@
 """Command Context is how we construct the command line for a command which may
 have variables that need to be rendered.
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import operator
 from functools import reduce
 
@@ -33,7 +30,7 @@ def build_filled_context(*context_objects):
     return reduce(build, context_objects, None)
 
 
-class CommandContext(object):
+class CommandContext:
     """A CommandContext object is a wrapper around any object which has values
     to be used to render a command for execution.  It looks up values by name.
 
@@ -77,7 +74,7 @@ class CommandContext(object):
         return not self == other
 
 
-class JobContext(object):
+class JobContext:
     """A class which exposes properties for rendering commands."""
 
     def __init__(self, job):
@@ -92,21 +89,18 @@ class JobContext(object):
         if not date_spec:
             raise KeyError(item)
 
-        if date_name == 'last_success':
+        if date_name == "last_success":
             last_success = self.job.runs.last_success
             last_success = last_success.run_time if last_success else None
 
-            time_value = timeutils.DateArithmetic.parse(
-                date_spec,
-                last_success,
-            )
+            time_value = timeutils.DateArithmetic.parse(date_spec, last_success,)
             if time_value:
                 return time_value
 
         raise KeyError(item)
 
     def _get_date_spec_parts(self, name):
-        parts = name.rsplit('#', 1)
+        parts = name.rsplit("#", 1)
         if len(parts) != 2:
             return name, None
         return parts
@@ -116,7 +110,7 @@ class JobContext(object):
         return self.job.name.split(".")[0]
 
 
-class JobRunContext(object):
+class JobRunContext:
     def __init__(self, job_run):
         self.job_run = job_run
 
@@ -134,10 +128,10 @@ class JobRunContext(object):
         the status of the other steps
         """
         if self.job_run.action_runs.is_failed:
-            return 'FAILURE'
+            return "FAILURE"
         elif self.job_run.action_runs.is_complete_without_cleanup:
-            return 'SUCCESS'
-        return 'UNKNOWN'
+            return "SUCCESS"
+        return "UNKNOWN"
 
     def __getitem__(self, name):
         """Attempt to parse date arithmetic syntax and apply to run_time."""
@@ -149,7 +143,7 @@ class JobRunContext(object):
         raise KeyError(name)
 
 
-class ActionRunContext(object):
+class ActionRunContext:
     """Context object that gives us access to data about the action run."""
 
     def __init__(self, action_run):
@@ -164,7 +158,7 @@ class ActionRunContext(object):
         return self.action_run.node.hostname
 
 
-class Filler(object):
+class Filler:
     """Filler object for using CommandContext during config parsing. This class
     is used as a substitute for objects that would be passed to Context objects.
     This allows the Context objects to be used directly for config validation.

@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
 
 from tron.core.actionrun import ActionRun
@@ -26,7 +23,7 @@ def filter_action_runs_needing_recovery(action_runs):
 def launch_recovery_actionruns_for_job_runs(job_runs, master_action_runner):
     for run in job_runs:
         if not run._action_runs:
-            log.info(f'Skipping recovery of {run} with no action runs (may have been cleaned up)')
+            log.info(f"Skipping recovery of {run} with no action runs (may have been cleaned up)")
             continue
 
         ssh_runs, mesos_runs = filter_action_runs_needing_recovery(run._action_runs)

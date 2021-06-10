@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import os
 import shutil
 import tempfile
@@ -19,7 +16,7 @@ class TestShelveStateStore(TestCase):
     @setup
     def setup_store(self):
         self.tmpdir = tempfile.mkdtemp()
-        self.filename = os.path.join(self.tmpdir, 'state')
+        self.filename = os.path.join(self.tmpdir, "state")
         self.store = ShelveStateStore(self.filename)
 
     @teardown
@@ -31,18 +28,8 @@ class TestShelveStateStore(TestCase):
 
     def test_save(self):
         key_value_pairs = [
-            (
-                ShelveKey("one", "two"),
-                {
-                    'this': 'data',
-                },
-            ),
-            (
-                ShelveKey("three", "four"),
-                {
-                    'this': 'data2',
-                },
-            ),
+            (ShelveKey("one", "two"), {"this": "data",},),
+            (ShelveKey("three", "four"), {"this": "data2",},),
         ]
         self.store.save(key_value_pairs)
         self.store.cleanup()
@@ -54,37 +41,24 @@ class TestShelveStateStore(TestCase):
 
     def test_delete(self):
         key_value_pairs = [
-            (
-                ShelveKey("one", "two"),
-                {
-                    'this': 'data',
-                },
-            ),
-            (
-                ShelveKey("three", "four"),
-                {
-                    'this': 'data2',
-                },
-            ),
+            (ShelveKey("one", "two"), {"this": "data",},),
+            (ShelveKey("three", "four"), {"this": "data2",},),
             # Delete first key
-            (
-                ShelveKey("one", "two"),
-                None,
-            ),
+            (ShelveKey("one", "two"), None,),
         ]
         self.store.save(key_value_pairs)
         self.store.cleanup()
 
         stored_data = Py2Shelf(self.filename)
         assert stored_data == {
-            str(ShelveKey("three", "four").key): {'this': 'data2'},
+            str(ShelveKey("three", "four").key): {"this": "data2"},
         }
         stored_data.close()
 
     def test_restore(self):
         self.store.cleanup()
         keys = [ShelveKey("thing", i) for i in range(5)]
-        value = {'this': 'data'}
+        value = {"this": "data"}
         store = Py2Shelf(self.filename)
         for key in keys:
             store[str(key.key)] = value

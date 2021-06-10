@@ -1,15 +1,12 @@
 """
  Immutable config schema objects.
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 from collections import namedtuple
 from enum import Enum
 
 MASTER_NAMESPACE = "MASTER"
 
-CLEANUP_ACTION_NAME = 'cleanup'
+CLEANUP_ACTION_NAME = "cleanup"
 
 
 def config_object_factory(name, required=None, optional=None):
@@ -28,7 +25,7 @@ def config_object_factory(name, required=None, optional=None):
     config_class = namedtuple(name, required + optional)
 
     # make last len(optional) args actually optional
-    config_class.__new__.__defaults__ = (None, ) * len(optional)
+    config_class.__new__.__defaults__ = (None,) * len(optional)
     config_class.required_keys = required
     config_class.optional_keys = optional
 
@@ -36,211 +33,159 @@ def config_object_factory(name, required=None, optional=None):
 
 
 TronConfig = config_object_factory(
-    name='TronConfig',
+    name="TronConfig",
     optional=[
-        'output_stream_dir',  # str
-        'action_runner',  # ConfigActionRunner
-        'state_persistence',  # ConfigState
-        'command_context',  # dict of str
-        'ssh_options',  # ConfigSSHOptions
-        'time_zone',  # pytz time zone
-        'nodes',  # dict of ConfigNode
-        'node_pools',  # dict of ConfigNodePool
-        'jobs',  # dict of ConfigJob
-        'mesos_options',  # ConfigMesos
-        'k8s_options',  # ConfigKubernetes
-        'eventbus_enabled',  # bool or None
+        "output_stream_dir",  # str
+        "action_runner",  # ConfigActionRunner
+        "state_persistence",  # ConfigState
+        "command_context",  # dict of str
+        "ssh_options",  # ConfigSSHOptions
+        "time_zone",  # pytz time zone
+        "nodes",  # dict of ConfigNode
+        "node_pools",  # dict of ConfigNodePool
+        "jobs",  # dict of ConfigJob
+        "mesos_options",  # ConfigMesos
+        "k8s_options",  # ConfigKubernetes
+        "eventbus_enabled",  # bool or None
     ],
 )
 
-NamedTronConfig = config_object_factory(
-    name='NamedTronConfig',
-    optional=[
-        'jobs',  # dict of ConfigJob
-    ],
-)
+NamedTronConfig = config_object_factory(name="NamedTronConfig", optional=["jobs",],)  # dict of ConfigJob
 
 ConfigActionRunner = config_object_factory(
-    'ConfigActionRunner',
-    optional=['runner_type', 'remote_status_path', 'remote_exec_path'],
+    "ConfigActionRunner", optional=["runner_type", "remote_status_path", "remote_exec_path"],
 )
 
 ConfigSSHOptions = config_object_factory(
-    name='ConfigSSHOptions',
+    name="ConfigSSHOptions",
     optional=[
-        'agent',
-        'identities',
-        'known_hosts_file',
-        'connect_timeout',
-        'idle_connection_timeout',
-        'jitter_min_load',
-        'jitter_max_delay',
-        'jitter_load_factor',
+        "agent",
+        "identities",
+        "known_hosts_file",
+        "connect_timeout",
+        "idle_connection_timeout",
+        "jitter_min_load",
+        "jitter_max_delay",
+        "jitter_load_factor",
     ],
 )
 
-ConfigNode = config_object_factory(
-    name='ConfigNode',
-    required=['hostname'],
-    optional=['name', 'username', 'port'],
-)
+ConfigNode = config_object_factory(name="ConfigNode", required=["hostname"], optional=["name", "username", "port"],)
 
-ConfigNodePool = config_object_factory('ConfigNodePool', ['nodes'], ['name'])
+ConfigNodePool = config_object_factory("ConfigNodePool", ["nodes"], ["name"])
 
 ConfigState = config_object_factory(
-    name='ConfigState',
-    required=[
-        'name',
-        'store_type',
-    ],
-    optional=[
-        'buffer_size',
-        'dynamodb_region',
-        'table_name',
-    ],
+    name="ConfigState", required=["name", "store_type",], optional=["buffer_size", "dynamodb_region", "table_name",],
 )
 
 ConfigMesos = config_object_factory(
-    name='ConfigMesos',
+    name="ConfigMesos",
     optional=[
-        'master_address',
-        'master_port',
-        'secret_file',
-        'principal',
-        'role',
-        'enabled',
-        'default_volumes',
-        'dockercfg_location',
-        'offer_timeout',
+        "master_address",
+        "master_port",
+        "secret_file",
+        "principal",
+        "role",
+        "enabled",
+        "default_volumes",
+        "dockercfg_location",
+        "offer_timeout",
     ],
 )
 
-ConfigKubernetes = config_object_factory(
-    name='ConfigKubernetes',
-    optional=[
-        'master_address',
-        'enabled',
-    ],
-)
+ConfigKubernetes = config_object_factory(name="ConfigKubernetes", optional=["master_address", "enabled",],)
 
 ConfigJob = config_object_factory(
-    name='ConfigJob',
+    name="ConfigJob",
     required=[
-        'name',  # str
-        'node',  # str
-        'schedule',  # Config*Scheduler
-        'actions',  # dict of ConfigAction
-        'namespace',  # str
+        "name",  # str
+        "node",  # str
+        "schedule",  # Config*Scheduler
+        "actions",  # dict of ConfigAction
+        "namespace",  # str
     ],
     optional=[
-        'monitoring',  # dict
-        'queueing',  # bool
-        'run_limit',  # int
-        'all_nodes',  # bool
-        'cleanup_action',  # ConfigAction
-        'enabled',  # bool
-        'allow_overlap',  # bool
-        'max_runtime',  # datetime.Timedelta
-        'time_zone',  # pytz time zone
-        'expected_runtime',  # datetime.Timedelta
+        "monitoring",  # dict
+        "queueing",  # bool
+        "run_limit",  # int
+        "all_nodes",  # bool
+        "cleanup_action",  # ConfigAction
+        "enabled",  # bool
+        "allow_overlap",  # bool
+        "max_runtime",  # datetime.Timedelta
+        "time_zone",  # pytz time zone
+        "expected_runtime",  # datetime.Timedelta
         # TODO: cleanup once we're fully off of Mesos and all non-SSH jobs *only* use k8s
-        'use_k8s'  # bool
+        "use_k8s",  # bool
     ],
 )
 
 ConfigAction = config_object_factory(
-    name='ConfigAction',
-    required=[
-        'name',  # str
-        'command',  # str
-    ],
+    name="ConfigAction",
+    required=["name", "command",],  # str  # str
     optional=[
-        'requires',  # tuple of str
-        'node',  # str
-        'retries',  # int
-        'retries_delay',  # datetime.Timedelta
-        'executor',  # str
-        'cpus',  # float
-        'mem',  # float
-        'disk',  # float
-        'constraints',  # List of ConfigConstraint
-        'docker_image',  # str
-        'docker_parameters',  # List of ConfigParameter
-        'env',  # dict
-        'extra_volumes',  # List of ConfigVolume
-        'expected_runtime',  # datetime.Timedelta
-        'trigger_downstreams',  # None, bool or dict
-        'triggered_by',  # list or None
-        'on_upstream_rerun',  # ActionOnRerun or None
-        'trigger_timeout',  # datetime.deltatime or None
+        "requires",  # tuple of str
+        "node",  # str
+        "retries",  # int
+        "retries_delay",  # datetime.Timedelta
+        "executor",  # str
+        "cpus",  # float
+        "mem",  # float
+        "disk",  # float
+        "constraints",  # List of ConfigConstraint
+        "docker_image",  # str
+        "docker_parameters",  # List of ConfigParameter
+        "env",  # dict
+        "extra_volumes",  # List of ConfigVolume
+        "expected_runtime",  # datetime.Timedelta
+        "trigger_downstreams",  # None, bool or dict
+        "triggered_by",  # list or None
+        "on_upstream_rerun",  # ActionOnRerun or None
+        "trigger_timeout",  # datetime.deltatime or None
     ],
 )
 
 ConfigCleanupAction = config_object_factory(
-    name='ConfigCleanupAction',
-    required=[
-        'command',  # str
-    ],
+    name="ConfigCleanupAction",
+    required=["command",],  # str
     optional=[
-        'name',  # str
-        'node',  # str
-        'retries',  # int
-        'retries_delay',  # datetime.Timedelta
-        'expected_runtime',  # datetime.Timedelta
-        'executor',  # str
-        'cpus',  # float
-        'mem',  # float
-        'disk',  # float
-        'constraints',  # List of ConfigConstraint
-        'docker_image',  # str
-        'docker_parameters',  # List of ConfigParameter
-        'env',  # dict
-        'extra_volumes',  # List of ConfigVolume
-        'trigger_downstreams',  # None, bool or dict
-        'triggered_by',  # list or None
-        'on_upstream_rerun',  # ActionOnRerun or None
-        'trigger_timeout',  # datetime.deltatime or None
+        "name",  # str
+        "node",  # str
+        "retries",  # int
+        "retries_delay",  # datetime.Timedelta
+        "expected_runtime",  # datetime.Timedelta
+        "executor",  # str
+        "cpus",  # float
+        "mem",  # float
+        "disk",  # float
+        "constraints",  # List of ConfigConstraint
+        "docker_image",  # str
+        "docker_parameters",  # List of ConfigParameter
+        "env",  # dict
+        "extra_volumes",  # List of ConfigVolume
+        "trigger_downstreams",  # None, bool or dict
+        "triggered_by",  # list or None
+        "on_upstream_rerun",  # ActionOnRerun or None
+        "trigger_timeout",  # datetime.deltatime or None
     ],
 )
 
 ConfigConstraint = config_object_factory(
-    name='ConfigConstraint',
-    required=[
-        'attribute',
-        'operator',
-        'value',
-    ],
-    optional=[],
+    name="ConfigConstraint", required=["attribute", "operator", "value",], optional=[],
 )
 
 ConfigVolume = config_object_factory(
-    name='ConfigVolume',
-    required=[
-        'container_path',
-        'host_path',
-        'mode',
-    ],
-    optional=[],
+    name="ConfigVolume", required=["container_path", "host_path", "mode",], optional=[],
 )
 
-ConfigParameter = config_object_factory(
-    name='ConfigParameter',
-    required=[
-        'key',
-        'value',
-    ],
-    optional=[],
-)
+ConfigParameter = config_object_factory(name="ConfigParameter", required=["key", "value",], optional=[],)
 
+StatePersistenceTypes = Enum("StatePersistenceTypes", dict(shelve="shelve", yaml="yaml", dynamodb="dynamodb"),)
 
-StatePersistenceTypes = Enum(
-    'StatePersistenceTypes', dict(shelve='shelve', yaml='yaml', dynamodb='dynamodb')
-)
+ExecutorTypes = Enum("ExecutorTypes", dict(ssh="ssh", mesos="mesos", kubernetes="kubernetes"))
 
-ExecutorTypes = Enum('ExecutorTypes', dict(ssh='ssh', mesos='mesos', kubernetes='kubernetes'))
+ActionRunnerTypes = Enum("ActionRunnerTypes", dict(none="none", subprocess="subprocess"))
 
-ActionRunnerTypes = Enum('ActionRunnerTypes', dict(none='none', subprocess='subprocess'))
+VolumeModes = Enum("VolumeModes", dict(RO="RO", RW="RW"))
 
-VolumeModes = Enum('VolumeModes', dict(RO='RO', RW='RW'))
-
-ActionOnRerun = Enum('ActionOnRerun', dict(rerun='rerun'))
+ActionOnRerun = Enum("ActionOnRerun", dict(rerun="rerun"))

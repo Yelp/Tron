@@ -1,7 +1,6 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
 try:
     from setuptools import setup, find_packages
+
     assert setup
 except ImportError:
     from distutils.core import setup
@@ -12,14 +11,14 @@ import tron
 setup(
     name="tron",
     version=tron.__version__,
-    provides=['tron'],
+    provides=["tron"],
     author="Yelp",
     author_email="yelplabs@yelp.com",
     url="http://github.com/Yelp/Tron",
-    description='Job scheduling and monitoring system',
+    description="Job scheduling and monitoring system",
     classifiers=[
         "Programming Language :: Python",
-        'Programming Language :: Python :: 3.6',
+        "Programming Language :: Python :: 3.6",
         "Operating System :: OS Independent",
         "License :: OSI Approved :: Apache Software License",
         "Topic :: System :: Monitoring",
@@ -28,10 +27,8 @@ setup(
         "Intended Audience :: System Administrators",
         "Development Status :: 4 - Beta",
     ],
-    packages=find_packages(
-        exclude=['tests.*', 'tests', 'example-cluster']
-    ) + ['tronweb', 'tronweb2'],
-    scripts=glob.glob('bin/*') + glob.glob('tron/bin/*.py'),
+    packages=find_packages(exclude=["tests.*", "tests", "example-cluster"],) + ["tronweb", "tronweb2"],
+    scripts=glob.glob("bin/*") + glob.glob("tron/bin/*.py"),
     include_package_data=True,
     long_description="""
 Tron is a centralized system for managing periodic batch processes across a

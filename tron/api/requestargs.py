@@ -1,8 +1,5 @@
 """Functions for returning validated values from a twisted.web.Request object.
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import datetime
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"

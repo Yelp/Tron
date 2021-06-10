@@ -25,7 +25,7 @@ log = logging.getLogger(__name__)
 
 
 def setup_logging(options):
-    default = pkg_resources.resource_filename(tron.__name__, 'logging.conf')
+    default = pkg_resources.resource_filename(tron.__name__, "logging.conf")
     logfile = options.log_conf or default
 
     level = twist_level = None
@@ -38,8 +38,8 @@ def setup_logging(options):
     if options.verbose > 2:
         twist_level = logging.DEBUG
 
-    tron_logger = logging.getLogger('tron')
-    twisted_logger = logging.getLogger('twisted')
+    tron_logger = logging.getLogger("tron")
+    twisted_logger = logging.getLogger("twisted")
 
     logging.config.fileConfig(logfile)
     if level is not None:
@@ -61,7 +61,7 @@ def no_daemon_context(workdir, lockfile=None, signal_map={}):
         yield
 
 
-class TronDaemon(object):
+class TronDaemon:
     """Daemonize and run the tron daemon."""
 
     def __init__(self, options):
@@ -101,7 +101,7 @@ class TronDaemon(object):
         # is running. If there is one, the following code could potentially
         # cause problems for the other daemon by removing its socket.
         if os.path.exists(self.manhole_sock):
-            log.info('Removing orphaned manhole socket')
+            log.info("Removing orphaned manhole socket")
             os.remove(self.manhole_sock)
 
         self.manhole = make_manhole(dict(trond=self, mcp=self.mcp))
@@ -111,6 +111,7 @@ class TronDaemon(object):
     def _run_www_api(self):
         # Local import required because of reactor import in server and www
         from tron.api import resource
+
         site = resource.TronSite.create(self.mcp, self.options.web_path)
         port = self.options.listen_port
         reactor.listenTCP(port, site, interface=self.options.listen_host)
@@ -118,6 +119,7 @@ class TronDaemon(object):
     def _run_mcp(self):
         # Local import required because of reactor import in mcp
         from tron import mcp
+
         working_dir = self.options.working_dir
         config_path = self.options.config_path
         self.mcp = mcp.MasterControlProgram(working_dir, config_path)
@@ -131,11 +133,7 @@ class TronDaemon(object):
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        threading.Thread(
-            target=reactor.run,
-            daemon=True,
-            kwargs=dict(installSignalHandlers=0)
-        ).start()
+        threading.Thread(target=reactor.run, daemon=True, kwargs=dict(installSignalHandlers=0),).start()
 
     def _handle_shutdown(self, sig_num, stack_frame):
         log.info(f"Shutdown requested via {str(sig_num)}")

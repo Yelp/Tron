@@ -4,7 +4,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
-class Observable(object):
+class Observable:
     """An Observable in the Observer/Observable pattern. It stores
     specifications and Observers which can be notified of changes by calling
     notify.
@@ -51,14 +51,12 @@ class Observable(object):
     def notify(self, event, event_data=None):
         """Notify all observers of the event."""
         handlers = self._get_handlers_for_event(event)
-        log.debug(
-            f"Notifying {len(handlers)} listeners for new event {event!r}"
-        )
+        log.debug(f"Notifying {len(handlers)} listeners for new event {event!r}",)
         for handler in handlers:
             handler.handler(self, event, event_data)
 
 
-class Observer(object):
+class Observer:
     """An observer in the Observer/Observable pattern.  Given an observable
     object will watch for notify calls.  Override handler to act on those
     notifications.

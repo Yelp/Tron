@@ -13,10 +13,10 @@ import time
 
 from tron import yaml
 
-STATUS_FILE = 'status'
+STATUS_FILE = "status"
 
 
-class StatusFile(object):
+class StatusFile:
     """Manage a status file."""
 
     def __init__(self, filename):
@@ -24,37 +24,26 @@ class StatusFile(object):
 
     def get_content(self, run_id, command, proc):
         return {
-            'run_id': run_id,
-            'command': command,
-            'pid': proc.pid,
-            'return_code': proc.returncode,
-            'runner_pid': os.getpid(),
-            'timestamp': time.time(),
+            "run_id": run_id,
+            "command": command,
+            "pid": proc.pid,
+            "return_code": proc.returncode,
+            "runner_pid": os.getpid(),
+            "timestamp": time.time(),
         }
 
     @contextlib.contextmanager
     def wrap(self, command, run_id, proc):
-        with open(self.filename, 'w') as fh:
+        with open(self.filename, "w") as fh:
             yaml.safe_dump(
-                self.get_content(
-                    run_id=run_id,
-                    command=command,
-                    proc=proc,
-                ),
-                fh,
-                explicit_start=True,
-                width=1000000,
+                self.get_content(run_id=run_id, command=command, proc=proc,), fh, explicit_start=True, width=1000000,
             )
         try:
             yield
         finally:
-            with open(self.filename, 'a') as fh:
+            with open(self.filename, "a") as fh:
                 yaml.safe_dump(
-                    self.get_content(
-                        run_id=run_id,
-                        command=command,
-                        proc=proc,
-                    ),
+                    self.get_content(run_id=run_id, command=command, proc=proc,),
                     fh,
                     explicit_start=True,
                     width=1000000,
@@ -77,86 +66,75 @@ def build_environment(run_id, original_env=None):
     if original_env is None:
         original_env = dict(os.environ)
     try:
-        namespace, job, run_num, action = run_id.split('.', maxsplit=3)
+        namespace, job, run_num, action = run_id.split(".", maxsplit=3)
     except ValueError:
         # if we can't parse the run_id, we don't want to abort, so just
         # set these semi-arbitrarily
-        namespace, job, run_num, action = ['UNKNOWN'] * 4
+        namespace, job, run_num, action = ["UNKNOWN"] * 4
 
     new_env = dict(original_env)
-    new_env['TRON_JOB_NAMESPACE'] = namespace
-    new_env['TRON_JOB_NAME'] = job
-    new_env['TRON_RUN_NUM'] = run_num
-    new_env['TRON_ACTION'] = action
+    new_env["TRON_JOB_NAMESPACE"] = namespace
+    new_env["TRON_JOB_NAME"] = job
+    new_env["TRON_RUN_NUM"] = run_num
+    new_env["TRON_ACTION"] = action
 
     logging.debug(new_env)
     return new_env
 
 
 def run_proc(output_path, command, run_id, proc):
-    logging.warning(f'{run_id} running as pid {proc.pid}')
+    logging.warning(f"{run_id} running as pid {proc.pid}")
     status_file = StatusFile(os.path.join(output_path, STATUS_FILE))
     with status_file.wrap(
-        command=command,
-        run_id=run_id,
-        proc=proc,
+        command=command, run_id=run_id, proc=proc,
     ):
         returncode = proc.wait()
-        logging.warning(f'pid {proc.pid} exited with returncode {returncode}')
+        logging.warning(f"pid {proc.pid} exited with returncode {returncode}")
         return returncode
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description='Action Runner for Tron')
+    parser = argparse.ArgumentParser(description="Action Runner for Tron")
     parser.add_argument(
-        'output_dir',
-        help='The directory to store the state of the action run',
+        "output_dir", help="The directory to store the state of the action run",
     )
     parser.add_argument(
-        'command',
-        help='the command to run',
+        "command", help="the command to run",
     )
     parser.add_argument(
-        'run_id',
-        help='run_id of the action',
+        "run_id", help="run_id of the action",
     )
     return parser.parse_args()
 
 
 def run_command(command, run_id):
     return subprocess.Popen(
-        command,
-        shell=True,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-        env=build_environment(run_id=run_id),
+        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=build_environment(run_id=run_id),
     )
 
 
 def stream(source, dst):
     is_connected = True
-    logging.warning(f'streaming {source.name} to {dst.name}')
-    for line in iter(source.readline, b''):
+    logging.warning(f"streaming {source.name} to {dst.name}")
+    for line in iter(source.readline, b""):
         if is_connected:
             try:
-                dst.write(line.decode('utf-8'))
+                dst.write(line.decode("utf-8"))
                 dst.flush()
-                logging.warning(f'{dst.name}: {line}')
+                logging.warning(f"{dst.name}: {line}")
             except Exception as e:
-                logging.warning(f'failed writing to {dst}: {e}')
-                logging.warning(f'{dst.name}: {line}')
+                logging.warning(f"failed writing to {dst}: {e}")
+                logging.warning(f"{dst.name}: {line}")
                 is_connected = False
         else:
-            logging.warning(f'{dst.name}: {line}')
+            logging.warning(f"{dst.name}: {line}")
             is_connected = False
 
 
 def configure_logging(run_id, output_dir):
-    output_file = os.path.join(output_dir, f'{run_id}-{os.getpid()}.log')
+    output_file = os.path.join(output_dir, f"{run_id}-{os.getpid()}.log")
     logging.basicConfig(
-        filename=output_file,
-        format='%(asctime)s %(levelname)s %(message)s',
-        datefmt='%Y-%m-%dT%H:%M:%S%z'
+        filename=output_file, format="%(asctime)s %(levelname)s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S%z",
     )
 
 
@@ -171,12 +149,7 @@ def main():
     ]
     for t in threads:
         t.start()
-    returncode = run_proc(
-        output_path=args.output_dir,
-        run_id=args.run_id,
-        command=args.command,
-        proc=proc,
-    )
+    returncode = run_proc(output_path=args.output_dir, run_id=args.run_id, command=args.command, proc=proc,)
 
     for t in threads:
         t.join()

@@ -1,7 +1,4 @@
 """Utilities for working with collections."""
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
 
 log = logging.getLogger(__name__)
@@ -33,7 +30,7 @@ class MappingCollection(dict):
 
     def remove(self, name):
         if name not in self:
-            raise ValueError("%s %s unknown" % (self.item_name, name))
+            raise ValueError(f"{self.item_name} {name} unknown")
 
         log.info("Removing %s %s", self.item_name, name)
         self.pop(name).disable()

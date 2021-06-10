@@ -20,18 +20,16 @@ class Machine:
     def __init__(self, initial, **transitions):
         super().__init__()
         self.transitions = defaultdict(dict, transitions)
-        self.transition_names = set(
-            transition_name for (_, transitions) in self.transitions.items()
+        self.transition_names = {
+            transition_name
+            for (_, transitions) in self.transitions.items()
             for (transition_name, _) in (transitions or {}).items()
-        )
+        }
         self.states = set(transitions.keys()).union(
-            state for (_, dst) in transitions.items()
-            for (_, state) in (dst or {}).items()
+            state for (_, dst) in transitions.items() for (_, state) in (dst or {}).items()
         )
         if initial not in self.states:
-            raise RuntimeError(
-                f"invalid machine: {initial} not in {self.states}"
-            )
+            raise RuntimeError(f"invalid machine: {initial} not in {self.states}",)
         self.state = initial
         self.initial = initial
 

@@ -14,6 +14,7 @@ log = logging.getLogger(__name__)
 @dataclass
 class ActionCommandConfig:
     """A configurable data object for one try of an Action."""
+
     command: str
     cpus: float = None
     mem: float = None
@@ -26,10 +27,7 @@ class ActionCommandConfig:
 
     @property
     def state_data(self):
-        return {
-            field.name: getattr(self, field.name)
-            for field in fields(self)
-        }
+        return {field.name: getattr(self, field.name) for field in fields(self)}
 
     def copy(self):
         return ActionCommandConfig(**self.state_data)
@@ -38,6 +36,7 @@ class ActionCommandConfig:
 @dataclass
 class Action:
     """A configurable data object for an Action."""
+
     name: str
     command_config: ActionCommandConfig
     node_pool: str
@@ -66,7 +65,7 @@ class Action:
             command=config.command,
             cpus=config.cpus,
             mem=config.mem,
-            disk=(1024. if config.disk is None else config.disk),
+            disk=(1024.0 if config.disk is None else config.disk),
             docker_image=config.docker_image,
             constraints=set(config.constraints or []),
             docker_parameters=set(config.docker_parameters or []),

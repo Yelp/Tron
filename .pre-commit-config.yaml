@@ -1,32 +1,51 @@
+---
 repos:
--   repo: https://github.com/pre-commit/pre-commit-hooks.git
-    rev: v2.0.0
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v2.5.0
     hooks:
-    -   id: trailing-whitespace
-    -   id: end-of-file-fixer
-        exclude: CHANGELOG.md|cluster_itests/tron_framework_secret
-    -   id: check-json
-    -   id: check-yaml
-    -   id: requirements-txt-fixer
-    -   id: flake8
-        additional_dependencies: ['flake8==3.8.3']
-        exclude: testifycompat/
-        language_version: python3.6
--   repo: https://github.com/asottile/reorder_python_imports.git
-    rev: v1.3.2
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+        exclude: CHANGELOG.md
+      - id: check-docstring-first
+      - id: check-json
+      - id: check-yaml
+      - id: requirements-txt-fixer
+      - id: fix-encoding-pragma
+        args: [--remove]
+      - id: pretty-format-json
+        args: [--autofix, --indent, '4', --no-sort-keys]
+  - repo: https://gitlab.com/pycqa/flake8
+    rev: 3.9.2
     hooks:
-    -   id: reorder-python-imports
-        language_version: python3.6
--   repo: local
+      - id: flake8
+        exclude: ^docs/source/conf.py$
+  - repo: https://github.com/asottile/reorder_python_imports
+    rev: v1.9.0
     hooks:
-    -   id: patch-enforce-autospec
+      - id: reorder-python-imports
+        args: [--py3-plus]
+  - repo: https://github.com/asottile/pyupgrade
+    rev: v2.0.2
+    hooks:
+      - id: pyupgrade
+        args: [--py36-plus]
+  - repo: local
+    hooks:
+      - id: patch-enforce-autospec
         name: mock.patch enforce autospec
-        description: This hook ensures all mock.patch invocations specify an autospec
+        description: |
+          This hook ensures all mock.patch invocations specify an autospec
         entry: contrib/mock_patch_checker.py
         language: script
         files: ^tests/.*\.py$
-    -   id: eslint
+      - id: eslint
         name: eslint
         entry: ./node_modules/.bin/eslint --format=compact --quiet --fix
         language: system
         files: ^tronweb2/src/.*\.js$
+  - repo: http://github.com/psf/black
+    rev: 19.10b0
+    hooks:
+      - id: black
+        language_version: python3.6
+        args: [--target-version, py36]

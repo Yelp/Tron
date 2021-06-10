@@ -30,10 +30,10 @@ class JobScheduler(Observer):
         for run in job_runs:
             self.job.watch(run)
         self.job.runs.runs.extend(job_runs)
-        log.info(f'{self} restored')
+        log.info(f"{self} restored")
 
         recovery.launch_recovery_actionruns_for_job_runs(
-            job_runs=job_runs, master_action_runner=config_action_runner
+            job_runs=job_runs, master_action_runner=config_action_runner,
         )
 
         scheduled = self.job.runs.get_scheduled()
@@ -86,7 +86,7 @@ class JobScheduler(Observer):
         # when reconfiguring, preserve the latest scheduled run's time
         pending_run_times = [j.run_time for j in list(self.job.runs.get_pending())]
         if len(pending_run_times) != 1:
-            log.warning(f'{self.job} has {len(pending_run_times)} pending runs, not 1')
+            log.warning(f"{self.job} has {len(pending_run_times)} pending runs, not 1")
         next_run_time = None if len(pending_run_times) == 0 else pending_run_times[0]
 
         self.job.runs.remove_pending()
@@ -113,13 +113,12 @@ class JobScheduler(Observer):
         # Since job updating only copies equality attributes (defined in the Job
         # class), we need to now enable or disable the job depending on if the
         # new job says so.
-        if (curr_job.enabled is not new_job.enabled and
-                curr_job.config_enabled is not new_job.config_enabled):
+        if curr_job.enabled is not new_job.enabled and curr_job.config_enabled is not new_job.config_enabled:
             if new_job.config_enabled:
-                log.info(f'{curr_job} re-enabled during reconfiguration')
+                log.info(f"{curr_job} re-enabled during reconfiguration")
                 self.enable()
             else:
-                log.info(f'{curr_job} disabled during reconfiguration')
+                log.info(f"{curr_job} disabled during reconfiguration")
                 self.disable()
         curr_job.config_enabled = new_job.config_enabled
 
@@ -152,8 +151,7 @@ class JobScheduler(Observer):
         # Alternatively, if run_queued is True, this job_run is already queued.
         if not run_queued and not job_run.is_scheduled:
             log.info(
-                f"{job_run} in state {job_run.state} is not scheduled, "
-                "scheduling a new run instead of running"
+                f"{job_run} in state {job_run.state} is not scheduled, " "scheduling a new run instead of running",
             )
             return self.schedule()
 
@@ -240,7 +238,7 @@ class JobScheduler(Observer):
         return not self == other
 
 
-class JobSchedulerFactory(object):
+class JobSchedulerFactory:
     """Construct JobScheduler instances from configuration."""
 
     def __init__(self, context, output_stream_dir, time_zone, action_runner, job_graph):

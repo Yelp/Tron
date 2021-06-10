@@ -86,7 +86,7 @@ def get_time(time_string):
         return None
 
 
-TOKEN_LAST = 'LAST'
+TOKEN_LAST = "LAST"
 
 ordinal_range = range(1, 6)
 weekday_range = range(0, 7)
@@ -108,7 +108,7 @@ def validate_spec(source, value_range, type, default=None, allow_last=False):
             has_last = True
             continue
         if item not in value_range:
-            raise ValueError("%s not in range %s" % (type, value_range))
+            raise ValueError(f"{type} not in range {value_range}")
         source_wo_last.append(item)
 
     sorted_source = sorted(source_wo_last)
@@ -118,7 +118,7 @@ def validate_spec(source, value_range, type, default=None, allow_last=False):
     return sorted_source
 
 
-class TimeSpecification(object):
+class TimeSpecification:
     """TimeSpecification determines the next time which matches the
     configured pattern.
     """
@@ -137,13 +137,13 @@ class TimeSpecification(object):
     ):
 
         if weekdays and monthdays:
-            raise ValueError('cannot supply both monthdays and weekdays')
+            raise ValueError("cannot supply both monthdays and weekdays")
 
         if timestr and (minutes or hours or seconds):
-            raise ValueError('cannot supply both timestr and h/m/s')
+            raise ValueError("cannot supply both timestr and h/m/s")
 
         if not any((timestr, minutes, hours, seconds)):
-            timestr = '00:00'
+            timestr = "00:00"
 
         if timestr:
             time = get_time(timestr)
@@ -151,35 +151,21 @@ class TimeSpecification(object):
             minutes = [time.minute]
             seconds = [0]
 
-        self.hours = validate_spec(hours, hour_range, 'hour')
-        self.minutes = validate_spec(minutes, minute_range, 'minute')
-        self.seconds = validate_spec(seconds, second_range, 'second')
-        self.ordinals = validate_spec(ordinals, ordinal_range, 'ordinal')
-        self.weekdays = validate_spec(
-            weekdays,
-            weekday_range,
-            'weekdays',
-            allow_last=True,
-        )
-        self.months = validate_spec(months, month_range, 'month')
-        self.monthdays = validate_spec(
-            monthdays,
-            monthday_range,
-            'monthdays',
-            [],
-            True,
-        )
+        self.hours = validate_spec(hours, hour_range, "hour")
+        self.minutes = validate_spec(minutes, minute_range, "minute")
+        self.seconds = validate_spec(seconds, second_range, "second")
+        self.ordinals = validate_spec(ordinals, ordinal_range, "ordinal")
+        self.weekdays = validate_spec(weekdays, weekday_range, "weekdays", allow_last=True,)
+        self.months = validate_spec(months, month_range, "month")
+        self.monthdays = validate_spec(monthdays, monthday_range, "monthdays", [], True,)
         self.timezone = get_timezone(timezone)
 
     def next_day(self, first_day, year, month):
         """Returns matching days for the given year and month.
         """
-        first_day_of_month, last_day_of_month = calendar.monthrange(
-            year,
-            month,
-        )
+        first_day_of_month, last_day_of_month = calendar.monthrange(year, month,)
 
-        def map_last(day, ):
+        def map_last(day):
             return last_day_of_month if day == TOKEN_LAST else day
 
         def day_filter(day):
@@ -252,13 +238,7 @@ class TimeSpecification(object):
                     continue
 
                 candidate = start_date.replace(
-                    year,
-                    month,
-                    day,
-                    time.hour,
-                    time.minute,
-                    second=time.second,
-                    microsecond=0,
+                    year, month, day, time.hour, time.minute, second=time.second, microsecond=0,
                 )
                 candidate = self.handle_timezone(candidate, start.tzinfo)
                 if not candidate:
@@ -273,19 +253,16 @@ class TimeSpecification(object):
 
     def __eq__(self, other):
         attrs = [
-            'hours',
-            'minutes',
-            'seconds',
-            'ordinals',
-            'weekdays',
-            'months',
-            'monthdays',
-            'timezone',
+            "hours",
+            "minutes",
+            "seconds",
+            "ordinals",
+            "weekdays",
+            "months",
+            "monthdays",
+            "timezone",
         ]
-        return all(
-            getattr(other, attr, None) == getattr(self, attr, None)
-            for attr in attrs
-        )
+        return all(getattr(other, attr, None) == getattr(self, attr, None) for attr in attrs)
 
     def __ne__(self, other):
         return not self == other

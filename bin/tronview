@@ -1,8 +1,4 @@
 #!/usr/bin/env python
-from __future__ import absolute_import
-from __future__ import print_function
-from __future__ import unicode_literals
-
 import os
 import sys
 
@@ -22,56 +18,25 @@ from tron.commands.cmd_utils import tron_jobs_completer
 def parse_cli():
     parser = cmd_utils.build_option_parser()
     parser.add_argument(
-        "--numshown",
-        "-n",
-        type=int,
-        dest="num_displays",
-        help="Max number of jobs/job-runs shown",
-        default=10,
+        "--numshown", "-n", type=int, dest="num_displays", help="Max number of jobs/job-runs shown", default=10,
     )
     parser.add_argument(
-        "--color",
-        "-c",
-        action="store_true",
-        dest="display_color",
-        help="Display in color",
-        default=None,
+        "--color", "-c", action="store_true", dest="display_color", help="Display in color", default=None,
     )
     parser.add_argument(
-        "--nocolor",
-        action="store_false",
-        dest="display_color",
-        help="Display without color",
-        default=None,
+        "--nocolor", action="store_false", dest="display_color", help="Display without color", default=None,
     )
     parser.add_argument(
-        "--stdout",
-        "-o",
-        action="count",
-        dest="stdout",
-        help="Solely displays stdout",
-        default=0,
+        "--stdout", "-o", action="count", dest="stdout", help="Solely displays stdout", default=0,
     )
     parser.add_argument(
-        "--stderr",
-        "-e",
-        action="count",
-        dest="stderr",
-        help="Solely displays stderr",
-        default=0,
+        "--stderr", "-e", action="count", dest="stderr", help="Solely displays stderr", default=0,
     )
     parser.add_argument(
-        "--events",
-        "-E",
-        action="store_true",
-        dest="events",
-        help="Display stored events",
-        default=0,
+        "--events", "-E", action="store_true", dest="events", help="Display stored events", default=0,
     )
     parser.add_argument(
-        'name',
-        nargs='?',
-        help='job name | job run id | action id',
+        "name", nargs="?", help="job name | job run id | action id",
     ).completer = cmd_utils.tron_jobs_completer
 
     argcomplete.autocomplete(parser)
@@ -82,18 +47,15 @@ def parse_cli():
 def console_height():
     if not sys.stdout.isatty():
         return 40
-    return int(os.popen('stty size', 'r').read().split()[0])
+    return int(os.popen("stty size", "r").read().split()[0])
 
 
 def view_all(args, client):
     """Retrieve jobs and display them."""
     return display.DisplayJobs().format(
         client.jobs(
-            include_job_runs=False,
-            include_action_runs=False,
-            include_action_graph=False,
-            include_node_pool=False,
-        )
+            include_job_runs=False, include_action_runs=False, include_action_graph=False, include_node_pool=False,
+        ),
     )
 
 
@@ -110,10 +72,7 @@ def view_job_run(args, job_run_id, client):
 
 
 def view_action_run(args, act_run_id, client):
-    content = client.action_runs(
-        act_run_id.url,
-        num_lines=args.num_displays,
-    )
+    content = client.action_runs(act_run_id.url, num_lines=args.num_displays,)
     return display.format_action_run_details(content)
 
 
@@ -129,10 +88,8 @@ def get_view_output(name, args, client):
     try:
         tron_id = get_object_type_from_identifier(url_index, name)
     except ValueError as e:
-        possibilities = list(tron_jobs_completer(prefix='', client=client))
-        suggestions = suggest_possibilities(
-            word=name, possibilities=possibilities
-        )
+        possibilities = list(tron_jobs_completer(prefix="", client=client))
+        suggestions = suggest_possibilities(word=name, possibilities=possibilities,)
         raise SystemExit(f"Error: {e}{suggestions}")
 
     if tron_id.type not in obj_type_to_view_map:
@@ -156,9 +113,9 @@ def main():
     try:
         if args.events:
             response = client.request("/api/events")
-            error = response.get('error')
+            error = response.get("error")
             if not error:
-                for evt in response.get('response', ['* no recorded events *']):
+                for evt in response.get("response", ["* no recorded events *"]):
                     print(evt)
                 sys.exit(ExitCode.success)
 
@@ -171,15 +128,17 @@ def main():
             print("Unrecognized identifier: %s" % args.name, file=sys.stderr)
             sys.exit(ExitCode.fail)
 
-        if sys.stdout.isatty() and len(output.split('\n')) > console_height():
+        if sys.stdout.isatty() and len(output.split("\n")) > console_height():
             display.view_with_less(output, args.display_color)
         else:
             print(output)
 
     except RequestError as err:
-        print(f"Error connecting to the tron server ({args.server}): {err}", file=sys.stderr)
+        print(
+            f"Error connecting to the tron server ({args.server}): {err}", file=sys.stderr,
+        )
         sys.exit(ExitCode.fail)
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

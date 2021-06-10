@@ -1,9 +1,6 @@
 """
 Tools for managing and properly closing file handles.
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
 import os.path
 import shutil
@@ -19,8 +16,9 @@ from tron.utils import maybe_encode
 log = logging.getLogger(__name__)
 
 
-class NullFileHandle(object):
+class NullFileHandle:
     """A No-Op object that supports a File interface."""
+
     closed = True
 
     @classmethod
@@ -32,12 +30,13 @@ class NullFileHandle(object):
         pass
 
 
-class FileHandleWrapper(object):
+class FileHandleWrapper:
     """Acts as a proxy to file handles.  Wrap a file handle and stores
     access time and metadata.  These objects should only be created
     by FileHandleManager. Do not instantiate them on their own.
     """
-    __slots__ = ['manager', 'name', 'last_accessed', '_fh_lock', '_fh']
+
+    __slots__ = ["manager", "name", "last_accessed", "_fh_lock", "_fh"]
 
     def __init__(self, manager, name):
         self.manager = manager
@@ -63,8 +62,8 @@ class FileHandleWrapper(object):
             if self._fh is not None:
                 if self._fh == NullFileHandle:
                     try:
-                        self._fh = open(self.name, 'ab')
-                    except IOError as e:
+                        self._fh = open(self.name, "ab")
+                    except OSError as e:
                         log.error("Failed to open %s: %s", self.name, e)
                         return
 
@@ -81,7 +80,7 @@ class FileHandleWrapper(object):
             self._fh = None
 
 
-class FileHandleManager(object):
+class FileHandleManager:
     """Creates FileHandleWrappers, closes handles when they have
     been inactive for a period of time, and transparently re-open the next
     time they are needed. All files are opened in append mode.
@@ -163,7 +162,7 @@ class FileHandleManager(object):
         self.cleanup()
 
 
-class OutputStreamSerializer(object):
+class OutputStreamSerializer:
     """Manage writing to and reading from files in a directory hierarchy."""
 
     def __init__(self, base_path):
@@ -184,7 +183,7 @@ class OutputStreamSerializer(object):
             num_lines = sys.maxsize
 
         try:
-            cmd = ('tail', '-n', str(num_lines), path)
+            cmd = ("tail", "-n", str(num_lines), path)
             tail_sub = Popen(cmd, stdout=PIPE)
             return list(line.rstrip().decode() for line in tail_sub.stdout)
         except OSError as e:
@@ -197,14 +196,15 @@ class OutputStreamSerializer(object):
         return FileHandleManager.get_instance().open(path)
 
 
-class OutputPath(object):
+class OutputPath:
     """A list like object used to construct a file path for output. The
     file path is constructed by joining the base path with any additional
     path elements.
     """
-    __slots__ = ['base', 'parts']
 
-    def __init__(self, base='.', *path_parts):
+    __slots__ = ["base", "parts"]
+
+    def __init__(self, base=".", *path_parts):
         self.base = base
         self.parts = list(path_parts or [])
 
@@ -213,8 +213,7 @@ class OutputPath(object):
 
     def __iter__(self):
         yield self.base
-        for p in self.parts:
-            yield p
+        yield from self.parts
 
     def __str__(self):
         return os.path.join(*self)
@@ -230,7 +229,7 @@ class OutputPath(object):
         try:
             shutil.rmtree(str(self))
         except OSError as e:
-            log.warning("Failed to delete %s: %s" % (self, e))
+            log.warning(f"Failed to delete {self}: {e}")
 
     def __eq__(self, other):
         return self.base == other.base and self.parts == other.parts

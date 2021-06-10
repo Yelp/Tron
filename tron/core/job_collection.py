@@ -11,14 +11,14 @@ class JobCollection:
     """A collection of jobs."""
 
     def __init__(self):
-        self.jobs = collections.MappingCollection('jobs')
+        self.jobs = collections.MappingCollection("jobs")
         self.proxy = proxy.CollectionProxy(
             self.jobs.values,
             [
-                proxy.func_proxy('enable', lambda seq: all(list(seq))),
-                proxy.func_proxy('disable', lambda seq: all(list(seq))),
-                proxy.func_proxy('schedule', lambda seq: all(list(seq))),
-                proxy.func_proxy('run_queue_schedule', lambda seq: all(list(seq))),
+                proxy.func_proxy("enable", lambda seq: all(list(seq))),
+                proxy.func_proxy("disable", lambda seq: all(list(seq))),
+                proxy.func_proxy("schedule", lambda seq: all(list(seq))),
+                proxy.func_proxy("run_queue_schedule", lambda seq: all(list(seq))),
             ],
         )
 
@@ -84,8 +84,7 @@ class JobCollection:
         return [sched.get_job_runs() for sched in self]
 
     def __iter__(self):
-        for val in self.jobs.values():
-            yield val
+        yield from self.jobs.values()
 
     def __getattr__(self, name):
         return self.proxy.perform(name)
