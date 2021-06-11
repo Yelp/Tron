@@ -5,6 +5,7 @@ import datetime
 import logging
 import os
 from typing import List
+from typing import Optional
 
 from dataclasses import dataclass
 from dataclasses import fields
@@ -20,6 +21,7 @@ from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
 from tron.eventbus import EventBus
+from tron.kubernetes import KubernetesTask
 from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
 from tron.utils import maybe_decode
@@ -28,6 +30,7 @@ from tron.utils import timeutils
 from tron.utils.observer import Observable
 from tron.utils.observer import Observer
 from tron.utils.state import Machine
+
 
 log = logging.getLogger(__name__)
 MAX_RECOVER_TRIES = 5
@@ -88,6 +91,8 @@ class ActionRunFactory:
         }
         if action.executor == ExecutorTypes.mesos.value:
             return MesosActionRun(**args)
+        elif action.executor == ExecutorTypes.kubernetes.value:
+            return KubernetesActionRun(**args)
         return SSHActionRun(**args)
 
     @classmethod
@@ -985,6 +990,83 @@ class MesosActionRun(ActionRun, Observer):
             if action_command.exit_status is None:
                 # This is different from SSHActionRun
                 # Allows retries to happen, if configured
+                return self._exit_unsuccessful(None)
+
+            if not action_command.exit_status:
+                return self.success()
+
+            return self._exit_unsuccessful(action_command.exit_status)
+
+    handler = handle_action_command_state_change
+
+
+class KubernetesActionRun(ActionRun, Observer):
+    """An ActionRun that executes the command on a Kubernetes cluster.
+    """
+
+    def submit_command(self, attempt: ActionRunAttempt) -> Optional[KubernetesTask]:
+        """
+        Attempt to run a given ActionRunAttempt on the configured Kubernetes cluster.
+
+        If k8s usage is not toggled off, a KubernetesTask representing what was scheduled
+        onto the cluster will be returned - otherwise, None.
+        """
+        pass
+
+    def recover(self) -> Optional[KubernetesTask]:
+        """
+        Called on Tron restart per previously running ActionRun to attempt to restart Tron's tracking
+        of this run.
+
+        If we're able to successfully recover, a KubernetesTask representing what is currently being run
+        will be returned - otherwise, None.
+        """
+        pass
+
+    def stop(self) -> Optional[str]:
+        """
+        Compatibility alias for KubernetesActionRun::kill().
+
+        Kills the Kubernetes Pod for this ActionRun and consumes a retry.
+        May return an error/diagnostic message suitible for displaying to users.
+        """
+        return self.kill()
+
+    def kill(self, final: bool = True) -> Optional[str]:
+        """
+        Kills the Kubernetes Pod for this ActionRun and consumes a retry.
+
+        May return an error/diagnostic message suitible for displaying to users.
+        """
+        if self.retries_remaining is not None and final:
+            self.retries_remaining = -1
+
+        # it's possible that a user wants to kill an action that has delayed it's start
+        # (e.g., they're killing a retry of a failed action that has a retry_delay set),
+        # so let's check if there's such a delay present and cancel that since in this case
+        # there's nothing actually running in k8s yet
+        if self.cancel_delay():
+            return
+
+        # TODO(TRON-) actually kill Pod
+
+    def handle_action_command_state_change(
+        self, action_command: ActionCommand, event: str, event_data=None
+    ) -> Optional[bool]:
+        """
+        Observe ActionCommand state changes and transition the ActionCommand state machine to a new state.
+        """
+        log.debug(f"{self} action_command state change: {action_command.state} for event: {event}.")
+
+        if event == ActionCommand.RUNNING:
+            return self.transition_and_notify("started")
+
+        if event == ActionCommand.FAILSTART:
+            return self._exit_unsuccessful(action_command.exit_status)
+
+        if event == ActionCommand.EXITING:
+            if action_command.exit_status is None:
+                # This is different from SSHActionRun - allows retries to happen, if configured
                 return self._exit_unsuccessful(None)
 
             if not action_command.exit_status:
