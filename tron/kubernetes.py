@@ -3,6 +3,7 @@ from logging import Logger
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import TYPE_CHECKING
 
 from task_processing.interfaces.event import Event  # type: ignore  # need to add task_proc type hints
 from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig  # type: ignore
@@ -13,9 +14,12 @@ from twisted.internet.defer import logError
 
 import tron.metrics as metrics
 from tron.actioncommand import ActionCommand
+from tron.config.schema import ConfigKubernetes
 from tron.config.schema import ConfigVolume
 from tron.utils.queue import PyDeferredQueue
 
+if TYPE_CHECKING:
+    from tron.serialize.runstate.statemanager import StateChangeWatcher
 
 DEFAULT_POD_LAUNCH_TIMEOUT_S = 300  # arbitrary number, same as Mesos offer timeout of yore
 
@@ -308,3 +312,46 @@ class KubernetesCluster:
         Given an instance of a KubernetesTask, attempt to reconcile the current state of the task from Kubernetes.
         """
         pass
+
+
+class KubernetesClusterRepository:
+    # Kubernetes config
+    kubernetes_enabled: bool = False
+    kubeconfig_path: Optional[str] = None
+    pod_launch_timeout: Optional[int] = None
+
+    # metadata config
+    clusters: Dict[str, KubernetesCluster] = {}
+
+    # state management config
+    state_data = {}
+    state_watcher: Optional["StateChangeWatcher"] = None
+
+    @classmethod
+    def attach(cls, _, observer):
+        cls.state_watcher = observer
+
+    @classmethod
+    def get_cluster(cls, kubeconfig_path: Optional[str] = None) -> Optional[KubernetesCluster]:
+        if kubeconfig_path is None:
+            kubeconfig_path = cls.kubeconfig_path
+            return
+
+        if kubeconfig_path not in cls.clusters:
+            cluster = KubernetesCluster(kubeconfig_path=kubeconfig_path, enabled=cls.kubernetes_enabled)
+            cls.clusters[kubeconfig_path] = cluster
+
+        return cls.clusters[kubeconfig_path]
+
+    @classmethod
+    def shutdown(cls) -> None:
+        for cluster in cls.clusters.values():
+            cluster.stop()
+
+    @classmethod
+    def configure(cls, kubernetes_options: ConfigKubernetes) -> None:
+        cls.kubeconfig_path = kubernetes_options.kubeconfig_path
+        cls.kubernetes_enabled = kubernetes_options.enabled
+
+        for cluster in cls.clusters.values():
+            cluster.set_enabled(cls.kubernetes_enabled)

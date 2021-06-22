@@ -15,6 +15,7 @@ from twisted.internet import reactor
 from twisted.python import log as twisted_log
 
 import tron
+from tron.kubernetes import KubernetesClusterRepository
 from tron.manhole import make_manhole
 from tron.mesos import MesosClusterRepository
 from tron.utils import chdir
@@ -148,6 +149,7 @@ class TronDaemon:
         if self.mcp:
             self.mcp.shutdown()
         MesosClusterRepository.shutdown()
+        KubernetesClusterRepository.shutdown()
         raise SystemExit(f"Terminating on signal {str(sig_num)}")
 
     def _handle_reconfigure(self, _signal_number, _stack_frame):

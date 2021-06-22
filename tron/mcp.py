@@ -11,6 +11,7 @@ from tron.core.job_collection import JobCollection
 from tron.core.job_scheduler import JobSchedulerFactory
 from tron.core.jobgraph import JobGraph
 from tron.eventbus import EventBus
+from tron.kubernetes import KubernetesClusterRepository
 from tron.mesos import MesosClusterRepository
 from tron.serialize.runstate import statemanager
 
@@ -78,12 +79,14 @@ class MasterControlProgram:
             (self.set_context_base, "command_context"),
             (node.NodePoolRepository.update_from_config, "nodes", "node_pools", "ssh_options",),
             (MesosClusterRepository.configure, "mesos_options"),
+            (KubernetesClusterRepository.configure, "k8s_options"),
             (self.configure_eventbus, "eventbus_enabled"),
         ]
         master_config = config_container.get_master()
         apply_master_configuration(master_config_directives, master_config)
 
         self.state_watcher.watch(MesosClusterRepository)
+        self.state_watcher.watch(KubernetesClusterRepository)
 
         # If the master namespace was updated, we should update jobs in all namespaces
         if namespace_to_reconfigure == MASTER_NAMESPACE:
