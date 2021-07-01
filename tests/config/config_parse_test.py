@@ -91,6 +91,10 @@ def make_mesos_options():
     )
 
 
+def make_k8s_options():
+    return schema.ConfigKubernetes(enabled=False,)
+
+
 def make_action(**kwargs):
     kwargs.setdefault("name", "action"),
     kwargs.setdefault("command", "command")
@@ -217,6 +221,7 @@ def make_tron_config(
     node_pools=None,
     jobs=None,
     mesos_options=None,
+    k8s_options=None,
 ):
     return schema.TronConfig(
         action_runner=action_runner or {},
@@ -229,6 +234,7 @@ def make_tron_config(
         node_pools=node_pools or make_node_pools(),
         jobs=jobs or make_master_jobs(),
         mesos_options=mesos_options or make_mesos_options(),
+        k8s_options=k8s_options or make_k8s_options(),
     )
 
 
@@ -319,6 +325,7 @@ class ConfigTestCase(TestCase):
         assert test_config.time_zone == expected.time_zone
         assert test_config.nodes == expected.nodes
         assert test_config.node_pools == expected.node_pools
+        assert test_config.k8s_options == expected.k8s_options
         for key in ["0", "1", "2", "_actions_dict", "4", "_mesos"]:
             job_name = f"MASTER.test_job{key}"
             assert job_name in test_config.jobs, f"{job_name} in test_config.jobs"

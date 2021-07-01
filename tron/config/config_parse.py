@@ -628,12 +628,12 @@ class ValidateKubernetes(Validator):
     config_class = ConfigKubernetes
     optional = True
     defaults = {
-        "master_address": None,
+        "kubeconfig_path": None,
         "enabled": False,
     }
 
     validators = {
-        "master_address": valid_k8s_master_address,
+        "kubeconfig_path": valid_string,
         "enabled": valid_bool,
     }
 
@@ -677,6 +677,7 @@ class ValidateConfig(Validator):
         "node_pools": {},
         "jobs": (),
         "mesos_options": ConfigMesos(**ValidateMesos.defaults),
+        "k8s_options": ConfigKubernetes(**ValidateKubernetes.defaults),
         "eventbus_enabled": None,
     }
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
