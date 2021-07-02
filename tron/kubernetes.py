@@ -110,13 +110,13 @@ class KubernetesTask(ActionCommand):
 class KubernetesCluster:
     def __init__(
         self,
-        master_address: str,
+        kubeconfig_path: str,
         enabled: bool = True,
         default_volumes: Optional[List[ConfigVolume]] = None,
         pod_launch_timeout: Optional[int] = None,
     ):
         # general k8s config
-        self.master_address = master_address
+        self.kubeconfig_path = kubeconfig_path
         self.enabled = enabled
         self.default_volumes = default_volumes or []
         self.pod_launch_timeout = pod_launch_timeout or DEFAULT_POD_LAUNCH_TIMEOUT_S
@@ -149,10 +149,10 @@ class KubernetesCluster:
         """
         Starts running our Kubernetes task_processing.
         """
-        self.runner = self.get_runner(master_address=self.master_address, queue=self.queue)
+        self.runner = self.get_runner(kubeconfig_path=self.kubeconfig_path, queue=self.queue)
         self.handle_next_event()
 
-    def get_runner(self, master_address: str, queue: PyDeferredQueue) -> Optional[Subscription]:
+    def get_runner(self, kubeconfig_path: str, queue: PyDeferredQueue) -> Optional[Subscription]:
         """
         Gets or creates an instance of our Kubernetes task_processing plugin.
         """
