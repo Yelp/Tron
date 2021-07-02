@@ -24,5 +24,4 @@ pytest==5.2.1
 requirements-tools==1.2.1
 toml==0.10.0
 typed-ast==1.4.0
-typing-extensions==3.10.0.0
 virtualenv==16.7.5

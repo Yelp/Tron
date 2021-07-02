@@ -21,6 +21,7 @@ from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
 from tron.eventbus import EventBus
+from tron.kubernetes import KubernetesClusterRepository
 from tron.kubernetes import KubernetesTask
 from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
@@ -122,6 +123,7 @@ class ActionRunAttempt:
     rendered_command: str = None
     exit_status: int = None
     mesos_task_id: str = None
+    kubernetes_task_id: str = None
 
     def exit(self, exit_status, end_time=None):
         if self.end_time is None:
@@ -193,6 +195,8 @@ class ActionRun(Observable):
     EXIT_STOP_KILL = -3
     EXIT_TRIGGER_TIMEOUT = -4
     EXIT_MESOS_DISABLED = -5
+    EXIT_KUBERNETES_DISABLED = -6
+    EXIT_KUBERNETES_NOT_CONFIGURED = -7
 
     EXIT_REASONS = {
         EXIT_INVALID_COMMAND: "Invalid command",
@@ -336,7 +340,11 @@ class ActionRun(Observable):
                     ),
                 )
             if attempts:
+                # only one of these should ever be valid - and we'll want to clean
+                # this up once we're off of mesos such that we only restore the k8s
+                # task id
                 attempts[-1].mesos_task_id = state_data.get("mesos_task_id")
+                attempts[-1].kubernetes_task_id = state_data.get("kubernetes_task_id")
         return attempts
 
     @classmethod
@@ -1011,7 +1019,33 @@ class KubernetesActionRun(ActionRun, Observer):
         If k8s usage is not toggled off, a KubernetesTask representing what was scheduled
         onto the cluster will be returned - otherwise, None.
         """
-        pass
+        k8s_cluster = KubernetesClusterRepository.get_cluster()
+        if not k8s_cluster:
+            self.fail(self.EXIT_KUBERNETES_NOT_CONFIGURED)
+            return None
+
+        task = k8s_cluster.create_task(
+            action_run_id=self.id,
+            command=attempt.rendered_command,
+            cpus=attempt.command_config.cpus,
+            mem=attempt.command_config.mem,
+            disk=attempt.command_config.disk,
+            docker_image=attempt.command_config.docker_image,
+            env=build_environment(original_env=attempt.command_config.env, run_id=self.id),
+            serializer=filehandler.OutputStreamSerializer(self.output_path),
+            volumes=attempt.command_config.extra_volumes,
+        )
+        if not task:
+            # generally, if we didn't get a task back that means that k8s usage is disabled
+            self.fail(self.EXIT_KUBERNETES_DISABLED)
+            return None
+
+        attempt.kubernetes_task_id = task.get_kubernetes_id()
+
+        # Watch before submitting, in case submit causes a transition
+        self.watch(task)
+        k8s_cluster.submit(task)
+        return task
 
     def recover(self) -> Optional[KubernetesTask]:
         """

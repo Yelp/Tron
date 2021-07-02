@@ -17,7 +17,9 @@ def mock_kubernetes_task():
     ):
         yield KubernetesTask(
             action_run_id="mock_service.mock_job.1.mock_action",
-            task_config=KubernetesTaskConfig(name="mock--service-mock-job-mock--action", uuid="123456",),
+            task_config=KubernetesTaskConfig(
+                name="mock--service-mock-job-mock--action", uuid="123456", image="some_image", command="echo test"
+            ),
         )
 
 
@@ -25,7 +27,10 @@ def mock_kubernetes_task():
 def mock_kubernetes_cluster():
     with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
         "tron.kubernetes.TaskProcessor", autospec=True,
-    ):
+    ), mock.patch("tron.kubernetes.Subscription", autospec=True,) as mock_runner:
+        mock_runner.return_value.configure_mock(
+            stopping=False, TASK_CONFIG_INTERFACE=mock.Mock(spec=KubernetesTaskConfig)
+        )
         yield KubernetesCluster("kube-cluster-a:1234")
 
 
@@ -33,6 +38,8 @@ def mock_kubernetes_cluster():
 def mock_disabled_kubernetes_cluster():
     with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
         "tron.kubernetes.TaskProcessor", autospec=True,
+    ), mock.patch(
+        "tron.kubernetes.Subscription", autospec=True,
     ):
         yield KubernetesCluster("kube-cluster-a:1234", enabled=False)
 
@@ -96,7 +103,17 @@ def test_create_task_disabled():
     cluster = KubernetesCluster("kube-cluster-a:1234", enabled=False)
     mock_serializer = mock.MagicMock()
 
-    task = cluster.create_task(action_run_id="action_a", serializer=mock_serializer,)
+    task = cluster.create_task(
+        action_run_id="action_a",
+        serializer=mock_serializer,
+        command="ls",
+        cpus=1,
+        mem=1024,
+        disk=None,
+        docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
+        env={},
+        volumes=[],
+    )
 
     assert task is None
 
@@ -104,7 +121,17 @@ def test_create_task_disabled():
 def test_create_task(mock_kubernetes_cluster):
     mock_serializer = mock.MagicMock()
 
-    task = mock_kubernetes_cluster.create_task(action_run_id="action_a", serializer=mock_serializer,)
+    task = mock_kubernetes_cluster.create_task(
+        action_run_id="action_a",
+        serializer=mock_serializer,
+        command="ls",
+        cpus=1,
+        mem=1024,
+        disk=None,
+        docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
+        env={},
+        volumes=[],
+    )
 
     assert task is not None
 
@@ -112,7 +139,18 @@ def test_create_task(mock_kubernetes_cluster):
 def test_create_task_with_task_id(mock_kubernetes_cluster):
     mock_serializer = mock.MagicMock()
 
-    task = mock_kubernetes_cluster.create_task(action_run_id="action_a", serializer=mock_serializer, task_id="yay.1234")
+    task = mock_kubernetes_cluster.create_task(
+        action_run_id="action_a",
+        serializer=mock_serializer,
+        task_id="yay.1234",
+        command="ls",
+        cpus=1,
+        mem=1024,
+        disk=None,
+        docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
+        env={},
+        volumes=[],
+    )
 
     mock_kubernetes_cluster.runner.TASK_CONFIG_INTERFACE().set_pod_name.assert_called_once_with("yay.1234")
     assert task is not None
@@ -123,7 +161,18 @@ def test_create_task_with_invalid_task_id(mock_kubernetes_cluster):
 
     with mock.patch.object(mock_kubernetes_cluster, "runner") as mock_runner:
         mock_runner.TASK_CONFIG_INTERFACE.return_value.set_pod_name = mock.MagicMock(side_effect=ValueError)
-        task = mock_kubernetes_cluster.create_task(action_run_id="action_a", serializer=mock_serializer, task_id="boo")
+        task = mock_kubernetes_cluster.create_task(
+            action_run_id="action_a",
+            serializer=mock_serializer,
+            task_id="boo",
+            command="ls",
+            cpus=1,
+            mem=1024,
+            disk=None,
+            docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
+            env={},
+            volumes=[],
+        )
 
     assert task is None
 
@@ -209,7 +258,12 @@ def test_set_enabled_disable(mock_kubernetes_cluster):
 
 def test_configure_default_volumes():
     # default_volume validation is done at config time, we just need to validate we are setting it
-    mock_kubernetes_cluster = KubernetesCluster("kube-cluster-a:1234", default_volumes=[])
+    with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
+        "tron.kubernetes.TaskProcessor", autospec=True,
+    ), mock.patch(
+        "tron.kubernetes.Subscription", autospec=True,
+    ):
+        mock_kubernetes_cluster = KubernetesCluster("kube-cluster-a:1234", default_volumes=[])
     assert mock_kubernetes_cluster.default_volumes == []
     expected_volumes = [
         {"container_path": "/tmp", "host_path": "/host/tmp", "mode": "RO",},
