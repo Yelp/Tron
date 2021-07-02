@@ -4,8 +4,7 @@ from typing import Dict
 from typing import List
 from typing import Optional
 
-# we need to add type hints for most of these (or upgrade)
-from task_processing.interfaces.event import Event  # type: ignore
+from task_processing.interfaces.event import Event  # type: ignore  # need to add task_proc type hints
 from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig  # type: ignore
 from task_processing.runners.subscription import Subscription  # type: ignore
 from task_processing.task_processor import TaskProcessor  # type: ignore
@@ -16,6 +15,7 @@ import tron.metrics as metrics
 from tron.actioncommand import ActionCommand
 from tron.config.schema import ConfigVolume
 from tron.utils.queue import PyDeferredQueue
+
 
 DEFAULT_POD_LAUNCH_TIMEOUT_S = 300  # arbitrary number, same as Mesos offer timeout of yore
 

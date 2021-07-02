@@ -29,6 +29,14 @@ def mock_kubernetes_cluster():
         yield KubernetesCluster("kube-cluster-a:1234")
 
 
+@pytest.fixture
+def mock_disabled_kubernetes_cluster():
+    with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
+        "tron.kubernetes.TaskProcessor", autospec=True,
+    ):
+        yield KubernetesCluster("kube-cluster-a:1234", enabled=False)
+
+
 def mock_event_factory(
     task_id: str,
     platform_type: str,
@@ -158,23 +166,42 @@ def test_stop_disabled():
     mock_kubernetes_cluster.stop()
 
 
-def test_set_enabled_enable(mock_kubernetes_cluster):
-    with mock.patch.object(mock_kubernetes_cluster, "connect", autospec=True,) as mock_connect, mock.patch.object(
-        mock_kubernetes_cluster, "stop", autospec=True,
-    ) as mock_stop:
-        mock_kubernetes_cluster.set_enabled(is_enabled=True)
+def test_set_enabled_enable_already_on(mock_kubernetes_cluster):
+    mock_kubernetes_cluster.set_enabled(is_enabled=True)
 
-        assert mock_kubernetes_cluster.enabled is True
-        mock_connect.assert_called_once()
-        mock_stop.assert_not_called()
+    assert mock_kubernetes_cluster.enabled is True
+    # only called once as part of creating the cluster object
+    mock_kubernetes_cluster.processor.executor_from_config.assert_called_once()
+    assert mock_kubernetes_cluster.runner is not None
+    assert mock_kubernetes_cluster.deferred is not None
+    mock_kubernetes_cluster.deferred.addCallback.assert_has_calls(
+        [mock.call(mock_kubernetes_cluster.process_event), mock.call(mock_kubernetes_cluster.handle_next_event),]
+    )
+
+
+def test_set_enabled_enable(mock_disabled_kubernetes_cluster):
+    mock_disabled_kubernetes_cluster.set_enabled(is_enabled=True)
+
+    assert mock_disabled_kubernetes_cluster.enabled is True
+    # only called once as part of enabling
+    mock_disabled_kubernetes_cluster.processor.executor_from_config.assert_called_once()
+    assert mock_disabled_kubernetes_cluster.runner is not None
+    assert mock_disabled_kubernetes_cluster.deferred is not None
+    mock_disabled_kubernetes_cluster.deferred.addCallback.assert_has_calls(
+        [
+            mock.call(mock_disabled_kubernetes_cluster.process_event),
+            mock.call(mock_disabled_kubernetes_cluster.handle_next_event),
+        ]
+    )
 
 
 def test_set_enabled_disable(mock_kubernetes_cluster):
-    with mock.patch.object(mock_kubernetes_cluster, "connect", autospec=True,) as mock_connect, mock.patch.object(
-        mock_kubernetes_cluster, "stop", autospec=True,
-    ) as mock_stop:
-        mock_kubernetes_cluster.set_enabled(is_enabled=False)
+    mock_task = mock.Mock(spec=KubernetesTask)
+    mock_kubernetes_cluster.tasks == {"a.b": mock_task}
 
-        assert mock_kubernetes_cluster.enabled is False
-        mock_connect.assert_not_called()
-        mock_stop.assert_called_once()
+    mock_kubernetes_cluster.set_enabled(is_enabled=False)
+
+    assert mock_kubernetes_cluster.enabled is False
+    mock_kubernetes_cluster.runner.stop.assert_called_once()
+    assert mock_kubernetes_cluster.deferred is None
+    assert mock_kubernetes_cluster.tasks == {}
