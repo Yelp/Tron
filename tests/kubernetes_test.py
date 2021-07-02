@@ -23,7 +23,10 @@ def mock_kubernetes_task():
 
 @pytest.fixture
 def mock_kubernetes_cluster():
-    yield KubernetesCluster("kube-cluster-a:1234")
+    with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
+        "tron.kubernetes.TaskProcessor", autospec=True,
+    ):
+        yield KubernetesCluster("kube-cluster-a:1234")
 
 
 def mock_event_factory(
@@ -103,13 +106,16 @@ def test_create_task_with_task_id(mock_kubernetes_cluster):
 
     task = mock_kubernetes_cluster.create_task(action_run_id="action_a", serializer=mock_serializer, task_id="yay.1234")
 
-    assert task.get_config().pod_name == "yay.1234"
+    mock_kubernetes_cluster.runner.TASK_CONFIG_INTERFACE().set_pod_name.assert_called_once_with("yay.1234")
+    assert task is not None
 
 
 def test_create_task_with_invalid_task_id(mock_kubernetes_cluster):
     mock_serializer = mock.MagicMock()
 
-    task = mock_kubernetes_cluster.create_task(action_run_id="action_a", serializer=mock_serializer, task_id="boo")
+    with mock.patch.object(mock_kubernetes_cluster, "runner") as mock_runner:
+        mock_runner.TASK_CONFIG_INTERFACE.return_value.set_pod_name = mock.MagicMock(side_effect=ValueError)
+        task = mock_kubernetes_cluster.create_task(action_run_id="action_a", serializer=mock_serializer, task_id="boo")
 
     assert task is None
 
@@ -150,3 +156,25 @@ def test_stop_disabled():
     # Shouldn't raise an error
     mock_kubernetes_cluster = KubernetesCluster("kube-cluster-a:1234", enabled=False)
     mock_kubernetes_cluster.stop()
+
+
+def test_set_enabled_enable(mock_kubernetes_cluster):
+    with mock.patch.object(mock_kubernetes_cluster, "connect", autospec=True,) as mock_connect, mock.patch.object(
+        mock_kubernetes_cluster, "stop", autospec=True,
+    ) as mock_stop:
+        mock_kubernetes_cluster.set_enabled(is_enabled=True)
+
+        assert mock_kubernetes_cluster.enabled is True
+        mock_connect.assert_called_once()
+        mock_stop.assert_not_called()
+
+
+def test_set_enabled_disable(mock_kubernetes_cluster):
+    with mock.patch.object(mock_kubernetes_cluster, "connect", autospec=True,) as mock_connect, mock.patch.object(
+        mock_kubernetes_cluster, "stop", autospec=True,
+    ) as mock_stop:
+        mock_kubernetes_cluster.set_enabled(is_enabled=False)
+
+        assert mock_kubernetes_cluster.enabled is False
+        mock_connect.assert_not_called()
+        mock_stop.assert_called_once()
