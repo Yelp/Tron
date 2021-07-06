@@ -1,8 +1,8 @@
 import logging
 from logging import Logger
 
-from task_processing.interfaces.event import Event
-from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig
+from task_processing.interfaces.event import Event  # type: ignore  # TODO: mypy isn't finding hints
+from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig  # type: ignore  # TODO: mypy isn't finding hints
 
 import tron.metrics as metrics
 from tron.actioncommand import ActionCommand
@@ -55,7 +55,7 @@ class KubernetesTask(ActionCommand):
 
         This will generally be of the form {pod_name}.{unique_suffix}
         """
-        return self.task_config.pod_name
+        return self.task_config.pod_name  # type: ignore  # TODO: mypy isn't seeing that this is typed in task_proc
 
     def get_config(self) -> KubernetesTaskConfig:
         """
