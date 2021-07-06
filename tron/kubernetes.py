@@ -324,7 +324,7 @@ class KubernetesClusterRepository:
     clusters: Dict[str, KubernetesCluster] = {}
 
     # state management config
-    state_data = {}
+    state_data = {}  # type: ignore  # not used yet
     state_watcher: Optional["StateChangeWatcher"] = None
 
     @classmethod
@@ -335,7 +335,7 @@ class KubernetesClusterRepository:
     def get_cluster(cls, kubeconfig_path: Optional[str] = None) -> Optional[KubernetesCluster]:
         if kubeconfig_path is None:
             kubeconfig_path = cls.kubeconfig_path
-            return
+            return None
 
         if kubeconfig_path not in cls.clusters:
             cluster = KubernetesCluster(kubeconfig_path=kubeconfig_path, enabled=cls.kubernetes_enabled)
