@@ -93,7 +93,7 @@ ConfigMesos = config_object_factory(
     ],
 )
 
-ConfigKubernetes = config_object_factory(name="ConfigKubernetes", optional=["master_address", "enabled",],)
+ConfigKubernetes = config_object_factory(name="ConfigKubernetes", optional=["kubeconfig_path", "enabled",],)
 
 ConfigJob = config_object_factory(
     name="ConfigJob",
