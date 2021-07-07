@@ -10,6 +10,10 @@ mesos_options:
     secret_file: '/work/cluster_itests/tron_framework_secret'
     principal: 'tron'
 
+k8s_options:
+  enabled: true
+  kubeconfig_path: '/DOES/NOT/EXIST/YET'
+
 ssh_options:
   agent: False
   identities:
