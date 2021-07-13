@@ -630,11 +630,13 @@ class ValidateKubernetes(Validator):
     defaults = {
         "kubeconfig_path": None,
         "enabled": False,
+        "default_volumes": (),
     }
 
     validators = {
         "kubeconfig_path": valid_string,
         "enabled": valid_bool,
+        "default_volumes": build_list_of_type_validator(valid_volume, allow_empty=True),
     }
 
 

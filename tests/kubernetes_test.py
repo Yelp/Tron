@@ -205,3 +205,14 @@ def test_set_enabled_disable(mock_kubernetes_cluster):
     mock_kubernetes_cluster.runner.stop.assert_called_once()
     assert mock_kubernetes_cluster.deferred is None
     assert mock_kubernetes_cluster.tasks == {}
+
+
+def test_configure_default_volumes():
+    # default_volume validation is done at config time, we just need to validate we are setting it
+    mock_kubernetes_cluster = KubernetesCluster("kube-cluster-a:1234", default_volumes=[])
+    assert mock_kubernetes_cluster.default_volumes == []
+    expected_volumes = [
+        {"container_path": "/tmp", "host_path": "/host/tmp", "mode": "RO",},
+    ]
+    mock_kubernetes_cluster.configure_tasks(default_volumes=expected_volumes)
+    assert mock_kubernetes_cluster.default_volumes == expected_volumes
