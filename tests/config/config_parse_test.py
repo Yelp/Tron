@@ -92,7 +92,7 @@ def make_mesos_options():
 
 
 def make_k8s_options():
-    return schema.ConfigKubernetes(enabled=False,)
+    return schema.ConfigKubernetes(enabled=False, default_volumes=())
 
 
 def make_action(**kwargs):
@@ -1021,6 +1021,20 @@ class TestValidateVolume(TestCase):
         # After we fix the error, expect error to go away.
         mesos_options["default_volumes"][1]["mode"] = "RW"
         assert config_parse.valid_mesos_options.validate(mesos_options, self.context,)
+
+    def test_k8s_default_volumes(self):
+        k8s_options = {"kubeconfig_path": "some_path"}
+        k8s_options["default_volumes"] = [
+            {"container_path": "/nail/srv", "host_path": "/tmp", "mode": "RO",},
+            {"container_path": "/nail/srv", "host_path": "/tmp", "mode": "invalid",},
+        ]
+
+        with pytest.raises(ConfigError):
+            config_parse.valid_kubernetes_options.validate(k8s_options, self.context)
+
+        # After we fix the error, expect error to go away.
+        k8s_options["default_volumes"][1]["mode"] = "RW"
+        assert config_parse.valid_kubernetes_options.validate(k8s_options, self.context,)
 
 
 class TestValidMasterAddress:

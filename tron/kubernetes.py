@@ -122,7 +122,7 @@ class KubernetesCluster:
         # general k8s config
         self.kubeconfig_path = kubeconfig_path
         self.enabled = enabled
-        self.default_volumes = default_volumes or []
+        self.default_volumes: Optional[List[ConfigVolume]] = default_volumes or []
         self.pod_launch_timeout = pod_launch_timeout or DEFAULT_POD_LAUNCH_TIMEOUT_S
 
         # creating a task_proc executor has a couple steps:
@@ -277,6 +277,9 @@ class KubernetesCluster:
         else:
             self.stop(fail_tasks=True)
 
+    def configure_tasks(self, default_volumes: Optional[List[ConfigVolume]]):
+        self.default_volumes = default_volumes
+
     def create_task(self, action_run_id: str, serializer, task_id: Optional[str] = None) -> Optional[KubernetesTask]:
         """
         Given the execution parameters for a task, create a KubernetesTask that encapsulate those parameters.
@@ -319,6 +322,7 @@ class KubernetesClusterRepository:
     kubernetes_enabled: bool = False
     kubeconfig_path: Optional[str] = None
     pod_launch_timeout: Optional[int] = None
+    default_volumes: Optional[List[ConfigVolume]] = None
 
     # metadata config
     clusters: Dict[str, KubernetesCluster] = {}
@@ -338,7 +342,9 @@ class KubernetesClusterRepository:
             return None
 
         if kubeconfig_path not in cls.clusters:
-            cluster = KubernetesCluster(kubeconfig_path=kubeconfig_path, enabled=cls.kubernetes_enabled)
+            cluster = KubernetesCluster(
+                kubeconfig_path=kubeconfig_path, enabled=cls.kubernetes_enabled, default_volumes=cls.default_volumes
+            )
             cls.clusters[kubeconfig_path] = cluster
 
         return cls.clusters[kubeconfig_path]
@@ -352,6 +358,8 @@ class KubernetesClusterRepository:
     def configure(cls, kubernetes_options: ConfigKubernetes) -> None:
         cls.kubeconfig_path = kubernetes_options.kubeconfig_path
         cls.kubernetes_enabled = kubernetes_options.enabled
+        cls.default_volumes = kubernetes_options.default_volumes
 
         for cluster in cls.clusters.values():
             cluster.set_enabled(cls.kubernetes_enabled)
+            cluster.configure_tasks(default_volumes=cls.default_volumes)
