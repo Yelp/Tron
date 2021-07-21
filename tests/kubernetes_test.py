@@ -6,6 +6,7 @@ import pytest
 from task_processing.interfaces.event import Event
 from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig
 
+from tron.config.schema import ConfigVolume
 from tron.kubernetes import KubernetesCluster
 from tron.kubernetes import KubernetesTask
 
@@ -212,7 +213,7 @@ def test_configure_default_volumes():
     mock_kubernetes_cluster = KubernetesCluster("kube-cluster-a:1234", default_volumes=[])
     assert mock_kubernetes_cluster.default_volumes == []
     expected_volumes = [
-        {"container_path": "/tmp", "host_path": "/host/tmp", "mode": "RO",},
+        ConfigVolume(container_path="/tmp", host_path="/host/tmp", mode="RO",),
     ]
     mock_kubernetes_cluster.configure_tasks(default_volumes=expected_volumes)
     assert mock_kubernetes_cluster.default_volumes == expected_volumes
