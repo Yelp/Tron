@@ -17,6 +17,7 @@ from tron.config import config_utils
 from tron.config import ConfigError
 from tron.config import schema
 from tron.config.config_utils import build_dict_name_validator
+from tron.config.config_utils import build_dict_value_validator
 from tron.config.config_utils import build_list_of_type_validator
 from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import PartialConfigContext
@@ -38,6 +39,7 @@ from tron.config.schema import ConfigJob
 from tron.config.schema import ConfigKubernetes
 from tron.config.schema import ConfigMesos
 from tron.config.schema import ConfigParameter
+from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigState
 from tron.config.schema import ConfigVolume
@@ -249,6 +251,17 @@ class ValidateVolume(Validator):
 valid_volume = ValidateVolume()
 
 
+class ValidateSecretSource(Validator):
+    config_class = ConfigSecretSource
+    validators = {
+        "secret": valid_string,
+        "key": valid_string,
+    }
+
+
+valid_secret_source = ValidateSecretSource()
+
+
 class ValidateSSHOptions(Validator):
     """Validate SSH options."""
 
@@ -387,6 +400,7 @@ class ValidateAction(Validator):
         "docker_image": None,
         "docker_parameters": None,
         "env": None,
+        "secret_env": None,
         "extra_volumes": None,
         "trigger_downstreams": None,
         "triggered_by": None,
@@ -410,6 +424,7 @@ class ValidateAction(Validator):
         "docker_image": valid_string,
         "docker_parameters": build_list_of_type_validator(valid_docker_parameter, allow_empty=True,),
         "env": valid_dict,
+        "secret_env": build_dict_value_validator(valid_secret_source),
         "extra_volumes": build_list_of_type_validator(valid_volume, allow_empty=True),
         "trigger_downstreams": valid_trigger_downstreams,
         "triggered_by": build_list_of_type_validator(valid_string, allow_empty=True),

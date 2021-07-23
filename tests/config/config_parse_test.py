@@ -675,6 +675,7 @@ class TestValidateJobs(TestCase):
                             docker_image="my_container:latest",
                             docker_parameters=[dict(key="label", value="labelA"), dict(key="label", value="labelB"),],
                             env=dict(USER="batch"),
+                            secret_env=dict(MY_SECRET=dict(secret="k8s-secret-name", key="secret_key")),
                             extra_volumes=[dict(container_path="/tmp", host_path="/home/tmp", mode="RO",),],
                         ),
                         dict(
@@ -709,6 +710,7 @@ class TestValidateJobs(TestCase):
                             schema.ConfigParameter(key="label", value="labelB",),
                         ),
                         env={"USER": "batch"},
+                        secret_env={"MY_SECRET": schema.ConfigSecretSource(secret="k8s-secret-name", key="secret_key")},
                         extra_volumes=(
                             schema.ConfigVolume(
                                 container_path="/tmp", host_path="/home/tmp", mode=schema.VolumeModes.RO.value,
