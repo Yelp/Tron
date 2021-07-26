@@ -270,3 +270,19 @@ def test_configure_default_volumes():
     ]
     mock_kubernetes_cluster.configure_tasks(default_volumes=expected_volumes)
     assert mock_kubernetes_cluster.default_volumes == expected_volumes
+
+
+def test_submit_disabled(mock_disabled_kubernetes_cluster, mock_kubernetes_task):
+    with mock.patch.object(mock_kubernetes_task, "exited", autospec=True) as mock_exited:
+        mock_disabled_kubernetes_cluster.submit(mock_kubernetes_task)
+
+    assert mock_kubernetes_task.get_kubernetes_id() not in mock_disabled_kubernetes_cluster.tasks
+    mock_exited.assert_called_once_with(1)
+
+
+def test_submit(mock_kubernetes_cluster, mock_kubernetes_task):
+    mock_kubernetes_cluster.submit(mock_kubernetes_task)
+
+    assert mock_kubernetes_task.get_kubernetes_id() in mock_kubernetes_cluster.tasks
+    assert mock_kubernetes_cluster.tasks[mock_kubernetes_task.get_kubernetes_id()] == mock_kubernetes_task
+    mock_kubernetes_cluster.runner.run.assert_called_once_with(mock_kubernetes_task.get_config())
