@@ -1,3 +1,10 @@
+tron (1.9.1) xenial; urgency=medium
+
+  * 1.9.1 tagged with 'make release'
+    Commit: Release v1.9.0
+
+ -- root <root@b17d2081ca9e>  Mon, 26 Jul 2021 19:30:29 +0000
+
 tron (1.8.1) xenial; urgency=medium
 
   * 1.8.1 tagged with 'make release'
