@@ -165,6 +165,7 @@ ConfigCleanupAction = config_object_factory(
         "docker_image",  # str
         "docker_parameters",  # List of ConfigParameter
         "env",  # dict
+        "secret_env",  # dict of str, ConfigSecretSource
         "extra_volumes",  # List of ConfigVolume
         "trigger_downstreams",  # None, bool or dict
         "triggered_by",  # list or None

@@ -207,6 +207,29 @@ def make_master_jobs():
             cleanup_action=None,
             expected_runtime=datetime.timedelta(1),
         ),
+        "MASTER.test_job_k8s": make_job(
+            name="MASTER.test_job_k8s",
+            node="NodePool",
+            schedule=schedule_parse.ConfigDailyScheduler(
+                original="00:00:00 ", hour=0, minute=0, second=0, days=set(), jitter=None,
+            ),
+            actions={
+                "action_k8s": make_action(
+                    name="action_k8s",
+                    command="test_command_k8s",
+                    executor=schema.ExecutorTypes.kubernetes.value,
+                    cpus=0.1,
+                    mem=100,
+                    disk=600,
+                    docker_image="container:latest",
+                    secret_env=dict(
+                        TEST_SECRET=schema.ConfigSecretSource(secret="tron-secret-test-secret--1", key="secret_1")
+                    ),
+                ),
+            },
+            cleanup_action=None,
+            expected_runtime=datetime.timedelta(1),
+        ),
     }
 
 
@@ -302,6 +325,23 @@ class ConfigTestCase(TestCase):
                         mem=100,
                         disk=600,
                         docker_image="container:latest",
+                    ),
+                ],
+            ),
+            dict(
+                name="test_job_k8s",
+                node="NodePool",
+                schedule="daily",
+                actions=[
+                    dict(
+                        name="action_k8s",
+                        executor="kubernetes",
+                        command="test_command_k8s",
+                        cpus=0.1,
+                        mem=100,
+                        disk=600,
+                        docker_image="container:latest",
+                        secret_env=dict(TEST_SECRET=dict(secret="tron-secret-test-secret--1", key="secret_1")),
                     ),
                 ],
             ),
@@ -578,6 +618,31 @@ class TestJobConfig(TestCase):
         assert_in(expected_msg, str(exception))
 
 
+class TestValidSecretSource(TestCase):
+    def test_missing_secret_name(self):
+        secret_env = dict(key="no_secret_name")
+
+        with pytest.raises(ConfigError) as missing_exc:
+            config_parse.valid_secret_source(secret_env, NullConfigContext)
+
+        assert "missing options: secret" in str(missing_exc.value)
+
+    def test_validate_job_extra_secret_env(self):
+        secret_env = dict(secret="tron-secret-k8s-name-no--secret--name", key="no_secret_name", extra_key="unknown",)
+        with pytest.raises(ConfigError) as missing_exc:
+            config_parse.valid_secret_source(secret_env, NullConfigContext)
+
+        assert "Unknown keys in SecretSource : extra_key" in str(missing_exc.value)
+
+    def test_valid_job_secret_env_success(self):
+        secret_env = dict(secret="tron-secret-k8s-name-no--secret--name", key="no_secret_name",)
+
+        expected_env = schema.ConfigSecretSource(**secret_env)
+
+        built_env = config_parse.valid_secret_source(secret_env, NullConfigContext)
+        assert built_env == expected_env
+
+
 class TestNodeConfig(TestCase):
     def test_validate_node_pool(self):
         config_node_pool = valid_node_pool(dict(name="theName", nodes=["node1", "node2"]),)
@@ -675,7 +740,6 @@ class TestValidateJobs(TestCase):
                             docker_image="my_container:latest",
                             docker_parameters=[dict(key="label", value="labelA"), dict(key="label", value="labelB"),],
                             env=dict(USER="batch"),
-                            secret_env=dict(MY_SECRET=dict(secret="k8s-secret-name", key="secret_key")),
                             extra_volumes=[dict(container_path="/tmp", host_path="/home/tmp", mode="RO",),],
                         ),
                         dict(
@@ -710,7 +774,6 @@ class TestValidateJobs(TestCase):
                             schema.ConfigParameter(key="label", value="labelB",),
                         ),
                         env={"USER": "batch"},
-                        secret_env={"MY_SECRET": schema.ConfigSecretSource(secret="k8s-secret-name", key="secret_key")},
                         extra_volumes=(
                             schema.ConfigVolume(
                                 container_path="/tmp", host_path="/home/tmp", mode=schema.VolumeModes.RO.value,
@@ -871,6 +934,7 @@ class TestConfigContainer(TestCase):
             "test_job2",
             "test_job4",
             "test_job_mesos",
+            "test_job_k8s",
         ]
         assert_equal(set(job_names), set(expected))
 
@@ -882,6 +946,7 @@ class TestConfigContainer(TestCase):
             "test_job2",
             "test_job4",
             "test_job_mesos",
+            "test_job_k8s",
         ]
         assert_equal(set(expected), set(self.container.get_jobs().keys()))
 
