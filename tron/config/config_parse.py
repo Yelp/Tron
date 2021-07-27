@@ -254,8 +254,8 @@ valid_volume = ValidateVolume()
 class ValidateSecretSource(Validator):
     config_class = ConfigSecretSource
     validators = {
-        "secret": valid_string,
-        "key": valid_string,
+        "secret_name": valid_string,  # name of Kubernetes Secret
+        "key": valid_string,  # key name in Secret data
     }
 
 

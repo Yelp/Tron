@@ -202,11 +202,13 @@ def build_dict_value_validator(item_validator, allow_empty=False):
     """Build a validator which validates values of a dict, and returns a dict"""
 
     def validator(value, config_context):
-        msg = "Duplicate name %%s at %s" % config_context.path
-        name_dict = UniqueNameDict(msg)
+        if not isinstance(value, dict):
+            msg = "Require a dict of type %s at %s"
+            raise ConfigError(msg % (item_validator.type_name, config_context.path))
+        result_dict = dict()
         for k, v in value.items():
-            name_dict[k] = item_validator(v, config_context)
-        return name_dict
+            result_dict[k] = item_validator(v, config_context)
+        return result_dict
 
     return validator
 

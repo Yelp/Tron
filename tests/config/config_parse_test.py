@@ -223,7 +223,7 @@ def make_master_jobs():
                     disk=600,
                     docker_image="container:latest",
                     secret_env=dict(
-                        TEST_SECRET=schema.ConfigSecretSource(secret="tron-secret-test-secret--1", key="secret_1")
+                        TEST_SECRET=schema.ConfigSecretSource(secret_name="tron-secret-test-secret--1", key="secret_1")
                     ),
                 ),
             },
@@ -341,7 +341,7 @@ class ConfigTestCase(TestCase):
                         mem=100,
                         disk=600,
                         docker_image="container:latest",
-                        secret_env=dict(TEST_SECRET=dict(secret="tron-secret-test-secret--1", key="secret_1")),
+                        secret_env=dict(TEST_SECRET=dict(secret_name="tron-secret-test-secret--1", key="secret_1")),
                     ),
                 ],
             ),
@@ -628,14 +628,16 @@ class TestValidSecretSource(TestCase):
         assert "missing options: secret" in str(missing_exc.value)
 
     def test_validate_job_extra_secret_env(self):
-        secret_env = dict(secret="tron-secret-k8s-name-no--secret--name", key="no_secret_name", extra_key="unknown",)
+        secret_env = dict(
+            secret_name="tron-secret-k8s-name-no--secret--name", key="no_secret_name", extra_key="unknown",
+        )
         with pytest.raises(ConfigError) as missing_exc:
             config_parse.valid_secret_source(secret_env, NullConfigContext)
 
         assert "Unknown keys in SecretSource : extra_key" in str(missing_exc.value)
 
     def test_valid_job_secret_env_success(self):
-        secret_env = dict(secret="tron-secret-k8s-name-no--secret--name", key="no_secret_name",)
+        secret_env = dict(secret_name="tron-secret-k8s-name-no--secret--name", key="no_secret_name",)
 
         expected_env = schema.ConfigSecretSource(**secret_env)
 

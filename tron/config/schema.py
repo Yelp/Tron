@@ -182,7 +182,7 @@ ConfigVolume = config_object_factory(
     name="ConfigVolume", required=["container_path", "host_path", "mode",], optional=[],
 )
 
-ConfigSecretSource = config_object_factory(name="ConfigSecretSource", required=["secret", "key"], optional=[],)
+ConfigSecretSource = config_object_factory(name="ConfigSecretSource", required=["secret_name", "key"], optional=[],)
 
 ConfigParameter = config_object_factory(name="ConfigParameter", required=["key", "value",], optional=[],)
 
