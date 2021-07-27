@@ -21,6 +21,7 @@ class ActionCommandConfig:
     disk: float = None
     constraints: set = field(default_factory=set)
     docker_image: str = None
+    # XXX: we can get rid of docker_parameters once we're off of Mesos
     docker_parameters: set = field(default_factory=set)
     env: dict = field(default_factory=dict)
     extra_volumes: set = field(default_factory=set)
