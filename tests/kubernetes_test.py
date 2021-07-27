@@ -92,6 +92,40 @@ def test_handle_event_exit_early_on_misrouted_event(mock_kubernetes_task):
     assert not mock_log_event_info.called
 
 
+def test_handle_event_running(mock_kubernetes_task):
+    with mock.patch.object(mock_kubernetes_task, "started", autospec=True) as mock_started:
+        mock_kubernetes_task.handle_event(
+            mock_event_factory(task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="running")
+        )
+    assert mock_started.called
+
+
+def test_handle_event_exit_on_succeeded(mock_kubernetes_task):
+    with mock.patch.object(mock_kubernetes_task, "exited", autospec=True) as mock_exited:
+        mock_kubernetes_task.handle_event(
+            mock_event_factory(
+                task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="succeeded", terminal=True, success=True
+            )
+        )
+    assert mock_exited.call_args == mock.call(0)
+
+
+def test_handle_event_exit_on_failed(mock_kubernetes_task):
+    with mock.patch.object(mock_kubernetes_task, "exited", autospec=True) as mock_exited:
+        mock_kubernetes_task.handle_event(
+            mock_event_factory(task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="failed",)
+        )
+    assert mock_exited.call_args == mock.call(1)
+
+
+def test_handle_event_unknown(mock_kubernetes_task):
+    with mock.patch.object(mock_kubernetes_task, "exited", autospec=True) as mock_exited:
+        mock_kubernetes_task.handle_event(
+            mock_event_factory(task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="unknown",)
+        )
+    assert mock_exited.call_args == mock.call(None)
+
+
 def test_create_task_disabled():
     cluster = KubernetesCluster("kube-cluster-a:1234", enabled=False)
     mock_serializer = mock.MagicMock()
