@@ -134,6 +134,8 @@ ConfigAction = config_object_factory(
         "cpus",  # float
         "mem",  # float
         "disk",  # float
+        "cap_add",  # List of str
+        "cap_drop",  # List of str
         "constraints",  # List of ConfigConstraint
         "docker_image",  # str
         "docker_parameters",  # List of ConfigParameter
@@ -161,6 +163,8 @@ ConfigCleanupAction = config_object_factory(
         "cpus",  # float
         "mem",  # float
         "disk",  # float
+        "cap_add",  # List of str
+        "cap_drop",  # List of str
         "constraints",  # List of ConfigConstraint
         "docker_image",  # str
         "docker_parameters",  # List of ConfigParameter

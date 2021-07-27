@@ -341,6 +341,8 @@ class KubernetesCluster:
         env: Dict[str, str],
         secret_env: Dict[str, ConfigSecretSource],
         volumes: Collection[ConfigVolume],
+        cap_add: Collection[str],
+        cap_drop: Collection[str],
         task_id: Optional[str] = None,
     ) -> Optional[KubernetesTask]:
         """
@@ -365,6 +367,8 @@ class KubernetesCluster:
                 disk=DEFAULT_DISK_LIMIT if disk is None else disk,
                 environment=env,
                 secret_environment={k: v._asdict() for k, v in secret_env.items()},
+                cap_add=cap_add,
+                cap_drop=cap_drop,
                 volumes=[
                     volume._asdict()
                     for volume in combine_volumes(defaults=self.default_volumes or [], overrides=volumes)

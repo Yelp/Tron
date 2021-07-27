@@ -27,6 +27,7 @@ from tron.config.config_utils import valid_dict
 from tron.config.config_utils import valid_float
 from tron.config.config_utils import valid_identifier
 from tron.config.config_utils import valid_int
+from tron.config.config_utils import valid_list
 from tron.config.config_utils import valid_name_identifier
 from tron.config.config_utils import valid_string
 from tron.config.config_utils import Validator
@@ -396,6 +397,8 @@ class ValidateAction(Validator):
         "cpus": None,
         "mem": None,
         "disk": None,
+        "cap_add": None,
+        "cap_drop": None,
         "constraints": None,
         "docker_image": None,
         "docker_parameters": None,
@@ -420,6 +423,8 @@ class ValidateAction(Validator):
         "cpus": valid_float,
         "mem": valid_float,
         "disk": valid_float,
+        "cap_add": valid_list,
+        "cap_drop": valid_list,
         "constraints": build_list_of_type_validator(valid_constraint, allow_empty=True),
         "docker_image": valid_string,
         "docker_parameters": build_list_of_type_validator(valid_docker_parameter, allow_empty=True,),
@@ -458,6 +463,8 @@ class ValidateCleanupAction(Validator):
         "cpus": None,
         "mem": None,
         "disk": None,
+        "cap_add": None,
+        "cap_drop": None,
         "constraints": None,
         "docker_image": None,
         "docker_parameters": None,
@@ -479,6 +486,8 @@ class ValidateCleanupAction(Validator):
         "cpus": valid_float,
         "mem": valid_float,
         "disk": valid_float,
+        "cap_add": valid_list,
+        "cap_drop": valid_list,
         "constraints": build_list_of_type_validator(valid_constraint, allow_empty=True),
         "docker_image": valid_string,
         "docker_parameters": build_list_of_type_validator(valid_docker_parameter, allow_empty=True,),

@@ -221,6 +221,8 @@ def make_master_jobs():
                     cpus=0.1,
                     mem=100,
                     disk=600,
+                    cap_add=["KILL"],
+                    cap_drop=["CHOWN", "KILL"],
                     docker_image="container:latest",
                     secret_env=dict(
                         TEST_SECRET=schema.ConfigSecretSource(secret_name="tron-secret-test-secret--1", key="secret_1")
@@ -342,6 +344,8 @@ class ConfigTestCase(TestCase):
                         disk=600,
                         docker_image="container:latest",
                         secret_env=dict(TEST_SECRET=dict(secret_name="tron-secret-test-secret--1", key="secret_1")),
+                        cap_add=["KILL"],
+                        cap_drop=["CHOWN", "KILL"],
                     ),
                 ],
             ),
