@@ -1,3 +1,14 @@
+tron (1.10.0) xenial; urgency=medium
+
+  * 1.10.0 tagged with 'make release'
+    Commit: Enable submitting a task to k8s using task_proc (#818)  *
+    Enable submitting a task to k8s using task_proc  We aren't yet
+    reading any of the events that task_proc is bubbling back up to us,
+    but that'll come next.  With this, we should be giving task_proc all
+    the information it needs to actually create a usable Pod.
+
+ -- root <root@346e4b8d8ad9>  Tue, 27 Jul 2021 20:24:40 +0000
+
 tron (1.9.1) xenial; urgency=medium
 
   * 1.9.1 tagged with 'make release'
