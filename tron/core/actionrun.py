@@ -204,6 +204,8 @@ class ActionRun(Observable):
         EXIT_STOP_KILL: "Stopped or killed",
         EXIT_TRIGGER_TIMEOUT: "Timed out waiting for trigger",
         EXIT_MESOS_DISABLED: "Mesos disabled",
+        EXIT_KUBERNETES_DISABLED: "Kubernetes disabled",
+        EXIT_KUBERNETES_NOT_CONFIGURED: "Kubernetes enabled, but not configured",
     }
 
     # This is a list of "alternate locations" that we can look for stdout/stderr in
