@@ -6,7 +6,9 @@ import pytest
 from task_processing.interfaces.event import Event
 from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig
 
+from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigVolume
+from tron.kubernetes import DEFAULT_DISK_LIMIT
 from tron.kubernetes import KubernetesCluster
 from tron.kubernetes import KubernetesTask
 
@@ -113,6 +115,7 @@ def test_create_task_disabled():
         disk=None,
         docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
         env={},
+        secret_env={},
         volumes=[],
     )
 
@@ -131,6 +134,7 @@ def test_create_task(mock_kubernetes_cluster):
         disk=None,
         docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
         env={},
+        secret_env={},
         volumes=[],
     )
 
@@ -150,6 +154,7 @@ def test_create_task_with_task_id(mock_kubernetes_cluster):
         disk=None,
         docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
         env={},
+        secret_env={},
         volumes=[],
     )
 
@@ -172,10 +177,51 @@ def test_create_task_with_invalid_task_id(mock_kubernetes_cluster):
             disk=None,
             docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
             env={},
+            secret_env={},
             volumes=[],
         )
 
     assert task is None
+
+
+def test_create_task_with_config(mock_kubernetes_cluster):
+    # Validate we pass all expected args to taskproc
+    default_volumes = [ConfigVolume(container_path="/nail/tmp", host_path="/nail/tmp", mode="RO")]
+
+    mock_kubernetes_cluster.default_volumes = default_volumes
+    mock_serializer = mock.MagicMock()
+
+    config_volumes = [ConfigVolume(container_path="/tmp", host_path="/host", mode="RO")]
+    config_secrets = {"TEST_SECRET": ConfigSecretSource(secret_name="tron-secret-test-secret--A", key="secret_A")}
+
+    expected_args = {
+        "name": mock.ANY,
+        "command": "ls",
+        "image": "docker-paasta.yelpcorp.com:443/bionic_yelp",
+        "cpus": 1,
+        "memory": 1024,
+        "disk": DEFAULT_DISK_LIMIT,
+        "environment": {"TEST_ENV": "foo"},
+        "secret_environment": {k: v._asdict() for k, v in config_secrets.items()},
+        "volumes": [v._asdict() for v in default_volumes + config_volumes],
+    }
+
+    task = mock_kubernetes_cluster.create_task(
+        action_run_id="action_a",
+        serializer=mock_serializer,
+        task_id="yay.1234",
+        command=expected_args["command"],
+        cpus=expected_args["cpus"],
+        mem=expected_args["memory"],
+        disk=None,
+        docker_image=expected_args["image"],
+        env=expected_args["environment"],
+        secret_env=config_secrets,
+        volumes=config_volumes,
+    )
+
+    assert task is not None
+    mock_kubernetes_cluster.runner.TASK_CONFIG_INTERFACE.assert_called_once_with(**expected_args)
 
 
 def test_process_event_task(mock_kubernetes_cluster):

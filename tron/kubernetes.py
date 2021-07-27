@@ -17,6 +17,7 @@ from twisted.internet.defer import logError
 import tron.metrics as metrics
 from tron.actioncommand import ActionCommand
 from tron.config.schema import ConfigKubernetes
+from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigVolume
 from tron.serialize.filehandler import OutputStreamSerializer
 from tron.utils.queue import PyDeferredQueue
@@ -305,6 +306,7 @@ class KubernetesCluster:
         disk: Optional[float],
         docker_image: str,
         env: Dict[str, str],
+        secret_env: Dict[str, ConfigSecretSource],
         volumes: Collection[ConfigVolume],
         task_id: Optional[str] = None,
     ) -> Optional[KubernetesTask]:
@@ -329,6 +331,7 @@ class KubernetesCluster:
                 memory=mem,
                 disk=DEFAULT_DISK_LIMIT if disk is None else disk,
                 environment=env,
+                secret_environment={k: v._asdict() for k, v in secret_env.items()},
                 volumes=[
                     volume._asdict()
                     for volume in combine_volumes(defaults=self.default_volumes or [], overrides=volumes)

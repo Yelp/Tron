@@ -1034,6 +1034,7 @@ class KubernetesActionRun(ActionRun, Observer):
             disk=attempt.command_config.disk,
             docker_image=attempt.command_config.docker_image,
             env=build_environment(original_env=attempt.command_config.env, run_id=self.id),
+            secret_env=attempt.command_config.secret_env,
             serializer=filehandler.OutputStreamSerializer(self.output_path),
             volumes=attempt.command_config.extra_volumes,
         )
