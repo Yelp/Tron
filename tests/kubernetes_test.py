@@ -101,37 +101,46 @@ def test_handle_event_exit_early_on_misrouted_event(mock_kubernetes_task):
 
 
 def test_handle_event_running(mock_kubernetes_task):
-    with mock.patch.object(mock_kubernetes_task, "started", autospec=True) as mock_started:
-        mock_kubernetes_task.handle_event(
-            mock_event_factory(task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="running")
-        )
-    assert mock_started.called
+    mock_kubernetes_task.handle_event(
+        mock_event_factory(task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="running")
+    )
+
+    assert mock_kubernetes_task.state == mock_kubernetes_task.RUNNING
 
 
 def test_handle_event_exit_on_succeeded(mock_kubernetes_task):
-    with mock.patch.object(mock_kubernetes_task, "exited", autospec=True) as mock_exited:
-        mock_kubernetes_task.handle_event(
-            mock_event_factory(
-                task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="succeeded", terminal=True, success=True
-            )
+    mock_kubernetes_task.started()
+    mock_kubernetes_task.handle_event(
+        mock_event_factory(
+            task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="succeeded", terminal=True, success=True
         )
-    assert mock_exited.call_args == mock.call(0)
+    )
+    assert mock_kubernetes_task.state == mock_kubernetes_task.COMPLETE
+    assert mock_kubernetes_task.is_complete
 
 
 def test_handle_event_exit_on_failed(mock_kubernetes_task):
-    with mock.patch.object(mock_kubernetes_task, "exited", autospec=True) as mock_exited:
-        mock_kubernetes_task.handle_event(
-            mock_event_factory(task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="failed",)
+    mock_kubernetes_task.started()
+    mock_kubernetes_task.handle_event(
+        mock_event_factory(
+            task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="failed", terminal=True, success=False
         )
-    assert mock_exited.call_args == mock.call(1)
+    )
+
+    assert mock_kubernetes_task.is_failed
+    assert mock_kubernetes_task.is_done
 
 
 def test_handle_event_unknown(mock_kubernetes_task):
-    with mock.patch.object(mock_kubernetes_task, "exited", autospec=True) as mock_exited:
-        mock_kubernetes_task.handle_event(
-            mock_event_factory(task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="unknown",)
+    mock_kubernetes_task.started()
+    mock_kubernetes_task.handle_event(
+        mock_event_factory(
+            task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="unknown", terminal=True, success=False
         )
-    assert mock_exited.call_args == mock.call(None)
+    )
+
+    assert mock_kubernetes_task.is_unknown
+    assert mock_kubernetes_task.is_done
 
 
 def test_create_task_disabled():
