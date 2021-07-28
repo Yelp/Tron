@@ -1,3 +1,12 @@
+tron (1.10.1) xenial; urgency=medium
+
+  * 1.10.1 tagged with 'make release'
+    Commit: Merge pull request #822 from Yelp/jfong/TRON-1627-
+    secret_env_to_taskproc  TRON-1627: Pass secret_env to taskproc from
+    kubernetes
+
+ -- root <root@e151da5deeea>  Wed, 28 Jul 2021 22:43:21 +0000
+
 tron (1.10.0) xenial; urgency=medium
 
   * 1.10.0 tagged with 'make release'
