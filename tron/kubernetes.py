@@ -123,7 +123,6 @@ class KubernetesTask(ActionCommand):
         except Exception:
             self.log.exception(f"Unable to log event info for id={event_id}.")
 
-        # TODO(TRON-1611): actually transition to different states
         if k8s_type == "pending":
             pass
         elif k8s_type == "running":
