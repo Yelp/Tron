@@ -24,6 +24,7 @@ class ActionCommandConfig:
     # XXX: we can get rid of docker_parameters once we're off of Mesos
     docker_parameters: set = field(default_factory=set)
     env: dict = field(default_factory=dict)
+    secret_env: dict = field(default_factory=dict)
     extra_volumes: set = field(default_factory=set)
 
     @property
@@ -72,6 +73,7 @@ class Action:
             docker_parameters=set(config.docker_parameters or []),
             extra_volumes=set(config.extra_volumes or []),
             env=config.env or {},
+            secret_env=config.secret_env or {},
         )
         kwargs = dict(
             name=config.name,

@@ -3,6 +3,7 @@ import pytest
 from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigConstraint
 from tron.config.schema import ConfigParameter
+from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigVolume
 from tron.core.action import Action
 
@@ -22,6 +23,7 @@ class TestAction:
             docker_image="fake-docker.com:400/image",
             docker_parameters=[ConfigParameter(key="test", value=123,),],
             env={"TESTING": "true"},
+            secret_env={"TEST_SECRET": ConfigSecretSource(secret_name="tron-secret-svc-sec--A", key="sec_A")},
             extra_volumes=[ConfigVolume(host_path="/tmp", container_path="/nail/tmp", mode="RO",),],
             trigger_downstreams=True,
             triggered_by=["foo.bar"],
@@ -42,6 +44,7 @@ class TestAction:
         assert command_config.docker_image == config.docker_image
         assert command_config.docker_parameters == {("test", 123)}
         assert command_config.env == config.env
+        assert command_config.secret_env == config.secret_env
         assert command_config.extra_volumes == {("/nail/tmp", "/tmp", "RO")}
 
     def test_from_config_none_values(self):
@@ -55,4 +58,5 @@ class TestAction:
         assert command_config.docker_image is None
         assert command_config.docker_parameters == set()
         assert command_config.env == {}
+        assert command_config.secret_env == {}
         assert command_config.extra_volumes == set()
