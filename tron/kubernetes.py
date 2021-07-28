@@ -123,13 +123,11 @@ class KubernetesTask(ActionCommand):
         except Exception:
             self.log.exception(f"Unable to log event info for id={event_id}.")
 
-        if k8s_type == "pending":
-            pass
-        elif k8s_type == "running":
+        if k8s_type == "running":
             self.started()
-        elif k8s_type == "succeeded":
+        elif k8s_type == "finished":
             self.exited(0)
-        elif k8s_type == "failed":
+        elif k8s_type == "FAILED":
             self.exited(1)
         elif k8s_type == "unknown":
             self.log.warning("Kubernetes does not know anything about this task, it is UNKOWN")
