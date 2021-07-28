@@ -138,6 +138,7 @@ ConfigAction = config_object_factory(
         "docker_image",  # str
         "docker_parameters",  # List of ConfigParameter
         "env",  # dict
+        "secret_env",  # dict of str, ConfigSecretSource
         "extra_volumes",  # List of ConfigVolume
         "expected_runtime",  # datetime.Timedelta
         "trigger_downstreams",  # None, bool or dict
@@ -164,6 +165,7 @@ ConfigCleanupAction = config_object_factory(
         "docker_image",  # str
         "docker_parameters",  # List of ConfigParameter
         "env",  # dict
+        "secret_env",  # dict of str, ConfigSecretSource
         "extra_volumes",  # List of ConfigVolume
         "trigger_downstreams",  # None, bool or dict
         "triggered_by",  # list or None
@@ -179,6 +181,8 @@ ConfigConstraint = config_object_factory(
 ConfigVolume = config_object_factory(
     name="ConfigVolume", required=["container_path", "host_path", "mode",], optional=[],
 )
+
+ConfigSecretSource = config_object_factory(name="ConfigSecretSource", required=["secret_name", "key"], optional=[],)
 
 ConfigParameter = config_object_factory(name="ConfigParameter", required=["key", "value",], optional=[],)
 
