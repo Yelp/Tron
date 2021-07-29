@@ -124,7 +124,42 @@ class KubernetesTask(ActionCommand):
         except Exception:
             self.log.exception(f"Unable to log event info for id={event_id}.")
 
-        # TODO(TRON-1611): actually transition to different states
+        if k8s_type == "running":
+            self.started()
+        elif k8s_type == "finished":
+            self.exited(0)
+        elif k8s_type == "FAILED":
+            self.exited(1)
+        elif k8s_type == "lost":
+            # Using 'lost' instead of 'unknown' for now until we are sure that before reconcile() is called,
+            # the tasks inside task_metadata map are all UNKNOWN
+            self.log.warning("Kubernetes does not know anything about this task, it is LOST")
+            self.log.warning(
+                "This can happen for any number of reasons, and Tron can't know if the task ran or not at all!"
+            )
+            self.log.warning("If you want Tron to RUN it (again) anyway, retry it with:")
+            self.log.warning(f"    tronctl retry {self.id}")
+            self.log.warning("If you want Tron to NOT run it and consider it as a success, skip it with:")
+            self.log.warning(f"    tronctl skip {self.id}")
+            self.log.warning("If you want Tron to NOT run it and consider it as a failure, fail it with:")
+            self.log.warning(f"    tronctl fail {self.id}")
+            self.exited(None)
+        elif k8s_type is None:
+            pass
+        else:
+            self.log.info(f"Did not handle unknown kubernetes event type: {event}",)
+
+        if event.terminal:
+            self.log.info("This Kubernetes event was terminal, ending this action")
+            self.report_resources(decrement=True)
+
+            exit_code = int(not getattr(event, "success", False))
+            # Returns False if we've already exited normally above
+            unexpected_error = self.exited(exit_code)
+            if unexpected_error:
+                self.log.error("Unexpected failure, exiting")
+
+            self.done()
 
 
 class KubernetesCluster:

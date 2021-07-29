@@ -102,6 +102,46 @@ def test_handle_event_exit_early_on_misrouted_event(mock_kubernetes_task):
     assert not mock_log_event_info.called
 
 
+def test_handle_event_running(mock_kubernetes_task):
+    mock_kubernetes_task.handle_event(
+        mock_event_factory(task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="running")
+    )
+
+    assert mock_kubernetes_task.state == mock_kubernetes_task.RUNNING
+
+
+def test_handle_event_exit_on_finished(mock_kubernetes_task):
+    mock_kubernetes_task.started()
+    mock_kubernetes_task.handle_event(
+        mock_event_factory(
+            task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="finished", terminal=True, success=True
+        )
+    )
+    assert mock_kubernetes_task.state == mock_kubernetes_task.COMPLETE
+    assert mock_kubernetes_task.is_complete
+
+
+def test_handle_event_exit_on_failed(mock_kubernetes_task):
+    mock_kubernetes_task.started()
+    mock_kubernetes_task.handle_event(
+        mock_event_factory(
+            task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="FAILED", terminal=True, success=False
+        )
+    )
+
+    assert mock_kubernetes_task.is_failed
+    assert mock_kubernetes_task.is_done
+
+
+def test_handle_event_lost(mock_kubernetes_task):
+    mock_kubernetes_task.started()
+    mock_kubernetes_task.handle_event(
+        mock_event_factory(task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="lost",)
+    )
+
+    assert mock_kubernetes_task.is_unknown
+
+
 def test_create_task_disabled():
     cluster = KubernetesCluster("kube-cluster-a:1234", enabled=False)
     mock_serializer = mock.MagicMock()
