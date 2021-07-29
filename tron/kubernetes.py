@@ -129,8 +129,10 @@ class KubernetesTask(ActionCommand):
             self.exited(0)
         elif k8s_type == "FAILED":
             self.exited(1)
-        elif k8s_type == "unknown":
-            self.log.warning("Kubernetes does not know anything about this task, it is UNKOWN")
+        elif k8s_type == "lost":
+            # Using 'lost' instead of 'unknown' for now until we are sure that before reconcile() is called,
+            # the tasks inside task_metadata map are all UNKNOWN
+            self.log.warning("Kubernetes does not know anything about this task, it is LOST")
             self.log.warning(
                 "This can happen for any number of reasons, and Tron can't know if the task ran or not at all!"
             )

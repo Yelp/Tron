@@ -131,16 +131,13 @@ def test_handle_event_exit_on_failed(mock_kubernetes_task):
     assert mock_kubernetes_task.is_done
 
 
-def test_handle_event_unknown(mock_kubernetes_task):
+def test_handle_event_lost(mock_kubernetes_task):
     mock_kubernetes_task.started()
     mock_kubernetes_task.handle_event(
-        mock_event_factory(
-            task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="unknown", terminal=True, success=False
-        )
+        mock_event_factory(task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="lost",)
     )
 
     assert mock_kubernetes_task.is_unknown
-    assert mock_kubernetes_task.is_done
 
 
 def test_create_task_disabled():
