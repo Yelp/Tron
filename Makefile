@@ -9,6 +9,13 @@ else
 	export PIP_INDEX_URL ?= https://pypi.python.org/simple
 endif
 
+NOOP = true
+ifeq ($(PAASTA_ENV),YELP)
+	ADD_MISSING_DEPS_MAYBE:=-diff --unchanged-line-format= --old-line-format= --new-line-format='%L' ./requirements.txt ./yelp_package/extra_requirements_yelp.txt >> ./requirements.txt
+else
+	ADD_MISSING_DEPS_MAYBE:=$(NOOP)
+endif
+
 .PHONY : all clean tests docs dev cluster_itests
 
 -usage:
@@ -27,12 +34,17 @@ docker_%:
 
 deb_%: clean docker_% coffee_% react_%
 	@echo "Building deb for $*"
+	# backup these files so we can temp modify them
+	cp requirements.txt requirements.txt.old
+	$(ADD_MISSING_DEPS_MAYBE)
 	$(DOCKER_RUN) -e PIP_INDEX_URL=${PIP_INDEX_URL} tron-builder-$* /bin/bash -c ' \
 		dpkg-buildpackage -d &&                  \
 		mv ../*.deb dist/ &&                     \
 		rm -rf debian/tron &&                    \
 		chown -R $(UID):$(GID) dist debian       \
 	'
+	# restore the backed up files
+	mv requirements.txt.old requirements.txt
 
 coffee_%: docker_%
 	@echo "Building tronweb"
@@ -77,6 +89,9 @@ dev:
 
 example_cluster:
 	tox -e example-cluster
+
+yelpy:
+	.tox/py36/bin/pip-custom-platform install -i https://pypi.yelpcorp.com/simple -r yelp_package/extra_requirements_yelp.txt
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/[\x27\x22]/\\\x27/g')
 release: docker_xenial docs
