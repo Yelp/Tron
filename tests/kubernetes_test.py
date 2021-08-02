@@ -125,7 +125,7 @@ def test_handle_event_exit_on_failed(mock_kubernetes_task):
     mock_kubernetes_task.started()
     mock_kubernetes_task.handle_event(
         mock_event_factory(
-            task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="FAILED", terminal=True, success=False
+            task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="failed", terminal=True, success=False
         )
     )
 

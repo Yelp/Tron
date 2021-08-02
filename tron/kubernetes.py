@@ -128,7 +128,7 @@ class KubernetesTask(ActionCommand):
             self.started()
         elif k8s_type == "finished":
             self.exited(0)
-        elif k8s_type == "FAILED":
+        elif k8s_type == "failed":
             self.exited(1)
         elif k8s_type == "lost":
             # Using 'lost' instead of 'unknown' for now until we are sure that before reconcile() is called,
@@ -144,8 +144,6 @@ class KubernetesTask(ActionCommand):
             self.log.warning("If you want Tron to NOT run it and consider it as a failure, fail it with:")
             self.log.warning(f"    tronctl fail {self.id}")
             self.exited(None)
-        elif k8s_type is None:
-            pass
         else:
             self.log.info(f"Did not handle unknown kubernetes event type: {event}",)
 
