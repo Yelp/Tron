@@ -79,7 +79,7 @@ s3transfer==0.2.1
 setuptools==41.4.0
 six==1.14.0
 sshpubkeys==3.1.0
-task-processing==0.1.17
+task-processing==0.1.18
 traitlets==4.3.3
 Twisted==20.3.0
 typing-extensions==3.10.0.0
