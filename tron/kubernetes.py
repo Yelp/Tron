@@ -309,7 +309,8 @@ class KubernetesCluster:
         self.queue = PyDeferredQueue()
 
         if fail_tasks:
-            for key, task in self.tasks.items():
+            # NOTE: we're turning this into a list on purpose: otherwise we're modifying the dict we're iterating over
+            for key, task in list(self.tasks.items()):
                 # set the task status to unknown
                 task.exited(exit_status=None)
                 del self.tasks[key]
