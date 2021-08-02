@@ -1,3 +1,11 @@
+tron (1.10.2) xenial; urgency=medium
+
+  * 1.10.2 tagged with 'make release'
+    Commit: Use un-typo'd failed platform_type for k8s events (#825)
+    see https://github.com/Yelp/task_processing/pull/173 :p
+
+ -- root <root@931eacd3331e>  Mon, 02 Aug 2021 18:56:46 +0000
+
 tron (1.10.1) xenial; urgency=medium
 
   * 1.10.1 tagged with 'make release'
