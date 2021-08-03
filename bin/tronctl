@@ -34,7 +34,7 @@ COMMAND_HELP = (
     ),
     ("recover", "Ask Tron to start tracking an UNKNOWN action run again"),
     ("cancel", "Cancel the selected job run."),
-    ("backfill", "Print tronctl commands for starting many jobs for a particular date range",),
+    ("backfill", "Start job runs for a particular date range",),
     ("disable", "Disable selected job and cancel any outstanding runs"),
     ("enable", "Enable the selected job and schedule the next run"),
     ("fail", "Mark an UNKNOWN job or action as failed. Does not publish action triggers.",),
@@ -62,7 +62,7 @@ def parse_cli():
     subparsers = parser.add_subparsers(dest="command", title="commands", help="Tronctl command to run",)
     cmd_parsers = {}
     for cmd_name, desc in COMMAND_HELP:
-        cmd_parsers[cmd_name] = subparsers.add_parser(cmd_name, help=desc)
+        cmd_parsers[cmd_name] = subparsers.add_parser(cmd_name, help=desc, description=desc)
         cmd_parsers[cmd_name].add_argument(
             "id", nargs="*", help="job name, job run id, or action id",
         ).completer = cmd_utils.tron_jobs_completer
@@ -73,14 +73,43 @@ def parse_cli():
     )
 
     # backfill
-    cmd_parsers["backfill"].add_argument(
+    backfill_parser = cmd_parsers["backfill"]
+    mutex_dates_group = backfill_parser.add_mutually_exclusive_group(required=True)
+    mutex_dates_group.add_argument(
         "--start-date", type=parse_date, dest="start_date", help="First run-date to backfill",
     )
-    cmd_parsers["backfill"].add_argument(
+    backfill_parser.add_argument(
         "--end-date",
         type=parse_date,
         dest="end_date",
-        help="Last run-date to backfill (note: many jobs operate on date-1). Defaults to today.",
+        help=(
+            "Last run-date to backfill (note: many jobs operate on date-1), "
+            "assuming --start-date is set. Defaults to today."
+        ),
+    )
+    backfill_parser.add_argument(
+        "--descending",
+        action="store_true",
+        default=False,
+        help=(
+            "If set, backfill from end date to start date. Otherwise, "
+            "the default is to backfill from start date to end date."
+        ),
+    )
+    mutex_dates_group.add_argument(
+        "--dates",
+        type=lambda v: [parse_date(date_str.strip()) for date_str in v.split(",")],
+        dest="dates",
+        help=(
+            "List of comma-separated dates to run backfills on. "
+            "Backfills will be executed for dates in the order they are presented."
+        ),
+    )
+    backfill_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="Prints the equivalent `tronctl start` commands for the backfill",
     )
 
     # retry
@@ -212,33 +241,39 @@ def move(args):
 
 
 def backfill(args):
-    if args.start_date is None:
-        print("Error: For a backfill, --start-date must be set")
-        yield False
-
-    if args.end_date is None:
-        args.end_date = datetime.datetime.today()
-
     if not args.id:
         print("Error: must provide at least one id argument")
         yield False
 
-    dates = get_dates_for_backfill(start_date=args.start_date, end_date=args.end_date,)
-    print("tronctl backfill currently only prints jobs for a human to run.")
-    print(f"Please run the following {len(dates)} commands:")
-    print("")
-    for date in dates:
-        print(f"tronctl start {args.id[0]} --run-date {date}")
-    print("")
-    print("Note that many jobs operate on the previous day's data.")
+    if args.start_date:
+        if args.end_date is None:
+            args.end_date = datetime.datetime.today()
+        dates = get_dates_for_backfill(args.start_date, args.end_date, descending=args.descending,)
+    else:
+        dates = [d.date() for d in args.dates]
+
+    if not args.dry_run:
+        print("tronctl backfill currently only prints jobs for a human to run.")
+    _backfill_dry_run(args.id[0], dates)
     yield True
 
 
-def get_dates_for_backfill(start_date, end_date):
+def _backfill_dry_run(job, dates):
+    print(f"Please run the following {len(dates)} commands:")
+    print("")
+    for date in dates:
+        print(f"tronctl start {job} --run-date {date}")
+    print("")
+    print("Note that many jobs operate on the previous day's data.")
+
+
+def get_dates_for_backfill(start_date, end_date, descending=False):
     dates = []
     delta = end_date - start_date
     for i in range(delta.days + 1):
         dates.append((start_date + datetime.timedelta(i)).date().isoformat())
+    if descending:
+        dates.reverse()
     return dates
 
 
