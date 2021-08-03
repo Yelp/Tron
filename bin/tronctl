@@ -52,48 +52,44 @@ COMMAND_HELP = (
 log = logging.getLogger("tronctl")
 
 
-def command_help_epilog():
-    # We want to include some extra helpful info
-    result = ["commands:", "\n"]
-    for cmd_name, desc in COMMAND_HELP:
-        result.append("  ")
-        text = "".join((cmd_name.ljust(15), desc.ljust(40)))
-        result.append(text)
-        result.append("\n")
-    return "".join(result)
-
-
 def parse_date(date_string):
     return datetime.datetime.strptime(date_string, "%Y-%m-%d")
 
 
 def parse_cli():
-    parser = cmd_utils.build_option_parser(epilog=command_help_epilog())
+    parser = cmd_utils.build_option_parser()
 
-    parser.add_argument(
-        "--run-date", type=parse_date, dest="run_date", help="For job starts, what should run-date be set to",
+    subparsers = parser.add_subparsers(dest="command", title="commands", help="Tronctl command to run",)
+    cmd_parsers = {}
+    for cmd_name, desc in COMMAND_HELP:
+        cmd_parsers[cmd_name] = subparsers.add_parser(cmd_name, help=desc)
+        cmd_parsers[cmd_name].add_argument(
+            "id", nargs="*", help="job name, job run id, or action id",
+        ).completer = cmd_utils.tron_jobs_completer
+
+    # start
+    cmd_parsers["start"].add_argument(
+        "--run-date", type=parse_date, dest="run_date", help="What the run-date should be set to",
     )
-    parser.add_argument(
-        "--start-date", type=parse_date, dest="start_date", help="For backfills, what should the first run-date be",
+
+    # backfill
+    cmd_parsers["backfill"].add_argument(
+        "--start-date", type=parse_date, dest="start_date", help="First run-date to backfill",
     )
-    parser.add_argument(
+    cmd_parsers["backfill"].add_argument(
         "--end-date",
         type=parse_date,
         dest="end_date",
-        help="For backfills, what should the last run-date be (note: many jobs operate on date-1). Defaults to today.",
+        help="Last run-date to backfill (note: many jobs operate on date-1). Defaults to today.",
     )
-    parser.add_argument(
+
+    # retry
+    cmd_parsers["retry"].add_argument(
         "--use-latest-command",
         action="store_true",
         default=False,
-        help="For a retry, use the latest command in tronfig rather than the original command when the action run was created",
+        help="Use the latest command in tronfig rather than the original command when the action run was created",
     )
-    parser.add_argument(
-        "command", help="Tronctl command to run", choices=[row[0] for row in COMMAND_HELP],
-    )
-    parser.add_argument(
-        "id", nargs="*", help="job name, job run id, or action id",
-    ).completer = cmd_utils.tron_jobs_completer
 
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
