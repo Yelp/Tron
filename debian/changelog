@@ -1,3 +1,12 @@
+tron (1.11.0) xenial; urgency=medium
+
+  * 1.11.0 tagged with 'make release'
+    Commit: Support adding/dropping capabilities (#827)  We'll need this
+    for parity with the Mesos implementation and because it's a good
+    security practice :p
+
+ -- root <root@d986f96cb5d1>  Tue, 03 Aug 2021 19:32:46 +0000
+
 tron (1.10.3) xenial; urgency=medium
 
   * 1.10.3 tagged with 'make release'
