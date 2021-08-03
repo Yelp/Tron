@@ -157,6 +157,8 @@ def test_create_task_disabled():
         env={},
         secret_env={},
         volumes=[],
+        cap_add=[],
+        cap_drop=[],
     )
 
     assert task is None
@@ -176,6 +178,8 @@ def test_create_task(mock_kubernetes_cluster):
         env={},
         secret_env={},
         volumes=[],
+        cap_add=[],
+        cap_drop=[],
     )
 
     assert task is not None
@@ -196,6 +200,8 @@ def test_create_task_with_task_id(mock_kubernetes_cluster):
         env={},
         secret_env={},
         volumes=[],
+        cap_add=[],
+        cap_drop=[],
     )
 
     mock_kubernetes_cluster.runner.TASK_CONFIG_INTERFACE().set_pod_name.assert_called_once_with("yay.1234")
@@ -219,6 +225,8 @@ def test_create_task_with_invalid_task_id(mock_kubernetes_cluster):
             env={},
             secret_env={},
             volumes=[],
+            cap_add=[],
+            cap_drop=[],
         )
 
     assert task is None
@@ -244,6 +252,8 @@ def test_create_task_with_config(mock_kubernetes_cluster):
         "environment": {"TEST_ENV": "foo"},
         "secret_environment": {k: v._asdict() for k, v in config_secrets.items()},
         "volumes": [v._asdict() for v in default_volumes + config_volumes],
+        "cap_add": ["KILL"],
+        "cap_drop": ["KILL", "CHOWN"],
     }
 
     task = mock_kubernetes_cluster.create_task(
@@ -258,6 +268,8 @@ def test_create_task_with_config(mock_kubernetes_cluster):
         env=expected_args["environment"],
         secret_env=config_secrets,
         volumes=config_volumes,
+        cap_add=["KILL"],
+        cap_drop=["KILL", "CHOWN"],
     )
 
     assert task is not None

@@ -1037,6 +1037,8 @@ class KubernetesActionRun(ActionRun, Observer):
             secret_env=attempt.command_config.secret_env,
             serializer=filehandler.OutputStreamSerializer(self.output_path),
             volumes=attempt.command_config.extra_volumes,
+            cap_add=attempt.command_config.cap_add,
+            cap_drop=attempt.command_config.cap_drop,
         )
         if not task:
             # generally, if we didn't get a task back that means that k8s usage is disabled

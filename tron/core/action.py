@@ -1,5 +1,6 @@
 import datetime
 import logging
+from typing import List
 
 from dataclasses import dataclass
 from dataclasses import field
@@ -19,6 +20,8 @@ class ActionCommandConfig:
     cpus: float = None
     mem: float = None
     disk: float = None
+    cap_add: List[str] = field(default_factory=list)
+    cap_drop: List[str] = field(default_factory=list)
     constraints: set = field(default_factory=set)
     docker_image: str = None
     # XXX: we can get rid of docker_parameters once we're off of Mesos
@@ -74,6 +77,8 @@ class Action:
             extra_volumes=set(config.extra_volumes or []),
             env=config.env or {},
             secret_env=config.secret_env or {},
+            cap_add=config.cap_add or [],
+            cap_drop=config.cap_drop or [],
         )
         kwargs = dict(
             name=config.name,
