@@ -250,12 +250,25 @@ def backfill(args):
             args.end_date = datetime.datetime.today()
         dates = get_dates_for_backfill(args.start_date, args.end_date, descending=args.descending,)
     else:
-        dates = [d.date() for d in args.dates]
+        dates = args.dates
 
-    if not args.dry_run:
-        print("tronctl backfill currently only prints jobs for a human to run.")
-    _backfill_dry_run(args.id[0], dates)
-    yield True
+    run_id = args.id[0]
+    if args.dry_run:
+        date_strs = [d.date().isoformat() for d in dates]
+        _backfill_dry_run(run_id, date_strs)
+        yield True
+    else:
+        for date in dates:
+            # this is a hack since `control_objects` requires an arg namespace
+            start_args = argparse.Namespace()
+            for arg_name in ["cluster_name", "save_config", "server", "verbose"]:
+                setattr(start_args, arg_name, getattr(args, arg_name))
+            start_args.command = "start"
+            start_args.id = [run_id]
+            start_args.run_date = date
+
+            print(f"Running backfill for {run_id} for {date}")
+            yield from COMMANDS["start"](start_args)
 
 
 def _backfill_dry_run(job, dates):
@@ -271,7 +284,7 @@ def get_dates_for_backfill(start_date, end_date, descending=False):
     dates = []
     delta = end_date - start_date
     for i in range(delta.days + 1):
-        dates.append((start_date + datetime.timedelta(i)).date().isoformat())
+        dates.append(start_date + datetime.timedelta(i))
     if descending:
         dates.reverse()
     return dates
