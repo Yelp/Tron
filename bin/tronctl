@@ -20,6 +20,9 @@ import argcomplete
 from tron import __version_info__
 from tron.commands import client
 from tron.commands import cmd_utils
+from tron.commands.backfill import get_date_range
+from tron.commands.backfill import print_backfill_cmds
+from tron.commands.backfill import run_backfill_for_date_range
 from tron.commands.client import RequestError
 from tron.commands.cmd_utils import ExitCode
 from tron.commands.cmd_utils import suggest_possibilities
@@ -248,46 +251,16 @@ def backfill(args):
     if args.start_date:
         if args.end_date is None:
             args.end_date = datetime.datetime.today()
-        dates = get_dates_for_backfill(args.start_date, args.end_date, descending=args.descending,)
+        dates = get_date_range(args.start_date, args.end_date, descending=args.descending)
     else:
         dates = args.dates
 
-    run_id = args.id[0]
+    job_name = args.id[0]
     if args.dry_run:
-        date_strs = [d.date().isoformat() for d in dates]
-        _backfill_dry_run(run_id, date_strs)
+        print_backfill_cmds(job_name, dates)
         yield True
     else:
-        for date in dates:
-            # this is a hack since `control_objects` requires an arg namespace
-            start_args = argparse.Namespace()
-            for arg_name in ["cluster_name", "save_config", "server", "verbose"]:
-                setattr(start_args, arg_name, getattr(args, arg_name))
-            start_args.command = "start"
-            start_args.id = [run_id]
-            start_args.run_date = date
-
-            print(f"Running backfill for {run_id} for {date}")
-            yield from COMMANDS["start"](start_args)
-
-
-def _backfill_dry_run(job, dates):
-    print(f"Please run the following {len(dates)} commands:")
-    print("")
-    for date in dates:
-        print(f"tronctl start {job} --run-date {date}")
-    print("")
-    print("Note that many jobs operate on the previous day's data.")
-
-
-def get_dates_for_backfill(start_date, end_date, descending=False):
-    dates = []
-    delta = end_date - start_date
-    for i in range(delta.days + 1):
-        dates.append(start_date + datetime.timedelta(i))
-    if descending:
-        dates.reverse()
-    return dates
+        yield from run_backfill_for_date_range(args.server, job_name, dates)
 
 
 def tron_version(args):
