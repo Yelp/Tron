@@ -1,4 +1,5 @@
 import datetime
+import pprint
 import re
 from typing import Generator
 from typing import List
@@ -9,24 +10,42 @@ from tron.commands import client
 DEFAULT_MAX_PARALLEL_RUNS = 10
 
 
-def get_date_range(start_date, end_date, descending=False):
+def get_date_range(
+    start_date: datetime.datetime, end_date: datetime.datetime, descending: bool = False,
+) -> List[datetime.datetime]:
     dates = []
     delta = end_date - start_date
-    for i in range(delta.days + 1):
-        dates.append(start_date + datetime.timedelta(i))
+    for days_to_add in range(delta.days + 1):
+        dates.append(start_date + datetime.timedelta(days=days_to_add))
     if descending:
         dates.reverse()
     return dates
 
 
-def print_backfill_cmds(job, dates):
-    date_strs = [d.date().isoformat() for d in dates]
-    print(f"Please run the following {len(dates)} commands:")
+def print_backfill_cmds(job: str, date_strs: List[str]) -> bool:
+    print(f"Please run the following {len(date_strs)} commands:")
     print("")
     for date in date_strs:
         print(f"tronctl start {job} --run-date {date}")
     print("")
     print("Note that many jobs operate on the previous day's data.")
+
+
+def confirm_backfill(job: str, date_strs: List[str]):
+    print(
+        f"To backfill for the job '{job}', a job run will be created for each "
+        f"of the following {len(date_strs)} dates:"
+    )
+    pprint.pprint(date_strs)
+    print("")
+    user_resp = input("Confirm? [y/n] ")
+
+    if user_resp.lower() != "y":
+        print("Aborted.")
+        return False
+    else:
+        print("")  # just for clean separation
+        return True
 
 
 def run_backfill_for_date_range(

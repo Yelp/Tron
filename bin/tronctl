@@ -20,6 +20,7 @@ import argcomplete
 from tron import __version_info__
 from tron.commands import client
 from tron.commands import cmd_utils
+from tron.commands.backfill import confirm_backfill
 from tron.commands.backfill import get_date_range
 from tron.commands.backfill import print_backfill_cmds
 from tron.commands.backfill import run_backfill_for_date_range
@@ -254,13 +255,15 @@ def backfill(args):
         dates = get_date_range(args.start_date, args.end_date, descending=args.descending)
     else:
         dates = args.dates
+    date_strs = [d.date().isoformat() for d in dates]
 
     job_name = args.id[0]
     if args.dry_run:
-        print_backfill_cmds(job_name, dates)
+        print_backfill_cmds(job_name, date_strs)
         yield True
     else:
-        yield from run_backfill_for_date_range(args.server, job_name, dates)
+        if confirm_backfill(job_name, date_strs):
+            yield from run_backfill_for_date_range(args.server, job_name, dates)
 
 
 def tron_version(args):
