@@ -47,8 +47,7 @@ def combine_volumes(defaults: Collection[ConfigVolume], overrides: Collection[Co
 
 class KubernetesTask(ActionCommand):
     def __init__(self, action_run_id: str, task_config: KubernetesTaskConfig, serializer=None):
-        # TODO(TASKPROC-238): use the actual task command once that exists
-        super().__init__(id=action_run_id, command="ls", serializer=serializer)
+        super().__init__(id=action_run_id, command=task_config.command, serializer=serializer)
 
         self.task_config = task_config
 

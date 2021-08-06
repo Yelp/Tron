@@ -1581,3 +1581,85 @@ class TestKubernetesActionRun:
         mock_k8s_action_run.machine.transition("start")
         assert mock_k8s_action_run.handler(mock_k8s_action_run.action_command, ActionCommand.FAILSTART,)
         assert mock_k8s_action_run.is_failed
+
+    @mock.patch("tron.core.actionrun.filehandler", autospec=True)
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
+    def test_recover(self, mock_cluster_repo, mock_filehandler, mock_k8s_action_run):
+        mock_k8s_action_run.machine.state = ActionRun.UNKNOWN
+        mock_k8s_action_run.end_time = 1000
+        mock_k8s_action_run.exit_status = 0
+        last_attempt = mock_k8s_action_run.create_attempt()
+        last_attempt.kubernetes_task_id = "test-k8s-task-id"
+        last_attempt.end_time = 1000
+        last_attempt.exit_status = 0
+        serializer = mock_filehandler.OutputStreamSerializer.return_value
+        with mock.patch.object(mock_k8s_action_run, "watch", autospec=True,) as mock_watch:
+            assert mock_k8s_action_run.recover()
+
+            mock_get_cluster = mock_cluster_repo.get_cluster
+            mock_get_cluster.assert_called_once_with()
+            mock_get_cluster.return_value.create_task.assert_called_once_with(
+                action_run_id=mock_k8s_action_run.id,
+                command=last_attempt.rendered_command,
+                cpus=mock_k8s_action_run.command_config.cpus,
+                mem=mock_k8s_action_run.command_config.mem,
+                disk=mock_k8s_action_run.command_config.disk,
+                docker_image=mock_k8s_action_run.command_config.docker_image,
+                env=mock.ANY,
+                secret_env=mock_k8s_action_run.command_config.secret_env,
+                serializer=serializer,
+                volumes=mock_k8s_action_run.command_config.extra_volumes,
+            ), mock_get_cluster.return_value.create_task.calls
+            task = mock_get_cluster.return_value.create_task.return_value
+            mock_get_cluster.return_value.recover.assert_called_once_with(task)
+            mock_watch.assert_called_once_with(task)
+
+        assert mock_k8s_action_run.is_running
+        assert mock_k8s_action_run.end_time is None
+        assert mock_k8s_action_run.exit_status is None
+        assert last_attempt.end_time is None
+        assert last_attempt.exit_status is None
+        mock_filehandler.OutputStreamSerializer.assert_called_with(mock_k8s_action_run.output_path,)
+
+    @mock.patch("tron.core.actionrun.filehandler", autospec=True)
+    @mock.patch("tron.core.actionrun.MesosClusterRepository", autospec=True)
+    def test_recover_done_no_change(
+        self, mock_cluster_repo, mock_filehandler, mock_k8s_action_run,
+    ):
+        mock_k8s_action_run.machine.state = ActionRun.SUCCEEDED
+        last_attempt = mock_k8s_action_run.create_attempt()
+        last_attempt.kubernetes_task_ic = "test-kubernetes-task-id"
+
+        assert not mock_k8s_action_run.recover()
+        assert mock_cluster_repo.get_cluster.call_count == 0
+        assert mock_k8s_action_run.is_succeeded
+
+    @mock.patch("tron.core.actionrun.filehandler", autospec=True)
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
+    def test_recover_no_k8s_task_id(
+        self, mock_cluster_repo, mock_filehandler, mock_k8s_action_run,
+    ):
+        print(f"cluster: {type(mock_cluster_repo)} filehand: {type(mock_filehandler)} ar: {type(mock_k8s_action_run)}")
+        mock_k8s_action_run.machine.state = ActionRun.UNKNOWN
+        last_attempt = mock_k8s_action_run.create_attempt()
+        last_attempt.mesos_task_id = None
+
+        assert not mock_k8s_action_run.recover()
+        assert mock_k8s_action_run.is_unknown
+        assert mock_k8s_action_run.end_time is not None
+
+    @mock.patch("tron.core.actionrun.filehandler", autospec=True)
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
+    def test_recover_task_none(self, mock_cluster_repo, mock_filehandler, mock_k8s_action_run):
+        mock_k8s_action_run.machine.state = ActionRun.UNKNOWN
+        last_attempt = mock_k8s_action_run.create_attempt()
+        last_attempt.kubernetes_task_id = "test-kubernetes-task-id"
+        # Task is None e.g. if Kubernetes is disabled
+        mock_get_cluster = mock_cluster_repo.get_cluster
+        mock_get_cluster.return_value.create_task.return_value = None
+        assert not mock_k8s_action_run.recover()
+
+        mock_get_cluster.assert_called_once_with()
+        assert mock_k8s_action_run.is_unknown
+        assert mock_get_cluster.return_value.recover.call_count == 0
+        assert mock_k8s_action_run.end_time is not None

@@ -1053,7 +1053,7 @@ class KubernetesActionRun(ActionRun, Observer):
     def recover(self) -> Optional[KubernetesTask]:
         """
         Called on Tron restart per previously running ActionRun to attempt to restart Tron's tracking
-        of this run.
+        of this run. See tron.core.recovery
 
         If we're able to successfully recover, a KubernetesTask representing what is currently being run
         will be returned - otherwise, None.
