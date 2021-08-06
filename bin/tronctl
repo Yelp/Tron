@@ -110,6 +110,17 @@ def parse_cli():
         ),
     )
     backfill_parser.add_argument(
+        "--fail-on-error",
+        dest="fail_on_error",
+        action="store_true",
+        default=False,
+        help=(
+            "If set, the overall backfill will fail immediately if a backfill "
+            "for a single date fails. By default, individual backfill failures "
+            "are ignored."
+        ),
+    )
+    backfill_parser.add_argument(
         "--dry-run",
         action="store_true",
         default=False,
@@ -263,7 +274,7 @@ def backfill(args):
         yield True
     else:
         if confirm_backfill(job_name, date_strs):
-            yield from run_backfill_for_date_range(args.server, job_name, dates)
+            yield from run_backfill_for_date_range(args.server, job_name, dates, ignore_errors=(not args.fail_on_error))
 
 
 def tron_version(args):
