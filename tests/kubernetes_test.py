@@ -376,8 +376,9 @@ def test_submit(mock_kubernetes_cluster, mock_kubernetes_task):
 
 
 def test_recover(mock_kubernetes_cluster, mock_kubernetes_task):
-    mock_kubernetes_cluster.recover(mock_kubernetes_task)
+    with mock.patch.object(mock_kubernetes_task, "started", autospec=True) as mock_started:
+        mock_kubernetes_cluster.recover(mock_kubernetes_task)
 
     assert mock_kubernetes_task.get_kubernetes_id() in mock_kubernetes_cluster.tasks
     mock_kubernetes_cluster.runner.reconcile.assert_called_once_with(mock_kubernetes_task.get_config())
-    assert mock_kubernetes_task.started.call_count == 1
+    assert mock_started.call_count == 1
