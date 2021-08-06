@@ -1609,6 +1609,7 @@ class TestKubernetesActionRun:
                 secret_env=mock_k8s_action_run.command_config.secret_env,
                 serializer=serializer,
                 volumes=mock_k8s_action_run.command_config.extra_volumes,
+                task_id=last_attempt.kubernetes_task_id,
             ), mock_get_cluster.return_value.create_task.calls
             task = mock_get_cluster.return_value.create_task.return_value
             mock_get_cluster.return_value.recover.assert_called_once_with(task)
