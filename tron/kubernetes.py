@@ -217,8 +217,6 @@ class KubernetesCluster:
             log.info("Reusing previously created runner.")
             return self.runner
 
-        # TODO: once we start implementing more things in the executor, we'll need to actually pass
-        # down some config
         executor = self.processor.executor_from_config(
             provider="kubernetes",
             provider_config={
@@ -446,13 +444,14 @@ class KubernetesCluster:
             return
 
         self._check_connection()
+        assert self.runner is not None, "Unable to correctly setup k8s runner!"
 
-        # pod name
+        # the task/kubernetes id is really just the pod name
         task_id = task.get_kubernetes_id()
         self.tasks[task_id] = task
         task.log.info("TRON RESTARTED! Starting recovery procedure by reconciling state for this task from Kubernetes")
         task.started()
-        self.runner.reconcile(task.get_config())  # type: ignore  # we need to add type annotation to task_proc
+        self.runner.reconcile(task.get_config())
         task.report_resources()
 
 

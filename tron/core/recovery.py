@@ -31,7 +31,7 @@ def launch_recovery_actionruns_for_job_runs(job_runs, master_action_runner):
             log.info(f"Skipping recovery of {run} with no action runs (may have been cleaned up)")
             continue
 
-        # Why do we do this separately if we just need to call recover()
+        # TODO: Why do we do this separately if we just need to call recover()
         ssh_runs, mesos_runs, kubernetes_runs = filter_action_runs_needing_recovery(run._action_runs)
         for action_run in ssh_runs:
             action_run.recover()

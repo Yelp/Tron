@@ -1065,7 +1065,7 @@ class KubernetesActionRun(ActionRun, Observer):
 
         # We cannot recover if we can't transition to running
         if not self.machine.check("running"):
-            log.error(f"{self} unable to transition from {self.machine.state}" "to running for recovery",)
+            log.error(f"{self} unable to transition from {self.machine.state} to running for recovery")
             return
 
         if not self.attempts or self.attempts[-1].kubernetes_task_id is None:
