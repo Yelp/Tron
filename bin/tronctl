@@ -5,6 +5,7 @@ Part of the command line interface to the tron daemon. Provides the interface
 to controlling jobs and runs.
 """
 import argparse
+import asyncio
 import datetime
 import logging
 import sys
@@ -21,6 +22,7 @@ from tron import __version_info__
 from tron.commands import client
 from tron.commands import cmd_utils
 from tron.commands.backfill import confirm_backfill
+from tron.commands.backfill import DEFAULT_MAX_PARALLEL_RUNS
 from tron.commands.backfill import get_date_range
 from tron.commands.backfill import print_backfill_cmds
 from tron.commands.backfill import run_backfill_for_date_range
@@ -88,7 +90,7 @@ def parse_cli():
         dest="end_date",
         help=(
             "Last run-date to backfill (note: many jobs operate on date-1), "
-            "assuming --start-date is set. Defaults to today."
+            "assuming --start-date is set. This date is inclusive. Defaults to today."
         ),
     )
     backfill_parser.add_argument(
@@ -101,6 +103,7 @@ def parse_cli():
         ),
     )
     mutex_dates_group.add_argument(
+        "-d",
         "--dates",
         type=lambda v: [parse_date(date_str.strip()) for date_str in v.split(",")],
         dest="dates",
@@ -110,14 +113,29 @@ def parse_cli():
         ),
     )
     backfill_parser.add_argument(
+        "-P",
+        "--max-parallel",
+        type=int,
+        dest="max_parallel",
+        default=DEFAULT_MAX_PARALLEL_RUNS,
+        help=(
+            "The max number of dates that can be backfilled in parallel. "
+            "Before setting, consider how much in resources your job needs. "
+            "If it needs a lot, keep this number low, because there may not be "
+            "enough resources in the cluster too satisfy the demand, which can "
+            "adversely affect other jobs. "
+            "The default is %(default)s."
+        ),
+    )
+    backfill_parser.add_argument(
         "--fail-on-error",
         dest="fail_on_error",
         action="store_true",
         default=False,
         help=(
             "If set, the overall backfill will fail immediately if a backfill "
-            "for a single date fails. By default, individual backfill failures "
-            "are ignored."
+            "for a single date fails. All in-progress backfills will cancelled. "
+            "By default, individual backfill failures are ignored."
         ),
     )
     backfill_parser.add_argument(
@@ -274,7 +292,19 @@ def backfill(args):
         yield True
     else:
         if confirm_backfill(job_name, date_strs):
-            yield from run_backfill_for_date_range(args.server, job_name, dates, ignore_errors=(not args.fail_on_error))
+            loop = asyncio.get_event_loop()
+            try:
+                yield loop.run_until_complete(
+                    run_backfill_for_date_range(
+                        args.server,
+                        job_name,
+                        dates,
+                        max_parallel=args.max_parallel,
+                        ignore_errors=(not args.fail_on_error),
+                    ),
+                )
+            finally:
+                loop.close()
 
 
 def tron_version(args):

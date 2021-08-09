@@ -1,7 +1,9 @@
+asynctest
 flake8
 mock
 mypy
 pre-commit
 pylint
 pytest
+pytest-asyncio
 requirements-tools
