@@ -1,7 +1,5 @@
-import asyncio
 import datetime
 
-import asynctest
 import mock
 import pytest
 
@@ -41,6 +39,15 @@ def mock_client_request():
         yield m
 
 
+@pytest.fixture
+def fake_backfill_run(mock_client):
+    tron_client = mock_client.return_value
+    tron_client.url_base = "http://localhost"
+    yield backfill.BackfillRun(
+        tron_client, client.TronObjectIdentifier("JOB", "/a_job"), TEST_DATETIME_1,
+    )
+
+
 @mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
 def test_run_backfill_for_date_range_job_dne(mock_get_obj_type, event_loop):
     mock_get_obj_type.side_effect = ValueError
@@ -55,106 +62,89 @@ def test_run_backfill_for_date_range_not_a_job(mock_get_obj_type, event_loop):
         event_loop.run_until_complete(backfill.run_backfill_for_date_range("a_server", "a_job", []),)
 
 
-@mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
-def test_run_backfill_for_date_range_normal(mock_get_obj_type, event_loop):
-    dates = [TEST_DATETIME_1, TEST_DATETIME_2, TEST_DATETIME_3]
-    mock_get_obj_type.return_value = client.TronObjectIdentifier("JOB", "a_url")
-    mock_run_backfill_for_date = asynctest.CoroutineMock(
-        side_effect=[
-            ("job_run_1", TEST_DATETIME_1, True),
-            ("job_run_2", TEST_DATETIME_2, True),
-            ("job_run_3", TEST_DATETIME_3, False),
-        ]
-    )
-
-    with mock.patch.object(backfill, "run_backfill_for_date", mock_run_backfill_for_date, autospec=None):
-        all_successful = event_loop.run_until_complete(
-            backfill.run_backfill_for_date_range("a_server", "a_job", dates, max_parallel=2)
-        )
-
-    assert all_successful
-
-
 @pytest.mark.parametrize(
-    "job_run_name,run_successful,expected",
-    [
-        (None, True, (None, TEST_DATETIME_1, False)),  # job run not created
-        ("", True, ("", TEST_DATETIME_1, False)),  # don't know job run's name
-        ("a_job_run", True, ("a_job_run", TEST_DATETIME_1, True)),  # job watched
-        ("", asyncio.CancelledError(""), ("", TEST_DATETIME_1, False)),  # cancelled, but don't know name
-        ("a_job_run", asyncio.CancelledError(""), ("a_job_run", TEST_DATETIME_1, False)),  # cancelled
-    ],
+    "ignore_errors,expected",
+    [(True, {"succeeded", "failed", "unknown"}), (False, {"succeeded", "failed", "not started"}),],
 )
 @mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
-def test_run_backfill_for_date(
-    mock_get_obj_type, mock_client, mock_client_request, event_loop, job_run_name, run_successful, expected,
-):
-    mock_get_obj_type.return_value = client.TronObjectIdentifier("JOB_RUN", "a_job_run_url")
-    mock_create = asynctest.CoroutineMock(return_value=job_run_name)
-    mock_watch = asynctest.CoroutineMock(side_effect=[run_successful])
-    tron_client = mock_client.return_value
-    tron_client.url_base = "http://localhost"
-    job_id = client.TronObjectIdentifier("JOB", "a_job_url")
+def test_run_backfill_for_date_range_normal(mock_get_obj_type, event_loop, ignore_errors, expected):
+    run_states = (state for state in ["succeeded", "failed", "unknown"])
 
-    with mock.patch.object(backfill, "_create_job_run", mock_create, autospec=None,), mock.patch.object(
-        backfill, "_watch_job_run", mock_watch, autospec=None,
-    ):
-        run_result = event_loop.run_until_complete(
-            backfill.run_backfill_for_date(tron_client, job_id, TEST_DATETIME_1),
-        )
+    async def fake_run_until_completion(self):
+        self.run_state = next(run_states)
 
-    assert expected == run_result
-    assert mock_create.call_args_list == [
-        mock.call(tron_client.url_base, "a_job_url", TEST_DATETIME_1),
-    ]
-    if job_run_name:
-        assert mock_watch.call_args_list == [
-            mock.call(tron_client, "a_job_run", "a_job_run_url", "2004-07-01"),
-        ]
-        if isinstance(run_successful, asyncio.CancelledError):
-            assert mock_client_request.call_args_list == [
-                mock.call("/".join([tron_client.url_base, "a_job_run_url"]), data=dict(command="cancel")),
-            ]
+    backfill.BackfillRun.run_until_completion = fake_run_until_completion
+    dates = [TEST_DATETIME_1, TEST_DATETIME_2, TEST_DATETIME_3]
+    mock_get_obj_type.return_value = client.TronObjectIdentifier("JOB", "a_url")
+
+    backfill_runs = event_loop.run_until_complete(
+        backfill.run_backfill_for_date_range("a_server", "a_job", dates, max_parallel=2, ignore_errors=ignore_errors,)
+    )
+
+    assert {br.run_state for br in backfill_runs} == expected
 
 
 @pytest.mark.parametrize(
     "is_error,result,expected",
     [
         (True, "an_error_msg", None),  # tron api failed
-        (False, "weird_resp_msg", ""),  # bad response, can't get job run name
+        (False, "weird_resp_msg", None),  # bad response, can't get job run name
         (False, "Created JobRun:real_job_run_name", "real_job_run_name"),  # ok
     ],
 )
-def test_create_job_run(mock_client_request, event_loop, is_error, result, expected):
+def test_backfill_run_create(mock_client_request, fake_backfill_run, event_loop, is_error, result, expected):
     mock_client_request.return_value.error = is_error
     mock_client_request.return_value.content["result"] = result
-
-    job_run_name = event_loop.run_until_complete(
-        backfill._create_job_run("a_server", "http://localhost", TEST_DATETIME_1),
-    )
-
-    assert expected == job_run_name
+    assert expected == event_loop.run_until_complete(fake_backfill_run.create())
 
 
 @pytest.mark.parametrize(
-    "job_run_resp,poll_cnt,expected",
+    "obj_type,expected",
     [
-        (client.RequestError, 1, False),  # polling failed
-        ([{}], 1, False),  # default to unknown
-        ([{"state": "running"}, {"state": "failed"}], 2, False),  # job run fail
-        ([{"state": "running"}, {"state": "succeeded"}], 2, True),  # ok
+        (client.RequestError(""), None),
+        ([client.TronObjectIdentifier("JOB_RUN", "/a_run")], client.TronObjectIdentifier("JOB_RUN", "/a_run")),
     ],
 )
 @mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
-def test_watch_job_run(mock_get_obj_type, mock_client, event_loop, job_run_resp, poll_cnt, expected):
-    mock_get_obj_type.return_value = client.TronObjectIdentifier("JOB_RUN", "a_url")
-    tron_client = mock_client.return_value
-    tron_client.url_base = "http://localhost"
-    tron_client.job_runs.side_effect = job_run_resp
+def test_backfill_run_get_run_id(mock_get_obj_type, fake_backfill_run, event_loop, obj_type, expected):
+    mock_get_obj_type.side_effect = obj_type
+    assert expected == event_loop.run_until_complete(fake_backfill_run.get_run_id())
+    assert expected == fake_backfill_run.run_id
 
-    run_successful = event_loop.run_until_complete(
-        backfill._watch_job_run(tron_client, "a_job_run", "a_url", "2004-07-01"),
-    )
 
-    assert expected == run_successful
-    assert poll_cnt == len(tron_client.job_runs.call_args_list)
+@pytest.mark.parametrize(
+    "job_run_resp,expected",
+    [
+        (client.RequestError, "unknown"),  # polling failed
+        ([{}], "unknown"),  # default to unknown
+        ([{"state": "failed"}], "failed"),  # ok
+    ],
+)
+def test_backfill_run_sync_state(fake_backfill_run, event_loop, job_run_resp, expected):
+    fake_backfill_run.run_id = client.TronObjectIdentifier("JOB_RUN", "/a_run")
+    fake_backfill_run.tron_client.job_runs.side_effect = job_run_resp
+    assert expected == event_loop.run_until_complete(fake_backfill_run.sync_state())
+
+
+def test_backfill_run_watch_until_completion(fake_backfill_run, event_loop):
+    async def change_run_state():
+        fake_backfill_run.run_state = "cancelled"
+
+    fake_backfill_run.sync_state = change_run_state
+    assert "cancelled" == event_loop.run_until_complete(fake_backfill_run.watch_until_completion())
+
+
+@pytest.mark.parametrize(
+    "run_id,response,expected",
+    [
+        (None, mock.Mock(error=False), False),  # no run_id
+        (client.TronObjectIdentifier("JOB_RUN", "/a_run"), mock.Mock(error=True), False),  # api error
+        (client.TronObjectIdentifier("JOB_RUN", "/a_run"), mock.Mock(error=False), True),  # ok
+    ],
+)
+def test_backfill_run_cancel(
+    mock_client_request, fake_backfill_run, event_loop, run_id, response, expected,
+):
+    fake_backfill_run.run_id = run_id
+    mock_client_request.return_value = response
+    assert expected == event_loop.run_until_complete(fake_backfill_run.cancel())
