@@ -3,6 +3,7 @@ import datetime
 import functools
 import pprint
 import re
+import signal
 from typing import List
 from urllib.parse import urljoin
 
@@ -213,6 +214,7 @@ async def run_backfill_for_date_range(
     """Creates and watches job runs over a range of dates for a given job. At
     most, max_parallel runs can run in parallel to prevent resource exhaustion.
     """
+    loop = asyncio.get_event_loop()
     tron_client = client.Client(server)
     url_index = tron_client.index()
 
@@ -227,23 +229,31 @@ async def run_backfill_for_date_range(
     finished_cnt = 0
     all_successful = True
 
-    while finished_cnt < len(dates):
-        # start more runs if we still have some and tha parallel limit is not yet reached
-        while finished_cnt + len(running) < len(dates) and len(running) < max_parallel:
-            next_run = backfill_runs[finished_cnt + len(running)]
-            running.add(asyncio.ensure_future(next_run.run_until_completion()))
+    loop.add_signal_handler(signal.SIGINT, asyncio.Task.current_task().cancel)
+    try:
+        while finished_cnt < len(dates):
+            # start more runs if we still have some and tha parallel limit is not yet reached
+            while finished_cnt + len(running) < len(dates) and len(running) < max_parallel:
+                next_run = backfill_runs[finished_cnt + len(running)]
+                running.add(asyncio.ensure_future(next_run.run_until_completion()))
 
-        just_finished, running = await asyncio.wait(running, return_when=asyncio.FIRST_COMPLETED)
-        for task in just_finished:
-            finished_cnt += 1
-            all_successful &= task.result() in BackfillRun.SUCCESS_STATES
+            just_finished, running = await asyncio.wait(running, return_when=asyncio.FIRST_COMPLETED)
+            for task in just_finished:
+                finished_cnt += 1
+                all_successful &= task.result() in BackfillRun.SUCCESS_STATES
 
-        if not ignore_errors and not all_successful:
-            print("Error: encountered failing job run; aborting all runs and exiting.")
-            for task in running:
-                task.cancel()  # cancel running async tasks
-                await task  # wait until it is done cancelling
-            break
+            if not ignore_errors and not all_successful:
+                print("Error: encountered failing job run; cancelling all in-progress runs and exiting.")
+                for task in running:
+                    task.cancel()  # cancel running async tasks
+                    await task  # wait until it is done cancelling
+                break
+
+    except asyncio.CancelledError:  # caused by sigint handler
+        print("Error: SIGINT detected; aborting all in-progress runs and exiting")
+        for task in running:
+            task.cancel()
+            await task
     return backfill_runs
 
 
