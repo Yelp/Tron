@@ -1055,12 +1055,59 @@ class KubernetesActionRun(ActionRun, Observer):
     def recover(self) -> Optional[KubernetesTask]:
         """
         Called on Tron restart per previously running ActionRun to attempt to restart Tron's tracking
-        of this run.
+        of this run. See tron.core.recovery
 
         If we're able to successfully recover, a KubernetesTask representing what is currently being run
         will be returned - otherwise, None.
         """
-        pass
+        k8s_cluster = KubernetesClusterRepository.get_cluster()
+        if not k8s_cluster:
+            self.fail(self.EXIT_KUBERNETES_NOT_CONFIGURED)
+            return None
+
+        # We cannot recover if we can't transition to running
+        if not self.machine.check("running"):
+            log.error(f"{self} unable to transition from {self.machine.state} to running for recovery")
+            return
+
+        if not self.attempts or self.attempts[-1].kubernetes_task_id is None:
+            log.error(f"{self} no task ID, cannot recover")
+            self.fail_unknown()
+            return
+
+        last_attempt = self.attempts[-1]
+
+        log.info(f"{self} recovering Kubernetes run")
+
+        task = k8s_cluster.create_task(
+            action_run_id=self.id,
+            command=last_attempt.rendered_command,
+            cpus=last_attempt.command_config.cpus,
+            mem=last_attempt.command_config.mem,
+            disk=last_attempt.command_config.disk,
+            docker_image=last_attempt.command_config.docker_image,
+            env=build_environment(original_env=last_attempt.command_config.env, run_id=self.id),
+            secret_env=last_attempt.command_config.secret_env,
+            serializer=filehandler.OutputStreamSerializer(self.output_path),
+            volumes=last_attempt.command_config.extra_volumes,
+            task_id=last_attempt.kubernetes_task_id,
+        )
+        if not task:
+            log.warning(
+                f"{self} cannot recover, Kubernetes is disabled or "
+                f"invalid task ID {last_attempt.kubernetes_task_id!r}",
+            )
+            self.fail_unknown()
+            return
+
+        self.watch(task)
+        k8s_cluster.recover(task)
+
+        # Reset status
+        self.clear_end_state()
+        self.transition_and_notify("running")
+
+        return task
 
     def stop(self) -> Optional[str]:
         """

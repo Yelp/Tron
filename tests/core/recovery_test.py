@@ -6,6 +6,7 @@ from testifycompat import TestCase
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.core.actionrun import ActionRun
+from tron.core.actionrun import KubernetesActionRun
 from tron.core.actionrun import MesosActionRun
 from tron.core.actionrun import SSHActionRun
 from tron.core.recovery import filter_action_runs_needing_recovery
@@ -59,10 +60,31 @@ class TestRecovery(TestCase):
                 machine=mock_unknown_machine,
                 end_time=timeutils.current_time(),
             ),
+            # TODO: Convert to all KubernetesActionRuns after deprecating mesos
+            #  A job will normally only ever have MesosActionRuns or KubernetsActionRuns
+            KubernetesActionRun(
+                job_run_id="test.k8s-done",
+                name="test.k8s-done",
+                node=Mock(),
+                command_config=Mock(),
+                machine=mock_unknown_machine,
+                end_time=timeutils.current_time(),
+            ),
+            KubernetesActionRun(
+                job_run_id="test.k8s-unknown",
+                name="test.k8s-unknown",
+                node=Mock(),
+                command_config=Mock(),
+                machine=mock_unknown_machine,
+            ),
         ]
 
     def test_filter_action_runs_needing_recovery(self):
-        assert filter_action_runs_needing_recovery(self.action_runs) == ([self.action_runs[0]], [self.action_runs[3]],)
+        assert filter_action_runs_needing_recovery(self.action_runs) == (
+            [self.action_runs[0]],
+            [self.action_runs[3]],
+            [self.action_runs[6]],
+        )
 
     @mock.patch("tron.core.recovery.filter_action_runs_needing_recovery", autospec=True)
     def test_launch_recovery_actionruns_for_job_runs(self, mock_filter):
@@ -75,6 +97,7 @@ class TestRecovery(TestCase):
                 ),
             ],
             [mock.Mock(action_runner=NoActionRunnerFactory(), spec=MesosActionRun,),],
+            [mock.Mock(action_runner=NoActionRunnerFactory(), spec=KubernetesActionRun,),],
         )
 
         mock_filter.return_value = mock_actions
@@ -91,13 +114,16 @@ class TestRecovery(TestCase):
         mesos_run = mock_actions[1][0]
         assert mesos_run.recover.call_count == 1
 
+        kubernetes_run = mock_actions[2][0]
+        assert kubernetes_run.recover.call_count == 1
+
     @mock.patch("tron.core.recovery.filter_action_runs_needing_recovery", autospec=True)
     def test_launch_recovery_actionruns_empty_job_run(self, mock_filter):
         """_action_runs=None shouldn't prevent other job runs from being recovered"""
         empty_job_run = mock.Mock(_action_runs=None)
         other_job_run = mock.Mock(_action_runs=[mock.Mock()])
         mock_action_runner = mock.Mock()
-        mock_filter.return_value = ([], [])
+        mock_filter.return_value = ([], [], [])
 
         launch_recovery_actionruns_for_job_runs(
             [empty_job_run, other_job_run], mock_action_runner,

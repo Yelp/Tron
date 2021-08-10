@@ -47,8 +47,7 @@ def combine_volumes(defaults: Collection[ConfigVolume], overrides: Collection[Co
 
 class KubernetesTask(ActionCommand):
     def __init__(self, action_run_id: str, task_config: KubernetesTaskConfig, serializer=None):
-        # TODO(TASKPROC-238): use the actual task command once that exists
-        super().__init__(id=action_run_id, command="ls", serializer=serializer)
+        super().__init__(id=action_run_id, command=task_config.command, serializer=serializer)
 
         self.task_config = task_config
 
@@ -218,10 +217,13 @@ class KubernetesCluster:
             log.info("Reusing previously created runner.")
             return self.runner
 
-        # TODO: once we start implementing more things in the executor, we'll need to actually pass
-        # down some config
         executor = self.processor.executor_from_config(
-            provider="kubernetes", provider_config={"namespace": "tron", "kubeconfig_path": self.kubeconfig_path,},
+            provider="kubernetes",
+            provider_config={
+                "namespace": "tron",
+                "kubeconfig_path": self.kubeconfig_path,
+                "task_configs": [task.get_config() for task in self.tasks.values()],
+            },
         )
 
         return Subscription(executor, queue)
@@ -437,7 +439,24 @@ class KubernetesCluster:
         """
         Given an instance of a KubernetesTask, attempt to reconcile the current state of the task from Kubernetes.
         """
-        pass
+        if not task:
+            return
+
+        if not self.enabled:
+            task.log.info("Could not recover task, Kubernetes usage is disabled.")
+            task.exited(None)
+            return
+
+        self._check_connection()
+        assert self.runner is not None, "Unable to correctly setup k8s runner!"
+
+        # the task/kubernetes id is really just the pod name
+        task_id = task.get_kubernetes_id()
+        self.tasks[task_id] = task
+        task.log.info("TRON RESTARTED! Starting recovery procedure by reconciling state for this task from Kubernetes")
+        task.started()
+        self.runner.reconcile(task.get_config())
+        task.report_resources()
 
 
 class KubernetesClusterRepository:
