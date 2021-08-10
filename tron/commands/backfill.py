@@ -7,6 +7,7 @@ from typing import List
 from urllib.parse import urljoin
 
 from tron.commands import client
+from tron.commands import display
 from tron.core.actionrun import ActionRun
 
 DEFAULT_MAX_PARALLEL_RUNS = 10
@@ -49,50 +50,6 @@ def confirm_backfill(job: str, date_strs: List[str]):
     else:
         print("")  # just for clean separation
         return True
-
-
-async def run_backfill_for_date_range(
-    server: str,
-    job_name: str,
-    dates: List[datetime.datetime],
-    max_parallel: int = DEFAULT_MAX_PARALLEL_RUNS,
-    ignore_errors: bool = True,
-) -> bool:
-    """Creates and watches job runs over a range of dates for a given job. At
-    most, max_parallel runs can run in parallel to prevent resource exhaustion.
-    """
-    tron_client = client.Client(server)
-    url_index = tron_client.index()
-
-    # check job_name identifies a valid tron object
-    job_id = client.get_object_type_from_identifier(url_index, job_name)
-    # check job_name identifies a job
-    if job_id.type != client.TronObjectType.job:
-        raise ValueError(f"'{job_name}' is a {job_id.type.lower()}, not a job")
-
-    backfill_runs = [BackfillRun(tron_client, job_id, run_time) for run_time in dates]
-    running = set()
-    finished_cnt = 0
-    all_successful = True
-
-    while finished_cnt < len(dates):
-        # start more runs if we still have some and tha parallel limit is not yet reached
-        while finished_cnt + len(running) < len(dates) and len(running) < max_parallel:
-            next_run = backfill_runs[finished_cnt + len(running)]
-            running.add(asyncio.ensure_future(next_run.run_until_completion()))
-
-        just_finished, running = await asyncio.wait(running, return_when=asyncio.FIRST_COMPLETED)
-        for task in just_finished:
-            finished_cnt += 1
-            # all_successful &= (task.result() in BackfillRun.SUCCESS_STATES)
-            all_successful &= task.result() == ActionRun.SUCCEEDED
-
-        if not ignore_errors and not all_successful:
-            print("Error: encountered failing job run; aborting all runs and exiting.")
-            for task in running:
-                task.cancel()  # cancel running async tasks
-            return False
-    return True
 
 
 class BackfillRun:
@@ -233,6 +190,7 @@ class BackfillRun:
                 )
             else:
                 print(f"Backfill job run '{self.run_name}' for {self.run_time_str} cancelled")
+                self.run_state = ActionRun.CANCELLED
                 return True
         else:
             # accounts for the case where the job was created, but this coroutine
@@ -243,3 +201,69 @@ class BackfillRun:
                 "to check."
             )
         return False
+
+
+async def run_backfill_for_date_range(
+    server: str,
+    job_name: str,
+    dates: List[datetime.datetime],
+    max_parallel: int = DEFAULT_MAX_PARALLEL_RUNS,
+    ignore_errors: bool = True,
+) -> List[BackfillRun]:
+    """Creates and watches job runs over a range of dates for a given job. At
+    most, max_parallel runs can run in parallel to prevent resource exhaustion.
+    """
+    tron_client = client.Client(server)
+    url_index = tron_client.index()
+
+    # check job_name identifies a valid tron object
+    job_id = client.get_object_type_from_identifier(url_index, job_name)
+    # check job_name identifies a job
+    if job_id.type != client.TronObjectType.job:
+        raise ValueError(f"'{job_name}' is a {job_id.type.lower()}, not a job")
+
+    backfill_runs = [BackfillRun(tron_client, job_id, run_time) for run_time in dates]
+    running = set()
+    finished_cnt = 0
+    all_successful = True
+
+    while finished_cnt < len(dates):
+        # start more runs if we still have some and tha parallel limit is not yet reached
+        while finished_cnt + len(running) < len(dates) and len(running) < max_parallel:
+            next_run = backfill_runs[finished_cnt + len(running)]
+            running.add(asyncio.ensure_future(next_run.run_until_completion()))
+
+        just_finished, running = await asyncio.wait(running, return_when=asyncio.FIRST_COMPLETED)
+        for task in just_finished:
+            finished_cnt += 1
+            all_successful &= task.result() in BackfillRun.SUCCESS_STATES
+
+        if not ignore_errors and not all_successful:
+            print("Error: encountered failing job run; aborting all runs and exiting.")
+            for task in running:
+                task.cancel()  # cancel running async tasks
+                await task  # wait until it is done cancelling
+            break
+    return backfill_runs
+
+
+class DisplayBackfillRuns(display.TableDisplay):
+
+    columns = ["Date", "Job Run Name", "Final State"]
+    fields = ["run_time", "run_name", "run_state"]
+    widths = [15, 60, 15]
+    title = "Backfills Job Runs"
+    resize_fields = ["run_time", "run_name", "run_state"]
+    header_color = "hgray"
+
+
+def print_backfill_runs_table(runs: List[BackfillRun]) -> None:
+    """Prints backfill runs in a table"""
+    with display.Color.enable():
+        table = DisplayBackfillRuns().format(
+            [
+                dict(run_time=r.run_time.date().isoformat(), run_name=(r.run_name or "n/a"), run_state=r.run_state)
+                for r in runs
+            ]
+        )
+        print(table)

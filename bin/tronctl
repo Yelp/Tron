@@ -21,10 +21,12 @@ import argcomplete
 from tron import __version_info__
 from tron.commands import client
 from tron.commands import cmd_utils
+from tron.commands.backfill import BackfillRun
 from tron.commands.backfill import confirm_backfill
 from tron.commands.backfill import DEFAULT_MAX_PARALLEL_RUNS
 from tron.commands.backfill import get_date_range
 from tron.commands.backfill import print_backfill_cmds
+from tron.commands.backfill import print_backfill_runs_table
 from tron.commands.backfill import run_backfill_for_date_range
 from tron.commands.client import RequestError
 from tron.commands.cmd_utils import ExitCode
@@ -296,7 +298,7 @@ def backfill(args):
         if confirm_backfill(job_name, date_strs):
             loop = asyncio.get_event_loop()
             try:
-                yield loop.run_until_complete(
+                backfill_runs = loop.run_until_complete(
                     run_backfill_for_date_range(
                         args.server,
                         job_name,
@@ -307,6 +309,9 @@ def backfill(args):
                 )
             finally:
                 loop.close()
+
+            print_backfill_runs_table(backfill_runs)
+            yield all(br.run_state in BackfillRun.SUCCESS_STATES for br in backfill_runs)
 
 
 def tron_version(args):

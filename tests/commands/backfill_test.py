@@ -48,42 +48,6 @@ def fake_backfill_run(mock_client):
     )
 
 
-@mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
-def test_run_backfill_for_date_range_job_dne(mock_get_obj_type, event_loop):
-    mock_get_obj_type.side_effect = ValueError
-    with pytest.raises(ValueError):
-        event_loop.run_until_complete(backfill.run_backfill_for_date_range("a_server", "a_job", []),)
-
-
-@mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
-def test_run_backfill_for_date_range_not_a_job(mock_get_obj_type, event_loop):
-    mock_get_obj_type.return_value = client.TronObjectIdentifier("JOB_RUN", "a_url")
-    with pytest.raises(ValueError):
-        event_loop.run_until_complete(backfill.run_backfill_for_date_range("a_server", "a_job", []),)
-
-
-@pytest.mark.parametrize(
-    "ignore_errors,expected",
-    [(True, {"succeeded", "failed", "unknown"}), (False, {"succeeded", "failed", "not started"}),],
-)
-@mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
-def test_run_backfill_for_date_range_normal(mock_get_obj_type, event_loop, ignore_errors, expected):
-    run_states = (state for state in ["succeeded", "failed", "unknown"])
-
-    async def fake_run_until_completion(self):
-        self.run_state = next(run_states)
-
-    backfill.BackfillRun.run_until_completion = fake_run_until_completion
-    dates = [TEST_DATETIME_1, TEST_DATETIME_2, TEST_DATETIME_3]
-    mock_get_obj_type.return_value = client.TronObjectIdentifier("JOB", "a_url")
-
-    backfill_runs = event_loop.run_until_complete(
-        backfill.run_backfill_for_date_range("a_server", "a_job", dates, max_parallel=2, ignore_errors=ignore_errors,)
-    )
-
-    assert {br.run_state for br in backfill_runs} == expected
-
-
 @pytest.mark.parametrize(
     "is_error,result,expected",
     [
@@ -148,3 +112,39 @@ def test_backfill_run_cancel(
     fake_backfill_run.run_id = run_id
     mock_client_request.return_value = response
     assert expected == event_loop.run_until_complete(fake_backfill_run.cancel())
+
+
+@mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
+def test_run_backfill_for_date_range_job_dne(mock_get_obj_type, event_loop):
+    mock_get_obj_type.side_effect = ValueError
+    with pytest.raises(ValueError):
+        event_loop.run_until_complete(backfill.run_backfill_for_date_range("a_server", "a_job", []),)
+
+
+@mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
+def test_run_backfill_for_date_range_not_a_job(mock_get_obj_type, event_loop):
+    mock_get_obj_type.return_value = client.TronObjectIdentifier("JOB_RUN", "a_url")
+    with pytest.raises(ValueError):
+        event_loop.run_until_complete(backfill.run_backfill_for_date_range("a_server", "a_job", []),)
+
+
+@pytest.mark.parametrize(
+    "ignore_errors,expected",
+    [(True, {"succeeded", "failed", "unknown"}), (False, {"succeeded", "failed", "not started"}),],
+)
+@mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
+def test_run_backfill_for_date_range_normal(mock_get_obj_type, event_loop, ignore_errors, expected):
+    run_states = (state for state in ["succeeded", "failed", "unknown"])
+
+    async def fake_run_until_completion(self):
+        self.run_state = next(run_states)
+
+    backfill.BackfillRun.run_until_completion = fake_run_until_completion
+    dates = [TEST_DATETIME_1, TEST_DATETIME_2, TEST_DATETIME_3]
+    mock_get_obj_type.return_value = client.TronObjectIdentifier("JOB", "a_url")
+
+    backfill_runs = event_loop.run_until_complete(
+        backfill.run_backfill_for_date_range("a_server", "a_job", dates, max_parallel=2, ignore_errors=ignore_errors,)
+    )
+
+    assert {br.run_state for br in backfill_runs} == expected
