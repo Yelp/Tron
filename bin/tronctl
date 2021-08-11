@@ -11,12 +11,14 @@ import logging
 import sys
 from collections import defaultdict
 from typing import Any
+from typing import Callable
 from typing import Dict
+from typing import Generator
 from typing import Optional
 from typing import Tuple
 from urllib.parse import urljoin
 
-import argcomplete
+import argcomplete  # type: ignore
 
 from tron import __version_info__
 from tron.commands import client
@@ -238,13 +240,13 @@ def control_objects(args: argparse.Namespace):
                     # TODO: should we check this up-front and refuse to skip if there are no triggers that will be
                     # published rather than carry on under the assumption that the user copy-pasted/typo'd the identifier?
                     yield True
-
-                # TODO: this loop should use event_publish(), but we'd need to refactor how the CLI works and stop passing
-                # around the full set of args everywhere to do so
-                for trigger in triggers:
-                    yield request(
-                        url=urljoin(args.server, "/api/events"), data={"command": "publish", "event": trigger},
-                    )
+                else:
+                    # TODO: this loop should use event_publish(), but we'd need to refactor how the CLI works and stop passing
+                    # around the full set of args everywhere to do so
+                    for trigger in triggers:
+                        yield request(
+                            url=urljoin(args.server, "/api/events"), data={"command": "publish", "event": trigger},
+                        )
             else:
                 print(f"Unable to skip {identifier}.")
                 yield False
@@ -329,7 +331,7 @@ def tron_version(args):
     yield True
 
 
-COMMANDS = defaultdict(
+COMMANDS: Dict[str, Callable[[argparse.Namespace], Generator[bool, None, None]]] = defaultdict(
     lambda: control_objects,
     publish=event_publish,
     discard=event_discard,

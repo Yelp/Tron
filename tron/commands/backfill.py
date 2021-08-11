@@ -5,6 +5,8 @@ import pprint
 import re
 import signal
 from typing import List
+from typing import Optional
+from typing import Set
 from urllib.parse import urljoin
 
 from tron.commands import client
@@ -12,7 +14,7 @@ from tron.commands import display
 from tron.core.actionrun import ActionRun
 
 DEFAULT_MAX_PARALLEL_RUNS = 10
-DEFAULT_POLLING_INTERVAL = 10  # seconds
+DEFAULT_POLLING_INTERVAL_S = 10
 
 
 def get_date_range(
@@ -27,7 +29,7 @@ def get_date_range(
     return dates
 
 
-def print_backfill_cmds(job: str, date_strs: List[str]) -> bool:
+def print_backfill_cmds(job: str, date_strs: List[str]) -> None:
     print(f"Please run the following {len(date_strs)} commands:")
     print("")
     for date in date_strs:
@@ -36,7 +38,7 @@ def print_backfill_cmds(job: str, date_strs: List[str]) -> bool:
     print("Note that many jobs operate on the previous day's data.")
 
 
-def confirm_backfill(job: str, date_strs: List[str]):
+def confirm_backfill(job: str, date_strs: List[str]) -> bool:
     print(
         f"To backfill for the job '{job}', a job run will be created for each "
         f"of the following {len(date_strs)} dates:"
@@ -57,16 +59,16 @@ class BackfillRun:
     NOT_STARTED_STATE = "not started"
     SUCCESS_STATES = {ActionRun.SUCCEEDED, ActionRun.CANCELLED, ActionRun.SKIPPED}
 
-    def __init__(self, tron_client: client.Client, job_id: client.TronObjectType, run_time: datetime.datetime):
+    def __init__(self, tron_client: client.Client, job_id: client.TronObjectIdentifier, run_time: datetime.datetime):
         self.tron_client = tron_client
         self.job_id = job_id
         self.run_time = run_time
-        self.run_name = None
-        self.run_id = None
+        self.run_name: Optional[str] = None
+        self.run_id: Optional[client.TronObjectIdentifier] = None
         self.run_state = BackfillRun.NOT_STARTED_STATE
 
     @property
-    def run_time_str(self):
+    def run_time_str(self) -> str:
         return self.run_time.date().isoformat()
 
     async def run_until_completion(self) -> str:
@@ -79,7 +81,7 @@ class BackfillRun:
             await self.cancel()
         return self.run_state
 
-    async def create(self) -> str:
+    async def create(self) -> Optional[str]:
         """Creates job run for a specific date.
 
         Returns the name of the run, if it was created with no issues.
@@ -118,7 +120,7 @@ class BackfillRun:
 
         return self.run_name
 
-    async def get_run_id(self) -> client.TronObjectIdentifier:
+    async def get_run_id(self) -> Optional[client.TronObjectIdentifier]:
         if not self.run_id:
             loop = asyncio.get_event_loop()
             try:
@@ -137,29 +139,30 @@ class BackfillRun:
         Returns the updated state.
         """
         if not self.run_id:
-            await self.get_run_id()
+            self.run_id = await self.get_run_id()
 
-        loop = asyncio.get_event_loop()
-        try:
-            # get the state of the run using the resource url
-            resp_content = await loop.run_in_executor(
-                None,
-                functools.partial(
-                    self.tron_client.job_runs,
-                    urljoin(self.tron_client.url_base, self.run_id.url),
-                    include_runs=False,
-                    include_graph=False,
-                ),
-            )
-            self.run_state = resp_content.get("state", ActionRun.UNKNOWN)
+        if self.run_id:
+            loop = asyncio.get_event_loop()
+            try:
+                # get the state of the run using the resource url
+                resp_content = await loop.run_in_executor(
+                    None,
+                    functools.partial(
+                        self.tron_client.job_runs,
+                        urljoin(self.tron_client.url_base, self.run_id.url),
+                        include_runs=False,
+                        include_graph=False,
+                    ),
+                )
+                self.run_state = resp_content.get("state", ActionRun.UNKNOWN)
 
-        except (client.RequestError, AttributeError, ValueError) as e:
-            print(f"Error: couldn't get state for job run '{self.run_name}': {e}")
-            self.run_state = ActionRun.UNKNOWN
+            except (client.RequestError, AttributeError, ValueError) as e:
+                print(f"Error: couldn't get state for job run '{self.run_name}': {e}")
+                self.run_state = ActionRun.UNKNOWN
 
         return self.run_state
 
-    async def watch_until_completion(self, poll_intv_s: int = DEFAULT_POLLING_INTERVAL) -> str:
+    async def watch_until_completion(self, poll_intv_s: int = DEFAULT_POLLING_INTERVAL_S) -> str:
         """Watches this job run until it finishes.
 
         Returns the end state of the run.
@@ -225,11 +228,15 @@ async def run_backfill_for_date_range(
         raise ValueError(f"'{job_name}' is a {job_id.type.lower()}, not a job")
 
     backfill_runs = [BackfillRun(tron_client, job_id, run_time) for run_time in dates]
-    running = set()
+    running: Set[asyncio.Future] = set()
     finished_cnt = 0
     all_successful = True
 
-    loop.add_signal_handler(signal.SIGINT, asyncio.Task.current_task().cancel)
+    # `current_task()` will always return a task here, but we need to account
+    # for the None case for mypy
+    current_task = asyncio.Task.current_task()
+    if current_task:
+        loop.add_signal_handler(signal.SIGINT, current_task.cancel)
     try:
         while finished_cnt < len(dates):
             # start more runs if we still have some and tha parallel limit is not yet reached
@@ -263,7 +270,7 @@ class DisplayBackfillRuns(display.TableDisplay):
     fields = ["run_time", "run_name", "run_state"]
     widths = [15, 60, 15]
     title = "Backfills Job Runs"
-    resize_fields = ["run_time", "run_name", "run_state"]
+    resize_fields = {"run_time", "run_name", "run_state"}
     header_color = "hgray"
 
 
