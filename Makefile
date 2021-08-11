@@ -5,8 +5,10 @@ GID:=$(shell id -g)
 
 ifeq ($(findstring .yelpcorp.com,$(shell hostname -f)), .yelpcorp.com)
 	export PIP_INDEX_URL ?= https://pypi.yelpcorp.com/simple
+	PAASTA_ENV ?= YELP
 else
 	export PIP_INDEX_URL ?= https://pypi.python.org/simple
+	PAASTA_ENV ?= $(shell hostname --fqdn)
 endif
 
 NOOP = true
