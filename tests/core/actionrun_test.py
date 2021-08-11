@@ -1664,3 +1664,37 @@ class TestKubernetesActionRun:
         assert mock_k8s_action_run.is_unknown
         assert mock_get_cluster.return_value.recover.call_count == 0
         assert mock_k8s_action_run.end_time is not None
+
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
+    def test_kill_task_k8s(self, mock_cluster_repo, mock_k8s_action_run):
+        mock_get_cluster = mock_cluster_repo.get_cluster
+        last_attempt = mock_k8s_action_run.create_attempt()
+        last_attempt.kubernetes_task_id = "fake_task_id"
+        mock_k8s_action_run.machine.state = ActionRun.RUNNING
+
+        mock_k8s_action_run.kill()
+        mock_get_cluster.return_value.kill.assert_called_once_with(last_attempt.kubernetes_task_id)
+
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
+    def test_kill_task_no_task_id_k8s(self, mock_cluster_repo, mock_k8s_action_run):
+        mock_k8s_action_run.machine.state = ActionRun.RUNNING
+        mock_k8s_action_run.create_attempt()
+        error_message = mock_k8s_action_run.kill()
+        assert error_message == "Error: Can't find task id for the action."
+
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
+    def test_stop_task_k8s(self, mock_cluster_repo, mock_k8s_action_run):
+        mock_get_cluster = mock_cluster_repo.get_cluster
+        last_attempt = mock_k8s_action_run.create_attempt()
+        last_attempt.kubernetes_task_id = "fake_task_id"
+        mock_k8s_action_run.machine.state = ActionRun.RUNNING
+
+        mock_k8s_action_run.stop()
+        mock_get_cluster.return_value.kill.assert_called_once_with(last_attempt.kubernetes_task_id)
+
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
+    def test_stop_task_no_task_id_k8s(self, mock_cluster_repo, mock_k8s_action_run):
+        mock_k8s_action_run.machine.state = ActionRun.RUNNING
+        mock_k8s_action_run.create_attempt()
+        error_message = mock_k8s_action_run.stop()
+        assert error_message == "Error: Can't find task id for the action."

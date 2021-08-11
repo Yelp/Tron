@@ -1132,9 +1132,27 @@ class KubernetesActionRun(ActionRun, Observer):
         # so let's check if there's such a delay present and cancel that since in this case
         # there's nothing actually running in k8s yet
         if self.cancel_delay():
-            return
+            return None
 
-        # TODO(TRON-) actually kill Pod
+        msgs = []
+        if not self.is_active:
+            msgs.append(f"Action is {self.state}, not running. Continuing anyway.")
+
+        k8s_cluster = KubernetesClusterRepository.get_cluster()
+        if not k8s_cluster:
+            return f"Unable to kill action {self.action_name} - could not get Kubernetes cluster."
+        last_attempt = self.last_attempt
+        if last_attempt is None or last_attempt.kubernetes_task_id is None:
+            msgs.append("Error: Can't find task id for the action.")
+        else:
+            msgs.append(f"Sending kill for {last_attempt.kubernetes_task_id}...")
+            succeeded = k8s_cluster.kill(last_attempt.kubernetes_task_id)
+            if succeeded:
+                msgs.append("Sent! Note: the Docker container may not stop immediately.")
+            else:
+                msgs.append("Error while sending kill request. Please try again.")
+
+        return "\n".join(msgs)
 
     def handle_action_command_state_change(
         self, action_command: ActionCommand, event: str, event_data=None
