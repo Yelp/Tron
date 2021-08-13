@@ -16,7 +16,7 @@ class module.ActionRun extends Backbone.Model
     urlRoot: ->
         "/jobs/#{ @get('job_name') }/#{ @get('run_num') }/"
 
-    urlArgs: "?include_stdout=1&include_stderr=1&num_lines=0"
+    urlArgs: "?include_stdout=1&include_stderr=1&include_meta=1&num_lines=0"
 
     url: =>
         super() + @urlArgs
@@ -207,6 +207,10 @@ class module.ActionRunView extends Backbone.View
                     </tbody>
                 </table>
                 </div>
+            </div>
+            <div class="span12 outline-block">
+                <h2>meta</h2>
+                <pre class="meta" style="display: none;"><%= meta.join('\\n') %></pre>
             </div>
             <div class="span12 outline-block">
                 <h2>stdout</h2>

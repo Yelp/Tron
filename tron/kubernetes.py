@@ -1,4 +1,5 @@
 import logging
+import re
 from logging import Logger
 from typing import cast
 from typing import Collection
@@ -53,6 +54,12 @@ class KubernetesTask(ActionCommand):
 
         self.log = self.get_event_logger()
 
+        config_str = str(self.get_config())
+        # AWS_SECRET_ACCESS_KEYs are base64-encoded so it uses alphanumerics plus +, /, and =
+        config_str = re.sub("'AWS_SECRET_ACCESS_KEY': '[a-zA-Z0-9+/=]+'", "AWS_SECRET_ACCESS_KEY_REDACTED", config_str)
+        config_str = re.sub("'AWS_ACCESS_KEY_ID': '[a-zA-Z0-9]+'", "AWS_ACCESS_KEY_ID_REDACTED", config_str)
+        self.log.info(f"Kubernetes task {self.get_kubernetes_id()} created with config {config_str}")
+
     def get_event_logger(self) -> Logger:
         """
         Get or create a logger for a the action run associated with this task.
@@ -100,9 +107,10 @@ class KubernetesTask(ActionCommand):
         """
         Helper to log nice-to-have information (may fail).
         """
-        # TODO: once we're actually bubbling up events from task_proc, we'll want to log detailed
-        # information here.
-        pass
+        k8s_type = getattr(event, "platform_type", None)
+        if k8s_type == "running":
+            hostname = event.raw.get("spec", {}).get("nodeName", "UNKNOWN")
+            self.log.info(f"Running on hostname: {hostname}")
 
     def handle_event(self, event: Event) -> None:
         """
