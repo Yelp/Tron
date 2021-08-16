@@ -120,6 +120,7 @@ def read_log_stream_for_action_run(
                     payload.get("tron_run_number") == int(run_num)
                     and payload.get("component") == component
                     and payload.get("message") is not None
+                    and payload.get("timestamp") is not None
                 ):
                     output.append((payload["timestamp"], payload["message"]))
 
