@@ -173,7 +173,7 @@ class ActionRunAdapter(RunAdapter):
         if isinstance(self._obj, KubernetesActionRun):
             return read_log_stream_for_action_run(
                 action_run_id=self._obj.id,
-                component="stderr",
+                component="stdout",
                 min_date=self._obj.start_time,
                 max_date=self._obj.end_time,
             )
