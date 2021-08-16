@@ -104,6 +104,8 @@ def read_log_stream_for_action_run(
     stream_name = f"stream_paasta_app_output_{namespace}_{job_name}__{action}"
     output: List[Tuple[str, str]] = []
 
+    malformed_lines = 0
+
     # We'll only use a stream reader for logs from not-today.
     # that said, it's possible that an action spans more than a single day - in this case, we'll first read "historical" data from
     # the reader and then follow-up with today's logs from a stream tailer.
@@ -117,6 +119,7 @@ def read_log_stream_for_action_run(
                     payload = json.loads(line)
                 except json.decoder.JSONDecodeError:
                     log.error(f"Unable to decode log line from stream ({stream_name}) for {action_run_id}: {line}")
+                    malformed_lines += 1
                     continue
 
                 if (
@@ -137,12 +140,14 @@ def read_log_stream_for_action_run(
                     payload = json.loads(line)
                 except json.decoder.JSONDecodeError:
                     log.error(f"Unable to decode log line from stream ({stream_name}) for {action_run_id}: {line}")
+                    malformed_lines += 1
                     continue
 
                 if (
                     payload.get("tron_run_number") == int(run_num)
                     and payload.get("component") == component
                     and payload.get("message") is not None
+                    and payload.get("timestamp") is not None
                 ):
                     output.append((payload["timestamp"], payload["message"]))
         except StreamTailerSetupError:
@@ -159,4 +164,6 @@ def read_log_stream_for_action_run(
     # XXX: for some reason, we're occasionally getting data out of order from scribereader - so we'll sort based on
     # timestamp until we can figure out what's causing this.
     output.sort(key=operator.itemgetter(0))
-    return [line for _, line in output]
+    return [line for _, line in output] + (
+        [f"{malformed_lines} encountered while retrieving logs"] if malformed_lines else []
+    )
