@@ -62,6 +62,9 @@ def get_scribereader_host_and_port() -> Optional[Tuple[str, int]]:
         log.warning("Unable to read location mapping files from disk, not returning scribereader host/port")
         return None
 
+    # NOTE: Passing in an ecosystem of prod is not supported by scribereader
+    # as there's no mapping of ecosystem->scribe-kafka-services discovery hosts
+    # for this ecosystem
     host, port = scribereader.get_tail_host_and_port(
         ecosystem=ecosystem if ecosystem != "prod" else None, region=region, superregion=superregion,
     )
