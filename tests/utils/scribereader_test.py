@@ -12,6 +12,11 @@ except ImportError:
 
 
 def test_read_log_stream_for_action_run_min_date_and_max_date_today():
+    # NOTE: these tests don't actually depend on the current time apart from
+    # today vs not-today and the args are forwarded to scribereader anyway
+    # so using the current time is fine
+    min_date = datetime.datetime.now()
+    max_date = datetime.datetime.now() + datetime.timedelta(hours=1)
     with mock.patch(
         "tron.utils.scribereader.get_scribereader_host_and_port", autospec=True, return_value=("host", 1234),
     ), mock.patch(
@@ -46,18 +51,22 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_today():
             ]
         )
         output = read_log_stream_for_action_run(
-            action_run_id="namespace.job.1234.action",
-            component="stdout",
-            min_date=datetime.datetime.now(),
-            max_date=datetime.datetime.now() + datetime.timedelta(hours=1),
+            action_run_id="namespace.job.1234.action", component="stdout", min_date=min_date, max_date=max_date,
         )
 
     mock_stream_reader.assert_not_called()
-    mock_stream_tailer.assert_called_once()
+    mock_stream_tailer.assert_called_once_with(
+        stream_name="stream_paasta_app_output_namespace_job__action", lines=-1, tailing_host="host", tailing_port=1234,
+    )
     assert output == ["line 1", "line 2"]
 
 
 def test_read_log_stream_for_action_run_min_date_and_max_date_different_days():
+    # NOTE: these tests don't actually depend on the current time apart from
+    # today vs not-today and the args are forwarded to scribereader anyway
+    # so using the current time is fine
+    min_date = datetime.datetime.now() - datetime.timedelta(days=5)
+    max_date = datetime.datetime.now()
     with mock.patch(
         "tron.utils.scribereader.get_scribereader_host_and_port", autospec=True, return_value=("host", 1234),
     ), mock.patch(
@@ -100,18 +109,28 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_different_days():
             ]
         )
         output = read_log_stream_for_action_run(
-            action_run_id="namespace.job.1234.action",
-            component="stdout",
-            min_date=datetime.datetime.now() - datetime.timedelta(days=5),
-            max_date=datetime.datetime.now(),
+            action_run_id="namespace.job.1234.action", component="stdout", min_date=min_date, max_date=max_date,
         )
 
-    mock_stream_reader.assert_called_once()
-    mock_stream_tailer.assert_called_once()
+    mock_stream_reader.assert_called_once_with(
+        stream_name="stream_paasta_app_output_namespace_job__action",
+        min_date=min_date,
+        max_date=max_date,
+        reader_host="host",
+        reader_port=1234,
+    )
+    mock_stream_tailer.assert_called_once_with(
+        stream_name="stream_paasta_app_output_namespace_job__action", lines=-1, tailing_host="host", tailing_port=1234,
+    )
     assert output == ["line 0", "line 1", "line 2"]
 
 
 def test_read_log_stream_for_action_run_min_date_and_max_date_in_past():
+    # NOTE: these tests don't actually depend on the current time apart from
+    # today vs not-today and the args are forwarded to scribereader anyway
+    # so using the current time is fine
+    min_date = datetime.datetime.now() - datetime.timedelta(days=5)
+    max_date = datetime.datetime.now() - datetime.timedelta(days=4)
     with mock.patch(
         "tron.utils.scribereader.get_scribereader_host_and_port", autospec=True, return_value=("host", 1234),
     ), mock.patch(
@@ -133,12 +152,15 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_in_past():
         # so lets make sure we don't call the tailer
         mock_stream_tailer.return_value.__iter__.side_effect = Exception
         output = read_log_stream_for_action_run(
-            action_run_id="namespace.job.1234.action",
-            component="stdout",
-            min_date=datetime.datetime.now() - datetime.timedelta(days=5),
-            max_date=datetime.datetime.now() - datetime.timedelta(days=4),
+            action_run_id="namespace.job.1234.action", component="stdout", min_date=min_date, max_date=max_date,
         )
 
-    mock_stream_reader.assert_called_once()
+    mock_stream_reader.assert_called_once_with(
+        stream_name="stream_paasta_app_output_namespace_job__action",
+        min_date=min_date,
+        max_date=max_date,
+        reader_host="host",
+        reader_port=1234,
+    )
     mock_stream_tailer.assert_not_called()
     assert output == ["line 0"]
