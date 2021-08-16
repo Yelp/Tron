@@ -1,7 +1,14 @@
 import datetime
 from unittest import mock
 
+import pytest
+
 from tron.utils.scribereader import read_log_stream_for_action_run
+
+try:
+    import scribereader  # noqa: F401
+except ImportError:
+    pytest.skip(allow_module_level=True)
 
 
 def test_read_log_stream_for_action_run_min_date_and_max_date_today():
