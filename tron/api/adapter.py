@@ -159,7 +159,7 @@ class ActionRunAdapter(RunAdapter):
         if not isinstance(self._obj, KubernetesActionRun):
             return ["When this action is migrated to Kubernetes, this will contain Tron/task_processing output."]
 
-        # We're reusing the "old" (i.e., SSH/Mesos) logging for task_processing output since
+        # We're reusing the "old" (i.e., SSH/Mesos) logging files for task_processing output since
         # that won't make it into anything but Splunk
         filename = actioncommand.ActionCommand.STDERR
         output: List[str] = self._get_serializer().tail(filename, self.max_lines)
