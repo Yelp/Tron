@@ -1,3 +1,20 @@
+tron (1.13.0) xenial; urgency=medium
+
+  * 1.13.0 tagged with 'make release'
+    Commit: Merge pull request #830 from Yelp/u/kawaiwan/automate-
+    backfills  Make tronctl backfill actually run backfills
+
+ -- root <root@e0578145385c>  Tue, 17 Aug 2021 16:38:44 +0000
+
+tron (1.12.0) xenial; urgency=medium
+
+  * 1.12.0 tagged with 'make release'
+    Commit: Actually kill k8s Pods on KubernetesActionRun::kill() (#828)
+    We had left this method stubbed out until we implemented kill() in
+    task_processing, but now we can actually finish implementation here.
+
+ -- root <root@1aef58341f12>  Mon, 16 Aug 2021 22:03:29 +0000
+
 tron (1.11.0) xenial; urgency=medium
 
   * 1.11.0 tagged with 'make release'
