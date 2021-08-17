@@ -10,6 +10,7 @@ from collections import OrderedDict
 from subprocess import PIPE
 from subprocess import Popen
 from threading import RLock
+from typing import List
 
 from tron.utils import maybe_encode
 
@@ -174,7 +175,7 @@ class OutputStreamSerializer:
         return os.path.join(self.base_path, filename)
 
     # TODO: do not use subprocess
-    def tail(self, filename, num_lines=None):
+    def tail(self, filename, num_lines=None) -> List[str]:
         """Tail a file using `tail`."""
         path = self.full_path(filename)
         if not path or not os.path.exists(path):

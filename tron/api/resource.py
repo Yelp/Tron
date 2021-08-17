@@ -134,6 +134,7 @@ class ActionRunResource(resource.Resource):
             requestargs.get_integer(request, "num_lines"),
             include_stdout=requestargs.get_bool(request, "include_stdout"),
             include_stderr=requestargs.get_bool(request, "include_stderr"),
+            include_meta=requestargs.get_bool(request, "include_meta"),
         )
         return respond(request=request, response=run_adapter.get_repr())
 

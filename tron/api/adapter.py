@@ -7,12 +7,15 @@
 import functools
 import os.path
 import time
+from typing import List
 from urllib.parse import quote
 
 from tron import actioncommand
 from tron import scheduler
+from tron.core.actionrun import KubernetesActionRun
 from tron.serialize import filehandler
 from tron.utils import timeutils
+from tron.utils.scribereader import read_log_stream_for_action_run
 from tron.utils.timeutils import delta_total_seconds
 
 
@@ -97,6 +100,7 @@ class ActionRunAdapter(RunAdapter):
         "command",
         "raw_command",
         "requirements",
+        "meta",
         "stdout",
         "stderr",
         "duration",
@@ -109,13 +113,14 @@ class ActionRunAdapter(RunAdapter):
     ]
 
     def __init__(
-        self, action_run, job_run=None, max_lines=10, include_stdout=False, include_stderr=False,
+        self, action_run, job_run=None, max_lines=10, include_stdout=False, include_stderr=False, include_meta=False,
     ):
         super().__init__(action_run)
         self.job_run = job_run
         self.max_lines = max_lines or None
         self.include_stdout = include_stdout
         self.include_stderr = include_stderr
+        self.include_meta = include_meta
 
     def get_raw_command(self):
         return self._obj.command_config.command
@@ -129,7 +134,7 @@ class ActionRunAdapter(RunAdapter):
         required = self.job_run.action_graph.get_dependencies(action_name)
         return [act.name for act in required]
 
-    def _get_serializer(self, path=None):
+    def _get_serializer(self, path=None) -> filehandler.OutputStreamSerializer:
         path = filehandler.OutputPath(path) if path else self._obj.output_path
         return filehandler.OutputStreamSerializer(path)
 
@@ -149,8 +154,32 @@ class ActionRunAdapter(RunAdapter):
             if os.path.exists(formatted_alt_path):
                 yield formatted_alt_path
 
+    @toggle_flag("include_meta")
+    def get_meta(self) -> List[str]:
+        if not isinstance(self._obj, KubernetesActionRun):
+            return ["When this action is migrated to Kubernetes, this will contain Tron/task_processing output."]
+
+        # We're reusing the "old" (i.e., SSH/Mesos) logging files for task_processing output since
+        # that won't make it into anything but Splunk
+        filename = actioncommand.ActionCommand.STDERR
+        output: List[str] = self._get_serializer().tail(filename, self.max_lines)
+        if not output:
+            for alt_path in self._get_alternate_output_paths():
+                output = self._get_serializer(alt_path).tail(filename, self.max_lines)
+                if output:
+                    return output
+        return output
+
     @toggle_flag("include_stdout")
-    def get_stdout(self):
+    def get_stdout(self) -> List[str]:
+        if isinstance(self._obj, KubernetesActionRun):
+            return read_log_stream_for_action_run(
+                action_run_id=self._obj.id,
+                component="stdout",
+                min_date=self._obj.start_time,
+                max_date=self._obj.end_time,
+            )
+
         filename = actioncommand.ActionCommand.STDOUT
         output = self._get_serializer().tail(filename, self.max_lines)
         if not output:
@@ -161,7 +190,15 @@ class ActionRunAdapter(RunAdapter):
         return output
 
     @toggle_flag("include_stderr")
-    def get_stderr(self):
+    def get_stderr(self) -> List[str]:
+        if isinstance(self._obj, KubernetesActionRun):
+            return read_log_stream_for_action_run(
+                action_run_id=self._obj.id,
+                component="stderr",
+                min_date=self._obj.start_time,
+                max_date=self._obj.end_time,
+            )
+
         filename = actioncommand.ActionCommand.STDERR
         output = self._get_serializer().tail(filename, self.max_lines)
         if not output:
