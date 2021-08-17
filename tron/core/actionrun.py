@@ -110,6 +110,8 @@ class ActionRunFactory:
 
         if state_data.get("executor") == ExecutorTypes.mesos.value:
             return MesosActionRun.from_state(**args)
+        if state_data.get("executor") == ExecutorTypes.kubernetes.value:
+            return KubernetesActionRun.from_state(**args)
         return SSHActionRun.from_state(**args)
 
 
