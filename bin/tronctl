@@ -5,21 +5,31 @@ Part of the command line interface to the tron daemon. Provides the interface
 to controlling jobs and runs.
 """
 import argparse
+import asyncio
 import datetime
 import logging
 import sys
 from collections import defaultdict
 from typing import Any
+from typing import Callable
 from typing import Dict
+from typing import Generator
 from typing import Optional
 from typing import Tuple
 from urllib.parse import urljoin
 
-import argcomplete
+import argcomplete  # type: ignore
 
 from tron import __version_info__
 from tron.commands import client
 from tron.commands import cmd_utils
+from tron.commands.backfill import BackfillRun
+from tron.commands.backfill import confirm_backfill
+from tron.commands.backfill import DEFAULT_MAX_PARALLEL_RUNS
+from tron.commands.backfill import get_date_range
+from tron.commands.backfill import print_backfill_cmds
+from tron.commands.backfill import print_backfill_runs_table
+from tron.commands.backfill import run_backfill_for_date_range
 from tron.commands.client import RequestError
 from tron.commands.cmd_utils import ExitCode
 from tron.commands.cmd_utils import suggest_possibilities
@@ -34,7 +44,7 @@ COMMAND_HELP = (
     ),
     ("recover", "Ask Tron to start tracking an UNKNOWN action run again"),
     ("cancel", "Cancel the selected job run."),
-    ("backfill", "Print tronctl commands for starting many jobs for a particular date range",),
+    ("backfill", "Start job runs for a particular date range",),
     ("disable", "Disable selected job and cancel any outstanding runs"),
     ("enable", "Enable the selected job and schedule the next run"),
     ("fail", "Mark an UNKNOWN job or action as failed. Does not publish action triggers.",),
@@ -52,48 +62,102 @@ COMMAND_HELP = (
 log = logging.getLogger("tronctl")
 
 
-def command_help_epilog():
-    # We want to include some extra helpful info
-    result = ["commands:", "\n"]
-    for cmd_name, desc in COMMAND_HELP:
-        result.append("  ")
-        text = "".join((cmd_name.ljust(15), desc.ljust(40)))
-        result.append(text)
-        result.append("\n")
-    return "".join(result)
-
-
 def parse_date(date_string):
     return datetime.datetime.strptime(date_string, "%Y-%m-%d")
 
 
 def parse_cli():
-    parser = cmd_utils.build_option_parser(epilog=command_help_epilog())
+    parser = cmd_utils.build_option_parser()
 
-    parser.add_argument(
-        "--run-date", type=parse_date, dest="run_date", help="For job starts, what should run-date be set to",
+    subparsers = parser.add_subparsers(dest="command", title="commands", help="Tronctl command to run",)
+    cmd_parsers = {}
+    for cmd_name, desc in COMMAND_HELP:
+        cmd_parsers[cmd_name] = subparsers.add_parser(cmd_name, help=desc, description=desc)
+        cmd_parsers[cmd_name].add_argument(
+            "id", nargs="*", help="job name, job run id, or action id",
+        ).completer = cmd_utils.tron_jobs_completer
+
+    # start
+    cmd_parsers["start"].add_argument(
+        "--run-date", type=parse_date, dest="run_date", help="What the run-date should be set to",
     )
-    parser.add_argument(
-        "--start-date", type=parse_date, dest="start_date", help="For backfills, what should the first run-date be",
+
+    # backfill
+    backfill_parser = cmd_parsers["backfill"]
+    mutex_dates_group = backfill_parser.add_mutually_exclusive_group(required=True)
+    mutex_dates_group.add_argument(
+        "--start-date", type=parse_date, dest="start_date", help="First run-date to backfill",
     )
-    parser.add_argument(
+    backfill_parser.add_argument(
         "--end-date",
         type=parse_date,
         dest="end_date",
-        help="For backfills, what should the last run-date be (note: many jobs operate on date-1). Defaults to today.",
+        help=(
+            "Last run-date to backfill (note: many jobs operate on date-1), "
+            "assuming --start-date is set. This date is inclusive. Defaults to today."
+        ),
     )
-    parser.add_argument(
+    backfill_parser.add_argument(
+        "--descending",
+        action="store_true",
+        default=False,
+        help=(
+            "If set, backfill from end date to start date. Otherwise, "
+            "the default is to backfill from start date to end date."
+        ),
+    )
+    mutex_dates_group.add_argument(
+        "-d",
+        "--dates",
+        type=lambda v: [parse_date(date_str.strip()) for date_str in v.split(",")],
+        dest="dates",
+        help=(
+            "List of comma-separated dates to run backfills on. "
+            "Backfills will be executed for dates in the order they are presented."
+        ),
+    )
+    backfill_parser.add_argument(
+        "-P",
+        "--max-parallel",
+        type=int,
+        dest="max_parallel",
+        default=DEFAULT_MAX_PARALLEL_RUNS,
+        help=(
+            "The max number of dates that can be backfilled in parallel. "
+            "Before setting, consider how much in resources your job needs. "
+            "If it needs a lot, keep this number low, because there may not be "
+            "enough resources in the cluster too satisfy the demand, which can "
+            "adversely affect other jobs. "
+            "The default is %(default)s."
+        ),
+    )
+    backfill_parser.add_argument(
+        "--fail-on-error",
+        dest="fail_on_error",
+        action="store_true",
+        default=False,
+        help=(
+            "If set, the overall backfill will fail immediately if a backfill "
+            "for a single date fails. All in-progress backfills will cancelled. "
+            "If a single backfill is still considered successful it was otherwise "
+            "cancelled or skipped by the user. "
+            "By default, individual backfill failures are ignored."
+        ),
+    )
+    backfill_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="Prints the equivalent `tronctl start` commands for the backfill",
+    )
+
+    # retry
+    cmd_parsers["retry"].add_argument(
         "--use-latest-command",
         action="store_true",
         default=False,
-        help="For a retry, use the latest command in tronfig rather than the original command when the action run was created",
+        help="Use the latest command in tronfig rather than the original command when the action run was created",
     )
-    parser.add_argument(
-        "command", help="Tronctl command to run", choices=[row[0] for row in COMMAND_HELP],
-    )
-    parser.add_argument(
-        "id", nargs="*", help="job name, job run id, or action id",
-    ).completer = cmd_utils.tron_jobs_completer
 
     argcomplete.autocomplete(parser)
     args = parser.parse_args()
@@ -176,13 +240,13 @@ def control_objects(args: argparse.Namespace):
                     # TODO: should we check this up-front and refuse to skip if there are no triggers that will be
                     # published rather than carry on under the assumption that the user copy-pasted/typo'd the identifier?
                     yield True
-
-                # TODO: this loop should use event_publish(), but we'd need to refactor how the CLI works and stop passing
-                # around the full set of args everywhere to do so
-                for trigger in triggers:
-                    yield request(
-                        url=urljoin(args.server, "/api/events"), data={"command": "publish", "event": trigger},
-                    )
+                else:
+                    # TODO: this loop should use event_publish(), but we'd need to refactor how the CLI works and stop passing
+                    # around the full set of args everywhere to do so
+                    for trigger in triggers:
+                        yield request(
+                            url=urljoin(args.server, "/api/events"), data={"command": "publish", "event": trigger},
+                        )
             else:
                 print(f"Unable to skip {identifier}.")
                 yield False
@@ -216,34 +280,40 @@ def move(args):
 
 
 def backfill(args):
-    if args.start_date is None:
-        print("Error: For a backfill, --start-date must be set")
-        yield False
-
-    if args.end_date is None:
-        args.end_date = datetime.datetime.today()
-
     if not args.id:
         print("Error: must provide at least one id argument")
         yield False
 
-    dates = get_dates_for_backfill(start_date=args.start_date, end_date=args.end_date,)
-    print("tronctl backfill currently only prints jobs for a human to run.")
-    print(f"Please run the following {len(dates)} commands:")
-    print("")
-    for date in dates:
-        print(f"tronctl start {args.id[0]} --run-date {date}")
-    print("")
-    print("Note that many jobs operate on the previous day's data.")
-    yield True
+    if args.start_date:
+        if args.end_date is None:
+            args.end_date = datetime.datetime.today()
+        dates = get_date_range(args.start_date, args.end_date, descending=args.descending)
+    else:
+        dates = args.dates
+    date_strs = [d.date().isoformat() for d in dates]
 
+    job_name = args.id[0]
+    if args.dry_run:
+        print_backfill_cmds(job_name, date_strs)
+        yield True
+    else:
+        if confirm_backfill(job_name, date_strs):
+            loop = asyncio.get_event_loop()
+            try:
+                backfill_runs = loop.run_until_complete(
+                    run_backfill_for_date_range(
+                        args.server,
+                        job_name,
+                        dates,
+                        max_parallel=args.max_parallel,
+                        ignore_errors=(not args.fail_on_error),
+                    ),
+                )
+            finally:
+                loop.close()
 
-def get_dates_for_backfill(start_date, end_date):
-    dates = []
-    delta = end_date - start_date
-    for i in range(delta.days + 1):
-        dates.append((start_date + datetime.timedelta(i)).date().isoformat())
-    return dates
+            print_backfill_runs_table(backfill_runs)
+            yield all(br.run_state in BackfillRun.SUCCESS_STATES for br in backfill_runs)
 
 
 def tron_version(args):
@@ -261,7 +331,7 @@ def tron_version(args):
     yield True
 
 
-COMMANDS = defaultdict(
+COMMANDS: Dict[str, Callable[[argparse.Namespace], Generator[bool, None, None]]] = defaultdict(
     lambda: control_objects,
     publish=event_publish,
     discard=event_discard,
