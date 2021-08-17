@@ -53,6 +53,8 @@ class KubernetesTask(ActionCommand):
 
         self.log = self.get_event_logger()
 
+        self.log.info(f"Kubernetes task {self.get_kubernetes_id()} created with config {self.get_config()}")
+
     def get_event_logger(self) -> Logger:
         """
         Get or create a logger for a the action run associated with this task.
@@ -100,9 +102,10 @@ class KubernetesTask(ActionCommand):
         """
         Helper to log nice-to-have information (may fail).
         """
-        # TODO: once we're actually bubbling up events from task_proc, we'll want to log detailed
-        # information here.
-        pass
+        k8s_type = getattr(event, "platform_type", None)
+        if k8s_type == "running":
+            hostname = event.raw.get("spec", {}).get("nodeName", "UNKNOWN")
+            self.log.info(f"Running on hostname: {hostname}")
 
     def handle_event(self, event: Event) -> None:
         """
