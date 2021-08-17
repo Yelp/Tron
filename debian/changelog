@@ -1,3 +1,11 @@
+tron (1.13.0) xenial; urgency=medium
+
+  * 1.13.0 tagged with 'make release'
+    Commit: Merge pull request #830 from Yelp/u/kawaiwan/automate-
+    backfills  Make tronctl backfill actually run backfills
+
+ -- root <root@e0578145385c>  Tue, 17 Aug 2021 16:38:44 +0000
+
 tron (1.12.0) xenial; urgency=medium
 
   * 1.12.0 tagged with 'make release'
