@@ -110,6 +110,8 @@ class ActionRunFactory:
 
         if state_data.get("executor") == ExecutorTypes.mesos.value:
             return MesosActionRun.from_state(**args)
+        if state_data.get("executor") == ExecutorTypes.kubernetes.value:
+            return KubernetesActionRun.from_state(**args)
         return SSHActionRun.from_state(**args)
 
 
@@ -1090,6 +1092,8 @@ class KubernetesActionRun(ActionRun, Observer):
             secret_env=last_attempt.command_config.secret_env,
             serializer=filehandler.OutputStreamSerializer(self.output_path),
             volumes=last_attempt.command_config.extra_volumes,
+            cap_add=last_attempt.command_config.cap_add,
+            cap_drop=last_attempt.command_config.cap_drop,
             task_id=last_attempt.kubernetes_task_id,
         )
         if not task:

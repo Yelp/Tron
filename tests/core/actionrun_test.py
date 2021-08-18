@@ -215,6 +215,17 @@ class TestActionRunFactory:
         assert not action_run.is_cleanup
         assert action_run.__class__ == MesosActionRun
 
+    def test_action_run_from_state_kubernetes(self, state_data):
+        state_data["executor"] = ExecutorTypes.kubernetes.value
+        action_run = ActionRunFactory.action_run_from_state(self.job_run, state_data,)
+
+        assert action_run.job_run_id == state_data["job_run_id"]
+        action_name = state_data["action_name"]
+        assert action_run.command_config == self.action_graph.action_map[action_name].command_config
+
+        assert not action_run.is_cleanup
+        assert action_run.__class__ == KubernetesActionRun
+
 
 class TestActionRun:
     @pytest.fixture(autouse=True)
@@ -1609,6 +1620,8 @@ class TestKubernetesActionRun:
                 secret_env=mock_k8s_action_run.command_config.secret_env,
                 serializer=serializer,
                 volumes=mock_k8s_action_run.command_config.extra_volumes,
+                cap_add=mock_k8s_action_run.command_config.cap_add,
+                cap_drop=mock_k8s_action_run.command_config.cap_drop,
                 task_id=last_attempt.kubernetes_task_id,
             ), mock_get_cluster.return_value.create_task.calls
             task = mock_get_cluster.return_value.create_task.return_value
