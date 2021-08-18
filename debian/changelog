@@ -1,3 +1,12 @@
+tron (1.13.1) xenial; urgency=medium
+
+  * 1.13.1 tagged with 'make release'
+    Commit: Merge pull request #836 from Yelp/jfong/TRON-1658-
+    kubernetesactionrunfromstate  TRON-1658: Fix issue restoring
+    KubernetesActionRuns
+
+ -- root <root@ac0cf0844867>  Wed, 18 Aug 2021 17:28:33 +0000
+
 tron (1.13.0) xenial; urgency=medium
 
   * 1.13.0 tagged with 'make release'
