@@ -147,6 +147,8 @@ ConfigAction = config_object_factory(
         "triggered_by",  # list or None
         "on_upstream_rerun",  # ActionOnRerun or None
         "trigger_timeout",  # datetime.deltatime or None
+        "node_selectors",
+        "node_affinities",
     ],
 )
 
@@ -175,6 +177,8 @@ ConfigCleanupAction = config_object_factory(
         "triggered_by",  # list or None
         "on_upstream_rerun",  # ActionOnRerun or None
         "trigger_timeout",  # datetime.deltatime or None
+        "node_selectors",
+        "node_affinities",
     ],
 )
 
@@ -187,6 +191,10 @@ ConfigVolume = config_object_factory(
 )
 
 ConfigSecretSource = config_object_factory(name="ConfigSecretSource", required=["secret_name", "key"], optional=[],)
+
+ConfigNodeAffinity = config_object_factory(
+    name="ConfigNodeAffinity", required=["key", "operator", "value"], optional=[],
+)
 
 ConfigParameter = config_object_factory(name="ConfigParameter", required=["key", "value",], optional=[],)
 
