@@ -29,6 +29,7 @@ from tron.config.config_parse import valid_output_stream_dir
 from tron.config.config_parse import validate_fragment
 from tron.config.config_utils import NullConfigContext
 from tron.config.schedule_parse import ConfigDailyScheduler
+from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import MASTER_NAMESPACE
 
 BASE_CONFIG = dict(
@@ -227,6 +228,8 @@ def make_master_jobs():
                     secret_env=dict(
                         TEST_SECRET=schema.ConfigSecretSource(secret_name="tron-secret-test-secret--1", key="secret_1")
                     ),
+                    node_selectors={"yelp.com/pool": "default"},
+                    node_affinities=(ConfigNodeAffinity(key="instance_type", operator="In", value=("a1.1xlarge",),),),
                 ),
             },
             cleanup_action=None,
@@ -346,6 +349,8 @@ class ConfigTestCase(TestCase):
                         secret_env=dict(TEST_SECRET=dict(secret_name="tron-secret-test-secret--1", key="secret_1")),
                         cap_add=["KILL"],
                         cap_drop=["CHOWN", "KILL"],
+                        node_selectors={"yelp.com/pool": "default"},
+                        node_affinities=[{"key": "instance_type", "operator": "In", "value": ["a1.1xlarge"]}],
                     ),
                 ],
             ),

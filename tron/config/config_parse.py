@@ -39,6 +39,7 @@ from tron.config.schema import ConfigConstraint
 from tron.config.schema import ConfigJob
 from tron.config.schema import ConfigKubernetes
 from tron.config.schema import ConfigMesos
+from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSSHOptions
@@ -263,6 +264,26 @@ class ValidateSecretSource(Validator):
 valid_secret_source = ValidateSecretSource()
 
 
+def _valid_node_affinity_operator(value: str, config_context: ConfigContext) -> str:
+    valid_operators = {"In", "NotIn", "Exists", "NotExists", "Gt", "Lt"}
+    if value not in valid_operators:
+        raise ConfigError(f"Got {value} as a node affinity operator, expected one of {valid_operators}")
+
+    return value
+
+
+class ValidateNodeAffinity(Validator):
+    config_class = ConfigNodeAffinity
+    validators = {
+        "key": valid_string,
+        "operator": _valid_node_affinity_operator,
+        "value": build_list_of_type_validator(valid_string, allow_empty=True),
+    }
+
+
+valid_node_affinity = ValidateNodeAffinity()
+
+
 class ValidateSSHOptions(Validator):
     """Validate SSH options."""
 
@@ -376,6 +397,18 @@ def valid_mesos_action(action, config_context):
             )
 
 
+def valid_kubernetes_action(action, config_context):
+    required_keys = {"cpus", "mem", "docker_image"}
+    if action.get("executor") == schema.ExecutorTypes.kubernetes.value:
+        missing_keys = required_keys - set(action.keys())
+        if missing_keys:
+            raise ConfigError(
+                "Kubernetes executor for action {id} is missing these required keys: {keys}".format(
+                    id=action["name"], keys=missing_keys,
+                ),
+            )
+
+
 def valid_trigger_downstreams(trigger_downstreams, config_context):
     if isinstance(trigger_downstreams, (type(None), bool, dict)):
         return trigger_downstreams
@@ -409,6 +442,8 @@ class ValidateAction(Validator):
         "triggered_by": None,
         "on_upstream_rerun": None,
         "trigger_timeout": None,
+        "node_selectors": None,
+        "node_affinities": None,
     }
     requires = build_list_of_type_validator(valid_action_name, allow_empty=True,)
     validators = {
@@ -435,10 +470,13 @@ class ValidateAction(Validator):
         "triggered_by": build_list_of_type_validator(valid_string, allow_empty=True),
         "on_upstream_rerun": config_utils.build_real_enum_validator(schema.ActionOnRerun),
         "trigger_timeout": config_utils.valid_time_delta,
+        "node_selectors:": valid_dict,
+        "node_affinities": build_list_of_type_validator(valid_node_affinity, allow_empty=True),
     }
 
     def post_validation(self, action, config_context):
         valid_mesos_action(action, config_context)
+        valid_kubernetes_action(action, config_context)
 
 
 valid_action = ValidateAction()
@@ -474,6 +512,8 @@ class ValidateCleanupAction(Validator):
         "triggered_by": None,
         "on_upstream_rerun": None,
         "trigger_timeout": None,
+        "node_selectors": None,
+        "node_affinities": None,
     }
     validators = {
         "name": valid_cleanup_action_name,
@@ -497,10 +537,13 @@ class ValidateCleanupAction(Validator):
         "triggered_by": build_list_of_type_validator(valid_string, allow_empty=True),
         "on_upstream_rerun": config_utils.build_real_enum_validator(schema.ActionOnRerun),
         "trigger_timeout": config_utils.valid_time_delta,
+        "node_selectors:": valid_dict,
+        "node_affinities": build_list_of_type_validator(valid_node_affinity, allow_empty=True),
     }
 
     def post_validation(self, action, config_context):
         valid_mesos_action(action, config_context)
+        valid_kubernetes_action(action, config_context)
 
 
 valid_cleanup_action = ValidateCleanupAction()
