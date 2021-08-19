@@ -1106,6 +1106,8 @@ class KubernetesActionRun(ActionRun, Observer):
             cap_add=last_attempt.command_config.cap_add,
             cap_drop=last_attempt.command_config.cap_drop,
             task_id=last_attempt.kubernetes_task_id,
+            node_selectors=last_attempt.command_config.node_selectors,
+            node_affinities=last_attempt.command_config.node_affinities,
         )
         if not task:
             log.warning(
