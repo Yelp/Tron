@@ -148,8 +148,19 @@ class ActionRunAttempt:
 
     @classmethod
     def from_state(cls, state_data):
-        state_data["command_config"] = action.ActionCommandConfig(**state_data["command_config"])
-        return cls(**state_data)
+        # it's possible that we've rolled back to an older Tron version that doesn't support data that we've persisted
+        # (e.g., new fields for an ActionCommandConfig) so ensure that we only load what we currently support
+        valid_command_config_entries_from_state = {
+            field.name: state_data["command_config"][field.name]
+            for field in fields(action.ActionCommandConfig)
+            if field.name in state_data["command_config"]
+        }
+        state_data["command_config"] = action.ActionCommandConfig(**valid_command_config_entries_from_state)
+
+        valid_actionrun_attempt_entries_from_state = {
+            field.name: state_data[field.name] for field in fields(cls) if field.name in state_data
+        }
+        return cls(**valid_actionrun_attempt_entries_from_state)
 
 
 class ActionRun(Observable):
