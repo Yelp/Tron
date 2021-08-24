@@ -1,3 +1,14 @@
+tron (1.13.2) xenial; urgency=medium
+
+  * 1.13.2 tagged with 'make release'
+    Commit: Use start and end times from ActionRunAttempts (#839)  It
+    turns out that we reset the start time for an ActionRun on any
+    retries, so let's use the start time from the first attempt and the
+    end time from the last attempt to figure out what timespan to ask
+    for logs from scribereader
+
+ -- root <root@302b18891663>  Tue, 24 Aug 2021 17:55:59 +0000
+
 tron (1.13.1) xenial; urgency=medium
 
   * 1.13.1 tagged with 'make release'
