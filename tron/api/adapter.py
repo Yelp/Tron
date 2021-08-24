@@ -176,8 +176,17 @@ class ActionRunAdapter(RunAdapter):
             return read_log_stream_for_action_run(
                 action_run_id=self._obj.id,
                 component="stdout",
-                min_date=self._obj.start_time,
-                max_date=self._obj.end_time,
+                # we update the start time of an ActionRun on a retry so we can't just use
+                # that start time to figure out when we should start displaying logs for.
+                # instead, we use the first attempt's start time as the date from which to
+                # start getting logs from and the last attempt's end time as the date at
+                # which we stop getting logs from.
+                # in the case of an action that completed on its initial run, there will
+                # only be one attempt, but that's fine as these single attempts will still
+                # have the correct information.
+                # XXX: this is suboptimal if there's many days between retries
+                min_date=self._obj.attempts[0].start_time if self._obj.attempts else None,
+                max_date=self._obj.attempts[-1].end_time if self._obj.attempts else None,
             )
 
         filename = actioncommand.ActionCommand.STDOUT
@@ -195,8 +204,17 @@ class ActionRunAdapter(RunAdapter):
             return read_log_stream_for_action_run(
                 action_run_id=self._obj.id,
                 component="stderr",
-                min_date=self._obj.start_time,
-                max_date=self._obj.end_time,
+                # we update the start time of an ActionRun on a retry so we can't just use
+                # that start time to figure out when we should start displaying logs for.
+                # instead, we use the first attempt's start time as the date from which to
+                # start getting logs from and the last attempt's end time as the date at
+                # which we stop getting logs from.
+                # in the case of an action that completed on its initial run, there will
+                # only be one attempt, but that's fine as these single attempts will still
+                # have the correct information.
+                # XXX: this is suboptimal if there's many days between retries
+                min_date=self._obj.attempts[0].start_time if self._obj.attempts else None,
+                max_date=self._obj.attempts[-1].end_time if self._obj.attempts else None,
             )
 
         filename = actioncommand.ActionCommand.STDERR
