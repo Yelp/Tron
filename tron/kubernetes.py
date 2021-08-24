@@ -17,6 +17,7 @@ from twisted.internet.defer import logError
 import tron.metrics as metrics
 from tron.actioncommand import ActionCommand
 from tron.config.schema import ConfigKubernetes
+from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigVolume
 from tron.serialize.filehandler import OutputStreamSerializer
@@ -349,6 +350,8 @@ class KubernetesCluster:
         volumes: Collection[ConfigVolume],
         cap_add: Collection[str],
         cap_drop: Collection[str],
+        node_selectors: Dict[str, str],
+        node_affinities: ConfigNodeAffinity,
         task_id: Optional[str] = None,
     ) -> Optional[KubernetesTask]:
         """
@@ -379,6 +382,8 @@ class KubernetesCluster:
                     volume._asdict()
                     for volume in combine_volumes(defaults=self.default_volumes or [], overrides=volumes)
                 ],
+                node_selectors=node_selectors,
+                node_affinities=[affinity._asdict() for affinity in node_affinities],
             ),
         )
 

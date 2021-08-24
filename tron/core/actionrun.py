@@ -9,6 +9,7 @@ from typing import Optional
 
 from dataclasses import dataclass
 from dataclasses import fields
+from pyrsistent import InvariantException
 from twisted.internet import reactor
 
 from tron import command_context
@@ -210,6 +211,7 @@ class ActionRun(Observable):
     EXIT_MESOS_DISABLED = -5
     EXIT_KUBERNETES_DISABLED = -6
     EXIT_KUBERNETES_NOT_CONFIGURED = -7
+    EXIT_KUBERNETES_TASK_INVALID = -8
 
     EXIT_REASONS = {
         EXIT_INVALID_COMMAND: "Invalid command",
@@ -219,6 +221,7 @@ class ActionRun(Observable):
         EXIT_MESOS_DISABLED: "Mesos disabled",
         EXIT_KUBERNETES_DISABLED: "Kubernetes disabled",
         EXIT_KUBERNETES_NOT_CONFIGURED: "Kubernetes enabled, but not configured",
+        EXIT_KUBERNETES_TASK_INVALID: "Kubernetes task was not valid",
     }
 
     # This is a list of "alternate locations" that we can look for stdout/stderr in
@@ -1039,20 +1042,28 @@ class KubernetesActionRun(ActionRun, Observer):
             self.fail(self.EXIT_KUBERNETES_NOT_CONFIGURED)
             return None
 
-        task = k8s_cluster.create_task(
-            action_run_id=self.id,
-            command=attempt.rendered_command,
-            cpus=attempt.command_config.cpus,
-            mem=attempt.command_config.mem,
-            disk=attempt.command_config.disk,
-            docker_image=attempt.command_config.docker_image,
-            env=build_environment(original_env=attempt.command_config.env, run_id=self.id),
-            secret_env=attempt.command_config.secret_env,
-            serializer=filehandler.OutputStreamSerializer(self.output_path),
-            volumes=attempt.command_config.extra_volumes,
-            cap_add=attempt.command_config.cap_add,
-            cap_drop=attempt.command_config.cap_drop,
-        )
+        try:
+            task = k8s_cluster.create_task(
+                action_run_id=self.id,
+                command=attempt.rendered_command,
+                cpus=attempt.command_config.cpus,
+                mem=attempt.command_config.mem,
+                disk=attempt.command_config.disk,
+                docker_image=attempt.command_config.docker_image,
+                env=build_environment(original_env=attempt.command_config.env, run_id=self.id),
+                secret_env=attempt.command_config.secret_env,
+                serializer=filehandler.OutputStreamSerializer(self.output_path),
+                volumes=attempt.command_config.extra_volumes,
+                cap_add=attempt.command_config.cap_add,
+                cap_drop=attempt.command_config.cap_drop,
+                node_selectors=attempt.command_config.node_selectors,
+                node_affinities=attempt.command_config.node_affinities,
+            )
+        except InvariantException:
+            log.exception(f"Unable to create task for ActionRun {self.id}")
+            self.fail(self.EXIT_KUBERNETES_TASK_INVALID)
+            return None
+
         if not task:
             # generally, if we didn't get a task back that means that k8s usage is disabled
             self.fail(self.EXIT_KUBERNETES_DISABLED)
@@ -1106,6 +1117,8 @@ class KubernetesActionRun(ActionRun, Observer):
             cap_add=last_attempt.command_config.cap_add,
             cap_drop=last_attempt.command_config.cap_drop,
             task_id=last_attempt.kubernetes_task_id,
+            node_selectors=last_attempt.command_config.node_selectors,
+            node_affinities=last_attempt.command_config.node_affinities,
         )
         if not task:
             log.warning(

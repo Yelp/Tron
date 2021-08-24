@@ -8,6 +8,7 @@ from dataclasses import fields
 
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
+from tron.config.schema import ConfigNodeAffinity
 
 log = logging.getLogger(__name__)
 
@@ -29,6 +30,8 @@ class ActionCommandConfig:
     env: dict = field(default_factory=dict)
     secret_env: dict = field(default_factory=dict)
     extra_volumes: set = field(default_factory=set)
+    node_selectors: dict = field(default_factory=dict)
+    node_affinities: List[ConfigNodeAffinity] = field(default_factory=list)
 
     @property
     def state_data(self):
@@ -79,6 +82,8 @@ class Action:
             secret_env=config.secret_env or {},
             cap_add=config.cap_add or [],
             cap_drop=config.cap_drop or [],
+            node_selectors=config.node_selectors or {},
+            node_affinities=config.node_affinities or [],
         )
         kwargs = dict(
             name=config.name,

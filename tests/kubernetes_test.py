@@ -159,6 +159,8 @@ def test_create_task_disabled():
         volumes=[],
         cap_add=[],
         cap_drop=[],
+        node_selectors={"yelp.com/pool": "default"},
+        node_affinities=[],
     )
 
     assert task is None
@@ -180,6 +182,8 @@ def test_create_task(mock_kubernetes_cluster):
         volumes=[],
         cap_add=[],
         cap_drop=[],
+        node_selectors={"yelp.com/pool": "default"},
+        node_affinities=[],
     )
 
     assert task is not None
@@ -202,6 +206,8 @@ def test_create_task_with_task_id(mock_kubernetes_cluster):
         volumes=[],
         cap_add=[],
         cap_drop=[],
+        node_selectors={"yelp.com/pool": "default"},
+        node_affinities=[],
     )
 
     mock_kubernetes_cluster.runner.TASK_CONFIG_INTERFACE().set_pod_name.assert_called_once_with("yay.1234")
@@ -227,6 +233,8 @@ def test_create_task_with_invalid_task_id(mock_kubernetes_cluster):
             volumes=[],
             cap_add=[],
             cap_drop=[],
+            node_selectors={"yelp.com/pool": "default"},
+            node_affinities=[],
         )
 
     assert task is None
@@ -254,6 +262,8 @@ def test_create_task_with_config(mock_kubernetes_cluster):
         "volumes": [v._asdict() for v in default_volumes + config_volumes],
         "cap_add": ["KILL"],
         "cap_drop": ["KILL", "CHOWN"],
+        "node_selectors": {"yelp.com/pool": "default"},
+        "node_affinities": [],
     }
 
     task = mock_kubernetes_cluster.create_task(
@@ -270,6 +280,8 @@ def test_create_task_with_config(mock_kubernetes_cluster):
         volumes=config_volumes,
         cap_add=["KILL"],
         cap_drop=["KILL", "CHOWN"],
+        node_selectors={"yelp.com/pool": "default"},
+        node_affinities=[],
     )
 
     assert task is not None

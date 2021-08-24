@@ -1623,6 +1623,8 @@ class TestKubernetesActionRun:
                 cap_add=mock_k8s_action_run.command_config.cap_add,
                 cap_drop=mock_k8s_action_run.command_config.cap_drop,
                 task_id=last_attempt.kubernetes_task_id,
+                node_selectors=mock_k8s_action_run.command_config.node_selectors,
+                node_affinities=mock_k8s_action_run.command_config.node_affinities,
             ), mock_get_cluster.return_value.create_task.calls
             task = mock_get_cluster.return_value.create_task.return_value
             mock_get_cluster.return_value.recover.assert_called_once_with(task)
