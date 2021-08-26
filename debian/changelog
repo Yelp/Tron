@@ -1,3 +1,15 @@
+tron (1.14.0) xenial; urgency=medium
+
+  * 1.14.0 tagged with 'make release'
+    Commit: Support node selectors/affinity for k8s tasks (#837)  This
+    additionally adds some error handling when things fail any
+    invariants for a KubernetesTaskConfig - previously, an
+    InvariantException meant that we would never realize that a
+    KubernetesTaskConfig was invalid and that the ActionRun would never
+    work.
+
+ -- root <root@126e6e1cddcf>  Thu, 26 Aug 2021 16:00:51 +0000
+
 tron (1.13.2) xenial; urgency=medium
 
   * 1.13.2 tagged with 'make release'
