@@ -71,6 +71,7 @@ class module.ActionRunHistoryListEntryView extends ClickableListEntry
         <td><%= modules.actionrun.formatExit(exit_status) %></td>
         <td><%= dateFromNow(start_time, "None") %></td>
         <td><%= dateFromNow(end_time, "") %></td>
+        <td><%= duration %></td>
     """
 
     render: ->
