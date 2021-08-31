@@ -32,6 +32,7 @@ class ActionCommandConfig:
     extra_volumes: set = field(default_factory=set)
     node_selectors: dict = field(default_factory=dict)
     node_affinities: List[ConfigNodeAffinity] = field(default_factory=list)
+    labels: dict = field(default_factory=dict)
 
     @property
     def state_data(self):
@@ -84,6 +85,7 @@ class Action:
             cap_drop=config.cap_drop or [],
             node_selectors=config.node_selectors or {},
             node_affinities=config.node_affinities or [],
+            labels=config.labels or {},
         )
         kwargs = dict(
             name=config.name,
