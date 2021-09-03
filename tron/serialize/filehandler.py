@@ -27,6 +27,10 @@ class NullFileHandle:
         pass
 
     @classmethod
+    def flush(cls):
+        pass
+
+    @classmethod
     def close(cls):
         pass
 
@@ -71,6 +75,14 @@ class FileHandleWrapper:
                 self.last_accessed = time.time()
                 self._fh.write(maybe_encode(content))
                 self.manager.update(self)
+
+    def flush(self) -> None:
+        with self._fh_lock:
+            if self._fh is not None:
+                try:
+                    self._fh.flush()
+                except OSError:
+                    log.exception("Failed to flush %s", self.name)
 
     def __enter__(self):
         return self
