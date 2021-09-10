@@ -72,7 +72,11 @@ def get_scribereader_host_and_port() -> Optional[Tuple[str, int]]:
 
 
 def read_log_stream_for_action_run(
-    action_run_id: str, component: str, min_date: Optional[datetime.datetime], max_date: Optional[datetime.datetime],
+    action_run_id: str,
+    component: str,
+    min_date: Optional[datetime.datetime],
+    max_date: Optional[datetime.datetime],
+    paasta_cluster: Optional[str],
 ) -> List[str]:
     if min_date is None:
         return [f"{action_run_id} has not started yet."]
@@ -83,8 +87,12 @@ def read_log_stream_for_action_run(
         return [
             "Unable to determine where Tron is located. If you're seeing this inside Yelp, report this to #compute-infra"
         ]
-
     host, port = get_scribereader_host_and_port()  # type: ignore  # the None case is covered by the check above
+
+    # this should never fail since get_scribereader_host_and_port() will have also called get_superregion() and we've ensured that
+    # that file exists by getting to this point
+    if paasta_cluster is None:
+        paasta_cluster = get_superregion()
 
     today = datetime.date.today()
     start_date = min_date.date()
@@ -127,6 +135,7 @@ def read_log_stream_for_action_run(
                     and payload.get("component") == component
                     and payload.get("message") is not None
                     and payload.get("timestamp") is not None
+                    and payload.get("cluster") == paasta_cluster
                 ):
                     output.append((payload["timestamp"], payload["message"]))
 
@@ -148,15 +157,18 @@ def read_log_stream_for_action_run(
                     and payload.get("component") == component
                     and payload.get("message") is not None
                     and payload.get("timestamp") is not None
+                    and payload.get("cluster") == paasta_cluster
                 ):
                     output.append((payload["timestamp"], payload["message"]))
         except StreamTailerSetupError:
             return [
-                f"No data in stream {stream_name} - if this is the first time this action has run, please wait a minute and refresh."
+                f"No data in stream {stream_name} - if this is the first time this action has run and you expected "
+                "output, please wait a couple minutes and refresh."
             ]
         except socket.timeout:
             return [
-                f"Unable to connect to stream {stream_name} - if this is the first time this action has run, please wait a couple minutes and refresh."
+                f"Unable to connect to stream {stream_name} - if this is the first time this action has run and you "
+                "expected output, please wait a couple minutes and refresh."
             ]
         finally:
             stream.close()

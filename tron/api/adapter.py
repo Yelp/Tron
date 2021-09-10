@@ -173,6 +173,18 @@ class ActionRunAdapter(RunAdapter):
     @toggle_flag("include_stdout")
     def get_stdout(self) -> List[str]:
         if isinstance(self._obj, KubernetesActionRun):
+            # it's possible that we have a job that logs to the samestream as another job on a
+            # different master (e.g., 1 job in pnw-devc and another in norcal-devc), so we
+            # additionally filter by the cluster in each log message.
+            # we get this information from the last attempt for this ActionRun, but
+            # all of the attempts should always have the same value. This value is guaranteed
+            # to be here as it's part of the PaaSTA Contract, but there's also a fallback in
+            # read_log_stream_for_action_run() to use the current superregion for the tron
+            # master should something go horribly wrong
+            paasta_cluster = None
+            if self._obj.attempts:
+                paasta_cluster = self._obj.attempts[-1].command_config.env.get("PAASTA_CLUSTER")
+
             return read_log_stream_for_action_run(
                 action_run_id=self._obj.id,
                 component="stdout",
@@ -187,6 +199,7 @@ class ActionRunAdapter(RunAdapter):
                 # XXX: this is suboptimal if there's many days between retries
                 min_date=self._obj.attempts[0].start_time if self._obj.attempts else None,
                 max_date=self._obj.attempts[-1].end_time if self._obj.attempts else None,
+                paasta_cluster=paasta_cluster,
             )
 
         filename = actioncommand.ActionCommand.STDOUT
@@ -201,6 +214,18 @@ class ActionRunAdapter(RunAdapter):
     @toggle_flag("include_stderr")
     def get_stderr(self) -> List[str]:
         if isinstance(self._obj, KubernetesActionRun):
+            # it's possible that we have a job that logs to the samestream as another job on a
+            # different master (e.g., 1 job in pnw-devc and another in norcal-devc), so we
+            # additionally filter by the cluster in each log message.
+            # we get this information from the last attempt for this ActionRun, but
+            # all of the attempts should always have the same value. This value is guaranteed
+            # to be here as it's part of the PaaSTA Contract, but there's also a fallback in
+            # read_log_stream_for_action_run() to use the current superregion for the tron
+            # master should something go horribly wrong
+            paasta_cluster = None
+            if self._obj.attempts:
+                paasta_cluster = self._obj.attempts[-1].command_config.env.get("PAASTA_CLUSTER")
+
             return read_log_stream_for_action_run(
                 action_run_id=self._obj.id,
                 component="stderr",
@@ -215,6 +240,7 @@ class ActionRunAdapter(RunAdapter):
                 # XXX: this is suboptimal if there's many days between retries
                 min_date=self._obj.attempts[0].start_time if self._obj.attempts else None,
                 max_date=self._obj.attempts[-1].end_time if self._obj.attempts else None,
+                paasta_cluster=paasta_cluster,
             )
 
         filename = actioncommand.ActionCommand.STDERR
