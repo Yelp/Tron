@@ -444,6 +444,7 @@ class ValidateAction(Validator):
         "trigger_timeout": None,
         "node_selectors": None,
         "node_affinities": None,
+        "labels": None,
     }
     requires = build_list_of_type_validator(valid_action_name, allow_empty=True,)
     validators = {
@@ -472,6 +473,7 @@ class ValidateAction(Validator):
         "trigger_timeout": config_utils.valid_time_delta,
         "node_selectors:": valid_dict,
         "node_affinities": build_list_of_type_validator(valid_node_affinity, allow_empty=True),
+        "labels:": valid_dict,
     }
 
     def post_validation(self, action, config_context):
@@ -514,6 +516,7 @@ class ValidateCleanupAction(Validator):
         "trigger_timeout": None,
         "node_selectors": None,
         "node_affinities": None,
+        "labels": None,
     }
     validators = {
         "name": valid_cleanup_action_name,
@@ -539,6 +542,7 @@ class ValidateCleanupAction(Validator):
         "trigger_timeout": config_utils.valid_time_delta,
         "node_selectors:": valid_dict,
         "node_affinities": build_list_of_type_validator(valid_node_affinity, allow_empty=True),
+        "labels": valid_dict,
     }
 
     def post_validation(self, action, config_context):

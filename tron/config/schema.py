@@ -147,8 +147,9 @@ ConfigAction = config_object_factory(
         "triggered_by",  # list or None
         "on_upstream_rerun",  # ActionOnRerun or None
         "trigger_timeout",  # datetime.deltatime or None
-        "node_selectors",
-        "node_affinities",
+        "node_selectors",  # Dict of str, str
+        "node_affinities",  # List of ConfigNodeAffinity
+        "labels",  # Dict of str, str
     ],
 )
 
@@ -177,8 +178,9 @@ ConfigCleanupAction = config_object_factory(
         "triggered_by",  # list or None
         "on_upstream_rerun",  # ActionOnRerun or None
         "trigger_timeout",  # datetime.deltatime or None
-        "node_selectors",
-        "node_affinities",
+        "node_selectors",  # Dict of str, str
+        "node_affinities",  # List of ConfigNodeAffinity
+        "labels",  # Dict of str, str
     ],
 )
 

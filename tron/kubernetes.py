@@ -352,6 +352,7 @@ class KubernetesCluster:
         cap_drop: Collection[str],
         node_selectors: Dict[str, str],
         node_affinities: ConfigNodeAffinity,
+        pod_labels: Dict[str, str],
         task_id: Optional[str] = None,
     ) -> Optional[KubernetesTask]:
         """
@@ -384,6 +385,7 @@ class KubernetesCluster:
                 ],
                 node_selectors=node_selectors,
                 node_affinities=[affinity._asdict() for affinity in node_affinities],
+                labels=pod_labels,
             ),
         )
 
