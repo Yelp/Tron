@@ -1,3 +1,13 @@
+tron (1.14.2) xenial; urgency=medium
+
+  * 1.14.2 tagged with 'make release'
+    Commit: Support passing Pod labels to task_processing (#841)  We'll
+    need this to set labels required by the PaaSTA Workload Contract
+    (which is needed to ensure that internal tooling will work as
+    expected with our Pods)
+
+ -- root <root@f3474d567429>  Fri, 10 Sep 2021 17:32:09 +0000
+
 tron (1.14.1) xenial; urgency=medium
 
   * 1.14.1 tagged with 'make release'
