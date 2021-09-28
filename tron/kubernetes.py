@@ -221,16 +221,20 @@ class KubernetesCluster:
             log.info("Reusing previously created runner.")
             return self.runner
 
-        executor = self.processor.executor_from_config(
-            provider="kubernetes",
-            provider_config={
-                "namespace": "tron",
-                "kubeconfig_path": self.kubeconfig_path,
-                "task_configs": [task.get_config() for task in self.tasks.values()],
-            },
-        )
+        try:
+            executor = self.processor.executor_from_config(
+                provider="kubernetes",
+                provider_config={
+                    "namespace": "tron",
+                    "kubeconfig_path": self.kubeconfig_path,
+                    "task_configs": [task.get_config() for task in self.tasks.values()],
+                },
+            )
 
-        return Subscription(executor, queue)
+            return Subscription(executor, queue)
+        except Exception:
+            log.exception("Unhandled exception while attempting to instantiate k8s task_proc plugin")
+            return None
 
     def handle_next_event(self, _=None) -> None:
         """
