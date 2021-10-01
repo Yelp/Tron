@@ -24,6 +24,6 @@ pyparsing==2.4.2
 pytest==6.2.2
 pytest-asyncio==0.14.0
 requirements-tools==1.2.1
-toml==0.10.0
+toml==0.10.2
 typed-ast==1.4.0
 virtualenv==16.7.5
