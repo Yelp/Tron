@@ -1,3 +1,14 @@
+tron (1.14.3) xenial; urgency=medium
+
+  * 1.14.3 tagged with 'make release'
+    Commit: Upgrade scribereader so that we can read logs in corpdev
+    (#846)  We duplicate the ecosystems that we can point scribereader
+    at in the package and that list was missing corpdev  This causes a
+    KeyError when trying to get the tailer host:port tuple for tron in
+    corpdev
+
+ -- root <root@f3aeb35abc97>  Fri, 01 Oct 2021 19:57:14 +0000
+
 tron (1.14.2) xenial; urgency=medium
 
   * 1.14.2 tagged with 'make release'
