@@ -1,3 +1,11 @@
+tron (1.14.4) xenial; urgency=medium
+
+  * 1.14.4 tagged with 'make release'
+    Commit: Update scribereader to v0.14.1 (#847)  v0.14.0 has a bug
+    that points to the wrong hosts (corpdev uses dev infra, not its own)
+
+ -- root <root@b36588a41db7>  Wed, 06 Oct 2021 19:44:17 +0000
+
 tron (1.14.3) xenial; urgency=medium
 
   * 1.14.3 tagged with 'make release'
