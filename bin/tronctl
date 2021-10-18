@@ -69,7 +69,8 @@ def parse_date(date_string):
 def parse_cli():
     parser = cmd_utils.build_option_parser()
 
-    subparsers = parser.add_subparsers(dest="command", title="commands", help="Tronctl command to run",)
+    subparsers = parser.add_subparsers(dest="command", title="commands", help="Tronctl command to run")
+    subparsers.required = True  # add_subparsers only supports required arg from py37
     cmd_parsers = {}
     for cmd_name, desc in COMMAND_HELP:
         cmd_parsers[cmd_name] = subparsers.add_parser(cmd_name, help=desc, description=desc)
