@@ -1059,6 +1059,7 @@ class KubernetesActionRun(ActionRun, Observer):
                 node_selectors=attempt.command_config.node_selectors,
                 node_affinities=attempt.command_config.node_affinities,
                 pod_labels=attempt.command_config.labels,
+                pod_annotations=attempt.command_config.annotations,
             )
         except InvariantException:
             log.exception(f"Unable to create task for ActionRun {self.id}")
@@ -1121,6 +1122,7 @@ class KubernetesActionRun(ActionRun, Observer):
             node_selectors=last_attempt.command_config.node_selectors,
             node_affinities=last_attempt.command_config.node_affinities,
             pod_labels=last_attempt.command_config.labels,
+            pod_annotations=last_attempt.command_config.annotations,
         )
         if not task:
             log.warning(

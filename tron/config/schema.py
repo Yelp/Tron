@@ -150,6 +150,7 @@ ConfigAction = config_object_factory(
         "node_selectors",  # Dict of str, str
         "node_affinities",  # List of ConfigNodeAffinity
         "labels",  # Dict of str, str
+        "annotations",  # Dict of str, str
     ],
 )
 
@@ -181,6 +182,7 @@ ConfigCleanupAction = config_object_factory(
         "node_selectors",  # Dict of str, str
         "node_affinities",  # List of ConfigNodeAffinity
         "labels",  # Dict of str, str
+        "annotations",  # Dict of str, str
     ],
 )
 
