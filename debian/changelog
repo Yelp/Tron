@@ -1,3 +1,12 @@
+tron (1.14.5) xenial; urgency=medium
+
+  * 1.14.5 tagged with 'make release'
+    Commit: Allow passing Pod annotations to task_processing (#850)
+    We'll need this to toggle certain behaviors (e.g., disable Pods
+    getting routable IPs internally).
+
+ -- root <root@2239f09987e7>  Thu, 28 Oct 2021 18:11:55 +0000
+
 tron (1.14.4) xenial; urgency=medium
 
   * 1.14.4 tagged with 'make release'
