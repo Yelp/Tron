@@ -33,6 +33,7 @@ class ActionCommandConfig:
     node_selectors: dict = field(default_factory=dict)
     node_affinities: List[ConfigNodeAffinity] = field(default_factory=list)
     labels: dict = field(default_factory=dict)
+    annotations: dict = field(default_factory=dict)
 
     @property
     def state_data(self):
@@ -86,6 +87,7 @@ class Action:
             node_selectors=config.node_selectors or {},
             node_affinities=config.node_affinities or [],
             labels=config.labels or {},
+            annotations=config.annotations or {},
         )
         kwargs = dict(
             name=config.name,
