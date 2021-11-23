@@ -25,6 +25,7 @@ RUN apt-get -q update && \
     && apt-get -q clean
 
 ARG PIP_INDEX_URL
+ARG NPM_CONFIG_REGISTRY
 ENV PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.python.org/simple}
 ENV NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-https://npm.yelpcorp.com}
 

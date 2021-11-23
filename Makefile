@@ -77,7 +77,7 @@ tox_%:
 	tox -e $*
 
 _itest_%:
-	$(DOCKER_RUN) ubuntu:$* /work/itest.sh
+	$(DOCKER_RUN) -e NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY} ubuntu:$* /work/itest.sh
 
 debitest_%: deb_% _itest_%
 	@echo "Package for $* looks good"
