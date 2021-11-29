@@ -5,9 +5,11 @@ GID:=$(shell id -g)
 
 ifeq ($(findstring .yelpcorp.com,$(shell hostname -f)), .yelpcorp.com)
 	export PIP_INDEX_URL ?= https://pypi.yelpcorp.com/simple
+	export NPM_CONFIG_REGISTRY ?= https://npm.yelpcorp.com/
 	PAASTA_ENV ?= YELP
 else
 	export PIP_INDEX_URL ?= https://pypi.python.org/simple
+	export NPM_CONFIG_REGISTRY ?= https://registry.npmjs.org
 	PAASTA_ENV ?= $(shell hostname --fqdn)
 endif
 
@@ -32,7 +34,7 @@ endif
 docker_%:
 	@echo "Building docker image for $*"
 	[ -d dist ] || mkdir -p dist
-	cd ./yelp_package/$* && docker build --build-arg PIP_INDEX_URL=${PIP_INDEX_URL} -t tron-builder-$* .
+	cd ./yelp_package/$* && docker build --build-arg PIP_INDEX_URL=${PIP_INDEX_URL} --build-arg NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY} -t tron-builder-$* .
 
 deb_%: clean docker_% coffee_% react_%
 	@echo "Building deb for $*"
@@ -60,8 +62,8 @@ coffee_%: docker_%
 react_%: docker_%
 	@echo "Building tronweb2"
 	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '       \
-		yarn --cwd tronweb2 &&                         \
-		yarn --cwd tronweb2 build &&                   \
+		YARN_REGISTRY=${NPM_CONFIG_REGISTRY} yarn --cwd tronweb2 &&                         \
+		YARN_REGISTRY=${NPM_CONFIG_REGISTRY} yarn --cwd tronweb2 build &&                   \
 		chown -R $(UID):$(GID) tronweb2/build/ tronweb2/node_modules         \
 	'
 
@@ -75,7 +77,7 @@ tox_%:
 	tox -e $*
 
 _itest_%:
-	$(DOCKER_RUN) ubuntu:$* /work/itest.sh
+	$(DOCKER_RUN) -e NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY} ubuntu:$* /work/itest.sh
 
 debitest_%: deb_% _itest_%
 	@echo "Package for $* looks good"
