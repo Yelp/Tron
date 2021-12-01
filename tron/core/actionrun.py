@@ -1060,6 +1060,7 @@ class KubernetesActionRun(ActionRun, Observer):
                 node_affinities=attempt.command_config.node_affinities,
                 pod_labels=attempt.command_config.labels,
                 pod_annotations=attempt.command_config.annotations,
+                service_account_name=attempt.command_config.service_account_name,
             )
         except InvariantException:
             log.exception(f"Unable to create task for ActionRun {self.id}")
