@@ -1,3 +1,15 @@
+tron (1.15.0) xenial; urgency=medium
+
+  * 1.15.0 tagged with 'make release'
+    Commit: Add Service Account support for k8s jobs (#852)  We'll use
+    this for Pod Identity - there's a webhook that will inject a secret
+    token + some environment variables if a Pod has a Service Account
+    set up.  paasta-tools will be in charge of creating the Service
+    Account that we'll use if it doesn't exist (as well as setting up
+    the annotations on that Service Account).
+
+ -- root <root@6959115743ac>  Fri, 03 Dec 2021 20:41:48 +0000
+
 tron (1.14.5) xenial; urgency=medium
 
   * 1.14.5 tagged with 'make release'
