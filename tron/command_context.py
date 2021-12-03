@@ -138,19 +138,22 @@ class JobRunContext:
         """
         This function attempts to parse any command context variable expressions
         that use shortdate or runid in the following order:
-        1) Attempt to parse date arithmetic syntax and apply to run_time if shortdate
-           is part of the expression
+        1) Attempt to parse date arithmetic syntax and apply to run_time unconditionally
+           and, if unsuccessful falls to the next case
         2) Attempts to parse a delta to apply to the current job runid - this is mostly
            meant to be used for jobs that rely on the output of the previous run, but
            this is not enforced in case someone can dream up another scenario where they
            want to do arbitrary deltas here.
         """
-        if "shortdate" in name:
-            run_time = self.job_run.run_time
-            time_value = timeutils.DateArithmetic.parse(name, run_time)
-            if time_value:
-                return time_value
-        if name == "runid":
+        run_time = self.job_run.run_time
+        time_value = timeutils.DateArithmetic.parse(name, run_time)
+        if time_value:
+            return time_value
+
+        # this is a little weird, but enumerating the cases that should be parsed by timeutils is hard,
+        # so we just unconditionally attempt to parse the name and then fallback to the runid special cases
+        # rather than attempt to enumerate the timeutils cases
+        elif name == "runid":
             # we could expand the logic below to handle this with the regex, but that
             # would make the code a little more complex for not much gain
             return self.runid
