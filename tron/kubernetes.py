@@ -358,6 +358,7 @@ class KubernetesCluster:
         node_affinities: ConfigNodeAffinity,
         pod_labels: Dict[str, str],
         pod_annotations: Dict[str, str],
+        service_account_name: Optional[str],
         task_id: Optional[str] = None,
     ) -> Optional[KubernetesTask]:
         """
@@ -392,6 +393,7 @@ class KubernetesCluster:
                 node_affinities=[affinity._asdict() for affinity in node_affinities],
                 labels=pod_labels,
                 annotations=pod_annotations,
+                service_account_name=service_account_name,
             ),
         )
 

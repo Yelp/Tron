@@ -1,6 +1,7 @@
 import datetime
 import logging
 from typing import List
+from typing import Optional
 
 from dataclasses import dataclass
 from dataclasses import field
@@ -34,6 +35,7 @@ class ActionCommandConfig:
     node_affinities: List[ConfigNodeAffinity] = field(default_factory=list)
     labels: dict = field(default_factory=dict)
     annotations: dict = field(default_factory=dict)
+    service_account_name: Optional[str] = None
 
     @property
     def state_data(self):
@@ -88,6 +90,7 @@ class Action:
             node_affinities=config.node_affinities or [],
             labels=config.labels or {},
             annotations=config.annotations or {},
+            service_account_name=config.service_account_name or None,
         )
         kwargs = dict(
             name=config.name,

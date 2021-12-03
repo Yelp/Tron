@@ -446,6 +446,7 @@ class ValidateAction(Validator):
         "node_affinities": None,
         "labels": None,
         "annotations": None,
+        "service_account_name": None,
     }
     requires = build_list_of_type_validator(valid_action_name, allow_empty=True,)
     validators = {
@@ -476,6 +477,7 @@ class ValidateAction(Validator):
         "node_affinities": build_list_of_type_validator(valid_node_affinity, allow_empty=True),
         "labels:": valid_dict,
         "annotations": valid_dict,
+        "service_account_name": valid_string,
     }
 
     def post_validation(self, action, config_context):
@@ -520,6 +522,7 @@ class ValidateCleanupAction(Validator):
         "node_affinities": None,
         "labels": None,
         "annotations": None,
+        "service_account_name": None,
     }
     validators = {
         "name": valid_cleanup_action_name,
@@ -547,6 +550,7 @@ class ValidateCleanupAction(Validator):
         "node_affinities": build_list_of_type_validator(valid_node_affinity, allow_empty=True),
         "labels": valid_dict,
         "annotations": valid_dict,
+        "service_account_name": valid_string,
     }
 
     def post_validation(self, action, config_context):
