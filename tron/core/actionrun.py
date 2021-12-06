@@ -1124,6 +1124,7 @@ class KubernetesActionRun(ActionRun, Observer):
             node_affinities=last_attempt.command_config.node_affinities,
             pod_labels=last_attempt.command_config.labels,
             pod_annotations=last_attempt.command_config.annotations,
+            service_account_name=last_attempt.command_config.service_account_name,
         )
         if not task:
             log.warning(
