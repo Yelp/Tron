@@ -1627,6 +1627,7 @@ class TestKubernetesActionRun:
                 node_affinities=mock_k8s_action_run.command_config.node_affinities,
                 pod_labels=mock_k8s_action_run.command_config.labels,
                 pod_annotations=mock_k8s_action_run.command_config.annotations,
+                service_account_name=mock_k8s_action_run.command_config.service_account_name,
             ), mock_get_cluster.return_value.create_task.calls
             task = mock_get_cluster.return_value.create_task.return_value
             mock_get_cluster.return_value.recover.assert_called_once_with(task)
