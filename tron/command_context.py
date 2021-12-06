@@ -2,6 +2,7 @@
 have variables that need to be rendered.
 """
 import operator
+import re
 from functools import reduce
 
 from tron.utils import timeutils
@@ -134,11 +135,44 @@ class JobRunContext:
         return "UNKNOWN"
 
     def __getitem__(self, name):
-        """Attempt to parse date arithmetic syntax and apply to run_time."""
+        """
+        This function attempts to parse any command context variable expressions
+        that use shortdate or runid in the following order:
+        1) Attempt to parse date arithmetic syntax and apply to run_time unconditionally
+           and, if unsuccessful falls to the next case
+        2) Attempts to parse a delta to apply to the current job runid - this is mostly
+           meant to be used for jobs that rely on the output of the previous run, but
+           this is not enforced in case someone can dream up another scenario where they
+           want to do arbitrary deltas here.
+        """
         run_time = self.job_run.run_time
         time_value = timeutils.DateArithmetic.parse(name, run_time)
         if time_value:
             return time_value
+
+        # this is a little weird, but enumerating the cases that should be parsed by timeutils is hard,
+        # so we just unconditionally attempt to parse the name and then fallback to the runid special cases
+        # rather than attempt to enumerate the timeutils cases
+        elif name == "runid":
+            # we could expand the logic below to handle this with the regex, but that
+            # would make the code a little more complex for not much gain
+            return self.runid
+        elif "runid" in name:
+            # we're really only expecting runid-1 for now but, as described in the docstring,
+            # we're allowing arbitrary addition/subtration in case someone dreams up a use for
+            # them
+            match = re.match(r"^runid([+-]\d+)$", name)
+            if match:
+                # self.runid here will be the job runid (e.g., NAMESPACE.SERVICE.RUN_NUMBER) - it will not
+                # include an action name.
+                # that said - all we need math-wise here is the run number, so we split on . and store the job name
+                # so that we can re-consistitute the runid after doing math on the run number
+                job_name, run_num = self.runid.rsplit(".", maxsplit=1)
+                # NOTE: this will potentially return a runid for a job that will never exist - e.g., if you setup an
+                # action that should only run after the previous jobrun's action has run for a job that has never run
+                # before) - normally this will only be a problem for the very first run and users can easily tronctl start
+                # the action to bootstrap things so we don't do any checking to see if the returned runid is valid
+                return f"{job_name}.{int(run_num) + int(match.groups()[0])}"
 
         raise KeyError(name)
 
