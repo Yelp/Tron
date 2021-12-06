@@ -1,3 +1,16 @@
+tron (1.16.0) xenial; urgency=medium
+
+  * 1.16.0 tagged with 'make release'
+    Commit: Allow users to use runid for triggers (#853)  Some users
+    have jobs whose output depends on the output of the previous run -
+    for critical jobs, it's useful to explicitly declare this dependency
+    so that these jobs never run unless Tron knows that the previous
+    output is ready/complete (using successful completion as a proxy for
+    this)  For additional context:
+    https://yelp.slack.com/archives/CA4K8PBLG/p1638402768180500
+
+ -- root <root@81bd90063f15>  Mon, 06 Dec 2021 19:06:11 +0000
+
 tron (1.15.0) xenial; urgency=medium
 
   * 1.15.0 tagged with 'make release'
