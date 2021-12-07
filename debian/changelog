@@ -1,3 +1,12 @@
+tron (1.16.1) xenial; urgency=medium
+
+  * 1.16.1 tagged with 'make release'
+    Commit: Silence yelp_clog.StreamTailer logs + k8s event guard (#855)
+    This should cleanup any non-fatal exceptions that we see in Tron
+    logs.
+
+ -- root <root@87fe59aafb66>  Tue, 07 Dec 2021 19:39:33 +0000
+
 tron (1.16.0) xenial; urgency=medium
 
   * 1.16.0 tagged with 'make release'
