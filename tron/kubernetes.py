@@ -104,7 +104,10 @@ class KubernetesTask(ActionCommand):
         Helper to log nice-to-have information (may fail).
         """
         k8s_type = getattr(event, "platform_type", None)
-        if k8s_type == "running":
+        # when Tron restarts, we'll get a number of events with an unfilled raw attribute
+        # these are safe to skip since we'll already have printed out the hostname of the
+        # box running the task corresponding to this event
+        if k8s_type == "running" and event.raw:
             hostname = event.raw.get("spec", {}).get("nodeName", "UNKNOWN")
             self.log.info(f"Running on hostname: {hostname}")
 
