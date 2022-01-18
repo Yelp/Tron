@@ -24,9 +24,9 @@ endif
 
 -usage:
 	@echo "make test - Run tests"
-	@echo "make deb_xenial - Generate xenial deb package"
-	@echo "make itest_xenial - Run tests and integration checks"
-	@echo "make _itest_xenial - Run only integration checks"
+	@echo "make deb_bionic - Generate bionic deb package"
+	@echo "make itest_bionic - Run tests and integration checks"
+	@echo "make _itest_bionic - Run only integration checks"
 	@echo "make release - Prepare debian info for new release"
 	@echo "make clean - Get rid of scratch and byte files"
 	@echo "make dev - Get a local copy of trond running in debug mode in the foreground"
@@ -98,9 +98,9 @@ yelpy:
 	.tox/py36/bin/pip-custom-platform install -i https://pypi.yelpcorp.com/simple -r yelp_package/extra_requirements_yelp.txt
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/[\x27\x22]/\\\x27/g')
-release: docker_xenial docs
-	$(DOCKER_RUN) tron-builder-xenial /bin/bash -c " \
-		dch -v $(VERSION) --distribution xenial --changelog debian/changelog \
+release: docker_bionic docs
+	$(DOCKER_RUN) tron-builder-bionic /bin/bash -c " \
+		dch -v $(VERSION) --distribution bionic --changelog debian/changelog \
 			$$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)' && \
 		chown $(UID):$(GID) debian/changelog \
 	"

@@ -4,7 +4,7 @@ services:
   playground:
     build:
       context: ../
-      dockerfile: yelp_package/xenial/Dockerfile
+      dockerfile: yelp_package/bionic/Dockerfile
     volumes:
       - ../:/work
       - ./:/nail/tron
@@ -14,7 +14,7 @@ services:
   master:
     build:
       context: .
-      dockerfile: ubuntu:xenial
+      dockerfile: ubuntu:bionic
     links:
       - batch1
   batch1:
