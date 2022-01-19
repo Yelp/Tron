@@ -1,4 +1,4 @@
-FROM ubuntu:xenial-20180123
+FROM ubuntu:bionic
 
 # Need Python 3.6
 RUN apt-get -q update && \

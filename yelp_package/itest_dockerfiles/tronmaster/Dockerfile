@@ -1,1 +1,1 @@
-../../xenial/Dockerfile
+../../bionic/Dockerfile
