@@ -1,3 +1,11 @@
+tron (1.16.2) bionic; urgency=medium
+
+  * 1.16.2 tagged with 'make release'
+    Commit: Merge pull request #861 from Yelp/u/kawaiwan/always-restart-
+    trond  Always restart trond if it goes down
+
+ -- root <root@1f8824f30d27>  Thu, 03 Feb 2022 19:20:28 +0000
+
 tron (1.16.1) xenial; urgency=medium
 
   * 1.16.1 tagged with 'make release'
