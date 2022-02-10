@@ -200,6 +200,7 @@ class ActionRunAdapter(RunAdapter):
                 min_date=self._obj.attempts[0].start_time if self._obj.attempts else None,
                 max_date=self._obj.attempts[-1].end_time if self._obj.attempts else None,
                 paasta_cluster=paasta_cluster,
+                max_lines=self.max_lines,
             )
 
         filename = actioncommand.ActionCommand.STDOUT
@@ -241,6 +242,7 @@ class ActionRunAdapter(RunAdapter):
                 min_date=self._obj.attempts[0].start_time if self._obj.attempts else None,
                 max_date=self._obj.attempts[-1].end_time if self._obj.attempts else None,
                 paasta_cluster=paasta_cluster,
+                max_lines=self.max_lines,
             )
 
         filename = actioncommand.ActionCommand.STDERR

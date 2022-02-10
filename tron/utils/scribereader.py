@@ -77,6 +77,7 @@ def read_log_stream_for_action_run(
     min_date: Optional[datetime.datetime],
     max_date: Optional[datetime.datetime],
     paasta_cluster: Optional[str],
+    max_lines: Optional[int] = None,
 ) -> List[str]:
     if min_date is None:
         return [f"{action_run_id} has not started yet."]
@@ -113,6 +114,7 @@ def read_log_stream_for_action_run(
     output: List[Tuple[str, str]] = []
 
     malformed_lines = 0
+    lines = 0
 
     # We'll only use a stream reader for logs from not-today.
     # that said, it's possible that an action spans more than a single day - in this case, we'll first read "historical" data from
@@ -123,6 +125,9 @@ def read_log_stream_for_action_run(
             stream_name=stream_name, min_date=min_date, max_date=max_date, reader_host=host, reader_port=port,
         ) as stream:
             for line in stream:
+                if max_lines is not None and lines == max_lines:
+                    break
+
                 try:
                     payload = json.loads(line)
                 except json.decoder.JSONDecodeError:
@@ -138,6 +143,7 @@ def read_log_stream_for_action_run(
                     and payload.get("cluster") == paasta_cluster
                 ):
                     output.append((payload["timestamp"], payload["message"]))
+                    lines += 1
 
     if use_tailer:
         stream = scribereader.get_stream_tailer(
@@ -145,6 +151,9 @@ def read_log_stream_for_action_run(
         )
         try:
             for line in stream:
+                if lines == max_lines:
+                    break
+
                 try:
                     payload = json.loads(line)
                 except json.decoder.JSONDecodeError:
@@ -160,6 +169,7 @@ def read_log_stream_for_action_run(
                     and payload.get("cluster") == paasta_cluster
                 ):
                     output.append((payload["timestamp"], payload["message"]))
+                    lines += 1
         except StreamTailerSetupError:
             return [
                 f"No data in stream {stream_name} - if this is the first time this action has run and you expected "
