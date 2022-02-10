@@ -1,3 +1,23 @@
+tron (1.16.3) bionic; urgency=medium
+
+  * 1.16.3 tagged with 'make release'
+    Commit: Respect ActionRunAdapter max_lines param (#862)  Callers can
+    request a specific number of lines for logs - before this change we
+    were ignoring that (except for the k8s metadata logs) and always
+    returning all the data available.
+
+ -- root <root@0d7972f57edb>  Thu, 10 Feb 2022 22:45:16 +0000
+
+tron (1.16.3) bionic; urgency=medium
+
+  * 1.16.3 tagged with 'make release'
+    Commit: Respect ActionRunAdapter max_lines param (#862)  Callers can
+    request a specific number of lines for logs - before this change we
+    were ignoring that (except for the k8s metadata logs) and always
+    returning all the data available.
+
+ -- root <root@9dc0edf8a8df>  Thu, 10 Feb 2022 19:46:18 +0000
+
 tron (1.16.2) bionic; urgency=medium
 
   * 1.16.2 tagged with 'make release'
