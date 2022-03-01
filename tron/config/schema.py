@@ -152,6 +152,7 @@ ConfigAction = config_object_factory(
         "labels",  # Dict of str, str
         "annotations",  # Dict of str, str
         "service_account_name",  # str
+        "spark_driver_service_account_name",  # str
     ],
 )
 
@@ -185,6 +186,7 @@ ConfigCleanupAction = config_object_factory(
         "labels",  # Dict of str, str
         "annotations",  # Dict of str, str
         "service_account_name",  # str
+        "spark_driver_service_account_name",  # str
     ],
 )
 
