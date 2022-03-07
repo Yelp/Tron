@@ -152,6 +152,7 @@ ConfigAction = config_object_factory(
         "labels",  # Dict of str, str
         "annotations",  # Dict of str, str
         "service_account_name",  # str
+        "spark_driver_service_account_name",  # str
     ],
 )
 
@@ -185,6 +186,7 @@ ConfigCleanupAction = config_object_factory(
         "labels",  # Dict of str, str
         "annotations",  # Dict of str, str
         "service_account_name",  # str
+        "spark_driver_service_account_name",  # str
     ],
 )
 
@@ -206,7 +208,7 @@ ConfigParameter = config_object_factory(name="ConfigParameter", required=["key",
 
 StatePersistenceTypes = Enum("StatePersistenceTypes", dict(shelve="shelve", yaml="yaml", dynamodb="dynamodb"),)
 
-ExecutorTypes = Enum("ExecutorTypes", dict(ssh="ssh", mesos="mesos", kubernetes="kubernetes"))
+ExecutorTypes = Enum("ExecutorTypes", dict(ssh="ssh", mesos="mesos", kubernetes="kubernetes", spark="spark"))
 
 ActionRunnerTypes = Enum("ActionRunnerTypes", dict(none="none", subprocess="subprocess"))
 
