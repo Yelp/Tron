@@ -1,3 +1,13 @@
+tron (1.17.0) bionic; urgency=medium
+
+  * 1.17.0 tagged with 'make release'
+    Commit: Bump pysensu-yelp to pull in issuetype support (#864)
+    https://github.com/Yelp/pysensu-yelp/pull/30 was released in pysensu-
+    yelp==0.4.4 and allows users to set the issuetype for a ticket (so
+    that sensu-created tickets aren't always of type  (the default))
+
+ -- root <root@cef92af84f05>  Thu, 10 Mar 2022 18:47:54 +0000
+
 tron (1.16.3) bionic; urgency=medium
 
   * 1.16.3 tagged with 'make release'
