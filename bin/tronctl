@@ -34,6 +34,8 @@ from tron.commands.client import RequestError
 from tron.commands.cmd_utils import ExitCode
 from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
+from tron.commands.retry import parse_deps_timeout
+from tron.commands.retry import retry_action
 
 COMMAND_HELP = (
     ("start", "Start the selected job, job run, or action. Creates a new job run if starting a job.",),
@@ -153,11 +155,27 @@ def parse_cli():
     )
 
     # retry
-    cmd_parsers["retry"].add_argument(
+    retry_parser = cmd_parsers["retry"]
+    retry_parser.add_argument(
         "--use-latest-command",
         action="store_true",
         default=False,
         help="Use the latest command in tronfig rather than the original command when the action run was created",
+    )
+    retry_parser.add_argument(
+        "--wait-for-deps",
+        type=parse_deps_timeout,
+        default=0,
+        dest="deps_timeout",
+        help=(
+            "Max duration to wait for upstream dependencies (upstream triggers "
+            "and/or same job actions) before attempting to retry. "
+            "If all dependencies are not done and a non-zero timeout expires, "
+            "this command will exit with an error, and the action will NOT be retried. "
+            "Must be either an int number of seconds, a human-readable/"
+            "pytimeparse-parsable string, or 'infinity' to wait forever. "
+            "Defaults to 0 (don't wait), which will not check dependencies."
+        ),
     )
 
     argcomplete.autocomplete(parser)
@@ -257,7 +275,13 @@ def control_objects(args: argparse.Namespace):
             if args.command == "start" and args.run_date:
                 data["run_time"] = str(args.run_date)
             if args.command == "retry":
-                data["use_latest_command"] = int(args.use_latest_command)
+                yield retry_action(
+                    tron_client,
+                    identifier,
+                    use_latest_command=args.use_latest_command,
+                    deps_timeout_s=args.deps_timeout,
+                )
+                return
             yield request(urljoin(args.server, tron_id.url), data)
 
 
