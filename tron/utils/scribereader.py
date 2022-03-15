@@ -2,7 +2,9 @@ import datetime
 import json
 import logging
 import operator
+import shutil
 import socket
+import subprocess
 from functools import lru_cache
 from typing import List
 from typing import Optional
@@ -71,6 +73,77 @@ def get_scribereader_host_and_port() -> Optional[Tuple[str, int]]:
     return host, port
 
 
+def _(
+    action_run_id: str,
+    component: str,
+    min_date: Optional[datetime.datetime],
+    max_date: Optional[datetime.datetime],
+    paasta_cluster: Optional[str],
+    max_lines: Optional[int] = None,
+):
+    if min_date is None:
+        return [f"{action_run_id} has not started yet."]
+
+    if shutil.which("scribereader") is None:
+        return ["Scribereader (an internal Yelp package) is not available - unable to display logs."]
+
+    try:
+        ecosystem = get_ecosystem()
+        superregion = get_superregion()
+    except OSError:
+        return [
+            "Unable to determine where Tron is located. If you're seeing this inside Yelp, report this to #compute-infra"
+        ]
+
+    selector = f"--superregion={superregion}" if ecosystem == "prod" else f"--ecosystem={ecosystem}"
+    scribereader_args = [
+        "scribereader",
+        selector,
+        f"--min-date={min_date.date()}",
+    ]
+
+    end_date = max_date.date() if max_date else None
+    if end_date:
+        scribereader_args.append(f"--max-date={end_date}")
+
+    namespace, job_name, run_num, action = action_run_id.split(".")
+    # in our logging infra, things are logged to per-instance streams - but
+    # since Tron PaaSTA instances are of the form `job_name.action`, we need
+    # to escape the period since some parts of our infra will reject streams
+    # containing them - thus, the "weird" __ separator
+    stream_name = f"stream_paasta_app_output_{namespace}_{job_name}__{action}"
+    scribereader_args.append(stream_name)
+
+    try:
+        scribereader_process = subprocess.run(scribereader_args, stdout=subprocess.PIPE, check=True, encoding="utf-8")
+    except subprocess.CalledProcessError as e:
+        return [f"Unable to get logs from scribereader: {e}"]
+
+    lines_filter = "[-{max_lines}:]" if max_lines else ""
+    if paasta_cluster is None:
+        paasta_cluster = get_superregion()
+
+    jq_args = [
+        "jq",
+        # it's much easier to process things if we have the contents as a list of objects rather
+        # than as a stream of objects
+        "--slurp",
+        f'[ .[] | select( \
+            .tron_run_number=={run_num} \
+            and .component == "{component}" \
+            and .cluster == "{paasta_cluster}" \
+         ) | .message]{lines_filter}',
+    ]
+    try:
+        output_lines = subprocess.run(
+            jq_args, stdout=subprocess.PIPE, input=scribereader_process.stdout, check=True, encoding="utf-8",
+        )
+    except subprocess.CalledProcessError as e:
+        return [f"Unable to filter logs from scribereader: {e}"]
+
+    return json.loads(output_lines.stdout)
+
+
 def read_log_stream_for_action_run(
     action_run_id: str,
     component: str,
@@ -79,113 +152,11 @@ def read_log_stream_for_action_run(
     paasta_cluster: Optional[str],
     max_lines: Optional[int] = None,
 ) -> List[str]:
-    if min_date is None:
-        return [f"{action_run_id} has not started yet."]
-
-    if scribereader is None:
-        return ["Scribereader (an internal Yelp package) is not available - unable to display logs."]
-    if get_scribereader_host_and_port() is None:
-        return [
-            "Unable to determine where Tron is located. If you're seeing this inside Yelp, report this to #compute-infra"
-        ]
-    host, port = get_scribereader_host_and_port()  # type: ignore  # the None case is covered by the check above
-
-    # this should never fail since get_scribereader_host_and_port() will have also called get_superregion() and we've ensured that
-    # that file exists by getting to this point
-    if paasta_cluster is None:
-        paasta_cluster = get_superregion()
-
-    today = datetime.date.today()
-    start_date = min_date.date()
-    end_date = max_date.date() if max_date else None
-
-    use_tailer = today in {start_date, end_date}
-    use_reader = start_date != today and end_date is not None
-
-    if end_date is not None and end_date == today:
-        end_date -= datetime.timedelta(days=1)
-
-    namespace, job_name, run_num, action = action_run_id.split(".")
-    # in our logging infra, things are logged to per-instance streams - but
-    # since Tron PaaSTA instances are of the form `job_name.action`, we need
-    # to escape the period since some parts of our infra will reject streams
-    # containing them - thus, the "weird" __ separator
-    stream_name = f"stream_paasta_app_output_{namespace}_{job_name}__{action}"
-    output: List[Tuple[str, str]] = []
-
-    malformed_lines = 0
-    lines = 0
-
-    # We'll only use a stream reader for logs from not-today.
-    # that said, it's possible that an action spans more than a single day - in this case, we'll first read "historical" data from
-    # the reader and then follow-up with today's logs from a stream tailer.
-    # NOTE: this is more-or-less what our internal `scribereader` binary does
-    if use_reader:
-        with scribereader.get_stream_reader(
-            stream_name=stream_name, min_date=min_date, max_date=max_date, reader_host=host, reader_port=port,
-        ) as stream:
-            for line in stream:
-                if max_lines is not None and lines == max_lines:
-                    break
-
-                try:
-                    payload = json.loads(line)
-                except json.decoder.JSONDecodeError:
-                    log.error(f"Unable to decode log line from stream ({stream_name}) for {action_run_id}: {line}")
-                    malformed_lines += 1
-                    continue
-
-                if (
-                    payload.get("tron_run_number") == int(run_num)
-                    and payload.get("component") == component
-                    and payload.get("message") is not None
-                    and payload.get("timestamp") is not None
-                    and payload.get("cluster") == paasta_cluster
-                ):
-                    output.append((payload["timestamp"], payload["message"]))
-                    lines += 1
-
-    if use_tailer:
-        stream = scribereader.get_stream_tailer(
-            stream_name=stream_name, tailing_host=host, tailing_port=port, lines=-1,
-        )
-        try:
-            for line in stream:
-                if lines == max_lines:
-                    break
-
-                try:
-                    payload = json.loads(line)
-                except json.decoder.JSONDecodeError:
-                    log.error(f"Unable to decode log line from stream ({stream_name}) for {action_run_id}: {line}")
-                    malformed_lines += 1
-                    continue
-
-                if (
-                    payload.get("tron_run_number") == int(run_num)
-                    and payload.get("component") == component
-                    and payload.get("message") is not None
-                    and payload.get("timestamp") is not None
-                    and payload.get("cluster") == paasta_cluster
-                ):
-                    output.append((payload["timestamp"], payload["message"]))
-                    lines += 1
-        except StreamTailerSetupError:
-            return [
-                f"No data in stream {stream_name} - if this is the first time this action has run and you expected "
-                "output, please wait a couple minutes and refresh."
-            ]
-        except socket.timeout:
-            return [
-                f"Unable to connect to stream {stream_name} - if this is the first time this action has run and you "
-                "expected output, please wait a couple minutes and refresh."
-            ]
-        finally:
-            stream.close()
-
-    # XXX: for some reason, we're occasionally getting data out of order from scribereader - so we'll sort based on
-    # timestamp until we can figure out what's causing this.
-    output.sort(key=operator.itemgetter(0))
-    return [line for _, line in output] + (
-        [f"{malformed_lines} encountered while retrieving logs"] if malformed_lines else []
+    return _(
+        action_run_id=action_run_id,
+        component=component,
+        min_date=min_date,
+        max_date=max_date,
+        paasta_cluster=paasta_cluster,
+        max_lines=max_lines,
     )
