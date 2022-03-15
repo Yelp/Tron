@@ -1,6 +1,8 @@
 import logging
 from collections import namedtuple
+from typing import Mapping
 
+from tron.core.action import Action
 from tron.utils.timeutils import delta_total_seconds
 
 log = logging.getLogger(__name__)
@@ -10,7 +12,7 @@ Trigger = namedtuple("Trigger", ["name", "command"])
 class ActionGraph:
     """A directed graph of actions and their requirements for a specific job."""
 
-    def __init__(self, action_map, required_actions, required_triggers):
+    def __init__(self, action_map: Mapping[str, Action], required_actions, required_triggers):
         self.action_map = action_map
         self.required_actions = required_actions
         self.required_triggers = required_triggers

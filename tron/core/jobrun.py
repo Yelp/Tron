@@ -5,10 +5,12 @@ import json
 import logging
 import time
 from collections import deque
+from typing import Optional
 
 import tron.metrics as metrics
 from tron import command_context
 from tron import node
+from tron.core.actiongraph import ActionGraph
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunFactory
 from tron.serialize import filehandler
@@ -53,7 +55,7 @@ class JobRun(Observable, Observer):
         output_path=None,
         base_context=None,
         action_runs=None,
-        action_graph=None,
+        action_graph: Optional[ActionGraph] = None,
         manual=None,
     ):
         super().__init__()
@@ -278,17 +280,33 @@ class JobRun(Observable, Observer):
     def get_action_run(self, action_name):
         return self.action_runs.get(action_name)
 
-    def log_state_update(self, state, action_name=None):
+    def log_state_update(self, state: str, action_name: Optional[str] = None) -> None:
         if action_name is None:
             state = f"job_{state}"
         else:
             action_name = str(action_name)
+
+        # Tron currently manges two major types of workloads: batch jobs and Spark jobs
+        # and the team that manages Spark would like to be able to monitor the runtime
+        # of Spark actions in Tron at an aggregate level. We currently ingest these state updates
+        # into various systems and have dashboards on this data, but it's currently non-trivial to
+        # separate out what actions belong to which workload without tagging these state updates
+        executor = None  # we log job state updates with this function - which don't have an executor
+        if self.action_graph and action_name and self.action_graph.action_map.get(action_name):
+            action = self.action_graph.action_map[action_name]
+            # TODO: replace this with checking if the action executor is spark once we're running
+            # the spark driver in k8s
+            if "spark-submit" in action.command:
+                executor = "spark"
+            else:
+                executor = action.executor
 
         data = {
             "job_name": str(self.job_name),
             "run_num": str(self.run_num),
             "action_name": action_name,
             "state": str(state),
+            "executor": executor,
             "timestamp": time.time(),
         }
         state_logger.info(json.dumps(data))
