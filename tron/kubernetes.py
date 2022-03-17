@@ -225,6 +225,8 @@ class KubernetesCluster:
             return self.runner
 
         try:
+            # TODO(TRON-1701): we'll need to figure out a good way to support multiple clusters here
+            # (with each cluster only using a single namespace for tron purposes)
             executor = self.processor.executor_from_config(
                 provider="kubernetes",
                 provider_config={

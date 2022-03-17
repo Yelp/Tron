@@ -37,6 +37,7 @@ from tron.utils.state import Machine
 log = logging.getLogger(__name__)
 MAX_RECOVER_TRIES = 5
 INITIAL_RECOVER_DELAY = 3
+KUBERNETES_ACTIONRUN_EXECUTORS = {ExecutorTypes.kubernetes.value, ExecutorTypes.spark.value}
 
 
 class ActionRunFactory:
@@ -93,7 +94,7 @@ class ActionRunFactory:
         }
         if action.executor == ExecutorTypes.mesos.value:
             return MesosActionRun(**args)
-        elif action.executor == ExecutorTypes.kubernetes.value:
+        elif action.executor in KUBERNETES_ACTIONRUN_EXECUTORS:
             return KubernetesActionRun(**args)
         return SSHActionRun(**args)
 
@@ -111,7 +112,7 @@ class ActionRunFactory:
 
         if state_data.get("executor") == ExecutorTypes.mesos.value:
             return MesosActionRun.from_state(**args)
-        if state_data.get("executor") == ExecutorTypes.kubernetes.value:
+        if state_data.get("executor") in KUBERNETES_ACTIONRUN_EXECUTORS:
             return KubernetesActionRun.from_state(**args)
         return SSHActionRun.from_state(**args)
 
