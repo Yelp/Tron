@@ -1,3 +1,21 @@
+tron (1.17.1) bionic; urgency=medium
+
+  * 1.17.1 tagged with 'make release'
+    Commit: Create KubernetesActionRuns for executor: spark (#866)  For
+    now, we should be able to just use a KubernetesActionRun for Spark
+    drivers - worst case, I think we'll just have a couple places where
+    we branch on  if we absolutely need to do something Spark-specific
+    and can't just pass that down from paasta-tools  This PR also
+    removes spark_driver_service_account_name - I'm not sure what I was
+    thinking initially - we don't really need anything to distinguish
+    between the driver and executor SA since the executor SA is
+    configured by the arguments used to start the driver (and thus we
+    can just start the driver pod as we normally would by using the
+    service account payload that we'd use for a normal tron-launched
+    pod)
+
+ -- root <root@46477e094be3>  Mon, 21 Mar 2022 15:03:15 +0000
+
 tron (1.17.0) bionic; urgency=medium
 
   * 1.17.0 tagged with 'make release'
