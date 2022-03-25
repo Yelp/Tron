@@ -141,6 +141,7 @@ ConfigAction = config_object_factory(
         "docker_parameters",  # List of ConfigParameter
         "env",  # dict
         "secret_env",  # dict of str, ConfigSecretSource
+        "field_selector_env",  # dict of str, ConfigFieldSelectorSource
         "extra_volumes",  # List of ConfigVolume
         "expected_runtime",  # datetime.Timedelta
         "trigger_downstreams",  # None, bool or dict
@@ -152,7 +153,7 @@ ConfigAction = config_object_factory(
         "labels",  # Dict of str, str
         "annotations",  # Dict of str, str
         "service_account_name",  # str
-        "spark_driver_service_account_name",  # str
+        "ports",  # List of int
     ],
 )
 
@@ -176,6 +177,7 @@ ConfigCleanupAction = config_object_factory(
         "docker_parameters",  # List of ConfigParameter
         "env",  # dict
         "secret_env",  # dict of str, ConfigSecretSource
+        "field_selector_env",  # dict of str, ConfigFieldSelectorSource
         "extra_volumes",  # List of ConfigVolume
         "trigger_downstreams",  # None, bool or dict
         "triggered_by",  # list or None
@@ -186,7 +188,7 @@ ConfigCleanupAction = config_object_factory(
         "labels",  # Dict of str, str
         "annotations",  # Dict of str, str
         "service_account_name",  # str
-        "spark_driver_service_account_name",  # str
+        "ports",  # List of int
     ],
 )
 
@@ -199,6 +201,10 @@ ConfigVolume = config_object_factory(
 )
 
 ConfigSecretSource = config_object_factory(name="ConfigSecretSource", required=["secret_name", "key"], optional=[],)
+
+ConfigFieldSelectorSource = config_object_factory(
+    name="ConfigFieldSelectorSource", required=["field_path"], optional=[],
+)
 
 ConfigNodeAffinity = config_object_factory(
     name="ConfigNodeAffinity", required=["key", "operator", "value"], optional=[],

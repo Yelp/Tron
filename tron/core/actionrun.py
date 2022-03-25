@@ -1053,6 +1053,7 @@ class KubernetesActionRun(ActionRun, Observer):
                 docker_image=attempt.command_config.docker_image,
                 env=build_environment(original_env=attempt.command_config.env, run_id=self.id),
                 secret_env=attempt.command_config.secret_env,
+                field_selector_env=attempt.command_config.field_selector_env,
                 serializer=filehandler.OutputStreamSerializer(self.output_path),
                 volumes=attempt.command_config.extra_volumes,
                 cap_add=attempt.command_config.cap_add,
@@ -1062,6 +1063,7 @@ class KubernetesActionRun(ActionRun, Observer):
                 pod_labels=attempt.command_config.labels,
                 pod_annotations=attempt.command_config.annotations,
                 service_account_name=attempt.command_config.service_account_name,
+                ports=attempt.command_config.ports,
             )
         except InvariantException:
             log.exception(f"Unable to create task for ActionRun {self.id}")
@@ -1116,6 +1118,7 @@ class KubernetesActionRun(ActionRun, Observer):
             docker_image=last_attempt.command_config.docker_image,
             env=build_environment(original_env=last_attempt.command_config.env, run_id=self.id),
             secret_env=last_attempt.command_config.secret_env,
+            field_selector_env=last_attempt.command_config.field_selector_env,
             serializer=filehandler.OutputStreamSerializer(self.output_path),
             volumes=last_attempt.command_config.extra_volumes,
             cap_add=last_attempt.command_config.cap_add,
@@ -1126,6 +1129,7 @@ class KubernetesActionRun(ActionRun, Observer):
             pod_labels=last_attempt.command_config.labels,
             pod_annotations=last_attempt.command_config.annotations,
             service_account_name=last_attempt.command_config.service_account_name,
+            ports=last_attempt.command_config.ports,
         )
         if not task:
             log.warning(
