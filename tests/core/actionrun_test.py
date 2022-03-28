@@ -1629,6 +1629,7 @@ class TestKubernetesActionRun:
                 docker_image=mock_k8s_action_run.command_config.docker_image,
                 env=mock.ANY,
                 secret_env=mock_k8s_action_run.command_config.secret_env,
+                field_selector_env=mock_k8s_action_run.command_config.field_selector_env,
                 serializer=serializer,
                 volumes=mock_k8s_action_run.command_config.extra_volumes,
                 cap_add=mock_k8s_action_run.command_config.cap_add,
@@ -1639,6 +1640,7 @@ class TestKubernetesActionRun:
                 pod_labels=mock_k8s_action_run.command_config.labels,
                 pod_annotations=mock_k8s_action_run.command_config.annotations,
                 service_account_name=mock_k8s_action_run.command_config.service_account_name,
+                ports=mock_k8s_action_run.command_config.ports,
             ), mock_get_cluster.return_value.create_task.calls
             task = mock_get_cluster.return_value.create_task.return_value
             mock_get_cluster.return_value.recover.assert_called_once_with(task)
