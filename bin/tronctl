@@ -36,6 +36,7 @@ from tron.commands.cmd_utils import ExitCode
 from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
 from tron.commands.retry import parse_deps_timeout
+from tron.commands.retry import print_retries_table
 from tron.commands.retry import retry_actions
 
 COMMAND_HELP = (
@@ -291,7 +292,10 @@ def retry(args):
         print()
         pprint.pprint(args.id)
         print()
-    yield all(retry_actions(args.server, args.id, args.use_latest_command, args.deps_timeout))
+
+    retries = retry_actions(args.server, args.id, args.use_latest_command, args.deps_timeout)
+    print_retries_table(retries)
+    yield all([r.succeeded for r in retries])
 
 
 def move(args):

@@ -11,6 +11,7 @@ from urllib.parse import urljoin
 import pytimeparse
 
 from tron.commands import client
+from tron.commands import display
 from tron.commands.backfill import BackfillRun
 
 
@@ -70,6 +71,10 @@ class RetryAction:
             return "Retry request issued successfully"
         else:
             return "Failed to issue retry request"
+
+    @property
+    def succeeded(self):
+        return bool(self._retry_request_result)
 
     def _validate_action_name(self, full_action_name: str) -> client.TronObjectIdentifier:
         action_run_id = client.get_object_type_from_identifier(self.tron_client.index(), full_action_name)
@@ -147,7 +152,7 @@ class RetryAction:
         random_init_delay: bool = True,
     ) -> bool:
 
-        if random_init_delay:
+        if deps_timeout_s != 0 and random_init_delay:
             init_delay_s = random.randint(1, min(deps_timeout_s, poll_intv_s)) - 1
             self._elapsed += datetime.timedelta(seconds=init_delay_s)
             await asyncio.sleep(init_delay_s)
@@ -204,7 +209,7 @@ def retry_actions(
     full_action_names: List[str],
     use_latest_command: bool = False,
     deps_timeout_s: Optional[int] = None,
-):
+) -> List[RetryAction]:
     tron_client = client.Client(tron_server)
     r_actions = [RetryAction(tron_client, name, use_latest_command=use_latest_command) for name in full_action_names]
 
@@ -219,3 +224,20 @@ def retry_actions(
     finally:
         loop.close()
     return r_actions
+
+
+class DisplayRetries(display.TableDisplay):
+
+    columns = ["Action Name", "Final Status"]
+    fields = ["full_action_name", "status"]
+    widths = [60, 60]
+    title = "Retries"
+    resize_fields = {"full_action_name", "status"}
+    header_color = "hgray"
+
+
+def print_retries_table(retries: List[RetryAction]) -> None:
+    """Prints retry runs in a table"""
+    with display.Color.enable():
+        table = DisplayRetries().format([dict(full_action_name=r.full_action_name, status=r.status) for r in retries])
+        print(table)
