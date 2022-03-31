@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import datetime
 import logging
+import pprint
 import sys
 from collections import defaultdict
 from typing import Any
@@ -35,7 +36,7 @@ from tron.commands.cmd_utils import ExitCode
 from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
 from tron.commands.retry import parse_deps_timeout
-from tron.commands.retry import retry_action
+from tron.commands.retry import retry_actions
 
 COMMAND_HELP = (
     ("start", "Start the selected job, job run, or action. Creates a new job run if starting a job.",),
@@ -274,15 +275,23 @@ def control_objects(args: argparse.Namespace):
             data = dict(command=args.command)
             if args.command == "start" and args.run_date:
                 data["run_time"] = str(args.run_date)
-            if args.command == "retry":
-                yield retry_action(
-                    tron_client,
-                    identifier,
-                    use_latest_command=args.use_latest_command,
-                    deps_timeout_s=args.deps_timeout,
-                )
-                return
             yield request(urljoin(args.server, tron_id.url), data)
+
+
+def retry(args):
+    if args.deps_timeout != 0:
+        deps_timeout_str = "forever"
+        if args.deps_timeout > 0:
+            deps_timeout_str = "up to " + str(datetime.timedelta(seconds=args.deps_timeout))
+        print(
+            f"We will wait {deps_timeout_str} for all upstream triggers to be published "
+            "and required actions to finish successfully before issuing retries for the "
+            "following actions:"
+        )
+        print()
+        pprint.pprint(args.id)
+        print()
+    yield all(retry_actions(args.server, args.id, args.use_latest_command, args.deps_timeout))
 
 
 def move(args):
@@ -362,6 +371,7 @@ COMMANDS: Dict[str, Callable[[argparse.Namespace], Generator[bool, None, None]]]
     discard=event_discard,
     backfill=backfill,
     move=move,
+    retry=retry,
     version=tron_version,
 )
 
