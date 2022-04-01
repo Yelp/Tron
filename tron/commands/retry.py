@@ -39,7 +39,7 @@ class RetryAction:
         self, tron_client: client.Client, full_action_name: str, use_latest_command: bool = False,
     ):
         self.tron_client = tron_client
-        self.retry_params = dict(command="retry", use_latest_command=use_latest_command)
+        self.retry_params = dict(command="retry", use_latest_command=int(use_latest_command))
 
         self.full_action_name = full_action_name
         self.action_run_id = self._validate_action_name(full_action_name)
@@ -201,7 +201,7 @@ class RetryAction:
             self._log(f"Got result: {response.content.get('result')}")
             self._log(f"Check the status of the retry run using: `tronview {self.full_action_name}`")
             self._retry_request_result = True
-        return bool(self._retry_request_result)
+        return self._retry_request_result
 
 
 def retry_actions(

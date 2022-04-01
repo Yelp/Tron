@@ -172,11 +172,11 @@ def parse_cli():
         help=(
             "Max duration to wait for upstream dependencies (upstream triggers "
             "and/or same job actions) before attempting to retry. "
-            "If all dependencies are not done and a non-zero timeout expires, "
+            "If all dependencies are not done when the timeout expires, "
             "this command will exit with an error, and the action will NOT be retried. "
             "Must be either an int number of seconds, a human-readable/"
             "pytimeparse-parsable string, or 'infinity' to wait forever. "
-            "Defaults to 0 (don't wait), which will not check dependencies."
+            "Defaults to 0 (don't wait)."
         ),
     )
 
