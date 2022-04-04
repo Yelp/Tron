@@ -40,27 +40,40 @@ from tron.commands.retry import print_retries_table
 from tron.commands.retry import retry_actions
 
 COMMAND_HELP = (
-    ("start", "Start the selected job, job run, or action. Creates a new job run if starting a job.",),
-    ("rerun", "Start a new job run with the same start time command context as the given job run.",),
+    (
+        "start",
+        "job name, job run id, or action id",
+        "Start the selected job, job run, or action. Creates a new job run if starting a job.",
+    ),
+    ("rerun", "job run id", "Start a new job run with the same start time command context as the given job run.",),
     (
         "retry",
+        "action id",
         "Re-run a job action within an existing job run. Uses latest code/config except the command by default. Add --use-latest-command to use the latest command.",
     ),
-    ("recover", "Ask Tron to start tracking an UNKNOWN action run again"),
-    ("cancel", "Cancel the selected job run."),
-    ("backfill", "Start job runs for a particular date range",),
-    ("disable", "Disable selected job and cancel any outstanding runs"),
-    ("enable", "Enable the selected job and schedule the next run"),
-    ("fail", "Mark an UNKNOWN job or action as failed. Does not publish action triggers.",),
-    ("success", "Mark an UNKNOWN job or action as having succeeded. Will publish action triggers.",),
-    ("skip", "Skip a failed action, unblocks dependent actions. Does *not* publish action triggers.",),
-    ("skip-and-publish", "Skip a failed action, unblocks dependent actions. *Does* publish action triggers.",),
-    ("stop", "Stop the action run (SIGTERM)"),
-    ("kill", "Force kill the action run (SIGKILL)"),
-    ("move", "Rename a job"),
-    ("publish", "Publish actionrun trigger to kick off downstream jobs"),
-    ("discard", "Discard existing actionrun trigger"),
-    ("version", "Print tron client and server versions"),
+    ("recover", "action id", "Ask Tron to start tracking an UNKNOWN action run again"),
+    ("cancel", "job run id", "Cancel the selected job run."),
+    ("backfill", "job name", "Start job runs for a particular date range",),
+    ("disable", "job name", "Disable selected job and cancel any outstanding runs"),
+    ("enable", "job name", "Enable the selected job and schedule the next run"),
+    ("fail", "job run or action id", "Mark an UNKNOWN job or action as failed. Does not publish action triggers.",),
+    (
+        "success",
+        "job run or action id",
+        "Mark an UNKNOWN job or action as having succeeded. Will publish action triggers.",
+    ),
+    ("skip", "action id", "Skip a failed action, unblocks dependent actions. Does *not* publish action triggers.",),
+    (
+        "skip-and-publish",
+        "action id",
+        "Skip a failed action, unblocks dependent actions. *Does* publish action triggers.",
+    ),
+    ("stop", "action id", "Stop the action run (SIGTERM)"),
+    ("kill", "action id", "Force kill the action run (SIGKILL)"),
+    ("move", "job name", "Rename a job"),
+    ("publish", "action id", "Publish actionrun trigger to kick off downstream jobs"),
+    ("discard", "trigger id", "Discard existing actionrun trigger"),
+    ("version", None, "Print tron client and server versions"),
 )
 
 log = logging.getLogger("tronctl")
@@ -72,15 +85,16 @@ def parse_date(date_string):
 
 def parse_cli():
     parser = cmd_utils.build_option_parser()
-
     subparsers = parser.add_subparsers(dest="command", title="commands", help="Tronctl command to run")
     subparsers.required = True  # add_subparsers only supports required arg from py37
+
     cmd_parsers = {}
-    for cmd_name, desc in COMMAND_HELP:
+    for cmd_name, id_help_text, desc in COMMAND_HELP:
         cmd_parsers[cmd_name] = subparsers.add_parser(cmd_name, help=desc, description=desc)
-        cmd_parsers[cmd_name].add_argument(
-            "id", nargs="*", help="job name, job run id, or action id",
-        ).completer = cmd_utils.tron_jobs_completer
+        if id_help_text:
+            cmd_parsers[cmd_name].add_argument(
+                "id", nargs="*", help=id_help_text
+            ).completer = cmd_utils.tron_jobs_completer
 
     # start
     cmd_parsers["start"].add_argument(
