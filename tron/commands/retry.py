@@ -8,7 +8,7 @@ from typing import List
 from typing import Optional
 from urllib.parse import urljoin
 
-import pytimeparse
+import pytimeparse  # type:ignore
 
 from tron.commands import client
 from tron.commands import display
@@ -56,7 +56,7 @@ class RetryAction:
         self._elapsed = datetime.timedelta(seconds=0)
         self._triggers_done = False
         self._required_actions_done = False
-        self._retry_request_result = RetryAction.RETRY_NOT_ISSUED
+        self._retry_request_result: Optional[bool] = RetryAction.RETRY_NOT_ISSUED
 
     @property
     def job_run_name(self) -> str:
@@ -84,13 +84,15 @@ class RetryAction:
         return bool(self._retry_request_result)
 
     def _validate_action_name(self, full_action_name: str) -> client.TronObjectIdentifier:
-        action_run_id = client.get_object_type_from_identifier(self.tron_client.index(), full_action_name)
+        action_run_id: client.TronObjectIdentifier = client.get_object_type_from_identifier(
+            self.tron_client.index(), full_action_name
+        )
         if action_run_id.type != client.TronObjectType.action_run:
             raise ValueError(f"'{full_action_name}' is a {action_run_id.type.lower()}, not an action")
         self.tron_client.action_runs(action_run_id.url, num_lines=0)  # verify action exists
         return action_run_id
 
-    def _get_required_action_indices(self) -> Dict[str, bool]:
+    def _get_required_action_indices(self) -> Dict[str, int]:
         job_run = self.tron_client.job_runs(self.job_run_id.url)
         required_actions = set()
         action_indices = {}
@@ -153,10 +155,7 @@ class RetryAction:
         }
 
     async def wait_and_retry(
-        self,
-        deps_timeout_s: Optional[int] = None,
-        poll_interval_s: int = DEFAULT_POLLING_INTERVAL_S,
-        jitter: bool = True,
+        self, deps_timeout_s: int = 0, poll_interval_s: int = DEFAULT_POLLING_INTERVAL_S, jitter: bool = True,
     ) -> bool:
 
         if deps_timeout_s != RetryAction.NO_TIMEOUT and jitter:
@@ -174,9 +173,7 @@ class RetryAction:
             self._log(msg)
             return False
 
-    async def wait_for_deps(
-        self, deps_timeout_s: Optional[int] = None, poll_interval_s: int = DEFAULT_POLLING_INTERVAL_S,
-    ) -> bool:
+    async def wait_for_deps(self, deps_timeout_s: int = 0, poll_interval_s: int = DEFAULT_POLLING_INTERVAL_S,) -> bool:
         """Wait for all upstream dependencies to finished up to a timeout. Once the
         timeout has expired, one final check is always conducted.
 
@@ -215,7 +212,7 @@ def retry_actions(
     tron_server: str,
     full_action_names: List[str],
     use_latest_command: bool = False,
-    deps_timeout_s: Optional[int] = None,
+    deps_timeout_s: int = RetryAction.NO_TIMEOUT,
 ) -> List[RetryAction]:
     tron_client = client.Client(tron_server)
     r_actions = [RetryAction(tron_client, name, use_latest_command=use_latest_command) for name in full_action_names]
