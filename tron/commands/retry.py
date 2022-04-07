@@ -18,23 +18,30 @@ from tron.commands.backfill import BackfillRun
 DEFAULT_POLLING_INTERVAL_S = 10
 
 
-def parse_deps_timeout(d_str):
-    if d_str == "infinity":
-        return -1
-    elif d_str.isnumeric():
-        seconds = int(d_str)
+def parse_deps_timeout(duration: str) -> int:
+    if duration == "infinity":
+        return RetryAction.WAIT_FOREVER
+    elif duration.isnumeric():
+        seconds = int(duration)
     else:
-        seconds = pytimeparse.parse(d_str)
+        seconds = pytimeparse.parse(duration)
         if seconds is None:
             raise argparse.ArgumentTypeError(
-                f"'{d_str}' is not a valid duration. Must be either number of seconds or pytimeparse-parsable string."
+                f"'{duration}' is not a valid duration. Must be either number of seconds or pytimeparse-parsable string."
             )
     if seconds < 0:
-        raise argparse.ArgumentTypeError(f"'{d_str}' must not be negative")
+        raise argparse.ArgumentTypeError(f"'{duration}' must not be negative")
     return seconds
 
 
 class RetryAction:
+    NO_TIMEOUT = 0
+    WAIT_FOREVER = -1
+
+    RETRY_NOT_ISSUED = None
+    RETRY_SUCCESS = True
+    RETRY_FAIL = False
+
     def __init__(
         self, tron_client: client.Client, full_action_name: str, use_latest_command: bool = False,
     ):
@@ -49,31 +56,31 @@ class RetryAction:
         self._elapsed = datetime.timedelta(seconds=0)
         self._triggers_done = False
         self._required_actions_done = False
-        self._retry_request_result = None  # None = not issued, True = success, False = fail
+        self._retry_request_result = RetryAction.RETRY_NOT_ISSUED
 
     @property
-    def job_run_name(self):
+    def job_run_name(self) -> str:
         return self.full_action_name.rsplit(".", 1)[0]
 
     @property
-    def action_name(self):
+    def action_name(self) -> str:
         return self.full_action_name.rsplit(".", 1)[1]
 
     @property
-    def status(self):
+    def status(self) -> str:
         if not self._triggers_done:
             return "Upstream triggers not all published"
         elif not self._required_actions_done:
             return "Required actions not all successfully completed"
-        elif self._retry_request_result is None:
+        elif self._retry_request_result == RetryAction.RETRY_NOT_ISSUED:
             return "Retry request not issued, but dependencies done"
-        elif self._retry_request_result:
+        elif self._retry_request_result == RetryAction.RETRY_SUCCESS:
             return "Retry request issued successfully"
         else:
             return "Failed to issue retry request"
 
     @property
-    def succeeded(self):
+    def succeeded(self) -> bool:
         return bool(self._retry_request_result)
 
     def _validate_action_name(self, full_action_name: str) -> client.TronObjectIdentifier:
@@ -93,14 +100,14 @@ class RetryAction:
                 required_actions = set(action_run["requirements"])
             action_indices[action_run["action_name"]] = i
 
-        return dict(filter(lambda e: e[0] in required_actions, action_indices.items()))
+        return {action_name: i for action_name, i in action_indices.items() if action_name in required_actions}
 
-    def _log(self, s: str) -> None:
-        print(f"[{self._elapsed}] {self.full_action_name}: {s}")
+    def _log(self, msg: str) -> None:
+        print(f"[{self._elapsed}] {self.full_action_name}: {msg}")
 
     async def can_retry(self) -> bool:
         if not self._triggers_done:
-            triggers = await self.get_triggers()
+            triggers = await self.check_trigger_statuses()
             self._triggers_done = all(triggers.values())
             if self._triggers_done:
                 if len(triggers) > 0:
@@ -109,7 +116,7 @@ class RetryAction:
                 remaining_triggers = [trigger for trigger, is_done in triggers.items() if not is_done]
                 self._log(f"Upstream triggers not yet published: {remaining_triggers}")
         if not self._required_actions_done:
-            required_actions = await self.get_required_actions()
+            required_actions = await self.check_required_actions_statuses()
             self._required_actions_done = all(required_actions.values())
             if self._required_actions_done:
                 if len(required_actions) > 0:
@@ -119,7 +126,7 @@ class RetryAction:
                 self._log(f"Required actions not yet succeeded: {remaining_required_actions}")
         return self._triggers_done and self._required_actions_done
 
-    async def get_triggers(self) -> Dict[str, bool]:
+    async def check_trigger_statuses(self) -> Dict[str, bool]:
         action_run = await asyncio.get_event_loop().run_in_executor(
             None, functools.partial(self.tron_client.action_runs, self.action_run_id.url, num_lines=0,),
         )
@@ -130,13 +137,13 @@ class RetryAction:
         trigger_states = {}
         for trigger_and_state in action_run["triggered_by"].split(", "):
             if trigger_and_state:
-                parts = trigger_and_state.split(" ")
+                trigger, *maybe_state = trigger_and_state.split(" ")
                 # if len(parts) == 2, then parts is [{trigger}, "(done)"]
                 # else, parts is [{trigger}]
-                trigger_states[parts[0]] = len(parts) == 2
+                trigger_states[trigger] = len(maybe_state) == 1
         return trigger_states
 
-    async def get_required_actions(self) -> Dict[str, bool]:
+    async def check_required_actions_statuses(self) -> Dict[str, bool]:
         action_runs = (
             await asyncio.get_event_loop().run_in_executor(None, self.tron_client.job_runs, self.job_run_id.url,)
         )["runs"]
@@ -148,38 +155,38 @@ class RetryAction:
     async def wait_and_retry(
         self,
         deps_timeout_s: Optional[int] = None,
-        poll_intv_s: int = DEFAULT_POLLING_INTERVAL_S,
-        random_init_delay: bool = True,
+        poll_interval_s: int = DEFAULT_POLLING_INTERVAL_S,
+        jitter: bool = True,
     ) -> bool:
 
-        if deps_timeout_s != 0 and random_init_delay:
-            init_delay_s = random.randint(1, min(deps_timeout_s, poll_intv_s)) - 1
+        if deps_timeout_s != RetryAction.NO_TIMEOUT and jitter:
+            init_delay_s = random.randint(1, min(deps_timeout_s, poll_interval_s)) - 1
             self._elapsed += datetime.timedelta(seconds=init_delay_s)
             await asyncio.sleep(init_delay_s)
 
-        if await self.wait_for_deps(deps_timeout_s=deps_timeout_s, poll_intv_s=poll_intv_s):
+        if await self.wait_for_deps(deps_timeout_s=deps_timeout_s, poll_interval_s=poll_interval_s):
             return await self.issue_retry()
         else:
             deps_timeout_td = datetime.timedelta(seconds=deps_timeout_s)
             msg = "Action will not be retried."
-            if deps_timeout_s != 0:
+            if deps_timeout_s != RetryAction.NO_TIMEOUT:
                 msg = f"Not all dependencies completed after waiting for {deps_timeout_td}. " + msg
             self._log(msg)
             return False
 
     async def wait_for_deps(
-        self, deps_timeout_s: Optional[int] = None, poll_intv_s: int = DEFAULT_POLLING_INTERVAL_S,
+        self, deps_timeout_s: Optional[int] = None, poll_interval_s: int = DEFAULT_POLLING_INTERVAL_S,
     ) -> bool:
         """Wait for all upstream dependencies to finished up to a timeout. Once the
         timeout has expired, one final check is always conducted.
 
         Returns whether or not deps successfully finished.
         """
-        while deps_timeout_s == -1 or self._elapsed.seconds < deps_timeout_s:
+        while deps_timeout_s == RetryAction.WAIT_FOREVER or self._elapsed.seconds < deps_timeout_s:
             if await self.can_retry():
                 return True
-            wait_for = poll_intv_s
-            if deps_timeout_s != -1:
+            wait_for = poll_interval_s
+            if deps_timeout_s != RetryAction.WAIT_FOREVER:
                 wait_for = min(wait_for, int(deps_timeout_s - self._elapsed.seconds))
             await asyncio.sleep(wait_for)
             self._elapsed += datetime.timedelta(seconds=wait_for)
@@ -196,11 +203,11 @@ class RetryAction:
         )
         if response.error:
             self._log(f"Error: couldn't issue retry request: {response.content}")
-            self._retry_request_result = False
+            self._retry_request_result = RetryAction.RETRY_FAIL
         else:
             self._log(f"Got result: {response.content.get('result')}")
             self._log(f"Check the status of the retry run using: `tronview {self.full_action_name}`")
-            self._retry_request_result = True
+            self._retry_request_result = RetryAction.RETRY_SUCCESS
         return self._retry_request_result
 
 
@@ -215,9 +222,10 @@ def retry_actions(
 
     loop = asyncio.get_event_loop()
     try:
+        # first action starts checking immediately, rest have a jitter
         loop.run_until_complete(
             asyncio.gather(
-                r_actions[0].wait_and_retry(deps_timeout_s=deps_timeout_s, random_init_delay=False),
+                r_actions[0].wait_and_retry(deps_timeout_s=deps_timeout_s, jitter=False),
                 *[ra.wait_and_retry(deps_timeout_s=deps_timeout_s) for ra in r_actions[1:]],
             )
         )

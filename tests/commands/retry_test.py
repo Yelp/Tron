@@ -62,6 +62,7 @@ def fake_retry_action(mock_client):
         run_num=1234,
         runs=[
             dict(action_name="required_action_0", state="succeeded"),
+            dict(action_name="non_required_action", state="succeeded"),
             dict(action_name="required_action_1", state="failed"),
             dict(action_name="upstream_action_0", trigger_downstreams="a_fake_trigger_0"),
             dict(action_name="upstream_action_1", trigger_downstreams="a_fake_trigger_1"),
@@ -92,20 +93,20 @@ def test_retry_action_init_ok(fake_retry_action):
     fake_retry_action.tron_client.job_runs.assert_called_once_with("/a_fake_job/0")
     assert fake_retry_action.job_run_name == "a_fake_job.0"
     assert fake_retry_action.job_run_id.url == "/a_fake_job/0"
-    assert fake_retry_action._required_action_indices == {"required_action_0": 0, "required_action_1": 1}
+    assert fake_retry_action._required_action_indices == {"required_action_0": 0, "required_action_1": 2}
 
 
-def test_get_triggers(fake_retry_action, event_loop):
+def test_check_trigger_statuses(fake_retry_action, event_loop):
     expected = dict(a_fake_trigger_0=True, a_fake_trigger_1=False)
-    assert expected == event_loop.run_until_complete(fake_retry_action.get_triggers())
+    assert expected == event_loop.run_until_complete(fake_retry_action.check_trigger_statuses())
     assert fake_retry_action.tron_client.action_runs.call_args_list[1] == mock.call(  # 0th call is in init
         "/a_fake_job/0/a_fake_action", num_lines=0,
     )
 
 
-def test_get_required_actions(fake_retry_action, event_loop):
+def test_check_required_actions_statuses(fake_retry_action, event_loop):
     expected = dict(required_action_0=True, required_action_1=False)
-    assert expected == event_loop.run_until_complete(fake_retry_action.get_required_actions())
+    assert expected == event_loop.run_until_complete(fake_retry_action.check_required_actions_statuses())
     assert fake_retry_action.tron_client.job_runs.call_args_list[1] == mock.call("/a_fake_job/0")  # 0th call is in init
 
 
@@ -119,18 +120,18 @@ def test_get_required_actions(fake_retry_action, event_loop):
 )
 def test_can_retry(fake_retry_action, event_loop, expected, triggered_by, required_action_1_state):
     fake_retry_action.tron_client.action_runs.return_value["triggered_by"] = triggered_by
-    fake_retry_action.tron_client.job_runs.return_value["runs"][1]["state"] = required_action_1_state
+    fake_retry_action.tron_client.job_runs.return_value["runs"][2]["state"] = required_action_1_state
     assert expected == event_loop.run_until_complete(fake_retry_action.can_retry())
 
 
 def test_wait_for_deps_timeout(fake_retry_action, event_loop):
-    assert not event_loop.run_until_complete(fake_retry_action.wait_for_deps(deps_timeout_s=3, poll_intv_s=1))
+    assert not event_loop.run_until_complete(fake_retry_action.wait_for_deps(deps_timeout_s=3, poll_interval_s=1))
     assert fake_retry_action._elapsed.seconds == 3
     assert fake_retry_action.tron_client.action_runs.call_count == 5  # 1 in init, 4 in this test
 
 
 def test_wait_for_deps_all_deps_done(fake_retry_action, event_loop):
-    fake_retry_action.tron_client.job_runs.return_value["runs"][1]["state"] = "skipped"
+    fake_retry_action.tron_client.job_runs.return_value["runs"][2]["state"] = "skipped"
     fake_retry_action.tron_client.action_runs.return_value = None
     triggered_by_results = [
         "a_fake_trigger_0 (done), a_fake_trigger_1",
@@ -142,7 +143,7 @@ def test_wait_for_deps_all_deps_done(fake_retry_action, event_loop):
         for r in triggered_by_results
     ]
 
-    assert event_loop.run_until_complete(fake_retry_action.wait_for_deps(deps_timeout_s=3, poll_intv_s=1))
+    assert event_loop.run_until_complete(fake_retry_action.wait_for_deps(deps_timeout_s=3, poll_interval_s=1))
     # 3rd triggered_by result returned on check at 2nd second
     assert fake_retry_action._elapsed.seconds == 2
     assert fake_retry_action.tron_client.action_runs.call_count == 4  # 1 in init, 3 in this test
@@ -157,14 +158,14 @@ def test_issue_retry(fake_retry_action, mock_client_request, event_loop, expecte
 
 def test_wait_for_retry_deps_not_done(fake_retry_action, mock_client_request, event_loop):
     assert not event_loop.run_until_complete(
-        fake_retry_action.wait_and_retry(deps_timeout_s=10, poll_intv_s=1, random_init_delay=True),
+        fake_retry_action.wait_and_retry(deps_timeout_s=10, poll_interval_s=1, jitter=True),
     )
     assert fake_retry_action._elapsed.seconds == 10  # timeout
     mock_client_request.assert_not_called()  # retry not attempted
 
 
 def test_wait_for_retry_deps_done(fake_retry_action, mock_client_request, event_loop):
-    fake_retry_action.tron_client.job_runs.return_value["runs"][1]["state"] = "skipped"
+    fake_retry_action.tron_client.job_runs.return_value["runs"][2]["state"] = "skipped"
     fake_retry_action.tron_client.action_runs.return_value[
         "triggered_by"
     ] = "a_fake_trigger_0 (done), a_fake_trigger_1 (done)"
@@ -172,7 +173,7 @@ def test_wait_for_retry_deps_done(fake_retry_action, mock_client_request, event_
     random.seed(1)  # init delay is 1s
 
     assert event_loop.run_until_complete(
-        fake_retry_action.wait_and_retry(deps_timeout_s=10, poll_intv_s=5, random_init_delay=True),
+        fake_retry_action.wait_and_retry(deps_timeout_s=10, poll_interval_s=5, jitter=True),
     )
     assert fake_retry_action._elapsed.seconds == 1  # init delay only
     mock_client_request.assert_called_once_with(
@@ -198,6 +199,6 @@ def test_retry_actions(mock_retry_action, mock_client, event_loop):
         mock.call(mock_client.return_value, "another_job.1.an_action_1", use_latest_command=True),
     ]
     assert mock_wait_and_retry.call_args_list == [
-        mock.call(deps_timeout_s=4, random_init_delay=False),
+        mock.call(deps_timeout_s=4, jitter=False),
         mock.call(deps_timeout_s=4),
     ]

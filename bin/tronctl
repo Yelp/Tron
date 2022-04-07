@@ -38,6 +38,7 @@ from tron.commands.cmd_utils import tron_jobs_completer
 from tron.commands.retry import parse_deps_timeout
 from tron.commands.retry import print_retries_table
 from tron.commands.retry import retry_actions
+from tron.commands.retry import RetryAction
 
 COMMAND_HELP = (
     (
@@ -294,8 +295,8 @@ def control_objects(args: argparse.Namespace):
 
 
 def retry(args):
-    if args.deps_timeout != 0:
-        deps_timeout_str = "forever"
+    if args.deps_timeout != RetryAction.NO_TIMEOUT:
+        deps_timeout_str = "forever"  # timeout = -1 (RetryAction.WAIT_FOREVER)
         if args.deps_timeout > 0:
             deps_timeout_str = "up to " + str(datetime.timedelta(seconds=args.deps_timeout))
         print(
