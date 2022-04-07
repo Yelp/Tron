@@ -25,6 +25,8 @@ services:
       - /var/run/docker.sock:/var/run/docker.sock
     depends_on:
       - zookeeper
+    environment:
+      - MESOS_SYSTEMD_ENABLE_SUPPORT=false
 
   tronmaster:
     build:
