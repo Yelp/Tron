@@ -1,3 +1,11 @@
+tron (1.18.0) bionic; urgency=medium
+
+  * 1.18.0 tagged with 'make release'
+    Commit: Merge pull request #867 from Yelp/u/kawaiwan/retry-honors-
+    triggers  Add arg to  for waiting for dependencies
+
+ -- root <root@27a2aed6edd5>  Wed, 13 Apr 2022 18:41:37 +0000
+
 tron (1.17.1) bionic; urgency=medium
 
   * 1.17.1 tagged with 'make release'
