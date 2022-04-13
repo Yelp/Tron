@@ -8,6 +8,7 @@ import argparse
 import asyncio
 import datetime
 import logging
+import pprint
 import sys
 from collections import defaultdict
 from typing import Any
@@ -34,29 +35,46 @@ from tron.commands.client import RequestError
 from tron.commands.cmd_utils import ExitCode
 from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
+from tron.commands.retry import parse_deps_timeout
+from tron.commands.retry import print_retries_table
+from tron.commands.retry import retry_actions
+from tron.commands.retry import RetryAction
 
 COMMAND_HELP = (
-    ("start", "Start the selected job, job run, or action. Creates a new job run if starting a job.",),
-    ("rerun", "Start a new job run with the same start time command context as the given job run.",),
+    (
+        "start",
+        "job name, job run id, or action id",
+        "Start the selected job, job run, or action. Creates a new job run if starting a job.",
+    ),
+    ("rerun", "job run id", "Start a new job run with the same start time command context as the given job run.",),
     (
         "retry",
+        "action id",
         "Re-run a job action within an existing job run. Uses latest code/config except the command by default. Add --use-latest-command to use the latest command.",
     ),
-    ("recover", "Ask Tron to start tracking an UNKNOWN action run again"),
-    ("cancel", "Cancel the selected job run."),
-    ("backfill", "Start job runs for a particular date range",),
-    ("disable", "Disable selected job and cancel any outstanding runs"),
-    ("enable", "Enable the selected job and schedule the next run"),
-    ("fail", "Mark an UNKNOWN job or action as failed. Does not publish action triggers.",),
-    ("success", "Mark an UNKNOWN job or action as having succeeded. Will publish action triggers.",),
-    ("skip", "Skip a failed action, unblocks dependent actions. Does *not* publish action triggers.",),
-    ("skip-and-publish", "Skip a failed action, unblocks dependent actions. *Does* publish action triggers.",),
-    ("stop", "Stop the action run (SIGTERM)"),
-    ("kill", "Force kill the action run (SIGKILL)"),
-    ("move", "Rename a job"),
-    ("publish", "Publish actionrun trigger to kick off downstream jobs"),
-    ("discard", "Discard existing actionrun trigger"),
-    ("version", "Print tron client and server versions"),
+    ("recover", "action id", "Ask Tron to start tracking an UNKNOWN action run again"),
+    ("cancel", "job run id", "Cancel the selected job run."),
+    ("backfill", "job name", "Start job runs for a particular date range",),
+    ("disable", "job name", "Disable selected job and cancel any outstanding runs"),
+    ("enable", "job name", "Enable the selected job and schedule the next run"),
+    ("fail", "job run or action id", "Mark an UNKNOWN job or action as failed. Does not publish action triggers.",),
+    (
+        "success",
+        "job run or action id",
+        "Mark an UNKNOWN job or action as having succeeded. Will publish action triggers.",
+    ),
+    ("skip", "action id", "Skip a failed action, unblocks dependent actions. Does *not* publish action triggers.",),
+    (
+        "skip-and-publish",
+        "action id",
+        "Skip a failed action, unblocks dependent actions. *Does* publish action triggers.",
+    ),
+    ("stop", "action id", "Stop the action run (SIGTERM)"),
+    ("kill", "action id", "Force kill the action run (SIGKILL)"),
+    ("move", "job name", "Rename a job"),
+    ("publish", "action id", "Publish actionrun trigger to kick off downstream jobs"),
+    ("discard", "trigger id", "Discard existing actionrun trigger"),
+    ("version", None, "Print tron client and server versions"),
 )
 
 log = logging.getLogger("tronctl")
@@ -68,15 +86,16 @@ def parse_date(date_string):
 
 def parse_cli():
     parser = cmd_utils.build_option_parser()
-
     subparsers = parser.add_subparsers(dest="command", title="commands", help="Tronctl command to run")
     subparsers.required = True  # add_subparsers only supports required arg from py37
+
     cmd_parsers = {}
-    for cmd_name, desc in COMMAND_HELP:
+    for cmd_name, id_help_text, desc in COMMAND_HELP:
         cmd_parsers[cmd_name] = subparsers.add_parser(cmd_name, help=desc, description=desc)
-        cmd_parsers[cmd_name].add_argument(
-            "id", nargs="*", help="job name, job run id, or action id",
-        ).completer = cmd_utils.tron_jobs_completer
+        if id_help_text:
+            cmd_parsers[cmd_name].add_argument(
+                "id", nargs="*", help=id_help_text
+            ).completer = cmd_utils.tron_jobs_completer
 
     # start
     cmd_parsers["start"].add_argument(
@@ -153,11 +172,27 @@ def parse_cli():
     )
 
     # retry
-    cmd_parsers["retry"].add_argument(
+    retry_parser = cmd_parsers["retry"]
+    retry_parser.add_argument(
         "--use-latest-command",
         action="store_true",
         default=False,
         help="Use the latest command in tronfig rather than the original command when the action run was created",
+    )
+    retry_parser.add_argument(
+        "--wait-for-deps",
+        type=parse_deps_timeout,
+        default=0,
+        dest="deps_timeout",
+        help=(
+            "Max duration to wait for upstream dependencies (upstream triggers "
+            "and/or same job actions) before attempting to retry. "
+            "If all dependencies are not done when the timeout expires, "
+            "this command will exit with an error, and the action will NOT be retried. "
+            "Must be either an int number of seconds, a human-readable/"
+            "pytimeparse-parsable string, or 'infinity' to wait forever. "
+            "Defaults to 0 (don't wait)."
+        ),
     )
 
     argcomplete.autocomplete(parser)
@@ -256,9 +291,26 @@ def control_objects(args: argparse.Namespace):
             data = dict(command=args.command)
             if args.command == "start" and args.run_date:
                 data["run_time"] = str(args.run_date)
-            if args.command == "retry":
-                data["use_latest_command"] = int(args.use_latest_command)
             yield request(urljoin(args.server, tron_id.url), data)
+
+
+def retry(args):
+    if args.deps_timeout != RetryAction.NO_TIMEOUT:
+        deps_timeout_str = "forever"  # timeout = -1 (RetryAction.WAIT_FOREVER)
+        if args.deps_timeout > 0:
+            deps_timeout_str = "up to " + str(datetime.timedelta(seconds=args.deps_timeout))
+        print(
+            f"We will wait {deps_timeout_str} for all upstream triggers to be published "
+            "and required actions to finish successfully before issuing retries for the "
+            "following actions:"
+        )
+        print()
+        pprint.pprint(args.id)
+        print()
+
+    retries = retry_actions(args.server, args.id, args.use_latest_command, args.deps_timeout)
+    print_retries_table(retries)
+    yield all([r.succeeded for r in retries])
 
 
 def move(args):
@@ -338,6 +390,7 @@ COMMANDS: Dict[str, Callable[[argparse.Namespace], Generator[bool, None, None]]]
     discard=event_discard,
     backfill=backfill,
     move=move,
+    retry=retry,
     version=tron_version,
 )
 
