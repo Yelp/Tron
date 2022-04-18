@@ -6,6 +6,7 @@ import pytest
 from task_processing.interfaces.event import Event
 from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig
 
+from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigVolume
 from tron.kubernetes import DEFAULT_DISK_LIMIT
@@ -156,6 +157,7 @@ def test_create_task_disabled():
         docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
         env={},
         secret_env={},
+        field_selector_env={},
         volumes=[],
         cap_add=[],
         cap_drop=[],
@@ -164,6 +166,7 @@ def test_create_task_disabled():
         pod_labels={},
         pod_annotations={},
         service_account_name=None,
+        ports=[],
     )
 
     assert task is None
@@ -182,6 +185,7 @@ def test_create_task(mock_kubernetes_cluster):
         docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
         env={},
         secret_env={},
+        field_selector_env={},
         volumes=[],
         cap_add=[],
         cap_drop=[],
@@ -190,6 +194,7 @@ def test_create_task(mock_kubernetes_cluster):
         pod_labels={},
         pod_annotations={},
         service_account_name=None,
+        ports=[],
     )
 
     assert task is not None
@@ -209,6 +214,7 @@ def test_create_task_with_task_id(mock_kubernetes_cluster):
         docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
         env={},
         secret_env={},
+        field_selector_env={},
         volumes=[],
         cap_add=[],
         cap_drop=[],
@@ -217,6 +223,7 @@ def test_create_task_with_task_id(mock_kubernetes_cluster):
         pod_labels={},
         pod_annotations={},
         service_account_name=None,
+        ports=[],
     )
 
     mock_kubernetes_cluster.runner.TASK_CONFIG_INTERFACE().set_pod_name.assert_called_once_with("yay.1234")
@@ -239,6 +246,7 @@ def test_create_task_with_invalid_task_id(mock_kubernetes_cluster):
             docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
             env={},
             secret_env={},
+            field_selector_env={},
             volumes=[],
             cap_add=[],
             cap_drop=[],
@@ -247,6 +255,7 @@ def test_create_task_with_invalid_task_id(mock_kubernetes_cluster):
             pod_labels={},
             pod_annotations={},
             service_account_name=None,
+            ports=[],
         )
 
     assert task is None
@@ -261,6 +270,7 @@ def test_create_task_with_config(mock_kubernetes_cluster):
 
     config_volumes = [ConfigVolume(container_path="/tmp", host_path="/host", mode="RO")]
     config_secrets = {"TEST_SECRET": ConfigSecretSource(secret_name="tron-secret-test-secret--A", key="secret_A")}
+    config_field_selector = {"POD_IP": ConfigFieldSelectorSource(field_path="status.podIP")}
 
     expected_args = {
         "name": mock.ANY,
@@ -271,6 +281,7 @@ def test_create_task_with_config(mock_kubernetes_cluster):
         "disk": DEFAULT_DISK_LIMIT,
         "environment": {"TEST_ENV": "foo"},
         "secret_environment": {k: v._asdict() for k, v in config_secrets.items()},
+        "field_selector_environment": {k: v._asdict() for k, v in config_field_selector.items()},
         "volumes": [v._asdict() for v in default_volumes + config_volumes],
         "cap_add": ["KILL"],
         "cap_drop": ["KILL", "CHOWN"],
@@ -279,6 +290,7 @@ def test_create_task_with_config(mock_kubernetes_cluster):
         "labels": {},
         "annotations": {},
         "service_account_name": None,
+        "ports": [],
     }
 
     task = mock_kubernetes_cluster.create_task(
@@ -292,6 +304,7 @@ def test_create_task_with_config(mock_kubernetes_cluster):
         docker_image=expected_args["image"],
         env=expected_args["environment"],
         secret_env=config_secrets,
+        field_selector_env=config_field_selector,
         volumes=config_volumes,
         cap_add=["KILL"],
         cap_drop=["KILL", "CHOWN"],
@@ -300,6 +313,7 @@ def test_create_task_with_config(mock_kubernetes_cluster):
         pod_labels={},
         pod_annotations={},
         service_account_name=None,
+        ports=expected_args["ports"],
     )
 
     assert task is not None

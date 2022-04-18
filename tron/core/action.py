@@ -9,6 +9,7 @@ from dataclasses import fields
 
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
+from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigNodeAffinity
 
 log = logging.getLogger(__name__)
@@ -30,12 +31,14 @@ class ActionCommandConfig:
     docker_parameters: set = field(default_factory=set)
     env: dict = field(default_factory=dict)
     secret_env: dict = field(default_factory=dict)
+    field_selector_env: dict = field(default_factory=dict)
     extra_volumes: set = field(default_factory=set)
     node_selectors: dict = field(default_factory=dict)
     node_affinities: List[ConfigNodeAffinity] = field(default_factory=list)
     labels: dict = field(default_factory=dict)
     annotations: dict = field(default_factory=dict)
     service_account_name: Optional[str] = None
+    ports: List[int] = field(default_factory=list)
 
     @property
     def state_data(self):
@@ -70,7 +73,7 @@ class Action:
         return self.command_config.command
 
     @classmethod
-    def from_config(cls, config):
+    def from_config(cls, config: ConfigAction) -> "Action":
         """Factory method for creating a new Action."""
         node_repo = node.NodePoolRepository.get_instance()
         command_config = ActionCommandConfig(
@@ -84,6 +87,7 @@ class Action:
             extra_volumes=set(config.extra_volumes or []),
             env=config.env or {},
             secret_env=config.secret_env or {},
+            field_selector_env=config.field_selector_env or {},
             cap_add=config.cap_add or [],
             cap_drop=config.cap_drop or [],
             node_selectors=config.node_selectors or {},
@@ -91,6 +95,7 @@ class Action:
             labels=config.labels or {},
             annotations=config.annotations or {},
             service_account_name=config.service_account_name or None,
+            ports=config.ports or [],
         )
         kwargs = dict(
             name=config.name,

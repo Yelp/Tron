@@ -16,6 +16,7 @@ from twisted.internet.defer import logError
 
 import tron.metrics as metrics
 from tron.actioncommand import ActionCommand
+from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigKubernetes
 from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigSecretSource
@@ -356,14 +357,16 @@ class KubernetesCluster:
         docker_image: str,
         env: Dict[str, str],
         secret_env: Dict[str, ConfigSecretSource],
+        field_selector_env: Dict[str, ConfigFieldSelectorSource],
         volumes: Collection[ConfigVolume],
         cap_add: Collection[str],
         cap_drop: Collection[str],
         node_selectors: Dict[str, str],
-        node_affinities: ConfigNodeAffinity,
+        node_affinities: List[ConfigNodeAffinity],
         pod_labels: Dict[str, str],
         pod_annotations: Dict[str, str],
         service_account_name: Optional[str],
+        ports: List[int],
         task_id: Optional[str] = None,
     ) -> Optional[KubernetesTask]:
         """
@@ -388,6 +391,7 @@ class KubernetesCluster:
                 disk=DEFAULT_DISK_LIMIT if disk is None else disk,
                 environment=env,
                 secret_environment={k: v._asdict() for k, v in secret_env.items()},
+                field_selector_environment={k: v._asdict() for k, v in field_selector_env.items()},
                 cap_add=cap_add,
                 cap_drop=cap_drop,
                 volumes=[
@@ -399,6 +403,7 @@ class KubernetesCluster:
                 labels=pod_labels,
                 annotations=pod_annotations,
                 service_account_name=service_account_name,
+                ports=ports,
             ),
         )
 

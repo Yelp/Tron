@@ -36,6 +36,7 @@ from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigCleanupAction
 from tron.config.schema import ConfigConstraint
+from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigJob
 from tron.config.schema import ConfigKubernetes
 from tron.config.schema import ConfigMesos
@@ -264,6 +265,16 @@ class ValidateSecretSource(Validator):
 valid_secret_source = ValidateSecretSource()
 
 
+class ValidateFieldSelectorSource(Validator):
+    config_class = ConfigFieldSelectorSource
+    validators = {
+        "field_path": valid_string,  # k8s field path - e.g., `status.podIP`
+    }
+
+
+valid_field_selector_source = ValidateFieldSelectorSource()
+
+
 def _valid_node_affinity_operator(value: str, config_context: ConfigContext) -> str:
     valid_operators = {"In", "NotIn", "Exists", "NotExists", "Gt", "Lt"}
     if value not in valid_operators:
@@ -437,6 +448,7 @@ class ValidateAction(Validator):
         "docker_parameters": None,
         "env": None,
         "secret_env": None,
+        "field_selector_env": None,
         "extra_volumes": None,
         "trigger_downstreams": None,
         "triggered_by": None,
@@ -447,6 +459,7 @@ class ValidateAction(Validator):
         "labels": None,
         "annotations": None,
         "service_account_name": None,
+        "ports": None,
     }
     requires = build_list_of_type_validator(valid_action_name, allow_empty=True,)
     validators = {
@@ -468,6 +481,7 @@ class ValidateAction(Validator):
         "docker_parameters": build_list_of_type_validator(valid_docker_parameter, allow_empty=True,),
         "env": valid_dict,
         "secret_env": build_dict_value_validator(valid_secret_source),
+        "field_selector_env": build_dict_value_validator(valid_field_selector_source),
         "extra_volumes": build_list_of_type_validator(valid_volume, allow_empty=True),
         "trigger_downstreams": valid_trigger_downstreams,
         "triggered_by": build_list_of_type_validator(valid_string, allow_empty=True),
@@ -478,6 +492,7 @@ class ValidateAction(Validator):
         "labels:": valid_dict,
         "annotations": valid_dict,
         "service_account_name": valid_string,
+        "ports": build_list_of_type_validator(valid_int, allow_empty=True),
     }
 
     def post_validation(self, action, config_context):
@@ -513,6 +528,8 @@ class ValidateCleanupAction(Validator):
         "docker_image": None,
         "docker_parameters": None,
         "env": None,
+        "secret_env": None,
+        "field_selector_env": None,
         "extra_volumes": None,
         "trigger_downstreams": None,
         "triggered_by": None,
@@ -523,6 +540,7 @@ class ValidateCleanupAction(Validator):
         "labels": None,
         "annotations": None,
         "service_account_name": None,
+        "ports": None,
     }
     validators = {
         "name": valid_cleanup_action_name,
@@ -541,6 +559,8 @@ class ValidateCleanupAction(Validator):
         "docker_image": valid_string,
         "docker_parameters": build_list_of_type_validator(valid_docker_parameter, allow_empty=True,),
         "env": valid_dict,
+        "secret_env": build_dict_value_validator(valid_secret_source),
+        "field_selector_env": build_dict_value_validator(valid_field_selector_source),
         "extra_volumes": build_list_of_type_validator(valid_volume, allow_empty=True),
         "trigger_downstreams": valid_trigger_downstreams,
         "triggered_by": build_list_of_type_validator(valid_string, allow_empty=True),
@@ -551,6 +571,7 @@ class ValidateCleanupAction(Validator):
         "labels": valid_dict,
         "annotations": valid_dict,
         "service_account_name": valid_string,
+        "ports": build_list_of_type_validator(valid_int, allow_empty=True),
     }
 
     def post_validation(self, action, config_context):
