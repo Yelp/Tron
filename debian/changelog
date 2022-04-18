@@ -1,3 +1,13 @@
+tron (1.19.0) bionic; urgency=medium
+
+  * 1.19.0 tagged with 'make release'
+    Commit: Pass port/field selector envvars to task_proc (#869)  we
+    need this for spark drivers in k8s to work - and without the field
+    selector env vars we're not able to fully adhere to the paasta
+    workload contract
+
+ -- root <root@9be8d1790a61>  Mon, 18 Apr 2022 16:10:56 +0000
+
 tron (1.18.0) bionic; urgency=medium
 
   * 1.18.0 tagged with 'make release'
