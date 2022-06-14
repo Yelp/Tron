@@ -4,19 +4,19 @@ UID:=$(shell id -u)
 GID:=$(shell id -g)
 
 ifeq ($(findstring .yelpcorp.com,$(shell hostname -f)), .yelpcorp.com)
-	export PIP_INDEX_URL ?= https://pypi.yelpcorp.com/simple
-	export NPM_CONFIG_REGISTRY ?= https://npm.yelpcorp.com/
 	PAASTA_ENV ?= YELP
 else
-	export PIP_INDEX_URL ?= https://pypi.python.org/simple
-	export NPM_CONFIG_REGISTRY ?= https://registry.npmjs.org
 	PAASTA_ENV ?= $(shell hostname --fqdn)
 endif
 
 NOOP = true
 ifeq ($(PAASTA_ENV),YELP)
+	export PIP_INDEX_URL ?= https://pypi.yelpcorp.com/simple
+	export NPM_CONFIG_REGISTRY ?= https://npm.yelpcorp.com/
 	ADD_MISSING_DEPS_MAYBE:=-diff --unchanged-line-format= --old-line-format= --new-line-format='%L' ./requirements.txt ./yelp_package/extra_requirements_yelp.txt >> ./requirements.txt
 else
+	export PIP_INDEX_URL ?= https://pypi.python.org/simple
+	export NPM_CONFIG_REGISTRY ?= https://registry.npmjs.org
 	ADD_MISSING_DEPS_MAYBE:=$(NOOP)
 endif
 

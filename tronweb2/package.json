@@ -42,6 +42,9 @@
         "eslint-plugin-react": "^7.20.6",
         "eslint-plugin-react-hooks": "^4.1.0"
     },
+    "resolutions": {
+        "axe-core": "4.3.3"
+    },
     "engines": {
         "node-version-shim": "10.x",
         "node": ">=10"
