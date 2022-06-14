@@ -3,6 +3,7 @@ DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw -v $(CURDIR)/.tox-indocker:/wor
 UID:=$(shell id -u)
 GID:=$(shell id -g)
 
+
 ifeq ($(findstring .yelpcorp.com,$(shell hostname -f)), .yelpcorp.com)
 	PAASTA_ENV ?= YELP
 else
