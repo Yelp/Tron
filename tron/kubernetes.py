@@ -15,6 +15,7 @@ from twisted.internet.defer import Deferred  # type: ignore  # need to upgrade t
 from twisted.internet.defer import logError
 
 import tron.metrics as metrics
+from tron import __version__
 from tron.actioncommand import ActionCommand
 from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigKubernetes
@@ -232,6 +233,7 @@ class KubernetesCluster:
                 provider="kubernetes",
                 provider_config={
                     "namespace": "tron",
+                    "version": __version__,
                     "kubeconfig_path": self.kubeconfig_path,
                     "task_configs": [task.get_config() for task in self.tasks.values()],
                 },
