@@ -1,3 +1,10 @@
+tron (1.20.0) bionic; urgency=medium
+
+  * 1.20.0 tagged with 'make release'
+    Commit: bumped up taskproc ver pass tron version to tskprc
+
+ -- root <root@d63f2c9cda1b>  Mon, 25 Jul 2022 20:44:50 +0000
+
 tron (1.19.0) bionic; urgency=medium
 
   * 1.19.0 tagged with 'make release'
