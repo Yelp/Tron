@@ -197,3 +197,47 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_in_past():
     )
     mock_stream_tailer.assert_not_called()
     assert output == ["line 0"]
+
+
+def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
+    # NOTE: these tests don't actually depend on the current time apart from
+    # today vs not-today and the args are forwarded to scribereader anyway
+    # so using the current time is fine
+    min_date = datetime.datetime.now() - datetime.timedelta(days=5)
+    max_date = datetime.datetime.now() - datetime.timedelta(days=4)
+    with mock.patch(
+        "tron.utils.scribereader.get_scribereader_host_and_port", autospec=True, return_value=("host", 1234),
+    ), mock.patch(
+        "tron.utils.scribereader.scribereader.get_stream_reader", autospec=True,
+    ) as mock_stream_reader, mock.patch(
+        "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
+    ) as mock_stream_tailer, mock.patch(
+        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
+    ):
+        # all the data we want is from the past, so we should only check the reader
+
+        # open the file , turn every line into a string
+        with open("./tests/utils/shortOutputTest.txt") as f:
+            content_list = f.readlines()
+
+        mock_stream_reader.return_value.__enter__.return_value = iter(content_list)
+
+        # so lets make sure we don't call the tailer
+        mock_stream_tailer.return_value.__iter__.side_effect = Exception
+        output = read_log_stream_for_action_run(
+            action_run_id="namespace.job.228.action",
+            component="stdout",
+            min_date=min_date,
+            max_date=max_date,
+            paasta_cluster="infrastage",
+        )
+    mock_stream_reader.assert_called_once_with(
+        stream_name="stream_paasta_app_output_namespace_job__action",
+        min_date=min_date,
+        max_date=max_date,
+        reader_host="host",
+        reader_port=1234,
+    )
+    mock_stream_tailer.assert_not_called()
+    # print(output[-1].find("truncated. Use this command to view all lines"))
+    assert output[-1].find("truncated. Use this command to view all lines") > 0

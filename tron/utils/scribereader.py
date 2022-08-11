@@ -191,7 +191,7 @@ def read_log_stream_for_action_run(
         output.append(
             (
                 formated_today,
-                "This output is truncated. Use this command to view all lines 'scribereader -s {paasta_cluster} -f stream_paasta_app_output_{namespace}_{job_name}__{action}'",
+                f"This output is truncated. Use this command to view all lines 'scribereader -s {paasta_cluster} -f stream_paasta_app_output_{namespace}_{job_name}__{action}'",
             )
         )
 
