@@ -1,3 +1,11 @@
+tron (1.21.0) bionic; urgency=medium
+
+  * 1.21.0 tagged with 'make release'
+    Commit: Merge pull request #874 from Yelp/u/jfong/TRON-1777-update-
+    taskproc  TRON-1777: bump taskproc to get kubeconfig reload fix
+
+ -- root <root@6bf33780de09>  Mon, 15 Aug 2022 18:29:12 +0000
+
 tron (1.20.0) bionic; urgency=medium
 
   * 1.20.0 tagged with 'make release'
