@@ -8,7 +8,7 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
-import staticconf
+import staticconf  # type: ignore
 
 from tron.config.static_config import NAMESPACE
 
