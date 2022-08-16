@@ -8,6 +8,10 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
+import staticconf
+
+from tron.config.static_config import NAMESPACE
+
 
 try:
     from scribereader import scribereader  # type: ignore
@@ -77,10 +81,13 @@ def read_log_stream_for_action_run(
     min_date: Optional[datetime.datetime],
     max_date: Optional[datetime.datetime],
     paasta_cluster: Optional[str],
-    max_lines: Optional[int] = 1000,
+    max_lines: Optional[int] = -1,
 ) -> List[str]:
     if min_date is None:
         return [f"{action_run_id} has not started yet."]
+
+    if max_lines == -1:
+        max_lines = staticconf.read("logging.max_lines_to_display", namespace=NAMESPACE)
 
     if scribereader is None:
         return ["Scribereader (an internal Yelp package) is not available - unable to display logs."]
@@ -186,18 +193,17 @@ def read_log_stream_for_action_run(
         finally:
             stream.close()
 
-    if truncated_output:
-        formated_today = datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")
-        output.append(
-            (
-                formated_today,
-                f"This output is truncated. Use this command to view all lines 'scribereader -s {paasta_cluster} -f stream_paasta_app_output_{namespace}_{job_name}__{action}'",
-            )
-        )
-
     # XXX: for some reason, we're occasionally getting data out of order from scribereader - so we'll sort based on
     # timestamp until we can figure out what's causing this.
     output.sort(key=operator.itemgetter(0))
-    return [line for _, line in output] + (
-        [f"{malformed_lines} encountered while retrieving logs"] if malformed_lines else []
+    return (
+        [line for _, line in output]
+        + ([f"{malformed_lines} encountered while retrieving logs"] if malformed_lines else [])
+        + (
+            [
+                f"This output is truncated. Use this command to view all lines 'scribereader -s {paasta_cluster} -f stream_paasta_app_output_{namespace}_{job_name}__{action} --min-date {min_date} --max-date {max_date}'"
+            ]
+            if truncated_output
+            else []
+        )
     )

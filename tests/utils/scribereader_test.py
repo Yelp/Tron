@@ -239,5 +239,4 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
         reader_port=1234,
     )
     mock_stream_tailer.assert_not_called()
-    # print(output[-1].find("truncated. Use this command to view all lines"))
-    assert output[-1].find("truncated. Use this command to view all lines") > 0
+    assert len(output) == 1000 + 1
