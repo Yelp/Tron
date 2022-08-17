@@ -10,6 +10,7 @@ from typing import Tuple
 
 import staticconf  # type: ignore
 
+from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
 
 
@@ -87,6 +88,8 @@ def read_log_stream_for_action_run(
         return [f"{action_run_id} has not started yet."]
 
     if max_lines == -1:
+        config_watcher = get_config_watcher()
+        config_watcher.reload_if_changed()
         max_lines = staticconf.read("logging.max_lines_to_display", namespace=NAMESPACE)
 
     if scribereader is None:

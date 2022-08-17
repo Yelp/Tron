@@ -25,6 +25,10 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_today():
         "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
     ) as mock_stream_tailer, mock.patch(
         "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
+    ), mock.patch(
+        "tron.config.static_config.build_configuration", autospec=True,
+    ), mock.patch(
+        "staticconf.read", autospec=True, return_value=1000
     ):
         # in this case, we shouldn't even try to check the reader, so lets set an exception
         # to make sure we didn't try
@@ -84,6 +88,10 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_different_days():
         "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
     ) as mock_stream_tailer, mock.patch(
         "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
+    ), mock.patch(
+        "tron.config.static_config.build_configuration", autospec=True,
+    ), mock.patch(
+        "staticconf.read", autospec=True, return_value=1000
     ):
         # we should check the reader for data from a previous day
         mock_stream_reader.return_value.__enter__.return_value = iter(
@@ -165,6 +173,10 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_in_past():
         "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
     ) as mock_stream_tailer, mock.patch(
         "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
+    ), mock.patch(
+        "tron.config.static_config.build_configuration", autospec=True,
+    ), mock.patch(
+        "staticconf.read", autospec=True, return_value=1000
     ):
         # all the data we want is from the past, so we should only check the reader
         mock_stream_reader.return_value.__enter__.return_value = iter(
@@ -213,14 +225,19 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
         "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
     ) as mock_stream_tailer, mock.patch(
         "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
+    ), mock.patch(
+        "tron.config.static_config.build_configuration", autospec=True,
+    ), mock.patch(
+        "staticconf.read", autospec=True, return_value=1000
     ):
-        # all the data we want is from the past, so we should only check the reader
 
-        # open the file , turn every line into a string
         with open("./tests/utils/shortOutputTest.txt") as f:
             content_list = f.readlines()
 
         mock_stream_reader.return_value.__enter__.return_value = iter(content_list)
+        # will call this hardcoded instead of static_config
+        # options: mock the whole return value of staticconf.read
+        # or mock the part that I'm used to read the file
 
         # so lets make sure we don't call the tailer
         mock_stream_tailer.return_value.__iter__.side_effect = Exception

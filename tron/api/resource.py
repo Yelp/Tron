@@ -9,7 +9,7 @@ import traceback
 
 import staticconf
 
-from tron.config.static_config import config_watcher
+from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
 
 try:
@@ -133,6 +133,7 @@ class ActionRunResource(resource.Resource):
 
     @AsyncResource.bounded
     def render_GET(self, request):
+        config_watcher = get_config_watcher()
         config_watcher.reload_if_changed()
         run_adapter = adapter.ActionRunAdapter(
             self.action_run,
