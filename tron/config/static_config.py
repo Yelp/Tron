@@ -7,6 +7,10 @@ FILENAME = "/nail/srv/configs/tron.yaml"
 NAMESPACE = "tron"
 
 
+def load_yaml_file():
+    staticconf.YamlConfiguration(filename=FILENAME, namespace=NAMESPACE)
+
+
 def build_configuration(filename, namespace):
     config_loader = partial(staticconf.YamlConfiguration, filename, namespace=namespace)
     reloader = config.ReloadCallbackChain(namespace)
@@ -15,4 +19,5 @@ def build_configuration(filename, namespace):
 
 # Load configuration from 'tron.yaml' into namespace 'tron'
 def get_config_watcher():
+    load_yaml_file()
     return build_configuration(FILENAME, NAMESPACE)

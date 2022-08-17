@@ -121,8 +121,11 @@ class TestActionRunResource(WWWTestCase):
         self.resource = www.ActionRunResource(self.action_run, self.job_run)
 
     def test_render_GET(self, mock_respond):
-        request = build_request(num_lines="12")
-        response = self.resource.render_GET(request)
+        request = build_request()
+        with mock.patch("tron.config.static_config.build_configuration", autospec=True,), mock.patch(
+            "staticconf.read", autospec=True, return_value=1000
+        ):
+            response = self.resource.render_GET(request)
         assert response["id"] == self.resource.action_run.id
 
 
