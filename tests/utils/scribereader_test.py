@@ -235,9 +235,6 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
             content_list = f.readlines()
 
         mock_stream_reader.return_value.__enter__.return_value = iter(content_list)
-        # will call this hardcoded instead of static_config
-        # options: mock the whole return value of staticconf.read
-        # or mock the part that I'm used to read the file
 
         # so lets make sure we don't call the tailer
         mock_stream_tailer.return_value.__iter__.side_effect = Exception
