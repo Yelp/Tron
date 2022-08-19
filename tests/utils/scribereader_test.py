@@ -26,9 +26,11 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_today():
     ) as mock_stream_tailer, mock.patch(
         "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
     ), mock.patch(
-        "tron.config.static_config.build_configuration", autospec=True,
+        "tron.config.static_config.build_configuration_watcher", autospec=True,
     ), mock.patch(
         "staticconf.read", autospec=True, return_value=1000
+    ), mock.patch(
+        "tron.config.static_config.load_yaml_file", autospec=True,
     ):
         # in this case, we shouldn't even try to check the reader, so lets set an exception
         # to make sure we didn't try
@@ -89,9 +91,11 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_different_days():
     ) as mock_stream_tailer, mock.patch(
         "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
     ), mock.patch(
-        "tron.config.static_config.build_configuration", autospec=True,
+        "tron.config.static_config.build_configuration_watcher", autospec=True,
     ), mock.patch(
         "staticconf.read", autospec=True, return_value=1000
+    ), mock.patch(
+        "tron.config.static_config.load_yaml_file", autospec=True,
     ):
         # we should check the reader for data from a previous day
         mock_stream_reader.return_value.__enter__.return_value = iter(
@@ -174,9 +178,11 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_in_past():
     ) as mock_stream_tailer, mock.patch(
         "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
     ), mock.patch(
-        "tron.config.static_config.build_configuration", autospec=True,
+        "tron.config.static_config.build_configuration_watcher", autospec=True,
     ), mock.patch(
         "staticconf.read", autospec=True, return_value=1000
+    ), mock.patch(
+        "tron.config.static_config.load_yaml_file", autospec=True,
     ):
         # all the data we want is from the past, so we should only check the reader
         mock_stream_reader.return_value.__enter__.return_value = iter(
@@ -217,6 +223,10 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
     # so using the current time is fine
     min_date = datetime.datetime.now() - datetime.timedelta(days=5)
     max_date = datetime.datetime.now() - datetime.timedelta(days=4)
+    # 1000 represents the number of lines that are expected to be
+    # outputted by the test, which is similar to the logging.max_lines_to_display
+    # in tron.yaml in srv-configs
+    max_lines = 1000
     with mock.patch(
         "tron.utils.scribereader.get_scribereader_host_and_port", autospec=True, return_value=("host", 1234),
     ), mock.patch(
@@ -226,9 +236,11 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
     ) as mock_stream_tailer, mock.patch(
         "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
     ), mock.patch(
-        "tron.config.static_config.build_configuration", autospec=True,
+        "tron.config.static_config.build_configuration_watcher", autospec=True,
     ), mock.patch(
         "staticconf.read", autospec=True, return_value=1000
+    ), mock.patch(
+        "tron.config.static_config.load_yaml_file", autospec=True,
     ):
 
         with open("./tests/utils/shortOutputTest.txt") as f:
@@ -253,4 +265,6 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
         reader_port=1234,
     )
     mock_stream_tailer.assert_not_called()
-    assert len(output) == 1000 + 1
+    # The expected output should be max_lines plus the
+    # extra line for 'This output is truncated.' message
+    assert len(output) == max_lines + 1
