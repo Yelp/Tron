@@ -130,11 +130,10 @@ class ActionRunResource(resource.Resource):
         self.action_run = action_run
         self.job_run = job_run
         self.controller = controller.ActionRunController(action_run, job_run)
+        self.config_watcher = get_config_watcher()
 
     @AsyncResource.bounded
     def render_GET(self, request):
-        config_watcher = get_config_watcher()
-        config_watcher.reload_if_changed()
         run_adapter = adapter.ActionRunAdapter(
             self.action_run,
             self.job_run,

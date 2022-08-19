@@ -21,6 +21,8 @@ from tron.core import jobrun
 from tron.core.job_collection import JobCollection
 from tron.core.job_scheduler import JobScheduler
 
+# import staticconf.testing
+
 with mock.patch(
     "tron.api.async_resource.AsyncResource.bounded", lambda fn: fn, autospec=None,
 ):
@@ -122,12 +124,7 @@ class TestActionRunResource(WWWTestCase):
 
     def test_render_GET(self, mock_respond):
         request = build_request()
-        with mock.patch("tron.config.static_config.build_configuration", autospec=True,), mock.patch(
-            "staticconf.read", autospec=True, return_value=1000
-        ), mock.patch(
-            "tron.config.static_config.load_yaml_file", autospec=True,
-        ):
-            response = self.resource.render_GET(request)
+        response = self.resource.render_GET(request)
         assert response["id"] == self.resource.action_run.id
 
 

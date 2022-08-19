@@ -22,6 +22,7 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
+USE_SRV_CONFIGS = -1
 
 
 @lru_cache(maxsize=1)
@@ -82,12 +83,12 @@ def read_log_stream_for_action_run(
     min_date: Optional[datetime.datetime],
     max_date: Optional[datetime.datetime],
     paasta_cluster: Optional[str],
-    max_lines: Optional[int] = -1,
+    max_lines: Optional[int] = USE_SRV_CONFIGS,
 ) -> List[str]:
     if min_date is None:
         return [f"{action_run_id} has not started yet."]
 
-    if max_lines == -1:
+    if max_lines == USE_SRV_CONFIGS:
         config_watcher = get_config_watcher()
         config_watcher.reload_if_changed()
         max_lines = staticconf.read("logging.max_lines_to_display", namespace=NAMESPACE)
@@ -124,7 +125,7 @@ def read_log_stream_for_action_run(
     output: List[Tuple[str, str]] = []
 
     malformed_lines = 0
-    lines = 0
+    num_lines = 0
     truncated_output = False
 
     # We'll only use a stream reader for logs from not-today.
@@ -136,7 +137,7 @@ def read_log_stream_for_action_run(
             stream_name=stream_name, min_date=min_date, max_date=max_date, reader_host=host, reader_port=port,
         ) as stream:
             for line in stream:
-                if max_lines is not None and lines == max_lines:
+                if max_lines is not None and num_lines == max_lines:
                     truncated_output = True
                     break
 
@@ -155,7 +156,7 @@ def read_log_stream_for_action_run(
                     and payload.get("cluster") == paasta_cluster
                 ):
                     output.append((payload["timestamp"], payload["message"]))
-                    lines += 1
+                    num_lines += 1
 
     if use_tailer:
         stream = scribereader.get_stream_tailer(
@@ -163,7 +164,7 @@ def read_log_stream_for_action_run(
         )
         try:
             for line in stream:
-                if lines == max_lines:
+                if num_lines == max_lines:
                     truncated_output = True
                     break
 
@@ -182,7 +183,7 @@ def read_log_stream_for_action_run(
                     and payload.get("cluster") == paasta_cluster
                 ):
                     output.append((payload["timestamp"], payload["message"]))
-                    lines += 1
+                    num_lines += 1
         except StreamTailerSetupError:
             return [
                 f"No data in stream {stream_name} - if this is the first time this action has run and you expected "
@@ -199,14 +200,17 @@ def read_log_stream_for_action_run(
     # XXX: for some reason, we're occasionally getting data out of order from scribereader - so we'll sort based on
     # timestamp until we can figure out what's causing this.
     output.sort(key=operator.itemgetter(0))
-    return (
-        [line for _, line in output]
-        + ([f"{malformed_lines} encountered while retrieving logs"] if malformed_lines else [])
-        + (
-            [
-                f"This output is truncated. Use this command to view all lines 'scribereader -s {paasta_cluster} -f stream_paasta_app_output_{namespace}_{job_name}__{action} --min-date {min_date} --max-date {max_date}'"
-            ]
-            if truncated_output
-            else []
-        )
+    lines = [line for _, line in output]
+    malformed = [f"{malformed_lines} encountered while retrieving logs"] if malformed_lines else []
+    truncation_message = (
+        [
+            f"This output is truncated. Use this command to view all lines 'scribereader -s {paasta_cluster} {stream_name} --min-date {min_date.date()} --max-date {max_date.date()}'"
+        ]
+        if max_date
+        else [
+            f"This output is truncated. Use this command to view all lines 'scribereader -s {paasta_cluster} {stream_name} --min-date {min_date.date()}'"
+        ]
     )
+    truncated = truncation_message if truncated_output else []
+
+    return lines + malformed + truncated
