@@ -13,6 +13,8 @@ tron.iml
 docs/images/
 *.dot
 tronweb/js/cs/*.js
+tronweb2/yarn.lock
+yarn.lock
 tronweb_tests/spec/*.js
 tronweb_tests/lib/
 .tox
