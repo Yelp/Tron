@@ -1,3 +1,11 @@
+tron (1.22.0) bionic; urgency=medium
+
+  * 1.22.0 tagged with 'make release'
+    Commit: Merge pull request #873 from Yelp/u/emanelsabban/tronUI-1737
+    Limiting amount of output displayed in Tron UI - TRON-1737
+
+ -- root <root@3923dfd1fe65>  Tue, 23 Aug 2022 19:35:57 +0000
+
 tron (1.21.0) bionic; urgency=medium
 
   * 1.21.0 tagged with 'make release'
