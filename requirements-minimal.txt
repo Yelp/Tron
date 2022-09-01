@@ -3,13 +3,16 @@ boto3
 bsddb3
 cryptography
 dataclasses
+distro
 ecdsa>=0.13.3
+funcsigs
 humanize
 ipdb
 ipython
 Jinja2>=2.10.1
 lockfile
 moto
+protobuf
 psutil
 py-bcrypt
 pyasn1
@@ -20,6 +23,7 @@ pytimeparse
 pytz
 PyYAML>=5.1
 requests
+rook
 task_processing[mesos_executor,k8s]
 Twisted>=19.7.0
 urllib3>=1.24.2

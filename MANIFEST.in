@@ -1,6 +1,7 @@
 include *.txt
 include *.md
 include Makefile
+include tron/VERSION_SHA
 include tron/default_config.yaml
 include tron/logging.conf
 include tron/named_config_template.yaml

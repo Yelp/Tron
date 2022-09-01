@@ -85,7 +85,7 @@ class TronDaemon:
                 signal.SIGUSR1: self._handle_debug,
             }
             signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
-
+            self._run_rookout()
             self._run_mcp()
             self._run_www_api()
             self._run_manhole()
@@ -96,6 +96,14 @@ class TronDaemon:
                 if signum in signal_map:
                     logging.info(f"Got signal {str(signum)}")
                     signal_map[signum](signum, None)
+
+    def _run_rookout(self):
+        # Local import required because logging is not initialized until later
+        from tron.utils import rookout
+
+        log.info("Preparing Rookout SDK")
+        rookout.prepare_rookout_token()
+        rookout.enable_rookout()
 
     def _run_manhole(self):
         # This condition is made with the assumption that no existing daemon
