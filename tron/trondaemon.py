@@ -85,7 +85,10 @@ class TronDaemon:
                 signal.SIGUSR1: self._handle_debug,
             }
             signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
-            self._run_rookout()
+            try:
+                self._run_rookout()
+            except Exception as e:
+                logging.exception(f"Unable to setup rookout. {e}")
             self._run_mcp()
             self._run_www_api()
             self._run_manhole()
@@ -102,7 +105,6 @@ class TronDaemon:
         from tron.utils import rookout
 
         log.info("Preparing Rookout SDK")
-        rookout.prepare_rookout_token()
         rookout.enable_rookout()
 
     def _run_manhole(self):

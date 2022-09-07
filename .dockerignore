@@ -1,8 +1,3 @@
 .tox
 .git
 .idea
-
-# Files need to setup Rookout git configuration
-!.git/HEAD
-!.git/config
-!.git/refs

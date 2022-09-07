@@ -3,16 +3,13 @@ boto3
 bsddb3
 cryptography
 dataclasses
-distro
 ecdsa>=0.13.3
-funcsigs
 humanize
 ipdb
 ipython
 Jinja2>=2.10.1
 lockfile
 moto
-protobuf
 psutil
 py-bcrypt
 pyasn1

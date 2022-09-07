@@ -27,8 +27,8 @@ def get_version_sha() -> Optional[str]:
     try:
         with open(f"{os.path.dirname(os.path.abspath(__file__))}/../VERSION_SHA") as file:
             version_sha = file.read().rstrip()
-    except OSError as exc:
-        log.warning("Failed to read the file VERSION_SHA: %s. Loading master as default.", exc)
+    except OSError:
+        log.exception("Failed to read the file VERSION_SHA. Using master as default.")
     return version_sha
 
 
@@ -37,13 +37,13 @@ def get_hostname() -> str:
 
 
 def prepare_rookout_token() -> None:
-    """Load rookout token into memory while we are still root"""
+    """Load rookout token into memory"""
     global ROOKOUT_TOKEN
     try:
         with open(ROOKOUT_TOKEN_PATH, encoding="utf-8") as _rookout_token_file:
             ROOKOUT_TOKEN = _rookout_token_file.read().strip()
-    except OSError as exc:
-        log.warning("Failed to load rookout token: %s", exc)
+    except OSError:
+        log.exception("Failed to load rookout token")
 
 
 def enable_rookout() -> None:
@@ -73,6 +73,7 @@ def enable_rookout() -> None:
         log.info("Stopping Rookout SDK (reconfig)")
         rook.stop()
         log.info("Starting Rookout SDK")
+        prepare_rookout_token()
         rook.start(
             token=ROOKOUT_TOKEN,
             labels={

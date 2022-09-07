@@ -1,5 +1,5 @@
 VERSION=$(shell python setup.py --version)
-VERSION_SHA = $(shell git rev-list -n 1 v$(VERSION))
+VERSION_SHA = $(shell git rev-parse HEAD)
 DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw -v $(CURDIR)/.tox-indocker:/work/.tox:rw
 UID:=$(shell id -u)
 GID:=$(shell id -g)
