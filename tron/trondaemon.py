@@ -87,8 +87,8 @@ class TronDaemon:
             signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
             try:
                 self._run_rookout()
-            except Exception as e:
-                logging.exception(f"Unable to setup rookout. {e}")
+            except Exception:
+                logging.exception("Unable to setup Rookout.")
             self._run_mcp()
             self._run_www_api()
             self._run_manhole()

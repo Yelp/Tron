@@ -22,6 +22,7 @@ RUN apt-get -q update && \
         python3-pip \
         python-tox \
         wget \
+        g++ \
     && apt-get -q clean
 
 ARG PIP_INDEX_URL
