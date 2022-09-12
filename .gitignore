@@ -27,6 +27,7 @@ tron.lock
 manhole.sock
 manhole.sock.lock
 node_modules/
+tron/VERSION_SHA
 
 # Example cluster
 example-cluster/config
