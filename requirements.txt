@@ -49,7 +49,6 @@ kubernetes==17.17.0
 lockfile==0.12.2
 MarkupSafe==1.1.1
 mock==3.0.5
-more-itertools==8.0.2
 moto==1.3.13
 oauthlib==3.1.0
 parso==0.5.1
@@ -94,5 +93,5 @@ websocket-client==0.56.0
 Werkzeug==0.16.0
 wrapt==1.11.2
 xmltodict==0.12.0
-zipp==0.6.0
+zipp==3.1.0
 zope.interface==5.1.0
