@@ -5,6 +5,7 @@ cryptography
 dataclasses
 ecdsa>=0.13.3
 humanize
+importlib-resources
 ipdb
 ipython
 Jinja2>=2.10.1

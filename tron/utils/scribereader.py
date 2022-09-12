@@ -12,6 +12,7 @@ import staticconf  # type: ignore
 
 from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
+from tron.utils import habitat
 
 
 try:
@@ -26,44 +27,11 @@ USE_SRV_CONFIGS = -1
 
 
 @lru_cache(maxsize=1)
-def get_region() -> str:
-    """
-    Discover what region we're running in by reading this information from on-disk facts.
-
-    Yelpers: for more information, see y/habitat
-    """
-    with open("/nail/etc/region") as f:
-        return f.read().strip()
-
-
-@lru_cache(maxsize=1)
-def get_superregion() -> str:
-    """
-    Discover what region we're running in by reading this information from on-disk facts.
-
-    Yelpers: for more information, see y/habitat
-    """
-    with open("/nail/etc/superregion") as f:
-        return f.read().strip()
-
-
-@lru_cache(maxsize=1)
-def get_ecosystem() -> str:
-    """
-    Discover what ecosystem we're running in by reading this information from on-disk facts.
-
-    Yelpers: for more information, see y/habitat
-    """
-    with open("/nail/etc/ecosystem") as f:
-        return f.read().strip()
-
-
-@lru_cache(maxsize=1)
 def get_scribereader_host_and_port() -> Optional[Tuple[str, int]]:
     try:
-        ecosystem = get_ecosystem()
-        superregion = get_superregion()
-        region = get_region()
+        ecosystem = habitat.get_ecosystem()
+        superregion = habitat.get_superregion()
+        region = habitat.get_region()
     except OSError:
         log.warning("Unable to read location mapping files from disk, not returning scribereader host/port")
         return None
@@ -104,7 +72,7 @@ def read_log_stream_for_action_run(
     # this should never fail since get_scribereader_host_and_port() will have also called get_superregion() and we've ensured that
     # that file exists by getting to this point
     if paasta_cluster is None:
-        paasta_cluster = get_superregion()
+        paasta_cluster = habitat.get_superregion()
 
     today = datetime.date.today()
     start_date = min_date.date()
