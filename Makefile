@@ -71,10 +71,10 @@ react_%: docker_%
 	'
 
 test:
-	tox -e py36
+	tox -e py37
 
 test_in_docker_%: docker_%
-	$(DOCKER_RUN) tron-builder-$* python3.6 -m tox -vv -e py36
+	$(DOCKER_RUN) tron-builder-$* python3.7 -m tox -vv -e py37
 
 tox_%:
 	tox -e $*
@@ -92,13 +92,13 @@ cluster_itests:
 	tox -e cluster_itests
 
 dev:
-	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py36/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0
+	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py37/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0
 
 example_cluster:
 	tox -e example-cluster
 
 yelpy:
-	.tox/py36/bin/pip-custom-platform install -i https://pypi.yelpcorp.com/simple -r yelp_package/extra_requirements_yelp.txt
+	.tox/py37/bin/pip-custom-platform install -i https://pypi.yelpcorp.com/simple -r yelp_package/extra_requirements_yelp.txt
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/[\x27\x22]/\\\x27/g')
 release: docker_bionic docs

@@ -4,11 +4,11 @@
 import datetime
 import logging
 import os
+from dataclasses import dataclass
+from dataclasses import fields
 from typing import List
 from typing import Optional
 
-from dataclasses import dataclass
-from dataclasses import fields
 from pyrsistent import InvariantException
 from twisted.internet import reactor
 

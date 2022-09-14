@@ -19,7 +19,7 @@ eval $(ssh-agent)
 trond --help
 tronfig --help
 
-/opt/venvs/tron/bin/python --version | grep -q '3\.6'
+/opt/venvs/tron/bin/python --version | grep -q '3\.7'
 
 /opt/venvs/tron/bin/python - <<EOF
 from yaml import CSafeLoader

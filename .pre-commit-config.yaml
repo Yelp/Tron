@@ -1,6 +1,6 @@
 ---
 default_language_version:
-    python: python3.6
+    python: python3.7
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.5.0
@@ -30,7 +30,7 @@ repos:
     rev: v2.0.2
     hooks:
       - id: pyupgrade
-        args: [--py36-plus]
+        args: [--py37-plus]
   - repo: local
     hooks:
       - id: patch-enforce-autospec
@@ -49,5 +49,5 @@ repos:
     rev: 19.10b0
     hooks:
       - id: black
-        language_version: python3.6
-        args: [--target-version, py36]
+        language_version: python3.7
+        args: [--target-version, py37]
