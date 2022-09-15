@@ -1,3 +1,11 @@
+tron (1.23.1) bionic; urgency=medium
+
+  * 1.23.1 tagged with 'make release'
+    Commit: Merge pull request #877 from Yelp/jammy-3.7  Python 3.7;
+    build for Jammy
+
+ -- root <root@7225e396580b>  Thu, 15 Sep 2022 22:42:37 +0000
+
 tron (1.23.0) bionic; urgency=medium
 
   * 1.23.0 tagged with 'make release'
