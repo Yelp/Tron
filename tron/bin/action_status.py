@@ -44,13 +44,16 @@ commands = {
 def parse_args():
     parser = argparse.ArgumentParser(description="Action Status for Tron")
     parser.add_argument(
-        "output_dir", help="The directory where the state of the action run is",
+        "output_dir",
+        help="The directory where the state of the action run is",
     )
     parser.add_argument(
-        "command", help="the command to run",
+        "command",
+        help="the command to run",
     )
     parser.add_argument(
-        "run_id", help="run_id of the action",
+        "run_id",
+        help="run_id of the action",
     )
     return parser.parse_args()
 

@@ -44,7 +44,9 @@ def fake_backfill_run(mock_client):
     tron_client = mock_client.return_value
     tron_client.url_base = "http://localhost"
     yield backfill.BackfillRun(
-        tron_client, client.TronObjectIdentifier("JOB", "/a_job"), TEST_DATETIME_1,
+        tron_client,
+        client.TronObjectIdentifier("JOB", "/a_job"),
+        TEST_DATETIME_1,
     )
 
 
@@ -107,7 +109,12 @@ def test_backfill_run_watch_until_completion(fake_backfill_run, event_loop):
     ],
 )
 def test_backfill_run_cancel(
-    mock_client_request, fake_backfill_run, event_loop, run_id, response, expected,
+    mock_client_request,
+    fake_backfill_run,
+    event_loop,
+    run_id,
+    response,
+    expected,
 ):
     fake_backfill_run.run_id = run_id
     mock_client_request.return_value = response
@@ -118,19 +125,26 @@ def test_backfill_run_cancel(
 def test_run_backfill_for_date_range_job_dne(mock_get_obj_type, event_loop):
     mock_get_obj_type.side_effect = ValueError
     with pytest.raises(ValueError):
-        event_loop.run_until_complete(backfill.run_backfill_for_date_range("a_server", "a_job", []),)
+        event_loop.run_until_complete(
+            backfill.run_backfill_for_date_range("a_server", "a_job", []),
+        )
 
 
 @mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
 def test_run_backfill_for_date_range_not_a_job(mock_get_obj_type, event_loop):
     mock_get_obj_type.return_value = client.TronObjectIdentifier("JOB_RUN", "a_url")
     with pytest.raises(ValueError):
-        event_loop.run_until_complete(backfill.run_backfill_for_date_range("a_server", "a_job", []),)
+        event_loop.run_until_complete(
+            backfill.run_backfill_for_date_range("a_server", "a_job", []),
+        )
 
 
 @pytest.mark.parametrize(
     "ignore_errors,expected",
-    [(True, {"succeeded", "failed", "unknown"}), (False, {"succeeded", "failed", "not started"}),],
+    [
+        (True, {"succeeded", "failed", "unknown"}),
+        (False, {"succeeded", "failed", "not started"}),
+    ],
 )
 @mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
 def test_run_backfill_for_date_range_normal(mock_get_obj_type, event_loop, ignore_errors, expected):
@@ -144,7 +158,13 @@ def test_run_backfill_for_date_range_normal(mock_get_obj_type, event_loop, ignor
     mock_get_obj_type.return_value = client.TronObjectIdentifier("JOB", "a_url")
 
     backfill_runs = event_loop.run_until_complete(
-        backfill.run_backfill_for_date_range("a_server", "a_job", dates, max_parallel=2, ignore_errors=ignore_errors,)
+        backfill.run_backfill_for_date_range(
+            "a_server",
+            "a_job",
+            dates,
+            max_parallel=2,
+            ignore_errors=ignore_errors,
+        )
     )
 
     assert {br.run_state for br in backfill_runs} == expected
