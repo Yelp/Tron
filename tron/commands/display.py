@@ -51,7 +51,11 @@ class Color:
     def set(cls, color_name, text):
         if not cls.enabled or not color_name:
             return text
-        return "{}{}{}".format(cls.colors[color_name.lower()], text, cls.colors["end"],)
+        return "{}{}{}".format(
+            cls.colors[color_name.lower()],
+            text,
+            cls.colors["end"],
+        )
 
     @classmethod
     def toggle(cls, enable):
@@ -149,7 +153,11 @@ class TableDisplay:
         return None
 
     def rows(self):
-        return sorted(self.data, key=itemgetter(self.fields[self.sort_index]), reverse=self.reversed,)
+        return sorted(
+            self.data,
+            key=itemgetter(self.fields[self.sort_index]),
+            reverse=self.reversed,
+        )
 
     def store_data(self, data):
         self.data = data
@@ -220,7 +228,9 @@ def format_fields(display_obj, content):
 def format_job_details(job_content):
     details = format_fields(DisplayJobs, job_content)
     job_runs = DisplayJobRuns().format(job_content["runs"])
-    actions = "\n\nList of Actions:\n%s" % "\n".join(job_content["action_names"],)
+    actions = "\n\nList of Actions:\n%s" % "\n".join(
+        job_content["action_names"],
+    )
     return details + actions + "\n" + job_runs
 
 
@@ -281,7 +291,12 @@ class DisplayJobRuns(TableDisplay):
         end = row["end_time"] or "-"
         duration = row["duration"][:-7] if row["duration"] else "-"
 
-        row_data = "{}Start: {}  End: {}  ({})".format(" " * self.widths[0], start, end, duration,)
+        row_data = "{}Start: {}  End: {}  ({})".format(
+            " " * self.widths[0],
+            start,
+            end,
+            duration,
+        )
         self.out.append(Color.set("gray", row_data))
 
 
@@ -375,7 +390,11 @@ class DisplayActionRuns(TableDisplay):
         # Action runs need a sort order that sorts by date
         # and that can handle situations where it is None, or
         # othere weird things, so we str()
-        return sorted(self.data, key=lambda x: str(x[self.fields[self.sort_index]]), reverse=self.reversed,)
+        return sorted(
+            self.data,
+            key=lambda x: str(x[self.fields[self.sort_index]]),
+            reverse=self.reversed,
+        )
 
 
 def display_node(source, _=None):

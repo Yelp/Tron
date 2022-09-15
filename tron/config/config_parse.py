@@ -55,14 +55,17 @@ log = logging.getLogger(__name__)
 
 def build_format_string_validator(context_object):
     """Validate that a string does not contain any unexpected formatting keys.
-        valid_keys - a sequence of strings
+    valid_keys - a sequence of strings
     """
 
     def validator(value, config_context):
         if config_context.partial:
             return valid_string(value, config_context)
 
-        context = command_context.CommandContext(context_object, config_context.command_context,)
+        context = command_context.CommandContext(
+            context_object,
+            config_context.command_context,
+        )
 
         try:
             StringFormatter(context).format(value)
@@ -93,7 +96,9 @@ def valid_output_stream_dir(output_dir, config_context):
         raise ConfigError(msg % output_dir)
 
     if not os.access(output_dir, os.W_OK):
-        raise ConfigError("output_stream_dir '%s' is not writable" % output_dir,)
+        raise ConfigError(
+            "output_stream_dir '%s' is not writable" % output_dir,
+        )
 
     return output_dir
 
@@ -316,7 +321,10 @@ class ValidateSSHOptions(Validator):
         # TODO: move this config and validations outside master namespace
         # 'identities':               build_list_of_type_validator(
         #                                 valid_identity_file, allow_empty=True),
-        "identities": build_list_of_type_validator(valid_string, allow_empty=True,),
+        "identities": build_list_of_type_validator(
+            valid_string,
+            allow_empty=True,
+        ),
         # 'known_hosts_file':         valid_known_hosts_file,
         "known_hosts_file": valid_string,
         "connect_timeout": config_utils.valid_int,
@@ -392,7 +400,9 @@ def valid_action_name(value, config_context):
 
 
 action_context = command_context.build_filled_context(
-    command_context.JobContext, command_context.JobRunContext, command_context.ActionRunContext,
+    command_context.JobContext,
+    command_context.JobRunContext,
+    command_context.ActionRunContext,
 )
 
 
@@ -403,7 +413,8 @@ def valid_mesos_action(action, config_context):
         if missing_keys:
             raise ConfigError(
                 "Mesos executor for action {id} is missing these required keys: {keys}".format(
-                    id=action["name"], keys=missing_keys,
+                    id=action["name"],
+                    keys=missing_keys,
                 ),
             )
 
@@ -415,7 +426,8 @@ def valid_kubernetes_action(action, config_context):
         if missing_keys:
             raise ConfigError(
                 "Kubernetes executor for action {id} is missing these required keys: {keys}".format(
-                    id=action["name"], keys=missing_keys,
+                    id=action["name"],
+                    keys=missing_keys,
                 ),
             )
 
@@ -461,7 +473,10 @@ class ValidateAction(Validator):
         "service_account_name": None,
         "ports": None,
     }
-    requires = build_list_of_type_validator(valid_action_name, allow_empty=True,)
+    requires = build_list_of_type_validator(
+        valid_action_name,
+        allow_empty=True,
+    )
     validators = {
         "name": valid_action_name,
         "command": build_format_string_validator(action_context),
@@ -478,7 +493,10 @@ class ValidateAction(Validator):
         "cap_drop": valid_list,
         "constraints": build_list_of_type_validator(valid_constraint, allow_empty=True),
         "docker_image": valid_string,
-        "docker_parameters": build_list_of_type_validator(valid_docker_parameter, allow_empty=True,),
+        "docker_parameters": build_list_of_type_validator(
+            valid_docker_parameter,
+            allow_empty=True,
+        ),
         "env": valid_dict,
         "secret_env": build_dict_value_validator(valid_secret_source),
         "field_selector_env": build_dict_value_validator(valid_field_selector_source),
@@ -557,7 +575,10 @@ class ValidateCleanupAction(Validator):
         "cap_drop": valid_list,
         "constraints": build_list_of_type_validator(valid_constraint, allow_empty=True),
         "docker_image": valid_string,
-        "docker_parameters": build_list_of_type_validator(valid_docker_parameter, allow_empty=True,),
+        "docker_parameters": build_list_of_type_validator(
+            valid_docker_parameter,
+            allow_empty=True,
+        ),
         "env": valid_dict,
         "secret_env": build_dict_value_validator(valid_secret_source),
         "field_selector_env": build_dict_value_validator(valid_field_selector_source),
@@ -624,7 +645,12 @@ class ValidateJob(Validator):
 
     # TODO: extract common code to a util function
     def _validate_dependencies(
-        self, job, actions, base_action, current_action=None, stack=None,
+        self,
+        job,
+        actions,
+        base_action,
+        current_action=None,
+        stack=None,
     ):
         """Check for circular or misspelled dependencies."""
         stack = stack or []
@@ -641,7 +667,11 @@ class ValidateJob(Validator):
                     " that is not in the same job!" % (job["name"], current_action.name, dep),
                 )
             self._validate_dependencies(
-                job, actions, base_action, actions[dep], stack,
+                job,
+                actions,
+                base_action,
+                actions[dep],
+                stack,
             )
 
         stack.pop()
@@ -756,7 +786,11 @@ def validate_jobs(config, config_context):
     config_utils.unique_names(fmt_string, config["jobs"])
 
 
-DEFAULT_STATE_PERSISTENCE = ConfigState(name="tron_state", store_type="shelve", buffer_size=1,)
+DEFAULT_STATE_PERSISTENCE = ConfigState(
+    name="tron_state",
+    store_type="shelve",
+    buffer_size=1,
+)
 DEFAULT_NODE = ValidateNode().do_shortcut(node="localhost")
 
 
@@ -775,7 +809,9 @@ class ValidateConfig(Validator):
         "ssh_options": ConfigSSHOptions(**ValidateSSHOptions.defaults),
         "time_zone": None,
         "state_persistence": DEFAULT_STATE_PERSISTENCE,
-        "nodes": {"localhost": DEFAULT_NODE,},
+        "nodes": {
+            "localhost": DEFAULT_NODE,
+        },
         "node_pools": {},
         "jobs": (),
         "mesos_options": ConfigMesos(**ValidateMesos.defaults),
@@ -813,13 +849,20 @@ class ValidateConfig(Validator):
     def post_validation(self, config, _):
         """Validate a non-named config."""
         node_names = config_utils.unique_names(
-            "Node and NodePool names must be unique %s", config["nodes"], config.get("node_pools", []),
+            "Node and NodePool names must be unique %s",
+            config["nodes"],
+            config.get("node_pools", []),
         )
 
         if config.get("node_pools"):
             self.validate_node_pool_nodes(config)
 
-        config_context = ConfigContext("config", node_names, config.get("command_context"), MASTER_NAMESPACE,)
+        config_context = ConfigContext(
+            "config",
+            node_names,
+            config.get("command_context"),
+            MASTER_NAMESPACE,
+        )
         validate_jobs(config, config_context)
 
 
@@ -873,7 +916,12 @@ def validate_config_mapping(config_mapping):
     yield MASTER_NAMESPACE, master
 
     for name, content in config_mapping.items():
-        context = ConfigContext(name, nodes, master.command_context, name,)
+        context = ConfigContext(
+            name,
+            nodes,
+            master.command_context,
+            name,
+        )
         yield name, valid_named_config(content, config_context=context)
 
 
@@ -898,7 +946,9 @@ class ConfigContainer:
         return job_names
 
     def get_jobs(self):
-        return dict(itertools.chain.from_iterable(config.jobs.items() for _, config in self.configs.items()),)
+        return dict(
+            itertools.chain.from_iterable(config.jobs.items() for _, config in self.configs.items()),
+        )
 
     def get_master(self):
         return self.configs[MASTER_NAMESPACE]

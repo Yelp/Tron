@@ -2,10 +2,10 @@ import logging
 import os
 import platform
 import sys
-from distutils.util import strtobool
 from typing import Optional
 
 import rook
+from distutils.util import strtobool
 
 import tron
 from tron.utils.habitat import get_ecosystem

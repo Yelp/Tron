@@ -19,6 +19,7 @@ setup(
     classifiers=[
         "Programming Language :: Python",
         "Programming Language :: Python :: 3.6",
+        "Programming Language :: Python :: 3.7",
         "Operating System :: OS Independent",
         "License :: OSI Approved :: Apache Software License",
         "Topic :: System :: Monitoring",
@@ -27,7 +28,10 @@ setup(
         "Intended Audience :: System Administrators",
         "Development Status :: 4 - Beta",
     ],
-    packages=find_packages(exclude=["tests.*", "tests", "example-cluster"],) + ["tronweb", "tronweb2"],
+    packages=find_packages(
+        exclude=["tests.*", "tests", "example-cluster"],
+    )
+    + ["tronweb", "tronweb2"],
     scripts=glob.glob("bin/*") + glob.glob("tron/bin/*.py"),
     include_package_data=True,
     long_description="""

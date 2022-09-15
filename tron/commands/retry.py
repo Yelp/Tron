@@ -43,7 +43,10 @@ class RetryAction:
     RETRY_FAIL = False
 
     def __init__(
-        self, tron_client: client.Client, full_action_name: str, use_latest_command: bool = False,
+        self,
+        tron_client: client.Client,
+        full_action_name: str,
+        use_latest_command: bool = False,
     ):
         self.tron_client = tron_client
         self.retry_params = dict(command="retry", use_latest_command=int(use_latest_command))
@@ -130,7 +133,12 @@ class RetryAction:
 
     async def check_trigger_statuses(self) -> Dict[str, bool]:
         action_run = await asyncio.get_event_loop().run_in_executor(
-            None, functools.partial(self.tron_client.action_runs, self.action_run_id.url, num_lines=0,),
+            None,
+            functools.partial(
+                self.tron_client.action_runs,
+                self.action_run_id.url,
+                num_lines=0,
+            ),
         )
         # from tron.api.adapter:ActionRunAdapter.get_triggered_by:
         # triggered_by is a single string with this format:
@@ -147,7 +155,11 @@ class RetryAction:
 
     async def check_required_actions_statuses(self) -> Dict[str, bool]:
         action_runs = (
-            await asyncio.get_event_loop().run_in_executor(None, self.tron_client.job_runs, self.job_run_id.url,)
+            await asyncio.get_event_loop().run_in_executor(
+                None,
+                self.tron_client.job_runs,
+                self.job_run_id.url,
+            )
         )["runs"]
         return {
             action_runs[i]["action_name"]: action_runs[i]["state"] in BackfillRun.SUCCESS_STATES
@@ -155,7 +167,10 @@ class RetryAction:
         }
 
     async def wait_and_retry(
-        self, deps_timeout_s: int = 0, poll_interval_s: int = DEFAULT_POLLING_INTERVAL_S, jitter: bool = True,
+        self,
+        deps_timeout_s: int = 0,
+        poll_interval_s: int = DEFAULT_POLLING_INTERVAL_S,
+        jitter: bool = True,
     ) -> bool:
 
         if deps_timeout_s != RetryAction.NO_TIMEOUT and jitter:
@@ -173,7 +188,11 @@ class RetryAction:
             self._log(msg)
             return False
 
-    async def wait_for_deps(self, deps_timeout_s: int = 0, poll_interval_s: int = DEFAULT_POLLING_INTERVAL_S,) -> bool:
+    async def wait_for_deps(
+        self,
+        deps_timeout_s: int = 0,
+        poll_interval_s: int = DEFAULT_POLLING_INTERVAL_S,
+    ) -> bool:
         """Wait for all upstream dependencies to finished up to a timeout. Once the
         timeout has expired, one final check is always conducted.
 
@@ -195,7 +214,9 @@ class RetryAction:
         response = await asyncio.get_event_loop().run_in_executor(
             None,
             functools.partial(
-                client.request, urljoin(self.tron_client.url_base, self.action_run_id.url), data=self.retry_params,
+                client.request,
+                urljoin(self.tron_client.url_base, self.action_run_id.url),
+                data=self.retry_params,
             ),
         )
         if response.error:

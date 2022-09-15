@@ -120,7 +120,11 @@ class TestConfigManager(TestCase):
         assert_equal(path, os.path.join(self.temp_dir, "_etc_passwd.yaml"))
         path = self.manager.build_file_path("../../etc/passwd")
         assert_equal(
-            path, os.path.join(self.temp_dir, "______etc_passwd.yaml",),
+            path,
+            os.path.join(
+                self.temp_dir,
+                "______etc_passwd.yaml",
+            ),
         )
 
     def test_read_raw_config(self):
@@ -141,7 +145,9 @@ class TestConfigManager(TestCase):
         self.manifest.get_file_name.assert_called_with(name)
         assert not self.manifest.add.call_count
         self.manager.validate_with_fragment.assert_called_with(
-            name, self.content, should_validate_missing_dependency=False,
+            name,
+            self.content,
+            should_validate_missing_dependency=False,
         )
 
     def test_write_config_new_name(self):
@@ -171,10 +177,12 @@ class TestConfigManager(TestCase):
         assert_equal(mock_remove.call_count, 0)
 
     @mock.patch(
-        "tron.config.manager.JobGraph", autospec=True,
+        "tron.config.manager.JobGraph",
+        autospec=True,
     )
     @mock.patch(
-        "tron.config.manager.config_parse.ConfigContainer", autospec=True,
+        "tron.config.manager.config_parse.ConfigContainer",
+        autospec=True,
     )
     def test_validate_with_fragment(self, mock_config_container, mock_job_graph):
         name = "the_name"
@@ -186,12 +194,14 @@ class TestConfigManager(TestCase):
         expected_mapping[name] = self.content
         mock_config_container.create.assert_called_with(expected_mapping)
         mock_job_graph.assert_called_once_with(
-            mock_config_container.create.return_value, should_validate_missing_dependency=True,
+            mock_config_container.create.return_value,
+            should_validate_missing_dependency=True,
         )
 
     @mock.patch("tron.config.manager.read", autospec=True)
     @mock.patch(
-        "tron.config.manager.config_parse.ConfigContainer", autospec=True,
+        "tron.config.manager.config_parse.ConfigContainer",
+        autospec=True,
     )
     def test_load(self, mock_config_container, mock_read):
         content_items = self.content.items()
