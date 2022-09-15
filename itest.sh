@@ -49,9 +49,6 @@ kill -0 $TRON_PID
 curl localhost:8089/api/status | grep -qi alive
 
 tronfig -p MASTER
-tronfig -n MASTER /work/example-cluster/tronfig/MASTER.yaml
-tronfig /work/example-cluster/tronfig/MASTER.yaml
-cat /work/example-cluster/tronfig/MASTER.yaml | tronfig -n MASTER -
 
 if test -L /opt/venvs/tron/lib/python3.7/encodings/punycode.py; then
     echo "Whoa, the tron package shouldn't have an encoding symlink!"
