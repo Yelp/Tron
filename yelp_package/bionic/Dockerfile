@@ -21,6 +21,7 @@ RUN apt-get -q update && \
         python3.7-dev \
         python3-pip \
         python-tox \
+        rust-all \
         wget \
         g++ \
     && apt-get -q clean

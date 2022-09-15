@@ -27,6 +27,7 @@ RUN apt-get -q update && \
         python3.7-dev \
         python3.7-distutils \
         python3-pip \
+        rust-all \
         tox \
         wget \
         g++ \
