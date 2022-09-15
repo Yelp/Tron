@@ -9,7 +9,6 @@ jobs:
       matrix:
         toxenv:
           - py37,docs
-          - cluster_itests
     steps:
       - uses: actions/checkout@v2
       - uses: actions/setup-python@v2

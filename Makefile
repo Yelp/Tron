@@ -21,7 +21,7 @@ else
 	ADD_MISSING_DEPS_MAYBE:=$(NOOP)
 endif
 
-.PHONY : all clean tests docs dev cluster_itests
+.PHONY : all clean tests docs dev
 
 -usage:
 	@echo "make test - Run tests"
@@ -90,9 +90,6 @@ debitest_%: deb_% _itest_%
 
 itest_%: debitest_%
 	@echo "itest $* OK"
-
-cluster_itests:
-	tox -e cluster_itests
 
 dev:
 	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py37/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0
