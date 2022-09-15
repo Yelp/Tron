@@ -1,0 +1,41 @@
+eventbus_enabled: true
+
+state_persistence:
+  name: "/nail/tron/tron_state"
+  store_type: "shelve"
+  buffer_size: 10
+
+ssh_options:
+  agent: False
+  identities:
+    - /work/example-cluster/insecure_key
+
+action_runner:
+  runner_type: "subprocess"
+  remote_status_path: "/tmp/tron"
+  remote_exec_path: "/work/tron/bin/"
+
+nodes:
+  - hostname: localhost
+    username: root
+
+time_zone: US/Eastern
+
+jobs:
+  one:
+    node: localhost
+    schedule: "cron */5 * * * *"
+    actions:
+      one:
+        command: exit 1
+        retries: 3
+        retries_delay: 1m
+        trigger_downstreams: {ymdhm: "{ymdhm}"}
+  two:
+    node: localhost
+    schedule: "cron */5 * * * *"
+    actions:
+      two:
+        command: sleep 10 && date
+        triggered_by: ["MASTER.one.one.ymdhm.{ymdhm}"]
+        trigger_timeout: 30s
