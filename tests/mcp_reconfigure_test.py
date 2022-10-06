@@ -21,40 +21,22 @@ class TestMCPReconfigure(TestCase):
 
     os.environ["SSH_AUTH_SOCK"] = "test-socket"
     pre_config = dict(
-        ssh_options=dict(
-            agent=True,
-            identities=["tests/test_id_rsa"],
-        ),
-        nodes=[
-            dict(name="node0", hostname="batch0"),
-            dict(name="node1", hostname="batch1"),
-        ],
+        ssh_options=dict(agent=True, identities=["tests/test_id_rsa"],),
+        nodes=[dict(name="node0", hostname="batch0"), dict(name="node1", hostname="batch1"),],
         node_pools=[dict(name="nodePool", nodes=["node0", "node1"])],
-        command_context={
-            "thischanges": "froma",
-        },
+        command_context={"thischanges": "froma",},
         jobs=[
             dict(
                 name="test_unchanged",
                 node="node0",
                 schedule="daily",
-                actions=[
-                    dict(
-                        name="action_unchanged",
-                        command="command_unchanged",
-                    ),
-                ],
+                actions=[dict(name="action_unchanged", command="command_unchanged",),],
             ),
             dict(
                 name="test_remove",
                 node="node1",
                 schedule={"type": "cron", "value": "* * * * *"},
-                actions=[
-                    dict(
-                        name="action_remove",
-                        command="command_remove",
-                    ),
-                ],
+                actions=[dict(name="action_remove", command="command_remove",),],
                 cleanup_action=dict(name="cleanup", command="doit"),
             ),
             dict(
@@ -62,97 +44,54 @@ class TestMCPReconfigure(TestCase):
                 node="nodePool",
                 schedule={"type": "cron", "value": "* * * * *"},
                 actions=[
-                    dict(
-                        name="action_change",
-                        command="command_change",
-                    ),
-                    dict(
-                        name="action_remove2",
-                        command="command_remove2",
-                        requires=["action_change"],
-                    ),
+                    dict(name="action_change", command="command_change",),
+                    dict(name="action_remove2", command="command_remove2", requires=["action_change"],),
                 ],
             ),
             dict(
                 name="test_daily_change",
                 node="node0",
                 schedule="daily",
-                actions=[
-                    dict(
-                        name="action_daily_change",
-                        command="command",
-                    ),
-                ],
+                actions=[dict(name="action_daily_change", command="command",),],
             ),
             dict(
                 name="test_action_added",
                 node="node0",
                 schedule={"type": "cron", "value": "* * * * *"},
-                actions=[
-                    dict(name="action_first", command="command_do_it"),
-                ],
+                actions=[dict(name="action_first", command="command_do_it"),],
             ),
         ],
     )
 
     post_config = dict(
-        ssh_options=dict(
-            agent=True,
-            identities=["tests/test_id_rsa"],
-        ),
-        nodes=[
-            dict(name="node0", hostname="batch0"),
-            dict(name="node1", hostname="batch1"),
-        ],
+        ssh_options=dict(agent=True, identities=["tests/test_id_rsa"],),
+        nodes=[dict(name="node0", hostname="batch0"), dict(name="node1", hostname="batch1"),],
         node_pools=[dict(name="nodePool", nodes=["node0", "node1"])],
-        command_context={
-            "a_variable": "is_constant",
-            "thischanges": "tob",
-        },
+        command_context={"a_variable": "is_constant", "thischanges": "tob",},
         jobs=[
             dict(
                 name="test_unchanged",
                 node="node0",
                 schedule="daily",
-                actions=[
-                    dict(
-                        name="action_unchanged",
-                        command="command_unchanged",
-                    ),
-                ],
+                actions=[dict(name="action_unchanged", command="command_unchanged",),],
             ),
             dict(
                 name="test_change",
                 node="nodePool",
                 schedule="daily",
-                actions=[
-                    dict(
-                        name="action_change",
-                        command="command_changed",
-                    ),
-                ],
+                actions=[dict(name="action_change", command="command_changed",),],
             ),
             dict(
                 name="test_daily_change",
                 node="node0",
                 schedule="daily",
-                actions=[
-                    dict(
-                        name="action_daily_change",
-                        command="command_changed",
-                    ),
-                ],
+                actions=[dict(name="action_daily_change", command="command_changed",),],
             ),
             dict(
                 name="test_new",
                 node="nodePool",
                 schedule={"type": "cron", "value": "* * * * *"},
-                actions=[
-                    dict(
-                        name="action_new",
-                        command="command_new",
-                    ),
-                ],
+                actions=[dict(name="action_new", command="command_new",),],
             ),
             dict(
                 name="test_action_added",
@@ -201,9 +140,7 @@ class TestMCPReconfigure(TestCase):
         self.reconfigure()
         assert_equal(len(self.mcp.jobs.get_names()), count)
 
-    @pytest.mark.skip(
-        reason="This test doesn't currently as run1 is not scheduled.",
-    )
+    @pytest.mark.skip(reason="This test doesn't currently as run1 is not scheduled.",)
     @suite("integration")
     def test_job_unchanged(self):
         assert "MASTER.test_unchanged" in self.mcp.jobs

@@ -1,0 +1,23 @@
+version: "3"
+services:
+  # For debugging
+  playground:
+    build:
+      context: ../
+      dockerfile: yelp_package/bionic/Dockerfile
+    volumes:
+      - ../:/work
+      - ./:/nail/tron
+    ports:
+      - "8089:8089"
+  # For itests only, `pip install -e .` won't work
+  master:
+    build:
+      context: .
+      dockerfile: ubuntu:bionic
+    links:
+      - batch1
+  batch1:
+    build:
+      context: ../
+      dockerfile: example-cluster/images/batch/Dockerfile

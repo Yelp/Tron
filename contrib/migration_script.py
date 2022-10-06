@@ -24,31 +24,21 @@ class bcolors:
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Migrate jobs to new namespace",
+    parser = argparse.ArgumentParser(description="Migrate jobs to new namespace",)
+    parser.add_argument(
+        "--server", required=True, help="specify the location of tron master",
     )
     parser.add_argument(
-        "--server",
-        required=True,
-        help="specify the location of tron master",
+        "--old-ns", required=True, help="Old namespace",
     )
     parser.add_argument(
-        "--old-ns",
-        required=True,
-        help="Old namespace",
+        "--new-ns", required=True, help="New namespace",
     )
     parser.add_argument(
-        "--new-ns",
-        required=True,
-        help="New namespace",
+        "source", help="source file to get list of jobs",
     )
     parser.add_argument(
-        "source",
-        help="source file to get list of jobs",
-    )
-    parser.add_argument(
-        "--job",
-        help="Specify a single job to migrate",
+        "--job", help="Specify a single job to migrate",
     )
     args = parser.parse_args()
     return args
@@ -73,7 +63,7 @@ def check_job_if_running(jobs_status, job_name):
 
 
 def command_jobs(command, jobs, args, ns=None):
-    """This function run tronctl command for the jobs
+    """ This function run tronctl command for the jobs
     command: the tronctl command it will run
     jobs: a list of jobs
     args: the args for this script
@@ -111,10 +101,7 @@ def command_jobs(command, jobs, args, ns=None):
 def ssh_command(hostname, command):
     print(bcolors.BOLD + f"Executing the command: ssh -A {hostname} {command}" + bcolors.ENDC)
     ssh = subprocess.Popen(
-        ["ssh", "-A", hostname, command],
-        shell=False,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
+        ["ssh", "-A", hostname, command], shell=False, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
     )
     exitcode = ssh.wait()
     result = ssh.stdout.readlines()

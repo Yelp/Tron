@@ -11,11 +11,7 @@ def test_send_data_metric():
     process.communicate = mock.Mock(return_value=(b"fake_output", b"fake_error"))
     cmd_str = "meteorite data -v fake_name fake_metric_type fake_value " "-d fake_dim_key:fake_dim_value"
 
-    with mock.patch(
-        "subprocess.Popen",
-        mock.Mock(return_value=process),
-        autospec=None,
-    ) as mock_popen:
+    with mock.patch("subprocess.Popen", mock.Mock(return_value=process), autospec=None,) as mock_popen:
         get_tron_metrics.send_data_metric(
             name="fake_name",
             metric_type="fake_metric_type",
@@ -25,11 +21,7 @@ def test_send_data_metric():
         )
 
         assert mock_popen.call_count == 1
-        assert mock_popen.call_args == mock.call(
-            cmd_str.split(),
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
+        assert mock_popen.call_args == mock.call(cmd_str.split(), stdout=subprocess.PIPE, stderr=subprocess.PIPE,)
 
 
 def test_send_data_metric_dry_run():
@@ -53,11 +45,7 @@ def test_send_counter(mock_send_data_metric):
 
     assert mock_send_data_metric.call_count == 1
     assert mock_send_data_metric.call_args == mock.call(
-        name="fake_name",
-        metric_type="counter",
-        value="fake_count",
-        dimensions={},
-        dry_run=False,
+        name="fake_name", metric_type="counter", value="fake_count", dimensions={}, dry_run=False,
     )
 
 
@@ -69,11 +57,7 @@ def test_send_gauge(mock_send_data_metric):
 
     assert mock_send_data_metric.call_count == 1
     assert mock_send_data_metric.call_args == mock.call(
-        name="fake_name",
-        metric_type="gauge",
-        value="fake_value",
-        dimensions={},
-        dry_run=False,
+        name="fake_name", metric_type="gauge", value="fake_value", dimensions={}, dry_run=False,
     )
 
 
@@ -87,24 +71,13 @@ def test_send_meter(mock_send_counter):
 
 @mock.patch("tron.bin.get_tron_metrics.send_gauge", autospec=True)
 def test_send_histogram(mock_send_gauge):
-    kwargs = dict(
-        p50="fake_p50",
-        p75="fake_p75",
-        p95="fake_p95",
-        p99="fake_p99",
-    )
-    p50_kwargs = dict(
-        **kwargs,
-        value="fake_p50",
-    )
+    kwargs = dict(p50="fake_p50", p75="fake_p75", p95="fake_p95", p99="fake_p99",)
+    p50_kwargs = dict(**kwargs, value="fake_p50",)
 
     get_tron_metrics.send_histogram("fake_name", **kwargs)
 
     assert mock_send_gauge.call_count == len(kwargs)
-    assert mock_send_gauge.call_args_list[0] == mock.call(
-        "fake_name.p50",
-        **p50_kwargs,
-    )
+    assert mock_send_gauge.call_args_list[0] == mock.call("fake_name.p50", **p50_kwargs,)
 
 
 @mock.patch("tron.bin.get_tron_metrics.send_meter", autospec=True)
@@ -124,18 +97,14 @@ def test_send_metrics(cluster):
     metrics = dict(counter=[dict(name="fake_name")])
 
     with mock.patch(
-        "tron.bin.get_tron_metrics._METRIC_SENDERS",
-        dict(counter=mock_send_counter),
-        autospec=None,
+        "tron.bin.get_tron_metrics._METRIC_SENDERS", dict(counter=mock_send_counter), autospec=None,
     ):
         get_tron_metrics.send_metrics(metrics, cluster=cluster, dry_run=True)
 
     assert mock_send_counter.call_count == 1
     if cluster:
         assert mock_send_counter.call_args == mock.call(
-            "fake_name",
-            dry_run=True,
-            dimensions={"tron_cluster": "fake_cluster"},
+            "fake_name", dry_run=True, dimensions={"tron_cluster": "fake_cluster"},
         )
     else:
         assert mock_send_counter.call_args == mock.call("fake_name", dry_run=True)

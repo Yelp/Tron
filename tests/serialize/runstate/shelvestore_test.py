@@ -28,18 +28,8 @@ class TestShelveStateStore(TestCase):
 
     def test_save(self):
         key_value_pairs = [
-            (
-                ShelveKey("one", "two"),
-                {
-                    "this": "data",
-                },
-            ),
-            (
-                ShelveKey("three", "four"),
-                {
-                    "this": "data2",
-                },
-            ),
+            (ShelveKey("one", "two"), {"this": "data",},),
+            (ShelveKey("three", "four"), {"this": "data2",},),
         ]
         self.store.save(key_value_pairs)
         self.store.cleanup()
@@ -51,23 +41,10 @@ class TestShelveStateStore(TestCase):
 
     def test_delete(self):
         key_value_pairs = [
-            (
-                ShelveKey("one", "two"),
-                {
-                    "this": "data",
-                },
-            ),
-            (
-                ShelveKey("three", "four"),
-                {
-                    "this": "data2",
-                },
-            ),
+            (ShelveKey("one", "two"), {"this": "data",},),
+            (ShelveKey("three", "four"), {"this": "data2",},),
             # Delete first key
-            (
-                ShelveKey("one", "two"),
-                None,
-            ),
+            (ShelveKey("one", "two"), None,),
         ]
         self.store.save(key_value_pairs)
         self.store.cleanup()

@@ -18,11 +18,7 @@ class TestMesosClusterRepository(TestCase):
         def init_cluster(*args, **kwargs):
             return mock.MagicMock(spec_set=MesosCluster)
 
-        with mock.patch(
-            "tron.mesos.MesosCluster",
-            side_effect=init_cluster,
-            autospec=True,
-        ) as self.cluster_cls:
+        with mock.patch("tron.mesos.MesosCluster", side_effect=init_cluster, autospec=True,) as self.cluster_cls:
             yield
 
     def test_get_cluster_repeated_mesos_address(self):
@@ -52,9 +48,7 @@ class TestMesosClusterRepository(TestCase):
             offer_timeout=1000,
         )
         with mock.patch(
-            "tron.mesos.get_secret_from_file",
-            autospec=True,
-            return_value="test-secret",
+            "tron.mesos.get_secret_from_file", autospec=True, return_value="test-secret",
         ):
             MesosClusterRepository.configure(options)
 
@@ -62,9 +56,7 @@ class TestMesosClusterRepository(TestCase):
         for cluster in clusters:
             cluster.set_enabled.assert_called_once_with(False)
             cluster.configure_tasks.assert_called_once_with(
-                default_volumes=[expected_volume],
-                dockercfg_location="auth",
-                offer_timeout=1000,
+                default_volumes=[expected_volume], dockercfg_location="auth", offer_timeout=1000,
             )
 
         # Next cluster we get should be initialized with the same settings
@@ -84,12 +76,7 @@ class TestMesosClusterRepository(TestCase):
 
 
 def mock_task_event(
-    task_id,
-    platform_type,
-    raw=None,
-    terminal=False,
-    success=False,
-    **kwargs,
+    task_id, platform_type, raw=None, terminal=False, success=False, **kwargs,
 ):
     return mock.MagicMock(
         kind="task",
@@ -109,9 +96,7 @@ class TestMesosTask(TestCase):
         self.action_run_id = "my_service.job.1.action"
         self.task_id = "123abcuuid"
         with mock.patch(
-            "tron.mesos.logging.getLogger",
-            return_value=mock.Mock(handlers=[mock.Mock()]),
-            autospec=None,
+            "tron.mesos.logging.getLogger", return_value=mock.Mock(handlers=[mock.Mock()]), autospec=None,
         ):
             self.task = MesosTask(
                 id=self.action_run_id,
@@ -139,92 +124,55 @@ class TestMesosTask(TestCase):
         assert all(["baz" in text[0][0] for text in self.task.log.info.call_args_list])
 
     def test_handle_staging(self):
-        event = mock_task_event(
-            task_id=self.task_id,
-            platform_type="staging",
-        )
+        event = mock_task_event(task_id=self.task_id, platform_type="staging",)
         self.task.handle_event(event)
         assert self.task.state == MesosTask.PENDING
 
     def test_handle_starting(self):
-        event = mock_task_event(
-            task_id=self.task_id,
-            platform_type="starting",
-        )
+        event = mock_task_event(task_id=self.task_id, platform_type="starting",)
         self.task.handle_event(event)
         assert self.task.state == MesosTask.RUNNING
 
     def test_handle_running(self):
-        event = mock_task_event(
-            task_id=self.task_id,
-            platform_type="running",
-        )
+        event = mock_task_event(task_id=self.task_id, platform_type="running",)
         self.task.handle_event(event)
         assert self.task.state == MesosTask.RUNNING
 
     def test_handle_running_for_other_task(self):
-        event = mock_task_event(
-            task_id="other321",
-            platform_type="running",
-        )
+        event = mock_task_event(task_id="other321", platform_type="running",)
         self.task.handle_event(event)
         assert self.task.state == MesosTask.PENDING
 
     def test_handle_finished(self):
         self.task.started()
-        event = mock_task_event(
-            task_id=self.task_id,
-            platform_type="finished",
-            terminal=True,
-            success=True,
-        )
+        event = mock_task_event(task_id=self.task_id, platform_type="finished", terminal=True, success=True,)
         self.task.handle_event(event)
         assert self.task.is_complete
 
     def test_handle_failed(self):
         self.task.started()
-        event = mock_task_event(
-            task_id=self.task_id,
-            platform_type="failed",
-            terminal=True,
-            success=False,
-        )
+        event = mock_task_event(task_id=self.task_id, platform_type="failed", terminal=True, success=False,)
         self.task.handle_event(event)
         assert self.task.is_failed
         assert self.task.is_done
 
     def test_handle_killed(self):
         self.task.started()
-        event = mock_task_event(
-            task_id=self.task_id,
-            platform_type="killed",
-            terminal=True,
-            success=False,
-        )
+        event = mock_task_event(task_id=self.task_id, platform_type="killed", terminal=True, success=False,)
         self.task.handle_event(event)
         assert self.task.is_failed
         assert self.task.is_done
 
     def test_handle_lost(self):
         self.task.started()
-        event = mock_task_event(
-            task_id=self.task_id,
-            platform_type="lost",
-            terminal=True,
-            success=False,
-        )
+        event = mock_task_event(task_id=self.task_id, platform_type="lost", terminal=True, success=False,)
         self.task.handle_event(event)
         assert self.task.is_unknown
         assert self.task.is_done
 
     def test_handle_error(self):
         self.task.started()
-        event = mock_task_event(
-            task_id=self.task_id,
-            platform_type="error",
-            terminal=True,
-            success=False,
-        )
+        event = mock_task_event(task_id=self.task_id, platform_type="error", terminal=True, success=False,)
         self.task.handle_event(event)
         assert self.task.is_failed
         assert self.task.is_done
@@ -244,46 +192,20 @@ class TestMesosTask(TestCase):
         assert self.task.is_done
 
     def test_handle_success_sequence(self):
+        self.task.handle_event(mock_task_event(task_id=self.task_id, platform_type="staging",),)
+        self.task.handle_event(mock_task_event(task_id=self.task_id, platform_type="starting",),)
+        self.task.handle_event(mock_task_event(task_id=self.task_id, platform_type="running",),)
         self.task.handle_event(
-            mock_task_event(
-                task_id=self.task_id,
-                platform_type="staging",
-            ),
-        )
-        self.task.handle_event(
-            mock_task_event(
-                task_id=self.task_id,
-                platform_type="starting",
-            ),
-        )
-        self.task.handle_event(
-            mock_task_event(
-                task_id=self.task_id,
-                platform_type="running",
-            ),
-        )
-        self.task.handle_event(
-            mock_task_event(
-                task_id=self.task_id,
-                platform_type="finished",
-                terminal=True,
-                success=True,
-            ),
+            mock_task_event(task_id=self.task_id, platform_type="finished", terminal=True, success=True,),
         )
         assert self.task.is_complete
 
     def test_log_event_error(self):
         with mock.patch.object(self.task, "log_event_info",) as mock_log_event, mock.patch.object(
-            self.task.log,
-            "warning",
+            self.task.log, "warning",
         ) as mock_log:
             mock_log_event.side_effect = Exception
-            self.task.handle_event(
-                mock_task_event(
-                    task_id=self.task_id,
-                    platform_type="running",
-                ),
-            )
+            self.task.handle_event(mock_task_event(task_id=self.task_id, platform_type="running",),)
             assert mock_log_event.called
             assert mock_log.called
         assert self.task.state == MesosTask.RUNNING
@@ -304,18 +226,15 @@ class TestMesosCluster(TestCase):
     @setup_teardown
     def setup_mocks(self):
         with mock.patch("tron.mesos.PyDeferredQueue", autospec=True,) as queue_cls, mock.patch(
-            "tron.mesos.TaskProcessor",
-            autospec=True,
+            "tron.mesos.TaskProcessor", autospec=True,
         ) as processor_cls, mock.patch("tron.mesos.Subscription", autospec=True,) as runner_cls, mock.patch(
-            "tron.mesos.get_mesos_leader",
-            autospec=True,
+            "tron.mesos.get_mesos_leader", autospec=True,
         ) as mock_get_leader:
             self.mock_queue = queue_cls.return_value
             self.mock_processor = processor_cls.return_value
             self.mock_runner_cls = runner_cls
             self.mock_runner_cls.return_value.configure_mock(
-                stopping=False,
-                TASK_CONFIG_INTERFACE=mock.Mock(),
+                stopping=False, TASK_CONFIG_INTERFACE=mock.Mock(),
             )
             self.mock_get_leader = mock_get_leader
             yield
@@ -336,8 +255,7 @@ class TestMesosCluster(TestCase):
         assert_equal(cluster.processor, self.mock_processor)
 
         self.mock_get_leader.assert_called_once_with(
-            "mesos-cluster-a.me",
-            5000,
+            "mesos-cluster-a.me", 5000,
         )
         self.mock_processor.executor_from_config.assert_has_calls(
             [
@@ -353,25 +271,18 @@ class TestMesosCluster(TestCase):
                         "failover": True,
                     },
                 ),
-                mock.call(
-                    provider="logging",
-                    provider_config=mock.ANY,
-                ),
+                mock.call(provider="logging", provider_config=mock.ANY,),
             ]
         )
         self.mock_runner_cls.assert_called_once_with(
-            self.mock_processor.executor_from_config.return_value,
-            self.mock_queue,
+            self.mock_processor.executor_from_config.return_value, self.mock_queue,
         )
         assert_equal(cluster.runner, self.mock_runner_cls.return_value)
 
         get_event_deferred = cluster.deferred
         assert_equal(get_event_deferred, self.mock_queue.get.return_value)
         get_event_deferred.addCallback.assert_has_calls(
-            [
-                mock.call(cluster._process_event),
-                mock.call(cluster.handle_next_event),
-            ]
+            [mock.call(cluster._process_event), mock.call(cluster.handle_next_event),]
         )
 
     def test_init_disabled(self):
@@ -399,18 +310,14 @@ class TestMesosCluster(TestCase):
         # Basically the same as regular initialization
         assert_equal(self.mock_processor.executor_from_config.call_count, 2)
         self.mock_runner_cls.assert_called_once_with(
-            self.mock_processor.executor_from_config.return_value,
-            self.mock_queue,
+            self.mock_processor.executor_from_config.return_value, self.mock_queue,
         )
         assert_equal(cluster.runner, self.mock_runner_cls.return_value)
 
         get_event_deferred = cluster.deferred
         assert_equal(get_event_deferred, self.mock_queue.get.return_value)
         get_event_deferred.addCallback.assert_has_calls(
-            [
-                mock.call(cluster._process_event),
-                mock.call(cluster.handle_next_event),
-            ]
+            [mock.call(cluster._process_event), mock.call(cluster.handle_next_event),]
         )
 
     def test_set_enabled_on_already(self):
@@ -421,27 +328,14 @@ class TestMesosCluster(TestCase):
         assert_equal(self.mock_runner_cls.call_count, 1)
 
     def test_configure_tasks(self):
-        cluster = MesosCluster(
-            "mesos-cluster-a.me",
-            default_volumes=[],
-            dockercfg_location="first",
-            offer_timeout=60,
-        )
+        cluster = MesosCluster("mesos-cluster-a.me", default_volumes=[], dockercfg_location="first", offer_timeout=60,)
         assert_equal(cluster.default_volumes, [])
         assert_equal(cluster.dockercfg_location, "first")
         assert_equal(cluster.offer_timeout, 60)
 
-        expected_volumes = [
-            {
-                "container_path": "/tmp",
-                "host_path": "/host",
-                "mode": "RO",
-            }
-        ]
+        expected_volumes = [{"container_path": "/tmp", "host_path": "/host", "mode": "RO",}]
         cluster.configure_tasks(
-            default_volumes=expected_volumes,
-            dockercfg_location="second",
-            offer_timeout=300,
+            default_volumes=expected_volumes, dockercfg_location="second", offer_timeout=300,
         )
         assert_equal(cluster.default_volumes, expected_volumes)
         assert_equal(cluster.dockercfg_location, "second")
@@ -453,17 +347,13 @@ class TestMesosCluster(TestCase):
         mock_task = mock.MagicMock(get_config=mock.Mock(return_value={"environment": {}}))
         mock_task.get_mesos_id.return_value = "this_task"
         with mock.patch(
-            "tron.mesos.get_clusterman_metrics",
-            return_value=(mock_clusterman_metrics),
-            autospec=True,
+            "tron.mesos.get_clusterman_metrics", return_value=(mock_clusterman_metrics), autospec=True,
         ):
             cluster.submit(mock_task)
 
         assert "this_task" in cluster.tasks
         assert cluster.tasks["this_task"] == mock_task
-        cluster.runner.run.assert_called_once_with(
-            mock_task.get_config.return_value,
-        )
+        cluster.runner.run.assert_called_once_with(mock_task.get_config.return_value,)
         assert mock_clusterman_metrics.ClustermanMetricsBotoClient.call_count == 0
 
     def test_submit_with_clusterman(self):
@@ -482,20 +372,15 @@ class TestMesosCluster(TestCase):
         )
         mock_task.get_mesos_id.return_value = "this_task"
         with mock.patch(
-            "tron.mesos.get_clusterman_metrics",
-            return_value=mock_clusterman_metrics,
-            autospec=True,
+            "tron.mesos.get_clusterman_metrics", return_value=mock_clusterman_metrics, autospec=True,
         ), staticconf.testing.MockConfiguration(
-            {"clusters": {"fake-cluster": {"aws_region": "fake-region"}}},
-            namespace="clusterman",
+            {"clusters": {"fake-cluster": {"aws_region": "fake-region"}}}, namespace="clusterman",
         ):
             cluster.submit(mock_task)
 
         assert "this_task" in cluster.tasks
         assert cluster.tasks["this_task"] == mock_task
-        cluster.runner.run.assert_called_once_with(
-            mock_task.get_config.return_value,
-        )
+        cluster.runner.run.assert_called_once_with(mock_task.get_config.return_value,)
         assert mock_clusterman_metrics.ClustermanMetricsBotoClient.call_count == 1
 
     def test_submit_disabled(self):
@@ -503,9 +388,7 @@ class TestMesosCluster(TestCase):
         mock_task = mock.MagicMock()
         mock_task.get_mesos_id.return_value = "this_task"
         with mock.patch(
-            "tron.mesos.get_clusterman_metrics",
-            return_value=(None, None),
-            autospec=True,
+            "tron.mesos.get_clusterman_metrics", return_value=(None, None), autospec=True,
         ):
             cluster.submit(mock_task)
 
@@ -520,9 +403,7 @@ class TestMesosCluster(TestCase):
 
         assert "this_task" in cluster.tasks
         assert cluster.tasks["this_task"] == mock_task
-        cluster.runner.reconcile.assert_called_once_with(
-            mock_task.get_config.return_value,
-        )
+        cluster.runner.reconcile.assert_called_once_with(mock_task.get_config.return_value,)
         assert mock_task.started.call_count == 1
 
     def test_recover_disabled(self):
@@ -567,9 +448,7 @@ class TestMesosCluster(TestCase):
         )
         assert_equal(task, mock_task.return_value)
         mock_task.assert_called_once_with(
-            "action_c",
-            cluster.runner.TASK_CONFIG_INTERFACE.return_value,
-            mock_serializer,
+            "action_c", cluster.runner.TASK_CONFIG_INTERFACE.return_value, mock_serializer,
         )
 
     @mock.patch("tron.mesos.MesosTask", autospec=True)
@@ -596,9 +475,7 @@ class TestMesosCluster(TestCase):
         task_config = cluster.runner.TASK_CONFIG_INTERFACE.return_value
         task_config.set_task_id.assert_called_once_with(task_id)
         mock_task.assert_called_once_with(
-            "action_c",
-            task_config.set_task_id.return_value,
-            mock_serializer,
+            "action_c", task_config.set_task_id.return_value, mock_serializer,
         )
 
     @mock.patch("tron.mesos.MesosTask", autospec=True)
@@ -626,16 +503,8 @@ class TestMesosCluster(TestCase):
         cluster = MesosCluster(
             "mesos-cluster-a.me",
             default_volumes=[
-                {
-                    "container_path": "/tmp",
-                    "host_path": "/host",
-                    "mode": "RO",
-                },
-                {
-                    "container_path": "/other",
-                    "host_path": "/other",
-                    "mode": "RW",
-                },
+                {"container_path": "/tmp", "host_path": "/host", "mode": "RO",},
+                {"container_path": "/other", "host_path": "/other", "mode": "RW",},
             ],
             dockercfg_location="some_place",
             offer_timeout=202,
@@ -652,13 +521,7 @@ class TestMesosCluster(TestCase):
             docker_parameters=[],
             env={"TESTING": "true"},
             # This should override the default volume for /tmp
-            extra_volumes=[
-                {
-                    "container_path": "/tmp",
-                    "host_path": "/custom",
-                    "mode": "RW",
-                },
-            ],
+            extra_volumes=[{"container_path": "/tmp", "host_path": "/custom", "mode": "RW",},],
             serializer=mock_serializer,
         )
         cluster.runner.TASK_CONFIG_INTERFACE.assert_called_once_with(
@@ -672,25 +535,15 @@ class TestMesosCluster(TestCase):
             docker_parameters=[],
             environment={"TESTING": "true"},
             volumes=[
-                {
-                    "container_path": "/tmp",
-                    "host_path": "/custom",
-                    "mode": "RW",
-                },
-                {
-                    "container_path": "/other",
-                    "host_path": "/other",
-                    "mode": "RW",
-                },
+                {"container_path": "/tmp", "host_path": "/custom", "mode": "RW",},
+                {"container_path": "/other", "host_path": "/other", "mode": "RW",},
             ],
             uris=["some_place"],
             offer_timeout=202,
         )
         assert_equal(task, mock_task.return_value)
         mock_task.assert_called_once_with(
-            "action_c",
-            cluster.runner.TASK_CONFIG_INTERFACE.return_value,
-            mock_serializer,
+            "action_c", cluster.runner.TASK_CONFIG_INTERFACE.return_value, mock_serializer,
         )
 
     def test_process_event_task(self):
@@ -714,10 +567,7 @@ class TestMesosCluster(TestCase):
         assert_equal(mock_task.handle_event.call_count, 0)
 
     def test_process_event_control_stop(self):
-        event = mock.MagicMock(
-            kind="control",
-            message="stop",
-        )
+        event = mock.MagicMock(kind="control", message="stop",)
         cluster = MesosCluster("mesos-cluster-a.me")
         cluster._process_event(event)
         assert cluster.runner.stop.call_count == 1

@@ -37,10 +37,7 @@ KUBERNETES_TASK_OUTPUT_LOGGER = "tron.kubernetes.task_output"
 log = logging.getLogger(__name__)
 
 
-def combine_volumes(
-    defaults: Collection[ConfigVolume],
-    overrides: Collection[ConfigVolume],
-) -> List[ConfigVolume]:
+def combine_volumes(defaults: Collection[ConfigVolume], overrides: Collection[ConfigVolume],) -> List[ConfigVolume]:
     """Helper to reconcile lists of volume mounts.
 
     If any volumes have the same container path, the one in overrides wins.
@@ -156,9 +153,7 @@ class KubernetesTask(ActionCommand):
             self.log.warning(f"    tronctl fail {self.id}")
             self.exited(None)
         else:
-            self.log.info(
-                f"Did not handle unknown kubernetes event type: {event}",
-            )
+            self.log.info(f"Did not handle unknown kubernetes event type: {event}",)
 
         if event.terminal:
             self.log.info("This Kubernetes event was terminal, ending this action")
@@ -424,11 +419,7 @@ class KubernetesCluster:
                 log.error(f"Invalid {task_id} for {action_run_id}")
                 return None
 
-        return KubernetesTask(
-            action_run_id=action_run_id,
-            task_config=task_config,
-            serializer=serializer,
-        )
+        return KubernetesTask(action_run_id=action_run_id, task_config=task_config, serializer=serializer,)
 
     def _check_connection(self) -> None:
         """

@@ -89,10 +89,7 @@ class ShelveStateStore:
         self.shelve.sync()
 
     def restore(self, keys):
-        items = zip(
-            keys,
-            (self.shelve.get(str(key.key)) for key in keys),
-        )
+        items = zip(keys, (self.shelve.get(str(key.key)) for key in keys),)
         return dict(filter(operator.itemgetter(1), items))
 
     def cleanup(self):

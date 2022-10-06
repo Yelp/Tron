@@ -29,12 +29,10 @@ def get_clusterman_metrics():
         import clusterman_metrics.util.costs
 
         staticconf.YamlConfiguration(
-            CLUSTERMAN_YAML_FILE_PATH,
-            namespace="clusterman",
+            CLUSTERMAN_YAML_FILE_PATH, namespace="clusterman",
         )
         staticconf.YamlConfiguration(
-            CLUSTERMAN_METRICS_YAML_FILE_PATH,
-            namespace="clusterman_metrics",
+            CLUSTERMAN_METRICS_YAML_FILE_PATH, namespace="clusterman_metrics",
         )
     except (ImportError, FileNotFoundError):
         clusterman_metrics = None
@@ -167,19 +165,9 @@ class MesosTask(ActionCommand):
 
         config_str = str(self.get_config())
         # AWS_SECRET_ACCESS_KEYs are base64-encoded so it uses alphanumerics plus +, /, and =
-        config_str = re.sub(
-            "'AWS_SECRET_ACCESS_KEY': '[a-zA-Z0-9+/=]+'",
-            "AWS_SECRET_ACCESS_KEY_REDACTED",
-            config_str,
-        )
-        config_str = re.sub(
-            "'AWS_ACCESS_KEY_ID': '[a-zA-Z0-9]+'",
-            "AWS_ACCESS_KEY_ID_REDACTED",
-            config_str,
-        )
-        self.log.info(
-            f"Mesos task {self.get_mesos_id()} created with config {config_str}",
-        )
+        config_str = re.sub("'AWS_SECRET_ACCESS_KEY': '[a-zA-Z0-9+/=]+'", "AWS_SECRET_ACCESS_KEY_REDACTED", config_str,)
+        config_str = re.sub("'AWS_ACCESS_KEY_ID': '[a-zA-Z0-9]+'", "AWS_ACCESS_KEY_ID_REDACTED", config_str,)
+        self.log.info(f"Mesos task {self.get_mesos_id()} created with config {config_str}",)
 
     def get_event_logger(self):
         log = logging.getLogger(__name__ + "." + self.id)
@@ -195,13 +183,9 @@ class MesosTask(ActionCommand):
 
     def setup_output_logging(self):
         task_id = self.get_mesos_id()
-        stdout_logger = logging.getLogger(
-            "{}.{}.{}".format(TASK_OUTPUT_LOGGER, task_id, "stdout"),
-        )
+        stdout_logger = logging.getLogger("{}.{}.{}".format(TASK_OUTPUT_LOGGER, task_id, "stdout"),)
         stdout_logger.addHandler(logging.StreamHandler(self.stdout))
-        stderr_logger = logging.getLogger(
-            "{}.{}.{}".format(TASK_OUTPUT_LOGGER, task_id, "stderr"),
-        )
+        stderr_logger = logging.getLogger("{}.{}.{}".format(TASK_OUTPUT_LOGGER, task_id, "stderr"),)
         stderr_logger.addHandler(logging.StreamHandler(self.stderr))
 
     def get_mesos_id(self):
@@ -223,9 +207,7 @@ class MesosTask(ActionCommand):
             # TODO: Save these in state?
             agent = event.raw.get("offer", {}).get("agent_id", {}).get("value")
             hostname = event.raw.get("offer", {}).get("hostname")
-            self.log.info(
-                f"Staging task on agent {agent} (hostname {hostname})",
-            )
+            self.log.info(f"Staging task on agent {agent} (hostname {hostname})",)
         elif mesos_type == "running":
             agent = event.raw.get("agent_id", {}).get("value")
             self.log.info(f"Running on agent {agent}")
@@ -254,15 +236,11 @@ class MesosTask(ActionCommand):
     def handle_event(self, event):
         event_id = getattr(event, "task_id", None)
         if event_id != self.get_mesos_id():
-            self.log.warning(
-                f"Event task id {event_id} does not match, ignoring",
-            )
+            self.log.warning(f"Event task id {event_id} does not match, ignoring",)
             return
         mesos_type = getattr(event, "platform_type", None)
 
-        self.log.info(
-            f"Got event for task {event_id}, Mesos type {mesos_type}",
-        )
+        self.log.info(f"Got event for task {event_id}, Mesos type {mesos_type}",)
         try:
             self.log_event_info(event)
         except Exception as e:
@@ -293,9 +271,7 @@ class MesosTask(ActionCommand):
         elif mesos_type is None:
             pass
         else:
-            self.log.info(
-                f"Did not handle unknown mesos event type: {event}",
-            )
+            self.log.info(f"Did not handle unknown mesos event type: {event}",)
 
         if event.terminal:
             self.log.info("This Mesos event was terminal, ending this action")
@@ -341,9 +317,7 @@ class MesosCluster:
         self.runner = None
         self.tasks = {}
 
-        self.processor.load_plugin(
-            provider_module="task_processing.plugins.mesos",
-        )
+        self.processor.load_plugin(provider_module="task_processing.plugins.mesos",)
         self.connect()
 
     def set_enabled(self, is_enabled):
@@ -354,10 +328,7 @@ class MesosCluster:
             self.stop(fail_tasks=True)
 
     def configure_tasks(
-        self,
-        default_volumes,
-        dockercfg_location,
-        offer_timeout,
+        self, default_volumes, dockercfg_location, offer_timeout,
     ):
         self.default_volumes = default_volumes
         self.dockercfg_location = dockercfg_location
@@ -369,9 +340,7 @@ class MesosCluster:
 
     def handle_next_event(self, deferred_result=None):
         if self.deferred and not self.deferred.called:
-            log.warning(
-                "Already have handlers waiting for next event in queue, " "not adding more",
-            )
+            log.warning("Already have handlers waiting for next event in queue, " "not adding more",)
             return
         self.deferred = self.queue.get()
         self.deferred.addCallback(self._process_event)
@@ -409,19 +378,13 @@ class MesosCluster:
             pool = env.get("EXECUTOR_POOL", env.get("PAASTA_POOL"))
             aws_region = staticconf.read(f"clusters.{cluster}.aws_region", namespace="clusterman")
             metrics_client = clusterman_metrics.ClustermanMetricsBotoClient(
-                region_name=aws_region,
-                app_identifier=pool,
+                region_name=aws_region, app_identifier=pool,
             )
-            with metrics_client.get_writer(
-                clusterman_metrics.APP_METRICS,
-                aggregate_meteorite_dims=True,
-            ) as writer:
+            with metrics_client.get_writer(clusterman_metrics.APP_METRICS, aggregate_meteorite_dims=True,) as writer:
                 for metric_key, metric_value in clusterman_resources.items():
                     writer.send((metric_key, int(time.time()), metric_value))
         self.runner.run(task.get_config())
-        log.info(
-            f"Submitting task {mesos_task_id} to {self.mesos_address}",
-        )
+        log.info(f"Submitting task {mesos_task_id} to {self.mesos_address}",)
         task.report_resources()
 
     def recover(self, task):
@@ -510,18 +473,12 @@ class MesosCluster:
         )
 
         def log_output(task_id, message, stream):
-            logger = logging.getLogger(
-                f"{TASK_OUTPUT_LOGGER}.{task_id}.{stream}",
-            )
+            logger = logging.getLogger(f"{TASK_OUTPUT_LOGGER}.{task_id}.{stream}",)
             logger.info(message)
 
         logging_executor = self.processor.executor_from_config(
             provider="logging",
-            provider_config={
-                "downstream_executor": executor,
-                "handler": log_output,
-                "format_string": "{line}",
-            },
+            provider_config={"downstream_executor": executor, "handler": log_output, "format_string": "{line}",},
         )
         return Subscription(logging_executor, queue)
 
@@ -534,9 +491,7 @@ class MesosCluster:
                 self.stop()
                 MesosClusterRepository.remove(self.mesos_address)
             elif message == "unknown":
-                log.warning(
-                    f"Unknown error from Mesos master: {event.raw}",
-                )
+                log.warning(f"Unknown error from Mesos master: {event.raw}",)
             elif message == "registered":
                 framework_id = event.raw["framework_id"]["value"]
                 MesosClusterRepository.save(self.mesos_address, framework_id)
@@ -548,9 +503,7 @@ class MesosCluster:
                 log.warning(f"Task event missing task_id: {event}")
                 return
             if event.task_id not in self.tasks:
-                log.warning(
-                    f"Received event for unknown task {event.task_id}: {event}",
-                )
+                log.warning(f"Received event for unknown task {event.task_id}: {event}",)
                 return
             task = self.tasks[event.task_id]
             task.handle_event(event)

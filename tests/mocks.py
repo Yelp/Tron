@@ -55,9 +55,7 @@ class MockJobRun(MagicMock):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault("output_path", [tempfile.mkdtemp()])
         kwargs.setdefault("action_graph", MockActionGraph())
-        action_runs = MockActionRunCollection(
-            action_graph=kwargs["action_graph"],
-        )
+        action_runs = MockActionRunCollection(action_graph=kwargs["action_graph"],)
         kwargs.setdefault("action_runs", action_runs)
         atexit.register(lambda: shutil.rmtree(kwargs["output_path"][0]))
         super().__init__(*args, **kwargs)

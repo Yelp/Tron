@@ -46,11 +46,7 @@ COMMAND_HELP = (
         "job name, job run id, or action id",
         "Start the selected job, job run, or action. Creates a new job run if starting a job.",
     ),
-    (
-        "rerun",
-        "job run id",
-        "Start a new job run with the same start time command context as the given job run.",
-    ),
+    ("rerun", "job run id", "Start a new job run with the same start time command context as the given job run.",),
     (
         "retry",
         "action id",
@@ -58,28 +54,16 @@ COMMAND_HELP = (
     ),
     ("recover", "action id", "Ask Tron to start tracking an UNKNOWN action run again"),
     ("cancel", "job run id", "Cancel the selected job run."),
-    (
-        "backfill",
-        "job name",
-        "Start job runs for a particular date range",
-    ),
+    ("backfill", "job name", "Start job runs for a particular date range",),
     ("disable", "job name", "Disable selected job and cancel any outstanding runs"),
     ("enable", "job name", "Enable the selected job and schedule the next run"),
-    (
-        "fail",
-        "job run or action id",
-        "Mark an UNKNOWN job or action as failed. Does not publish action triggers.",
-    ),
+    ("fail", "job run or action id", "Mark an UNKNOWN job or action as failed. Does not publish action triggers.",),
     (
         "success",
         "job run or action id",
         "Mark an UNKNOWN job or action as having succeeded. Will publish action triggers.",
     ),
-    (
-        "skip",
-        "action id",
-        "Skip a failed action, unblocks dependent actions. Does *not* publish action triggers.",
-    ),
+    ("skip", "action id", "Skip a failed action, unblocks dependent actions. Does *not* publish action triggers.",),
     (
         "skip-and-publish",
         "action id",
@@ -115,20 +99,14 @@ def parse_cli():
 
     # start
     cmd_parsers["start"].add_argument(
-        "--run-date",
-        type=parse_date,
-        dest="run_date",
-        help="What the run-date should be set to",
+        "--run-date", type=parse_date, dest="run_date", help="What the run-date should be set to",
     )
 
     # backfill
     backfill_parser = cmd_parsers["backfill"]
     mutex_dates_group = backfill_parser.add_mutually_exclusive_group(required=True)
     mutex_dates_group.add_argument(
-        "--start-date",
-        type=parse_date,
-        dest="start_date",
-        help="First run-date to backfill",
+        "--start-date", type=parse_date, dest="start_date", help="First run-date to backfill",
     )
     backfill_parser.add_argument(
         "--end-date",
@@ -235,16 +213,14 @@ def request(url: str, data: Dict[str, Any], headers=None, method=None) -> bool:
 def event_publish(args):
     for event in args.id:
         yield request(
-            urljoin(args.server, "/api/events"),
-            dict(command="publish", event=event),
+            urljoin(args.server, "/api/events"), dict(command="publish", event=event),
         )
 
 
 def event_discard(args):
     for event in args.id:
         yield request(
-            urljoin(args.server, "/api/events"),
-            dict(command="discard", event=event),
+            urljoin(args.server, "/api/events"), dict(command="discard", event=event),
         )
 
 
@@ -258,10 +234,7 @@ def _get_triggers_for_action(server: str, action_identifier: str) -> Optional[Tu
         return None
 
     trigger_response = client.request(
-        uri=urljoin(
-            server,
-            f"/api/jobs/{namespace}.{job_name}/{run_number}/{action_name}",
-        ),
+        uri=urljoin(server, f"/api/jobs/{namespace}.{job_name}/{run_number}/{action_name}",),
     )
     if trigger_response.error:
         print(f"Unable to fetch downstream triggers for {action_identifier}: {trigger_response.error}")
@@ -281,28 +254,17 @@ def control_objects(args: argparse.Namespace):
     url_index = tron_client.index()
     for identifier in args.id:
         try:
-            tron_id = client.get_object_type_from_identifier(
-                url_index,
-                identifier,
-            )
+            tron_id = client.get_object_type_from_identifier(url_index, identifier,)
         except ValueError as e:
-            possibilities = list(
-                tron_jobs_completer(prefix="", client=tron_client),
-            )
-            suggestions = suggest_possibilities(
-                word=identifier,
-                possibilities=possibilities,
-            )
+            possibilities = list(tron_jobs_completer(prefix="", client=tron_client),)
+            suggestions = suggest_possibilities(word=identifier, possibilities=possibilities,)
             raise SystemExit(f"Error: {e}{suggestions}")
 
         if args.command == "skip-and-publish":
             # this command is more of a pseudo-command - skip and publish are handled in two different resources
             # and changing the API would be painful, so instead we call skip + publish separately from the client
             # (i.e., this file) to implement this functionality
-            if request(
-                url=urljoin(args.server, tron_id.url),
-                data={"command": "skip"},
-            ):
+            if request(url=urljoin(args.server, tron_id.url), data={"command": "skip"},):
                 # a single action can have 0..N triggers to publish and these can be arbitrarily named, so we need to
                 # query the API and figure out what triggers exist
                 triggers = _get_triggers_for_action(server=args.server, action_identifier=identifier)
@@ -319,8 +281,7 @@ def control_objects(args: argparse.Namespace):
                     # around the full set of args everywhere to do so
                     for trigger in triggers:
                         yield request(
-                            url=urljoin(args.server, "/api/events"),
-                            data={"command": "publish", "event": trigger},
+                            url=urljoin(args.server, "/api/events"), data={"command": "publish", "event": trigger},
                         )
             else:
                 print(f"Unable to skip {identifier}.")
@@ -446,8 +407,7 @@ def main():
                 sys.exit(ExitCode.fail)
     except RequestError as err:
         print(
-            f"Error connecting to the tron server ({args.server}): {err}",
-            file=sys.stderr,
+            f"Error connecting to the tron server ({args.server}): {err}", file=sys.stderr,
         )
         sys.exit(ExitCode.fail)
 

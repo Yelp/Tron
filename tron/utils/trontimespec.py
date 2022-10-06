@@ -155,28 +155,15 @@ class TimeSpecification:
         self.minutes = validate_spec(minutes, minute_range, "minute")
         self.seconds = validate_spec(seconds, second_range, "second")
         self.ordinals = validate_spec(ordinals, ordinal_range, "ordinal")
-        self.weekdays = validate_spec(
-            weekdays,
-            weekday_range,
-            "weekdays",
-            allow_last=True,
-        )
+        self.weekdays = validate_spec(weekdays, weekday_range, "weekdays", allow_last=True,)
         self.months = validate_spec(months, month_range, "month")
-        self.monthdays = validate_spec(
-            monthdays,
-            monthday_range,
-            "monthdays",
-            [],
-            True,
-        )
+        self.monthdays = validate_spec(monthdays, monthday_range, "monthdays", [], True,)
         self.timezone = get_timezone(timezone)
 
     def next_day(self, first_day, year, month):
-        """Returns matching days for the given year and month."""
-        first_day_of_month, last_day_of_month = calendar.monthrange(
-            year,
-            month,
-        )
+        """Returns matching days for the given year and month.
+        """
+        first_day_of_month, last_day_of_month = calendar.monthrange(year, month,)
 
         def map_last(day):
             return last_day_of_month if day == TOKEN_LAST else day
@@ -201,7 +188,8 @@ class TimeSpecification:
         return sort_days(days_from_weekdays())
 
     def next_month(self, start_date):
-        """Create a generator which yields valid months after the start month."""
+        """Create a generator which yields valid months after the start month.
+        """
         current = start_date.month
         potential = [m for m in self.months if m >= current]
         year_wraps = 0
@@ -250,13 +238,7 @@ class TimeSpecification:
                     continue
 
                 candidate = start_date.replace(
-                    year,
-                    month,
-                    day,
-                    time.hour,
-                    time.minute,
-                    second=time.second,
-                    microsecond=0,
+                    year, month, day, time.hour, time.minute, second=time.second, microsecond=0,
                 )
                 candidate = self.handle_timezone(candidate, start.tzinfo)
                 if not candidate:

@@ -21,12 +21,7 @@ class ExitCode:
     fail = 1
 
 
-GLOBAL_CONFIG_FILE_NAME = (
-    os.environ.get(
-        "TRON_CONFIG",
-    )
-    or "/etc/tron/tron.yaml"
-)
+GLOBAL_CONFIG_FILE_NAME = os.environ.get("TRON_CONFIG",) or "/etc/tron/tron.yaml"
 CONFIG_FILE_NAME = os.path.expanduser("~/.tron")
 
 DEFAULT_HOST = "localhost"
@@ -70,56 +65,32 @@ def tron_jobs_completer(prefix, **kwargs):
     if os.path.isfile(TAB_COMPLETE_FILE):
         with opener(TAB_COMPLETE_FILE, "r") as f:
             jobs = f.readlines()
-        return filter_jobs_actions_runs(
-            prefix=prefix,
-            inputs=[job.strip("\n\r") for job in jobs],
-        )
+        return filter_jobs_actions_runs(prefix=prefix, inputs=[job.strip("\n\r") for job in jobs],)
     else:
         if "client" not in kwargs:
             client = Client(get_default_server())
         else:
             client = kwargs["client"]
-        return filter_jobs_actions_runs(
-            prefix=prefix,
-            inputs=[job["name"] for job in client.jobs()],
-        )
+        return filter_jobs_actions_runs(prefix=prefix, inputs=[job["name"] for job in client.jobs()],)
 
 
 def build_option_parser(usage=None, epilog=None):
-    parser = argparse.ArgumentParser(
-        usage=usage,
-        epilog=epilog,
-        formatter_class=argparse.RawDescriptionHelpFormatter,
-    )
+    parser = argparse.ArgumentParser(usage=usage, epilog=epilog, formatter_class=argparse.RawDescriptionHelpFormatter,)
     parser.add_argument(
-        "--version",
-        action="version",
-        version=f"{parser.prog} {tron.__version__}",
+        "--version", action="version", version=f"{parser.prog} {tron.__version__}",
     )
 
     parser.add_argument(
-        "-v",
-        "--verbose",
-        action="count",
-        help="Verbose logging",
-        default=None,
+        "-v", "--verbose", action="count", help="Verbose logging", default=None,
     )
     parser.add_argument(
-        "--server",
-        default=None,
-        help="Url including scheme, host and port, Default: %(default)s",
+        "--server", default=None, help="Url including scheme, host and port, Default: %(default)s",
     )
     parser.add_argument(
-        "--cluster_name",
-        default=None,
-        help="Human friendly tron cluster name",
+        "--cluster_name", default=None, help="Human friendly tron cluster name",
     )
     parser.add_argument(
-        "-s",
-        "--save",
-        action="store_true",
-        dest="save_config",
-        help="Save options used on this job for next time.",
+        "-s", "--save", action="store_true", dest="save_config", help="Save options used on this job for next time.",
     )
 
     return parser
@@ -195,18 +166,12 @@ def setup_logging(options):
         level = logging.NOTSET
 
     logging.basicConfig(
-        level=level,
-        format="%(name)s %(levelname)s %(message)s",
-        stream=sys.stdout,
+        level=level, format="%(name)s %(levelname)s %(message)s", stream=sys.stdout,
     )
 
 
 def suggest_possibilities(word, possibilities, max_suggestions=6):
-    suggestions = difflib.get_close_matches(
-        word=word,
-        possibilities=possibilities,
-        n=max_suggestions,
-    )
+    suggestions = difflib.get_close_matches(word=word, possibilities=possibilities, n=max_suggestions,)
     if len(suggestions) == 1:
         return f"\nDid you mean: {suggestions[0]}?"
     elif len(suggestions) >= 1:

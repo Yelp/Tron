@@ -20,11 +20,7 @@ from tron.core.job_scheduler import JobScheduler
 class TestJobCollectionController:
     @pytest.fixture(autouse=True)
     def setup_controller(self):
-        self.collection = mock.create_autospec(
-            JobCollection,
-            enable=mock.Mock(),
-            disable=mock.Mock(),
-        )
+        self.collection = mock.create_autospec(JobCollection, enable=mock.Mock(), disable=mock.Mock(),)
         self.controller = JobCollectionController(self.collection)
 
     def test_handle_command_unknown(self):
@@ -34,45 +30,27 @@ class TestJobCollectionController:
 
     def test_handle_command_move_non_existing_job(self):
         self.collection.get_names.return_value = []
-        result = self.controller.handle_command(
-            "move",
-            old_name="old.test",
-            new_name="new.test",
-        )
+        result = self.controller.handle_command("move", old_name="old.test", new_name="new.test",)
         assert "doesn't exist" in result
 
     def test_handle_command_move_to_existing_job(self):
         self.collection.get_names.return_value = ["old.test", "new.test"]
-        result = self.controller.handle_command(
-            "move",
-            old_name="old.test",
-            new_name="new.test",
-        )
+        result = self.controller.handle_command("move", old_name="old.test", new_name="new.test",)
         assert "exists already" in result
 
     def test_handle_command_move(self):
         self.collection.get_names.return_value = ["old.test"]
-        result = self.controller.handle_command(
-            "move",
-            old_name="old.test",
-            new_name="new.test",
-        )
+        result = self.controller.handle_command("move", old_name="old.test", new_name="new.test",)
         assert "Error" not in result
 
 
 class TestActionRunController:
     @pytest.fixture(autouse=True)
     def setup_controller(self):
-        self.action_run = mock.create_autospec(
-            actionrun.ActionRun,
-            cancel=mock.Mock(),
-        )
+        self.action_run = mock.create_autospec(actionrun.ActionRun, cancel=mock.Mock(),)
         self.job_run = mock.create_autospec(jobrun.JobRun)
         self.job_run.is_scheduled = False
-        self.controller = controller.ActionRunController(
-            self.action_run,
-            self.job_run,
-        )
+        self.controller = controller.ActionRunController(self.action_run, self.job_run,)
         self.job_run.action_runs.cleanup_action_run = None
 
     def test_handle_command_start_failed(self):
@@ -125,22 +103,13 @@ class TestActionRunController:
 class TestJobRunController:
     @pytest.fixture(autouse=True)
     def setup_controller(self):
-        self.job_run = mock.create_autospec(
-            jobrun.JobRun,
-            run_time=mock.Mock(),
-            cancel=mock.Mock(),
-        )
+        self.job_run = mock.create_autospec(jobrun.JobRun, run_time=mock.Mock(), cancel=mock.Mock(),)
         self.job_scheduler = mock.create_autospec(JobScheduler)
-        self.controller = controller.JobRunController(
-            self.job_run,
-            self.job_scheduler,
-        )
+        self.controller = controller.JobRunController(self.job_run, self.job_scheduler,)
 
     def test_handle_command_restart(self):
         self.controller.handle_command("restart")
-        self.job_scheduler.manual_start.assert_called_with(
-            self.job_run.run_time,
-        )
+        self.job_scheduler.manual_start.assert_called_with(self.job_run.run_time,)
 
     def test_handle_mapped_command(self):
         result = self.controller.handle_command("start")
@@ -222,11 +191,7 @@ class TestConfigController:
         self.manager.get_hash.return_value = config_hash
         self.manager.write_config.side_effect = [ConfigError("It broke"), None]
         self.controller.read_config = mock.Mock(return_value={"config": old_content})
-        error = self.controller.update_config(
-            name,
-            content,
-            config_hash,
-        )
+        error = self.controller.update_config(name, content, config_hash,)
         assert error == "It broke"
         self.manager.write_config.call_args_list = [
             (name, content),

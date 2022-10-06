@@ -29,18 +29,13 @@ class TronDaemonTestCase(TestCase):
         daemon = TronDaemon.__new__(TronDaemon)  # skip __init__
         options = mock.Mock()
 
-        with mock.patch(
-            "tron.utils.flock",
-            autospec=True,
-        ) as mock_flock:
+        with mock.patch("tron.utils.flock", autospec=True,) as mock_flock:
             daemon.__init__(options)
             assert mock_flock.call_count == 0
 
     def test_run_uses_context(self):
         with mock.patch("tron.trondaemon.setup_logging", mock.Mock(), autospec=None,), mock.patch(
-            "tron.trondaemon.no_daemon_context",
-            mock.Mock(),
-            autospec=None,
+            "tron.trondaemon.no_daemon_context", mock.Mock(), autospec=None,
         ) as ndc:
             ndc.return_value = mock.MagicMock()
             ndc.return_value.__enter__.side_effect = RuntimeError()
@@ -55,10 +50,7 @@ class TronDaemonTestCase(TestCase):
         with open(self.trond.manhole_sock, "w+"):
             pass
 
-        with mock.patch(
-            "twisted.internet.reactor.listenUNIX",
-            autospec=True,
-        ) as mock_listenUNIX:
+        with mock.patch("twisted.internet.reactor.listenUNIX", autospec=True,) as mock_listenUNIX:
             self.trond._run_manhole()
 
             assert mock_listenUNIX.call_count == 1
