@@ -1,3 +1,10 @@
+tron (1.23.2) bionic; urgency=medium
+
+  * 1.23.2 tagged with 'make release'
+    Commit: fixes incorrect test
+
+ -- root <root@561dbdc505d9>  Thu, 06 Oct 2022 15:24:16 +0000
+
 tron (1.23.1) bionic; urgency=medium
 
   * 1.23.1 tagged with 'make release'
