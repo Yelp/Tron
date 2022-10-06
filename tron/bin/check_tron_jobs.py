@@ -16,6 +16,7 @@ from tron.commands import cmd_utils
 from tron.commands import display
 from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
+from tron.utils.habitat import get_superregion
 
 PRECIOUS_JOB_ATTR = "check_that_every_day_has_a_successful_run"
 NUM_PRECIOUS = 7
@@ -51,6 +52,13 @@ def parse_cli():
         type=int,
         dest="run_interval",
         default=300,
+    )
+    parser.add_argument(
+        "--skip-failed-logging-for-superregion",
+        help="Specify a superregion to skip querying stoud/stderr logs for failed jobs",
+        type=str,
+        dest="skip_failed_logging_for_superregion",
+        default=None,
     )
     args = parser.parse_args()
     return args
@@ -93,7 +101,11 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
     action_run_id = get_object_type_from_identifier(url_index, relevant_action["id"],)
 
     if last_state in (State.STUCK, State.FAILED, State.UNKNOWN):
-        action_run_details = client.action_runs(action_run_id.url, num_lines=10)
+        action_run_details = (
+            {}
+            if _skip_superregion and get_superregion == _skip_superregion
+            else client.action_runs(action_run_id.url, num_lines=10)
+        )
     else:
         action_run_details = {}
 
@@ -428,6 +440,10 @@ def main():
     error_code = 0
     global _run_interval
     _run_interval = args.run_interval
+
+    global _skip_superregion
+    _skip_superregion = args.skip_failed_logging_for_superregion
+
     url_index = client.index()
     if args.job is None:
         jobs = client.jobs(include_job_runs=True)
