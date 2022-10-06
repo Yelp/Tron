@@ -40,9 +40,7 @@ def get_scribereader_host_and_port() -> Optional[Tuple[str, int]]:
     # as there's no mapping of ecosystem->scribe-kafka-services discovery hosts
     # for this ecosystem
     host, port = scribereader.get_tail_host_and_port(
-        ecosystem=ecosystem if ecosystem != "prod" else None,
-        region=region,
-        superregion=superregion,
+        ecosystem=ecosystem if ecosystem != "prod" else None, region=region, superregion=superregion,
     )
     return host, port
 
@@ -104,11 +102,7 @@ def read_log_stream_for_action_run(
     # NOTE: this is more-or-less what our internal `scribereader` binary does
     if use_reader:
         with scribereader.get_stream_reader(
-            stream_name=stream_name,
-            min_date=min_date,
-            max_date=max_date,
-            reader_host=host,
-            reader_port=port,
+            stream_name=stream_name, min_date=min_date, max_date=max_date, reader_host=host, reader_port=port,
         ) as stream:
             for line in stream:
                 if max_lines is not None and num_lines == max_lines:
@@ -134,10 +128,7 @@ def read_log_stream_for_action_run(
 
     if use_tailer:
         stream = scribereader.get_stream_tailer(
-            stream_name=stream_name,
-            tailing_host=host,
-            tailing_port=port,
-            lines=-1,
+            stream_name=stream_name, tailing_host=host, tailing_port=port, lines=-1,
         )
         try:
             for line in stream:

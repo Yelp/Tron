@@ -19,29 +19,12 @@ class TestAction:
             cpus=1,
             mem=100,
             disk=disk,  # default: 1024.0
-            constraints=[
-                ConfigConstraint(
-                    attribute="pool",
-                    operator="LIKE",
-                    value="default",
-                ),
-            ],
+            constraints=[ConfigConstraint(attribute="pool", operator="LIKE", value="default",),],
             docker_image="fake-docker.com:400/image",
-            docker_parameters=[
-                ConfigParameter(
-                    key="test",
-                    value=123,
-                ),
-            ],
+            docker_parameters=[ConfigParameter(key="test", value=123,),],
             env={"TESTING": "true"},
             secret_env={"TEST_SECRET": ConfigSecretSource(secret_name="tron-secret-svc-sec--A", key="sec_A")},
-            extra_volumes=[
-                ConfigVolume(
-                    host_path="/tmp",
-                    container_path="/nail/tmp",
-                    mode="RO",
-                ),
-            ],
+            extra_volumes=[ConfigVolume(host_path="/tmp", container_path="/nail/tmp", mode="RO",),],
             trigger_downstreams=True,
             triggered_by=["foo.bar"],
         )
@@ -65,12 +48,7 @@ class TestAction:
         assert command_config.extra_volumes == {("/nail/tmp", "/tmp", "RO")}
 
     def test_from_config_none_values(self):
-        config = ConfigAction(
-            name="ted",
-            command="do something",
-            node="first",
-            executor="ssh",
-        )
+        config = ConfigAction(name="ted", command="do something", node="first", executor="ssh",)
         new_action = Action.from_config(config)
         assert new_action.name == config.name
         assert new_action.executor == config.executor

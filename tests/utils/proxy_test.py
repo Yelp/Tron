@@ -39,11 +39,7 @@ class TestCollectionProxy(TestCase):
         self.target_list = [DummyTarget(1), DummyTarget(2), DummyTarget(0)]
         self.proxy = CollectionProxy(
             lambda: self.target_list,
-            [
-                ("foo", any, True),
-                ("not_foo", all, False),
-                ("equals", lambda a: list(a), True),
-            ],
+            [("foo", any, True), ("not_foo", all, False), ("equals", lambda a: list(a), True),],
         )
         self.dummy = DummyObject(self.proxy)
 
@@ -62,8 +58,7 @@ class TestCollectionProxy(TestCase):
         assert_equal(self.proxy.perform("equals")(2), [False, True, False])
         sometimes = ["sometimes"] * 3
         assert_equal(
-            self.proxy.perform("equals")(3, sometimes=True),
-            sometimes,
+            self.proxy.perform("equals")(3, sometimes=True), sometimes,
         )
 
 

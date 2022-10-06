@@ -39,9 +39,7 @@ class TestStateMachineMultiOption(TestCase):
         # If they are listening, we should talk
         # If they are ignoring us we should get angry
         self.machine = state.Machine(
-            "listening",
-            listening=dict(listening="talking"),
-            talking=dict(ignoring="angry", talking="listening"),
+            "listening", listening=dict(listening="talking"), talking=dict(ignoring="angry", talking="listening"),
         )
 
     def test_transition_many(self):

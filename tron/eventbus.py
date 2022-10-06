@@ -31,9 +31,7 @@ class EventBus:
             log.warning(f"creating {eb.log_dir}")
             os.mkdir(eb.log_dir)
 
-        if not os.path.exists(eb.log_current) or not os.path.exists(
-            os.readlink(eb.log_current),
-        ):
+        if not os.path.exists(eb.log_current) or not os.path.exists(os.readlink(eb.log_current),):
             log.warning(f"creating {eb.log_current}")
             eb.sync_save_log("initial save")
 
@@ -200,8 +198,7 @@ class EventBus:
 
         consume_dequeue(self.subscribe_queue, self.sync_subscribe)
         consume_dequeue(
-            self.clear_subscription_queue,
-            self.sync_clear_subscriptions,
+            self.clear_subscription_queue, self.sync_clear_subscriptions,
         )
         consume_dequeue(self.publish_queue, self.sync_publish)
 

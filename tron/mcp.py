@@ -57,9 +57,7 @@ class MasterControlProgram:
         """Read config data and apply it."""
         with self.state_watcher.disabled():
             self.apply_config(
-                self.config.load(),
-                reconfigure=reconfigure,
-                namespace_to_reconfigure=namespace_to_reconfigure,
+                self.config.load(), reconfigure=reconfigure, namespace_to_reconfigure=namespace_to_reconfigure,
             )
 
     def initial_setup(self):
@@ -68,9 +66,7 @@ class MasterControlProgram:
         """
         self._load_config()
         self.restore_state(
-            actioncommand.create_action_runner_factory_from_config(
-                self.config.load().get_master().action_runner,
-            ),
+            actioncommand.create_action_runner_factory_from_config(self.config.load().get_master().action_runner,),
         )
         # Any job with existing state would have been scheduled already. Jobs
         # without any state will be scheduled here.
@@ -81,12 +77,7 @@ class MasterControlProgram:
         master_config_directives = [
             (self.update_state_watcher_config, "state_persistence"),
             (self.set_context_base, "command_context"),
-            (
-                node.NodePoolRepository.update_from_config,
-                "nodes",
-                "node_pools",
-                "ssh_options",
-            ),
+            (node.NodePoolRepository.update_from_config, "nodes", "node_pools", "ssh_options",),
             (MesosClusterRepository.configure, "mesos_options"),
             (KubernetesClusterRepository.configure, "k8s_options"),
             (self.configure_eventbus, "eventbus_enabled"),
@@ -105,25 +96,14 @@ class MasterControlProgram:
         self.job_graph = JobGraph(config_container)
         factory = self.build_job_scheduler_factory(master_config, self.job_graph)
         updated_jobs = self.jobs.update_from_config(
-            config_container.get_jobs(),
-            factory,
-            reconfigure,
-            namespace_to_reconfigure,
+            config_container.get_jobs(), factory, reconfigure, namespace_to_reconfigure,
         )
         self.state_watcher.watch_all(updated_jobs, [Job.NOTIFY_STATE_CHANGE, Job.NOTIFY_NEW_RUN])
 
     def build_job_scheduler_factory(self, master_config, job_graph):
         output_stream_dir = master_config.output_stream_dir or self.working_dir
-        action_runner = actioncommand.create_action_runner_factory_from_config(
-            master_config.action_runner,
-        )
-        return JobSchedulerFactory(
-            self.context,
-            output_stream_dir,
-            master_config.time_zone,
-            action_runner,
-            job_graph,
-        )
+        action_runner = actioncommand.create_action_runner_factory_from_config(master_config.action_runner,)
+        return JobSchedulerFactory(self.context, output_stream_dir, master_config.time_zone, action_runner, job_graph,)
 
     def update_state_watcher_config(self, state_config):
         """Update the StateChangeWatcher, and save all state if the state config

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.7
+#!/usr/bin/env python3.6
 #
 # get_tron_metrics.py
 #   This script is designed to retrieve metrics from Tron via its API and send
@@ -19,10 +19,7 @@ def parse_cli():
     parser = cmd_utils.build_option_parser()
     parser.description = "Collects metrics from Tron via its API and forwards them to " "meteorite."
     parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        default=False,
-        help="Don't actually send metrics out. Defaults: %(default)s",
+        "--dry-run", action="store_true", default=False, help="Don't actually send metrics out. Defaults: %(default)s",
     )
     args = parser.parse_args()
     return args
@@ -34,14 +31,7 @@ def check_bin_exists(bin):
 
     :param bin: (str) Name of the executable; could be a path to one
     """
-    return (
-        subprocess.call(
-            ["which", bin],
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-        )
-        == 0
-    )
+    return subprocess.call(["which", bin], stdout=subprocess.PIPE, stderr=subprocess.PIPE,) == 0
 
 
 def send_data_metric(name, metric_type, value, dimensions={}, dry_run=False):
@@ -56,34 +46,21 @@ def send_data_metric(name, metric_type, value, dimensions={}, dry_run=False):
     :param dry_run: (bool) Whether or not to send metrics to meteorite
     """
     if dry_run:
-        metric_args = dict(
-            name=name,
-            metric_type=metric_type,
-            value=value,
-            dimensions=dimensions,
-        )
-        log.info(
-            f"Would have sent this to meteorite:\n" f"{pprint.pformat(metric_args)}",
-        )
+        metric_args = dict(name=name, metric_type=metric_type, value=value, dimensions=dimensions,)
+        log.info(f"Would have sent this to meteorite:\n" f"{pprint.pformat(metric_args)}",)
         return
 
     cmd = ["meteorite", "data", "-v", name, metric_type, str(value)]
     for k, v in dimensions.items():
         cmd.extend(["-d", f"{k}:{v}"])
 
-    process = subprocess.Popen(
-        cmd,
-        stdout=subprocess.PIPE,
-        stderr=subprocess.PIPE,
-    )
+    process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,)
     output, error = process.communicate()
     output = output.decode("utf-8").rstrip()
     error = error.decode("utf-8").rstrip()
 
     if process.returncode != 0:
-        log.error(
-            "Meteorite failed with:\n" f"{textwrap.indent(error, '    ')}",
-        )
+        log.error("Meteorite failed with:\n" f"{textwrap.indent(error, '    ')}",)
     else:
         log.debug(f"From meteorite: {output}")
 

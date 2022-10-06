@@ -45,10 +45,7 @@ class TestActionGraph(TestCase):
         assert self.action_graph.get_dependencies("base_one") == []
         assert self.action_graph.get_dependencies("base_one", include_triggers=True)[0].name == "MASTER.otherjob.first"
         assert sorted(d.name for d in self.action_graph.get_dependencies("dep_multi")) == sorted(
-            [
-                "dep_one_one",
-                "base_two",
-            ]
+            ["dep_one_one", "base_two",]
         )
 
     def test_names(self):
@@ -59,8 +56,7 @@ class TestActionGraph(TestCase):
 
     def test__getitem__(self):
         assert_equal(
-            self.action_graph["base_one"],
-            self.action_map["base_one"],
+            self.action_graph["base_one"], self.action_map["base_one"],
         )
 
     def test__getitem__miss(self):

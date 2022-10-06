@@ -18,14 +18,10 @@ def parse_args():
     parser = optparse.OptionParser()
     parser.add_option("-c", "--config", help="Tron configuration path.")
     parser.add_option(
-        "-n",
-        "--name",
-        help="Job name to graph. Also used as output filename.",
+        "-n", "--name", help="Job name to graph. Also used as output filename.",
     )
     parser.add_option(
-        "--namespace",
-        default=schema.MASTER_NAMESPACE,
-        help="Configuration namespace which contains the job.",
+        "--namespace", default=schema.MASTER_NAMESPACE, help="Configuration namespace which contains the job.",
     )
     opts, _ = parser.parse_args()
 

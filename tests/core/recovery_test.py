@@ -90,30 +90,14 @@ class TestRecovery(TestCase):
     def test_launch_recovery_actionruns_for_job_runs(self, mock_filter):
         mock_actions = (
             [
+                mock.Mock(action_runner=NoActionRunnerFactory(), spec=SSHActionRun,),
                 mock.Mock(
-                    action_runner=NoActionRunnerFactory(),
-                    spec=SSHActionRun,
-                ),
-                mock.Mock(
-                    action_runner=SubprocessActionRunnerFactory(
-                        status_path="/tmp/foo",
-                        exec_path=("/tmp/foo"),
-                    ),
+                    action_runner=SubprocessActionRunnerFactory(status_path="/tmp/foo", exec_path=("/tmp/foo"),),
                     spec=SSHActionRun,
                 ),
             ],
-            [
-                mock.Mock(
-                    action_runner=NoActionRunnerFactory(),
-                    spec=MesosActionRun,
-                ),
-            ],
-            [
-                mock.Mock(
-                    action_runner=NoActionRunnerFactory(),
-                    spec=KubernetesActionRun,
-                ),
-            ],
+            [mock.Mock(action_runner=NoActionRunnerFactory(), spec=MesosActionRun,),],
+            [mock.Mock(action_runner=NoActionRunnerFactory(), spec=KubernetesActionRun,),],
         )
 
         mock_filter.return_value = mock_actions
@@ -121,8 +105,7 @@ class TestRecovery(TestCase):
 
         mock_job_run = mock.Mock()
         launch_recovery_actionruns_for_job_runs(
-            [mock_job_run],
-            mock_action_runner,
+            [mock_job_run], mock_action_runner,
         )
         ssh_runs = mock_actions[0]
         for run in ssh_runs:
@@ -143,7 +126,6 @@ class TestRecovery(TestCase):
         mock_filter.return_value = ([], [], [])
 
         launch_recovery_actionruns_for_job_runs(
-            [empty_job_run, other_job_run],
-            mock_action_runner,
+            [empty_job_run, other_job_run], mock_action_runner,
         )
         mock_filter.assert_called_with(other_job_run._action_runs)

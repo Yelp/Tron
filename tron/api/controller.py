@@ -84,9 +84,7 @@ class ActionRunController:
             return msg % (self.action_run, self.action_run.state)
 
         raise InvalidCommandForActionState(
-            command=command,
-            action_name=self.action_run.name,
-            action_state=self.action_run.state,
+            command=command, action_name=self.action_run.name, action_state=self.action_run.state,
         )
 
     def handle_termination(self, command):

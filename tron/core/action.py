@@ -1,10 +1,11 @@
 import datetime
 import logging
+from typing import List
+from typing import Optional
+
 from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
-from typing import List
-from typing import Optional
 
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME

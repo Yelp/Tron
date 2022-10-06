@@ -13,24 +13,15 @@ from tron import yaml
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Creating namespaces and jobs configuration for load testing",
+    parser = argparse.ArgumentParser(description="Creating namespaces and jobs configuration for load testing",)
+    parser.add_argument(
+        "--multiple", type=int, default=1, help="multiple workload of namespaces and jobs from source directory",
     )
     parser.add_argument(
-        "--multiple",
-        type=int,
-        default=1,
-        help="multiple workload of namespaces and jobs from source directory",
+        "--src", default="/nail/etc/services/tron/prod", help="Directory to get Tron configuration files",
     )
     parser.add_argument(
-        "--src",
-        default="/nail/etc/services/tron/prod",
-        help="Directory to get Tron configuration files",
-    )
-    parser.add_argument(
-        "--dest",
-        default="/tmp/tron-servdir",
-        help="Directory to put Tron configuration files for load testing",
+        "--dest", default="/tmp/tron-servdir", help="Directory to put Tron configuration files for load testing",
     )
     args = parser.parse_args()
     return args
@@ -61,10 +52,7 @@ def main():
                         if "node" in action:
                             action["node"] = "localhost"
             for i in range(args.multiple):
-                out_filepath = os.path.join(
-                    args.dest,
-                    "load_testing_" + str(i) + "-" + filename,
-                )
+                out_filepath = os.path.join(args.dest, "load_testing_" + str(i) + "-" + filename,)
                 with open(out_filepath, "w") as outf:
                     yaml.dump(config, outf, default_flow_style=False)
 

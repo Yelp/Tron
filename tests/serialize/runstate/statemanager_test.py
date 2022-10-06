@@ -29,11 +29,7 @@ class TestPersistenceManagerFactory(TestCase):
         tmpdir = tempfile.mkdtemp()
         try:
             fname = os.path.join(tmpdir, "state")
-            config = schema.ConfigState(
-                store_type="shelve",
-                name=fname,
-                buffer_size=0,
-            )
+            config = schema.ConfigState(store_type="shelve", name=fname, buffer_size=0,)
             manager = PersistenceManagerFactory.from_config(config)
             store = manager._impl
             assert_equal(store.filename, config.name)
@@ -54,9 +50,7 @@ class TestStateMetadata(TestCase):
     def test_validate_metadata_mismatch(self):
         metadata = {"version": (200, 1, 1)}
         assert_raises(
-            VersionMismatchError,
-            StateMetadata.validate_metadata,
-            metadata,
+            VersionMismatchError, StateMetadata.validate_metadata, metadata,
         )
 
 
@@ -104,24 +98,15 @@ class TestPersistentStateManager(TestCase):
     def test_restore(self):
         job_names = ["one", "two"]
         with mock.patch.object(
-            self.manager,
-            "_restore_metadata",
-            autospec=True,
+            self.manager, "_restore_metadata", autospec=True,
         ) as mock_restore_metadata, mock.patch.object(
-            self.manager,
-            "_restore_dicts",
-            autospec=True,
+            self.manager, "_restore_dicts", autospec=True,
         ) as mock_restore_dicts, mock.patch.object(
-            self.manager,
-            "_restore_runs_for_job",
-            autospect=True,
+            self.manager, "_restore_runs_for_job", autospect=True,
         ) as mock_restore_runs:
             mock_restore_dicts.side_effect = [
                 # _restore_dicts for JOB_STATE
-                {
-                    "one": {"key": "val1"},
-                    "two": {"key": "val2"},
-                },
+                {"one": {"key": "val1"}, "two": {"key": "val2"},},
                 # _restore_dicts for MESOS_STATE
                 {"frameworks": "clusters"},
             ]
@@ -143,11 +128,7 @@ class TestPersistentStateManager(TestCase):
 
     def test_restore_runs_for_job(self):
         job_state = {"run_nums": [2, 3], "enabled": True}
-        with mock.patch.object(
-            self.manager,
-            "_restore_dicts",
-            autospec=True,
-        ) as mock_restore_dicts:
+        with mock.patch.object(self.manager, "_restore_dicts", autospec=True,) as mock_restore_dicts:
             mock_restore_dicts.side_effect = [{"job_a.2": "two"}, {"job_a.3": "three"}]
             runs = self.manager._restore_runs_for_job("job_a", job_state)
 
@@ -159,11 +140,7 @@ class TestPersistentStateManager(TestCase):
 
     def test_restore_runs_for_job_one_missing(self):
         job_state = {"run_nums": [2, 3], "enabled": True}
-        with mock.patch.object(
-            self.manager,
-            "_restore_dicts",
-            autospec=True,
-        ) as mock_restore_dicts:
+        with mock.patch.object(self.manager, "_restore_dicts", autospec=True,) as mock_restore_dicts:
             mock_restore_dicts.side_effect = [{}, {"job_a.3": "three"}]
             runs = self.manager._restore_runs_for_job("job_a", job_state)
 
@@ -178,21 +155,13 @@ class TestPersistentStateManager(TestCase):
         autospec_method(self.manager._keys_for_items)
         self.manager._keys_for_items.return_value = dict(enumerate(names))
         self.store.restore.return_value = {
-            0: {
-                "state": "data",
-            },
-            1: {
-                "state": "2data",
-            },
+            0: {"state": "data",},
+            1: {"state": "2data",},
         }
         state_data = self.manager._restore_dicts("type", names)
         expected = {
-            names[0]: {
-                "state": "data",
-            },
-            names[1]: {
-                "state": "2data",
-            },
+            names[0]: {"state": "data",},
+            names[1]: {"state": "2data",},
         }
         assert_equal(expected, state_data)
 
@@ -205,11 +174,7 @@ class TestPersistentStateManager(TestCase):
     def test_save_failed(self):
         self.store.save.side_effect = PersistenceStoreError("blah")
         assert_raises(
-            PersistenceStoreError,
-            self.manager.save,
-            None,
-            None,
-            None,
+            PersistenceStoreError, self.manager.save, None, None, None,
         )
 
     def test_save_while_disabled(self):
@@ -262,8 +227,7 @@ class TestStateChangeWatcher(TestCase):
         assert not self.watcher.shutdown.mock_calls
 
     @mock.patch(
-        "tron.serialize.runstate.statemanager.PersistenceManagerFactory",
-        autospec=True,
+        "tron.serialize.runstate.statemanager.PersistenceManagerFactory", autospec=True,
     )
     def test_update_from_config_changed(self, mock_factory):
         state_config = mock.Mock()
@@ -272,8 +236,7 @@ class TestStateChangeWatcher(TestCase):
         assert_equal(self.watcher.config, state_config)
         self.watcher.shutdown.assert_called_with()
         assert_equal(
-            self.watcher.state_manager,
-            mock_factory.from_config.return_value,
+            self.watcher.state_manager, mock_factory.from_config.return_value,
         )
         mock_factory.from_config.assert_called_with(state_config)
 
@@ -281,22 +244,17 @@ class TestStateChangeWatcher(TestCase):
         mock_job = mock.Mock()
         self.watcher.save_job(mock_job)
         self.watcher.state_manager.save.assert_called_with(
-            runstate.JOB_STATE,
-            mock_job.name,
-            mock_job.state_data,
+            runstate.JOB_STATE, mock_job.name, mock_job.state_data,
         )
 
     @mock.patch(
-        "tron.serialize.runstate.statemanager.StateMetadata",
-        autospec=None,
+        "tron.serialize.runstate.statemanager.StateMetadata", autospec=None,
     )
     def test_save_metadata(self, mock_state_metadata):
         self.watcher.save_metadata()
         meta_data = mock_state_metadata.return_value
         self.watcher.state_manager.save.assert_called_with(
-            runstate.MCP_STATE,
-            meta_data.name,
-            meta_data.state_data,
+            runstate.MCP_STATE, meta_data.name, meta_data.state_data,
         )
 
     def test_shutdown(self):
@@ -315,21 +273,17 @@ class TestStateChangeWatcher(TestCase):
 
     def test_handler_mesos_change(self):
         self.watcher.handler(
-            observable=MesosClusterRepository,
-            event=None,
+            observable=MesosClusterRepository, event=None,
         )
         self.watcher.state_manager.save.assert_called_with(
-            runstate.MESOS_STATE,
-            MesosClusterRepository.name,
-            MesosClusterRepository.state_data,
+            runstate.MESOS_STATE, MesosClusterRepository.name, MesosClusterRepository.state_data,
         )
 
     def test_handler_job_state_change(self):
         mock_job = mock.Mock(spec_set=Job)
         with mock.patch.object(self.watcher, "save_job") as mock_save_job:
             self.watcher.handler(
-                observable=mock_job,
-                event=Job.NOTIFY_STATE_CHANGE,
+                observable=mock_job, event=Job.NOTIFY_STATE_CHANGE,
             )
             mock_save_job.assert_called_with(mock_job)
 
@@ -337,22 +291,18 @@ class TestStateChangeWatcher(TestCase):
         mock_job = mock.Mock(spec_set=Job)
         mock_job_run = mock.Mock(spec_set=JobRun)
         with mock.patch.object(self.watcher, "save_job",) as mock_save_job, mock.patch.object(
-            self.watcher,
-            "watch",
+            self.watcher, "watch",
         ) as mock_watch:
             # Error: No job run in event data, do nothing
             self.watcher.handler(
-                observable=mock_job,
-                event=Job.NOTIFY_NEW_RUN,
+                observable=mock_job, event=Job.NOTIFY_NEW_RUN,
             )
             assert mock_watch.call_count == 0
             assert mock_save_job.call_count == 0
 
             # Correct case
             self.watcher.handler(
-                observable=mock_job,
-                event=Job.NOTIFY_NEW_RUN,
-                event_data=mock_job_run,
+                observable=mock_job, event=Job.NOTIFY_NEW_RUN, event_data=mock_job_run,
             )
             mock_watch.assert_called_with(mock_job_run)
             assert mock_save_job.call_count == 0
@@ -360,24 +310,19 @@ class TestStateChangeWatcher(TestCase):
     def test_handler_job_run_state_change(self):
         mock_job_run = mock.MagicMock(spec_set=JobRun)
         self.watcher.handler(
-            observable=mock_job_run,
-            event=JobRun.NOTIFY_STATE_CHANGED,
+            observable=mock_job_run, event=JobRun.NOTIFY_STATE_CHANGED,
         )
         self.watcher.state_manager.save.assert_called_with(
-            runstate.JOB_RUN_STATE,
-            mock_job_run.name,
-            mock_job_run.state_data,
+            runstate.JOB_RUN_STATE, mock_job_run.name, mock_job_run.state_data,
         )
 
     def test_handler_job_run_removed(self):
         mock_job_run = mock.MagicMock(spec_set=JobRun)
         self.watcher.handler(
-            observable=mock_job_run,
-            event=JobRun.NOTIFY_REMOVED,
+            observable=mock_job_run, event=JobRun.NOTIFY_REMOVED,
         )
         self.watcher.state_manager.delete.assert_called_with(
-            runstate.JOB_RUN_STATE,
-            mock_job_run.name,
+            runstate.JOB_RUN_STATE, mock_job_run.name,
         )
 
 
