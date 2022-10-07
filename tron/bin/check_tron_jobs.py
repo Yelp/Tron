@@ -54,10 +54,10 @@ def parse_cli():
         default=300,
     )
     parser.add_argument(
-        "--skip-failed-logging-for-superregion",
-        help="Boolean flag to skip querying stoud/stderr logs for failed jobs for the current superregion",
+        "--skip-sensu-failure-logging",
+        help="Skip including stdout/stderr logs in alerts for failed jobs",
         action="store_true",
-        dest="skip_failed_logging_for_superregion",
+        dest="skip_sensu_failure_logging",
         default=False,
     )
     args = parser.parse_args()
@@ -101,8 +101,8 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
     action_run_id = get_object_type_from_identifier(url_index, relevant_action["id"],)
 
     if last_state in (State.STUCK, State.FAILED, State.UNKNOWN):
-        if _skip_superregion:
-            job_run_url = job_run_id.rsplit(".", 1)[0]
+        if _skip_sensu_failure_logging:
+            job_run_url = "/".join(job_run_id.rsplit(".", 1))
             tronweb_url = f"http://y/tron-{get_superregion()}/#job/{job_run_url}"
             stderr_default = f"Please visit {tronweb_url} for stderr details."
             action_run_details = {}
@@ -444,8 +444,8 @@ def main():
     global _run_interval
     _run_interval = args.run_interval
 
-    global _skip_superregion
-    _skip_superregion = args.skip_failed_logging_for_superregion
+    global _skip_sensu_failure_logging
+    _skip_sensu_failure_logging = args.skip_sensu_failure_logging
 
     url_index = client.index()
     if args.job is None:
