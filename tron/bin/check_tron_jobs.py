@@ -55,10 +55,10 @@ def parse_cli():
     )
     parser.add_argument(
         "--skip-failed-logging-for-superregion",
-        help="Specify a superregion to skip querying stoud/stderr logs for failed jobs",
-        type=str,
+        help="Boolean flag to skip querying stoud/stderr logs for failed jobs for the current superregion",
+        action="store_true",
         dest="skip_failed_logging_for_superregion",
-        default=None,
+        default=False,
     )
     args = parser.parse_args()
     return args
@@ -101,11 +101,14 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
     action_run_id = get_object_type_from_identifier(url_index, relevant_action["id"],)
 
     if last_state in (State.STUCK, State.FAILED, State.UNKNOWN):
-        action_run_details = (
-            {}
-            if _skip_superregion and get_superregion() == _skip_superregion
-            else client.action_runs(action_run_id.url, num_lines=10)
-        )
+        if _skip_superregion:
+            job_run_url = job_run_id.rsplit(".", 1)[0]
+            tronweb_url = f"http://y/tron-{get_superregion()}/#job/{job_run_url}"
+            stderr_default = f"Please visit {tronweb_url} for stderr details."
+            action_run_details = {}
+        else:
+            stderr_default = "(No stderr available)"
+            action_run_details = client.action_runs(action_run_id.url, num_lines=10)
     else:
         action_run_details = {}
 
@@ -129,11 +132,11 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
             level = "WARN"
             status = 1
         prefix = f"{level}: Job {job_run_id} exceeded expected runtime or still running when next job is scheduled on {cluster}"
-        stderr = "\n".join(action_run_details.get("stderr", ["(No stderr available)"]))
+        stderr = "\n".join(action_run_details.get("stderr", [stderr_default]))
     elif last_state == State.FAILED:
         prefix = f"CRIT: The last job run ({job_run_id}) failed on {cluster}!"
         status = 2
-        stderr = "\n".join(action_run_details.get("stderr", ["(No stderr available)"]))
+        stderr = "\n".join(action_run_details.get("stderr", [stderr_default]))
     elif last_state == State.UNKNOWN:
         prefix = f"CRIT: Job {job_run_id} has gone 'unknown' and might need manual intervention on {cluster}"
         status = 2
