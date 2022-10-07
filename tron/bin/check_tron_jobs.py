@@ -16,6 +16,7 @@ from tron.commands import cmd_utils
 from tron.commands import display
 from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
+from tron.utils.habitat import get_superregion
 
 PRECIOUS_JOB_ATTR = "check_that_every_day_has_a_successful_run"
 NUM_PRECIOUS = 7
@@ -51,6 +52,13 @@ def parse_cli():
         type=int,
         dest="run_interval",
         default=300,
+    )
+    parser.add_argument(
+        "--skip-sensu-failure-logging",
+        help="Skip including stdout/stderr logs in alerts for failed jobs",
+        action="store_true",
+        dest="skip_sensu_failure_logging",
+        default=False,
     )
     args = parser.parse_args()
     return args
@@ -93,7 +101,14 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
     action_run_id = get_object_type_from_identifier(url_index, relevant_action["id"],)
 
     if last_state in (State.STUCK, State.FAILED, State.UNKNOWN):
-        action_run_details = client.action_runs(action_run_id.url, num_lines=10)
+        if _skip_sensu_failure_logging:
+            job_run_url = "/".join(job_run_id.rsplit(".", 1))
+            tronweb_url = f"http://y/tron-{get_superregion()}/#job/{job_run_url}"
+            stderr_default = f"Please visit {tronweb_url} for stderr details."
+            action_run_details = {}
+        else:
+            stderr_default = "(No stderr available)"
+            action_run_details = client.action_runs(action_run_id.url, num_lines=10)
     else:
         action_run_details = {}
 
@@ -117,11 +132,11 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
             level = "WARN"
             status = 1
         prefix = f"{level}: Job {job_run_id} exceeded expected runtime or still running when next job is scheduled on {cluster}"
-        stderr = "\n".join(action_run_details.get("stderr", ["(No stderr available)"]))
+        stderr = "\n".join(action_run_details.get("stderr", [stderr_default]))
     elif last_state == State.FAILED:
         prefix = f"CRIT: The last job run ({job_run_id}) failed on {cluster}!"
         status = 2
-        stderr = "\n".join(action_run_details.get("stderr", ["(No stderr available)"]))
+        stderr = "\n".join(action_run_details.get("stderr", [stderr_default]))
     elif last_state == State.UNKNOWN:
         prefix = f"CRIT: Job {job_run_id} has gone 'unknown' and might need manual intervention on {cluster}"
         status = 2
@@ -428,6 +443,10 @@ def main():
     error_code = 0
     global _run_interval
     _run_interval = args.run_interval
+
+    global _skip_sensu_failure_logging
+    _skip_sensu_failure_logging = args.skip_sensu_failure_logging
+
     url_index = client.index()
     if args.job is None:
         jobs = client.jobs(include_job_runs=True)
