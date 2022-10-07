@@ -103,7 +103,7 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
     if last_state in (State.STUCK, State.FAILED, State.UNKNOWN):
         action_run_details = (
             {}
-            if _skip_superregion and get_superregion == _skip_superregion
+            if _skip_superregion and get_superregion() == _skip_superregion
             else client.action_runs(action_run_id.url, num_lines=10)
         )
     else:
