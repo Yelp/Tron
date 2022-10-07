@@ -1,3 +1,12 @@
+tron (1.23.3) bionic; urgency=medium
+
+  * 1.23.3 tagged with 'make release'
+    Commit: TRON-1806 Adds new function in check_tron_jobs to skip
+    failed logging queries for a specific superregion (#880)  Adds new
+    function in check_tron_jobs --skip-sensu-failure-logging
+
+ -- root <root@277e452fcc16>  Fri, 07 Oct 2022 19:53:47 +0000
+
 tron (1.23.2) bionic; urgency=medium
 
   * 1.23.2 tagged with 'make release'
