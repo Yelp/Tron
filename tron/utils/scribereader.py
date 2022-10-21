@@ -108,6 +108,10 @@ def read_log_stream_for_action_run(
                 if max_lines is not None and num_lines == max_lines:
                     truncated_output = True
                     break
+                # it's possible for jobs to run multiple times a day and have obscenely large amounts of output
+                # so we can't just truncate after seeing X number of lines for the run number in question - we
+                # need to count how many total lines we've seen and bail out early to preserve tron's uptime
+                num_lines += 1
 
                 try:
                     payload = json.loads(line)
@@ -124,7 +128,6 @@ def read_log_stream_for_action_run(
                     and payload.get("cluster") == paasta_cluster
                 ):
                     output.append((payload["timestamp"], payload["message"]))
-                    num_lines += 1
 
     if use_tailer:
         stream = scribereader.get_stream_tailer(
@@ -135,6 +138,10 @@ def read_log_stream_for_action_run(
                 if num_lines == max_lines:
                     truncated_output = True
                     break
+                # it's possible for jobs to run multiple times a day and have obscenely large amounts of output
+                # so we can't just truncate after seeing X number of lines for the run number in question - we
+                # need to count how many total lines we've seen and bail out early to preserve tron's uptime
+                num_lines += 1
 
                 try:
                     payload = json.loads(line)
@@ -151,7 +158,6 @@ def read_log_stream_for_action_run(
                     and payload.get("cluster") == paasta_cluster
                 ):
                     output.append((payload["timestamp"], payload["message"]))
-                    num_lines += 1
         except StreamTailerSetupError:
             return [
                 f"No data in stream {stream_name} - if this is the first time this action has run and you expected "
@@ -170,13 +176,17 @@ def read_log_stream_for_action_run(
     output.sort(key=operator.itemgetter(0))
     lines = [line for _, line in output]
     malformed = [f"{malformed_lines} encountered while retrieving logs"] if malformed_lines else []
+    try:
+        location_selector = f"-s {paasta_cluster}" if "prod" in paasta_cluster else f'-e {paasta_cluster.split("-")[1]}'
+    except IndexError:
+        location_selector = f"-s {paasta_cluster}"
     truncation_message = (
         [
-            f"This output is truncated. Use this command to view all lines 'scribereader -s {paasta_cluster} {stream_name} --min-date {min_date.date()} --max-date {max_date.date()}'"
+            f"This output is truncated. Use this command to view all lines: scribereader {location_selector} {stream_name} --min-date {min_date.date()} --max-date {max_date.date()} | jq 'select(.tron_run_number=={int(run_num)}) | .message'"
         ]
         if max_date
         else [
-            f"This output is truncated. Use this command to view all lines 'scribereader -s {paasta_cluster} {stream_name} --min-date {min_date.date()}'"
+            f"This output is truncated. Use this command to view all lines: scribereader {location_selector} {stream_name} --min-date {min_date.date()} | jq 'select(.tron_run_number=={int(run_num)}) | .message'"
         ]
     )
     truncated = truncation_message if truncated_output else []
