@@ -1,3 +1,14 @@
+tron (1.23.4) bionic; urgency=medium
+
+  * 1.23.4 tagged with 'make release'
+    Commit: Bail out earlier on large tron logs (#881)  It's possible
+    for there to be multiple gigabytes of logs in our logging streams
+    and we don't want Tron sitting there processing these for ages on
+    end. This isn't a silver bullet, but this should help in the
+    meantime
+
+ -- root <root@d4d7abb7b249>  Mon, 24 Oct 2022 16:02:12 +0000
+
 tron (1.23.3) bionic; urgency=medium
 
   * 1.23.3 tagged with 'make release'
