@@ -5,7 +5,6 @@ cryptography
 dataclasses
 ecdsa>=0.13.3
 humanize
-importlib-resources
 ipdb
 ipython
 Jinja2>=2.10.1
@@ -21,7 +20,6 @@ pytimeparse
 pytz
 PyYAML>=5.1
 requests
-rook
 task_processing[mesos_executor,k8s]
 Twisted>=19.7.0
 urllib3>=1.24.2
