@@ -1,3 +1,11 @@
+tron (1.23.5) bionic; urgency=medium
+
+  * 1.23.5 tagged with 'make release'
+    Commit: Merge pull request #882 from Yelp/DAR-1739-revert-rookout
+    Revert 'This adds rookout to tron (TRON-1764) (#875)'
+
+ -- root <root@b023a97c11d6>  Wed, 26 Oct 2022 00:24:33 +0000
+
 tron (1.23.4) bionic; urgency=medium
 
   * 1.23.4 tagged with 'make release'
