@@ -24,7 +24,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_today():
     ) as mock_stream_reader, mock.patch(
         "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
     ) as mock_stream_tailer, mock.patch(
-        "tron.utils.habitat.get_superregion", autospec=True, return_value="fake",
+        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
     ), mock.patch(
         "tron.config.static_config.build_configuration_watcher", autospec=True,
     ), mock.patch(
@@ -89,7 +89,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_different_days():
     ) as mock_stream_reader, mock.patch(
         "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
     ) as mock_stream_tailer, mock.patch(
-        "tron.utils.habitat.get_superregion", autospec=True, return_value="fake",
+        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
     ), mock.patch(
         "tron.config.static_config.build_configuration_watcher", autospec=True,
     ), mock.patch(
@@ -176,7 +176,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_in_past():
     ) as mock_stream_reader, mock.patch(
         "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
     ) as mock_stream_tailer, mock.patch(
-        "tron.utils.habitat.get_superregion", autospec=True, return_value="fake",
+        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
     ), mock.patch(
         "tron.config.static_config.build_configuration_watcher", autospec=True,
     ), mock.patch(
@@ -234,7 +234,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
     ) as mock_stream_reader, mock.patch(
         "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
     ) as mock_stream_tailer, mock.patch(
-        "tron.utils.habitat.get_superregion", autospec=True, return_value="fake",
+        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
     ), mock.patch(
         "tron.config.static_config.build_configuration_watcher", autospec=True,
     ), mock.patch(

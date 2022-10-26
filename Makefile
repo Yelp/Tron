@@ -1,5 +1,4 @@
 VERSION=$(shell python setup.py --version)
-VERSION_SHA = $(shell git rev-parse HEAD)
 DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw -v $(CURDIR)/.tox-indocker:/work/.tox:rw
 UID:=$(shell id -u)
 GID:=$(shell id -g)
@@ -41,8 +40,6 @@ deb_%: clean docker_% coffee_% react_%
 	@echo "Building deb for $*"
 	# backup these files so we can temp modify them
 	cp requirements.txt requirements.txt.old
-	# Update git sha based on version
-	@echo "$(VERSION_SHA)" > tron/VERSION_SHA
 	$(ADD_MISSING_DEPS_MAYBE)
 	$(DOCKER_RUN) -e PIP_INDEX_URL=${PIP_INDEX_URL} tron-builder-$* /bin/bash -c ' \
 		dpkg-buildpackage -d &&                  \
