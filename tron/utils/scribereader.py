@@ -8,12 +8,6 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
-import staticconf  # type: ignore
-
-from tron.config.static_config import get_config_watcher
-from tron.config.static_config import NAMESPACE
-
-
 try:
     from scribereader import scribereader  # type: ignore
     from clog.readers import StreamTailerSetupError  # type: ignore
@@ -22,7 +16,7 @@ except ImportError:
 
 
 log = logging.getLogger(__name__)
-USE_SRV_CONFIGS = -1
+DEFAULT_MAX_LINES = 1000
 
 
 @lru_cache(maxsize=1)
@@ -83,15 +77,10 @@ def read_log_stream_for_action_run(
     min_date: Optional[datetime.datetime],
     max_date: Optional[datetime.datetime],
     paasta_cluster: Optional[str],
-    max_lines: Optional[int] = USE_SRV_CONFIGS,
+    max_lines: Optional[int] = DEFAULT_MAX_LINES,
 ) -> List[str]:
     if min_date is None:
         return [f"{action_run_id} has not started yet."]
-
-    if max_lines == USE_SRV_CONFIGS:
-        config_watcher = get_config_watcher()
-        config_watcher.reload_if_changed()
-        max_lines = staticconf.read("logging.max_lines_to_display", namespace=NAMESPACE)
 
     if scribereader is None:
         return ["Scribereader (an internal Yelp package) is not available - unable to display logs."]

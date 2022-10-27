@@ -7,11 +7,6 @@ import datetime
 import logging
 import traceback
 
-import staticconf
-
-from tron.config.static_config import get_config_watcher
-from tron.config.static_config import NAMESPACE
-
 try:
     import simplejson as json
 
@@ -28,6 +23,8 @@ from tron.api.async_resource import AsyncResource
 from tron.metrics import view_all_metrics
 from tron.metrics import meter
 from tron.utils import maybe_decode
+
+DEFAULT_MAX_LINES = 1000
 
 log = logging.getLogger(__name__)
 
@@ -130,15 +127,13 @@ class ActionRunResource(resource.Resource):
         self.action_run = action_run
         self.job_run = job_run
         self.controller = controller.ActionRunController(action_run, job_run)
-        self.config_watcher = get_config_watcher()
 
     @AsyncResource.bounded
     def render_GET(self, request):
         run_adapter = adapter.ActionRunAdapter(
             self.action_run,
             self.job_run,
-            requestargs.get_integer(request, "num_lines")
-            or staticconf.read("logging.max_lines_to_display", namespace=NAMESPACE),
+            requestargs.get_integer(request, "num_lines") or DEFAULT_MAX_LINES,
             include_stdout=requestargs.get_bool(request, "include_stdout"),
             include_stderr=requestargs.get_bool(request, "include_stderr"),
             include_meta=requestargs.get_bool(request, "include_meta"),

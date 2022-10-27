@@ -5,7 +5,6 @@ from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
-import staticconf.testing
 import twisted.web.http
 import twisted.web.resource
 import twisted.web.server
@@ -119,17 +118,11 @@ class TestActionRunResource(WWWTestCase):
     def setup_resource(self):
         self.job_run = mock.MagicMock()
         self.action_run = mock.MagicMock(output_path=["one"])
-        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True,), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True,
-        ):
-            self.resource = www.ActionRunResource(self.action_run, self.job_run)
+        self.resource = www.ActionRunResource(self.action_run, self.job_run)
 
     def test_render_GET(self, mock_respond):
         request = build_request()
-        mock_config = {"logging.max_lines_to_display": 1000}
-        mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
-        with mock_configuration:
-            response = self.resource.render_GET(request)
+        response = self.resource.render_GET(request)
         assert response["id"] == self.resource.action_run.id
 
 
