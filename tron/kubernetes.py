@@ -192,6 +192,13 @@ class KubernetesTask(ActionCommand):
         if event.terminal:
             self.log.info("This Kubernetes event was terminal, ending this action")
             self.report_resources(decrement=True)
+
+            exit_code = int(not getattr(event, "success", False))
+            # Returns False if we've already exited normally above
+            unexpected_error = self.exited(exit_code)
+            if unexpected_error:
+                self.log.error("Unexpected failure, exiting")
+
             self.done()
 
 
