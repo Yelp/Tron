@@ -136,21 +136,23 @@ class KubernetesTask(ActionCommand):
             self.started()
         elif k8s_type == "finished":
             raw_object = getattr(event, "raw", {})
-            container_statuses = raw_object.get("status", {}).get("container_statuses", [])
+            container_statuses = raw_object.get("status", {}).get("container_statuses", []) or []
             abnormal_exit = False
 
-            if len(container_statuses) > 1:
+            if len(container_statuses) > 1 or len(container_statuses) == 0:
                 # shouldn't happen right now, but who knows what future us will do :p
                 self.log.error(
-                    "Got an event for a Pod with multiple containers - not inspecting payload to verify success."
+                    "Got an event for a Pod with zero or multiple containers - not inspecting payload to verify success."
                 )
+                self.log.error(f"Event with >1 || 0 containers: {raw_object}")
             else:
                 main_container_statuses = container_statuses[0]
                 main_container_state = main_container_statuses.get("state")
-                if main_container_state is None or main_container_state.get("terminated") in None:
+                if main_container_state is None or main_container_state.get("terminated") is None:
                     self.log.error("Got an event with missing state - assuming success.")
+                    self.log.error(f"Event with missing state: {raw_object}")
                 else:
-                    termination_metadata = main_container_state.get("terminated")
+                    termination_metadata = main_container_state.get("terminated", {}) or {}
                     # this is kinda wild: we're seeing that a kubelet will sometimes fail to start a container (usually
                     # due to what appear to be race conditons like those mentioned in
                     # https://github.com/kubernetes/kubernetes/issues/100047#issuecomment-797624208) and then decide that
@@ -158,9 +160,10 @@ class KubernetesTask(ActionCommand):
                     # started. So far, we've noticed that when this happens, the finished_at and reason fields will be None
                     # and thus we'll check for at least one of these conditions to detect an abnormal exit and actually "fail"
                     # the affected action
-                    # NOTE: hopefully this won't
-                    abnormal_exit = (
-                        termination_metadata.get("exit_code") == 0 and termination_metadata.get("finished_at") is None
+                    # NOTE: hopefully this won't change too drastically in future k8s upgrades without the actual problem (incorrect
+                    # success) being fixed :p
+                    abnormal_exit = termination_metadata.get("exit_code") == 0 and (
+                        termination_metadata.get("finished_at") is None and termination_metadata.get("reason") is None
                     )
                     if abnormal_exit:
                         self.log.warning("Container never started due to a Kubernetes/infra flake!")
@@ -168,7 +171,8 @@ class KubernetesTask(ActionCommand):
                             f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
                         )
 
-            self.exited(int(abnormal_exit))
+            # -9 is EXIT_KUBERNETES_ABNORMAL from actionrun.py - we just can't import that value right now since there'd be a circular dependency
+            self.exited(-9 if abnormal_exit else 0)
         elif k8s_type == "failed":
             # TODO: we should reach into the container status field here and get the actual exit code
             self.exited(1)
