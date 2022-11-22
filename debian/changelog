@@ -1,3 +1,20 @@
+tron (1.23.6) bionic; urgency=medium
+
+  * 1.23.6 tagged with 'make release'
+    Commit: Detect abnormal successful exits in k8s (#884)  this is
+    kinda wild: we're seeing that a kubelet will sometimes fail to start
+    a container (usually due to what appear to be race conditions like
+    those mentioned in
+    https://github.com/kubernetes/kubernetes/issues/100047#issuecomment-
+    797624208 and then decide that these Pods should be phase=Succeeded
+    with an exit code of 0 - even though the container never actually
+    started.  So far, we've noticed that when this happens, the  and
+    fields will be  - thus we'll check for at least one of these
+    conditions to detect an abnormal exit and actually 'fail' the
+    affected action
+
+ -- root <root@4c9236847e02>  Tue, 22 Nov 2022 19:28:02 +0000
+
 tron (1.23.5) bionic; urgency=medium
 
   * 1.23.5 tagged with 'make release'
