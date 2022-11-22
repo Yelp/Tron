@@ -135,8 +135,9 @@ class KubernetesTask(ActionCommand):
         if k8s_type == "running":
             self.started()
         elif k8s_type == "finished":
-            raw_object = getattr(event, "raw", {})
-            container_statuses = raw_object.get("status", {}).get("container_statuses", []) or []
+            raw_object = getattr(event, "raw", {}) or {}
+            pod_status = raw_object.get("status", {}) or {}
+            container_statuses = pod_status.get("container_statuses", []) or []
             abnormal_exit = False
 
             if len(container_statuses) > 1 or len(container_statuses) == 0:
