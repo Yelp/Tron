@@ -113,9 +113,42 @@ def test_handle_event_running(mock_kubernetes_task):
 
 def test_handle_event_exit_on_finished(mock_kubernetes_task):
     mock_kubernetes_task.started()
+    raw_event_data = {
+        "status": {
+            "container_statuses": [
+                {
+                    "container_id": "docker://asdf",
+                    "image": "someimage",
+                    "image_id": "docker-pullable://someimage:sometag",
+                    "last_state": {"running": None, "terminated": None, "waiting": None},
+                    "name": "main",
+                    "ready": False,
+                    "restart_count": 0,
+                    "started": False,
+                    "state": {
+                        "running": None,
+                        "terminated": {
+                            "container_id": "docker://asdf",
+                            "exit_code": 0,
+                            "finished_at": "2022-11-19 00:11:02+00:00",
+                            "message": None,
+                            "reason": "Completed",
+                            "signal": None,
+                            "started_at": None,
+                        },
+                        "waiting": None,
+                    },
+                }
+            ],
+        }
+    }
     mock_kubernetes_task.handle_event(
         mock_event_factory(
-            task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="finished", terminal=True, success=True
+            task_id=mock_kubernetes_task.get_kubernetes_id(),
+            raw=raw_event_data,
+            platform_type="finished",
+            terminal=True,
+            success=True,
         )
     )
     assert mock_kubernetes_task.state == mock_kubernetes_task.COMPLETE
@@ -127,6 +160,51 @@ def test_handle_event_exit_on_failed(mock_kubernetes_task):
     mock_kubernetes_task.handle_event(
         mock_event_factory(
             task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="failed", terminal=True, success=False
+        )
+    )
+
+    assert mock_kubernetes_task.is_failed
+    assert mock_kubernetes_task.is_done
+
+
+def test_handle_event_abnormal_exit(mock_kubernetes_task):
+    mock_kubernetes_task.started()
+    raw_event_data = {
+        "status": {
+            "container_statuses": [
+                {
+                    "container_id": "docker://asdf",
+                    "image": "someimage",
+                    "image_id": "docker-pullable://someimage:sometag",
+                    "last_state": {"running": None, "terminated": None, "waiting": None},
+                    "name": "main",
+                    "ready": False,
+                    "restart_count": 0,
+                    "started": False,
+                    "state": {
+                        "running": None,
+                        "terminated": {
+                            "container_id": "docker://asdf",
+                            "exit_code": 0,
+                            "finished_at": None,
+                            "message": None,
+                            "reason": None,
+                            "signal": None,
+                            "started_at": None,
+                        },
+                        "waiting": None,
+                    },
+                }
+            ],
+        }
+    }
+    mock_kubernetes_task.handle_event(
+        mock_event_factory(
+            task_id=mock_kubernetes_task.get_kubernetes_id(),
+            raw=raw_event_data,
+            platform_type="finished",
+            terminal=True,
+            success=False,
         )
     )
 
