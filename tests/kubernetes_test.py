@@ -115,30 +115,30 @@ def test_handle_event_exit_on_finished(mock_kubernetes_task):
     mock_kubernetes_task.started()
     raw_event_data = {
         "status": {
-            "container_statuses": [
+            "containerStatuses": [
                 {
-                    "container_id": "docker://asdf",
+                    "containerID": "docker://asdf",
                     "image": "someimage",
-                    "image_id": "docker-pullable://someimage:sometag",
-                    "last_state": {"running": None, "terminated": None, "waiting": None},
+                    "imageID": "docker-pullable://someimage:sometag",
+                    "lastState": {"running": None, "terminated": None, "waiting": None},
                     "name": "main",
                     "ready": False,
-                    "restart_count": 0,
+                    "restartCount": 0,
                     "started": False,
                     "state": {
                         "running": None,
                         "terminated": {
-                            "container_id": "docker://asdf",
-                            "exit_code": 0,
-                            "finished_at": "2022-11-19 00:11:02+00:00",
+                            "containerID": "docker://asdf",
+                            "exitCode": 0,
+                            "finishedAt": "2022-11-19 00:11:02+00:00",
                             "message": None,
                             "reason": "Completed",
                             "signal": None,
-                            "started_at": None,
+                            "startedAt": None,
                         },
                         "waiting": None,
                     },
-                }
+                },
             ],
         }
     }
@@ -171,11 +171,11 @@ def test_handle_event_abnormal_exit(mock_kubernetes_task):
     mock_kubernetes_task.started()
     raw_event_data = {
         "status": {
-            "container_statuses": [
+            "containerStatuses": [
                 {
                     "container_id": "docker://asdf",
                     "image": "someimage",
-                    "image_id": "docker-pullable://someimage:sometag",
+                    "imageID": "docker-pullable://someimage:sometag",
                     "last_state": {"running": None, "terminated": None, "waiting": None},
                     "name": "main",
                     "ready": False,
@@ -184,17 +184,17 @@ def test_handle_event_abnormal_exit(mock_kubernetes_task):
                     "state": {
                         "running": None,
                         "terminated": {
-                            "container_id": "docker://asdf",
-                            "exit_code": 0,
-                            "finished_at": None,
+                            "containerID": "docker://asdf",
+                            "exitCode": 0,
+                            "finishedAt": None,
                             "message": None,
                             "reason": None,
                             "signal": None,
-                            "started_at": None,
+                            "startedAt": None,
                         },
                         "waiting": None,
                     },
-                }
+                },
             ],
         }
     }

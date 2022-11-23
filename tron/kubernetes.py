@@ -137,7 +137,7 @@ class KubernetesTask(ActionCommand):
         elif k8s_type == "finished":
             raw_object = getattr(event, "raw", {}) or {}
             pod_status = raw_object.get("status", {}) or {}
-            container_statuses = pod_status.get("container_statuses", []) or []
+            container_statuses = pod_status.get("containerStatuses", []) or []
             abnormal_exit = False
 
             if len(container_statuses) > 1 or len(container_statuses) == 0:
@@ -163,8 +163,8 @@ class KubernetesTask(ActionCommand):
                     # the affected action
                     # NOTE: hopefully this won't change too drastically in future k8s upgrades without the actual problem (incorrect
                     # success) being fixed :p
-                    abnormal_exit = termination_metadata.get("exit_code") == 0 and (
-                        termination_metadata.get("finished_at") is None and termination_metadata.get("reason") is None
+                    abnormal_exit = termination_metadata.get("exitCode") == 0 and (
+                        termination_metadata.get("finishedAt") is None and termination_metadata.get("reason") is None
                     )
                     if abnormal_exit:
                         self.log.warning("Container never started due to a Kubernetes/infra flake!")
