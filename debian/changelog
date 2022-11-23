@@ -1,3 +1,18 @@
+tron (1.23.7) bionic; urgency=medium
+
+  * 1.23.7 tagged with 'make release'
+    Commit: Use correct dict casing for k8s metadata (#885)  The data
+    we'd been dumping into our logging streams was using different key
+    names than what task_proc was actually sending k8s: we were logging
+    the python-ified names, but task_proc was sending tron the literal
+    k8s payloads (i.e., keynames being camelCased).  We didn't notice
+    this 'cause until the initial attempt at working around this weird
+    k8s bug we weren't actually logging what tron was seeing and our
+    test data in the unit tests was based on what we'd been seeing in
+    our logging streams
+
+ -- root <root@93f5efd72e85>  Wed, 23 Nov 2022 19:44:24 +0000
+
 tron (1.23.6) bionic; urgency=medium
 
   * 1.23.6 tagged with 'make release'
