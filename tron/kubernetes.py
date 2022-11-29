@@ -178,7 +178,7 @@ class KubernetesTask(ActionCommand):
                             self.log.warning(
                                 f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
                             )
-                    elif k8s_type == "failed":
+                    elif k8s_type == "failed" or k8s_type == "killed":
                         # Handling spot terminations
                         if last_state_termination_metadata.get("exitCode", 1) == 137 and (
                             "deleted" in last_state_termination_metadata.get("message", "")
