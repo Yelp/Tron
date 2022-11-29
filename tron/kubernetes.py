@@ -134,11 +134,11 @@ class KubernetesTask(ActionCommand):
 
         if k8s_type == "running":
             self.started()
-        elif k8s_type == "finished":
+        elif k8s_type == "finished" or k8s_type == "failed" or k8s_type == "killed":
             raw_object = getattr(event, "raw", {}) or {}
             pod_status = raw_object.get("status", {}) or {}
             container_statuses = pod_status.get("containerStatuses", []) or []
-            abnormal_exit = False
+            exit_code = 0 if k8s_type == "finished" else 1
 
             if len(container_statuses) > 1 or len(container_statuses) == 0:
                 # shouldn't happen right now, but who knows what future us will do :p
@@ -148,35 +148,59 @@ class KubernetesTask(ActionCommand):
                 self.log.error(f"Event with >1 || 0 containers: {raw_object}")
             else:
                 main_container_statuses = container_statuses[0]
-                main_container_state = main_container_statuses.get("state")
-                if main_container_state is None or main_container_state.get("terminated") is None:
+                main_container_state = main_container_statuses.get("state", {}) or {}
+                main_container_last_state = main_container_statuses.get("lastState", {}) or {}
+                if (main_container_state is None or main_container_state.get("terminated") is None) and (
+                    main_container_last_state is None or main_container_last_state.get("terminated") is None
+                ):
                     self.log.error("Got an event with missing state - assuming success.")
                     self.log.error(f"Event with missing state: {raw_object}")
                 else:
-                    termination_metadata = main_container_state.get("terminated", {}) or {}
-                    # this is kinda wild: we're seeing that a kubelet will sometimes fail to start a container (usually
-                    # due to what appear to be race conditons like those mentioned in
-                    # https://github.com/kubernetes/kubernetes/issues/100047#issuecomment-797624208) and then decide that
-                    # these Pods should be phase=Succeeded with an exit code of 0 - even though the container never actually
-                    # started. So far, we've noticed that when this happens, the finished_at and reason fields will be None
-                    # and thus we'll check for at least one of these conditions to detect an abnormal exit and actually "fail"
-                    # the affected action
-                    # NOTE: hopefully this won't change too drastically in future k8s upgrades without the actual problem (incorrect
-                    # success) being fixed :p
-                    abnormal_exit = termination_metadata.get("exitCode") == 0 and (
-                        termination_metadata.get("finishedAt") is None and termination_metadata.get("reason") is None
-                    )
-                    if abnormal_exit:
-                        self.log.warning("Container never started due to a Kubernetes/infra flake!")
+                    state_termination_metadata = main_container_state.get("terminated", {}) or {}
+                    last_state_termination_metadata = main_container_last_state.get("terminated", {}) or {}
+                    if k8s_type == "finished":
+                        # this is kinda wild: we're seeing that a kubelet will sometimes fail to start a container (usually
+                        # due to what appear to be race conditons like those mentioned in
+                        # https://github.com/kubernetes/kubernetes/issues/100047#issuecomment-797624208) and then decide that
+                        # these Pods should be phase=Succeeded with an exit code of 0 - even though the container never actually
+                        # started. So far, we've noticed that when this happens, the finished_at and reason fields will be None
+                        # and thus we'll check for at least one of these conditions to detect an abnormal exit and actually "fail"
+                        # the affected action
+                        # NOTE: hopefully this won't change too drastically in future k8s upgrades without the actual problem (incorrect
+                        # success) being fixed :p
+                        if state_termination_metadata.get("exitCode") == 0 and (
+                            state_termination_metadata.get("finishedAt") is None
+                            and state_termination_metadata.get("reason") is None
+                        ):
+                            # -9 is EXIT_KUBERNETES_ABNORMAL from actionrun.py - we just can't import that value right now since there'd be a circular dependency
+                            exit_code = -9
+                            self.log.warning("Container never started due to a Kubernetes/infra flake!")
+                            self.log.warning(
+                                f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
+                            )
+                    elif k8s_type == "killed":
+                        # Handling spot terminations
+                        if last_state_termination_metadata.get("exitCode", 1) == 137 and (
+                            "deleted" in last_state_termination_metadata.get("message", "")
+                            and last_state_termination_metadata.get("reason", "") == "ContainerStatusUnknown"
+                        ):
+                            exit_code = 137
+                            self.log.warning("Tronjob failed due to spot interruption.")
+                    elif k8s_type == "failed":
+                        # Handling K8s scaling down a node
+                        if state_termination_metadata.get("exitCode", 1) == 143 and (
+                            state_termination_metadata.get("reason", "") == "Error"
+                        ):
+                            exit_code = 143
+                            self.log.warning("Tronjob failed due to Kubernetes scaling down a node.")
+                    if exit_code in [137, 143]:
                         self.log.warning(
                             f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
                         )
-
-            # -9 is EXIT_KUBERNETES_ABNORMAL from actionrun.py - we just can't import that value right now since there'd be a circular dependency
-            self.exited(-9 if abnormal_exit else 0)
-        elif k8s_type == "failed":
-            # TODO: we should reach into the container status field here and get the actual exit code
-            self.exited(1)
+                        self.log.warning(
+                            "If this job is idempotent, then please consider increasing the number of retries to your action. If your job is not idempotent then please set this job to run on the stable pool rather than the default."
+                        )
+            self.exited(exit_code)
         elif k8s_type == "lost":
             # Using 'lost' instead of 'unknown' for now until we are sure that before reconcile() is called,
             # the tasks inside task_metadata map are all UNKNOWN
