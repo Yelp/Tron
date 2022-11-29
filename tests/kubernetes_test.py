@@ -130,9 +130,9 @@ def test_handle_event_exit_on_finished(mock_kubernetes_task):
                         "terminated": {
                             "containerID": "docker://asdf",
                             "exitCode": 0,
-                            "finishedAt": "2022-11-19 00:11:02+00:00",
+                            "finishedAt": None,
                             "message": None,
-                            "reason": "Completed",
+                            "reason": None,
                             "signal": None,
                             "startedAt": None,
                         },
@@ -151,6 +151,7 @@ def test_handle_event_exit_on_finished(mock_kubernetes_task):
             success=True,
         )
     )
+    assert mock_kubernetes_task.exit_status == -9
     assert mock_kubernetes_task.state == mock_kubernetes_task.COMPLETE
     assert mock_kubernetes_task.is_complete
 
@@ -206,12 +207,12 @@ def test_handle_event_spot_interruption_exit(mock_kubernetes_task):
         mock_event_factory(
             task_id=mock_kubernetes_task.get_kubernetes_id(),
             raw=raw_event_data,
-            platform_type="failed",
+            platform_type="killed",
             terminal=True,
             success=False,
         )
     )
-
+    assert mock_kubernetes_task.exit_status == 137
     assert mock_kubernetes_task.is_failed
     assert mock_kubernetes_task.is_done
 
@@ -256,7 +257,7 @@ def test_handle_event_node_scaledown_exit(mock_kubernetes_task):
             success=False,
         )
     )
-
+    assert mock_kubernetes_task.exit_status == 143
     assert mock_kubernetes_task.is_failed
     assert mock_kubernetes_task.is_done
 
