@@ -207,7 +207,7 @@ def test_handle_event_spot_interruption_exit(mock_kubernetes_task):
         mock_event_factory(
             task_id=mock_kubernetes_task.get_kubernetes_id(),
             raw=raw_event_data,
-            platform_type="killed",
+            platform_type="failed",
             terminal=True,
             success=False,
         )

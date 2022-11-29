@@ -178,7 +178,7 @@ class KubernetesTask(ActionCommand):
                             self.log.warning(
                                 f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
                             )
-                    elif k8s_type == "killed":
+                    elif k8s_type == "failed":
                         # Handling spot terminations
                         if last_state_termination_metadata.get("exitCode", 1) == 137 and (
                             "deleted" in last_state_termination_metadata.get("message", "")
@@ -186,20 +186,19 @@ class KubernetesTask(ActionCommand):
                         ):
                             exit_code = 137
                             self.log.warning("Tronjob failed due to spot interruption.")
-                    elif k8s_type == "failed":
                         # Handling K8s scaling down a node
-                        if state_termination_metadata.get("exitCode", 1) == 143 and (
+                        elif state_termination_metadata.get("exitCode", 1) == 143 and (
                             state_termination_metadata.get("reason", "") == "Error"
                         ):
                             exit_code = 143
                             self.log.warning("Tronjob failed due to Kubernetes scaling down a node.")
-                    if exit_code in [137, 143]:
-                        self.log.warning(
-                            f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
-                        )
-                        self.log.warning(
-                            "If this job is idempotent, then please consider increasing the number of retries to your action. If your job is not idempotent then please set this job to run on the stable pool rather than the default."
-                        )
+                        if exit_code in [137, 143]:
+                            self.log.warning(
+                                f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
+                            )
+                            self.log.warning(
+                                "If this job is idempotent, then please consider increasing the number of retries to your action. If your job is not idempotent then please set this job to run on the stable pool rather than the default."
+                            )
             self.exited(exit_code)
         elif k8s_type == "lost":
             # Using 'lost' instead of 'unknown' for now until we are sure that before reconcile() is called,
