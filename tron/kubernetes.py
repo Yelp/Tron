@@ -23,6 +23,7 @@ from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigVolume
 from tron.serialize.filehandler import OutputStreamSerializer
+from tron.utils import exitcode
 from tron.utils.queue import PyDeferredQueue
 
 if TYPE_CHECKING:
@@ -35,7 +36,7 @@ KUBERNETES_TASK_LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
 KUBERNETES_TASK_OUTPUT_LOGGER = "tron.kubernetes.task_output"
 KUBERNETES_TERMINAL_TYPE = {"finished", "failed", "killed"}
 KUBERNETES_FAILED_TYPE = {"failed", "killed"}
-KUBERNETES_EXIT_CODE_EXCEPTIONS = {-10, -11}
+KUBERNETES_EXIT_CODE_EXCEPTIONS = {exitcode.EXIT_KUBERNETES_SPOT_INTERRUPTION, exitcode.EXIT_KUBERNETES_NODE_SCALEDOWN}
 
 log = logging.getLogger(__name__)
 
@@ -179,8 +180,7 @@ class KubernetesTask(ActionCommand):
                             state_termination_metadata.get("finishedAt") is None
                             and state_termination_metadata.get("reason") is None
                         ):
-                            # -9 is EXIT_KUBERNETES_ABNORMAL from actionrun.py - we just can't import that value right now since there'd be a circular dependency
-                            exit_code = -9
+                            exit_code = exitcode.EXIT_KUBERNETES_ABNORMAL
                             self.log.warning("Container never started due to a Kubernetes/infra flake!")
                             self.log.warning(
                                 f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
@@ -191,13 +191,13 @@ class KubernetesTask(ActionCommand):
                             "deleted" in last_state_termination_metadata.get("message", "")
                             and last_state_termination_metadata.get("reason") == "ContainerStatusUnknown"
                         ):
-                            exit_code = -10
+                            exit_code = exitcode.EXIT_KUBERNETES_SPOT_INTERRUPTION
                             self.log.warning("Tronjob failed due to spot interruption.")
                         # Handling K8s scaling down a node
                         elif state_termination_metadata.get("exitCode") == 143 and (
                             state_termination_metadata.get("reason") == "Error"
                         ):
-                            exit_code = -11
+                            exit_code = exitcode.EXIT_KUBERNETES_NODE_SCALEDOWN
                             self.log.warning("Tronjob failed due to Kubernetes scaling down a node.")
                         if exit_code in KUBERNETES_EXIT_CODE_EXCEPTIONS:
                             self.log.warning(

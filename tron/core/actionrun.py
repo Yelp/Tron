@@ -26,6 +26,7 @@ from tron.kubernetes import KubernetesClusterRepository
 from tron.kubernetes import KubernetesTask
 from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
+from tron.utils import exitcode
 from tron.utils import maybe_decode
 from tron.utils import proxy
 from tron.utils import timeutils
@@ -204,32 +205,6 @@ class ActionRun(Observable):
     # Failed render command is false to ensure that it will fail when run
     FAILED_RENDER = "false # Command failed to render correctly. See the Tron error log."
     NOTIFY_TRIGGER_READY = "trigger_ready"
-
-    EXIT_INVALID_COMMAND = -1
-    EXIT_NODE_ERROR = -2
-    EXIT_STOP_KILL = -3
-    EXIT_TRIGGER_TIMEOUT = -4
-    EXIT_MESOS_DISABLED = -5
-    EXIT_KUBERNETES_DISABLED = -6
-    EXIT_KUBERNETES_NOT_CONFIGURED = -7
-    EXIT_KUBERNETES_TASK_INVALID = -8
-    EXIT_KUBERNETES_ABNORMAL = -9
-    EXIT_KUBERNETES_SPOT_INTERRUPTION = -10
-    EXIT_KUBERNETES_NODE_SCALEDOWN = -11
-
-    EXIT_REASONS = {
-        EXIT_INVALID_COMMAND: "Invalid command",
-        EXIT_NODE_ERROR: "Node error",
-        EXIT_STOP_KILL: "Stopped or killed",
-        EXIT_TRIGGER_TIMEOUT: "Timed out waiting for trigger",
-        EXIT_MESOS_DISABLED: "Mesos disabled",
-        EXIT_KUBERNETES_DISABLED: "Kubernetes disabled",
-        EXIT_KUBERNETES_NOT_CONFIGURED: "Kubernetes enabled, but not configured",
-        EXIT_KUBERNETES_TASK_INVALID: "Kubernetes task was not valid",
-        EXIT_KUBERNETES_ABNORMAL: "Kubernetes task failed in an unexpected manner",
-        EXIT_KUBERNETES_SPOT_INTERRUPTION: "Kubernetes task failed due to spot interruption",
-        EXIT_KUBERNETES_NODE_SCALEDOWN: "Kubernetes task failed due to the autoscaler scaling down a node",
-    }
 
     # This is a list of "alternate locations" that we can look for stdout/stderr in
     # The PR in question is https://github.com/Yelp/Tron/pull/735/files, which changed
@@ -452,11 +427,11 @@ class ActionRun(Observable):
 
         if not self.command_config.command:
             log.error(f"{self} no longer configured in tronfig, cannot run")
-            self.fail(self.EXIT_INVALID_COMMAND)
+            self.fail(exitcode.EXIT_INVALID_COMMAND)
 
         if not self.is_valid_command(new_attempt.rendered_command):
             log.error(f"{self} invalid command: {new_attempt.command_config.command}")
-            self.fail(self.EXIT_INVALID_COMMAND)
+            self.fail(exitcode.EXIT_INVALID_COMMAND)
             return
 
         return self.submit_command(new_attempt)
@@ -611,7 +586,7 @@ class ActionRun(Observable):
         if self.in_delay is not None:
             self.in_delay.cancel()
             self.in_delay = None
-            self.fail(self.EXIT_STOP_KILL)
+            self.fail(exitcode.EXIT_STOP_KILL)
             return True
 
     @property
@@ -706,7 +681,7 @@ class ActionRun(Observable):
         if self.remaining_triggers:
             self.trigger_timeout_call = None
             log.warning(f"{self} reached timeout waiting for: {self.remaining_triggers}",)
-            self.fail(self.EXIT_TRIGGER_TIMEOUT)
+            self.fail(exitcode.EXIT_TRIGGER_TIMEOUT)
         else:
             self.notify(ActionRun.NOTIFY_TRIGGER_READY)
 
@@ -766,7 +741,7 @@ class SSHActionRun(ActionRun, Observer):
             self.node.submit_command(action_command)
         except node.Error as e:
             log.warning("Failed to start %s: %r", self.id, e)
-            self._exit_unsuccessful(self.EXIT_NODE_ERROR)
+            self._exit_unsuccessful(exitcode.EXIT_NODE_ERROR)
             return
         return True
 
@@ -889,7 +864,7 @@ class SSHActionRun(ActionRun, Observer):
             return self.transition_and_notify("started")
 
         if event == ActionCommand.FAILSTART:
-            return self._exit_unsuccessful(self.EXIT_NODE_ERROR)
+            return self._exit_unsuccessful(exitcode.EXIT_NODE_ERROR)
 
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
@@ -929,7 +904,7 @@ class MesosActionRun(ActionRun, Observer):
         mesos_cluster = MesosClusterRepository.get_cluster()
         task = self._create_mesos_task(mesos_cluster, serializer, attempt)
         if not task:  # Mesos is disabled
-            self.fail(self.EXIT_MESOS_DISABLED)
+            self.fail(exitcode.EXIT_MESOS_DISABLED)
             return
 
         attempt.mesos_task_id = task.get_mesos_id()
@@ -1046,7 +1021,7 @@ class KubernetesActionRun(ActionRun, Observer):
         """
         k8s_cluster = KubernetesClusterRepository.get_cluster()
         if not k8s_cluster:
-            self.fail(self.EXIT_KUBERNETES_NOT_CONFIGURED)
+            self.fail(exitcode.EXIT_KUBERNETES_NOT_CONFIGURED)
             return None
 
         try:
@@ -1073,12 +1048,12 @@ class KubernetesActionRun(ActionRun, Observer):
             )
         except InvariantException:
             log.exception(f"Unable to create task for ActionRun {self.id}")
-            self.fail(self.EXIT_KUBERNETES_TASK_INVALID)
+            self.fail(exitcode.EXIT_KUBERNETES_TASK_INVALID)
             return None
 
         if not task:
             # generally, if we didn't get a task back that means that k8s usage is disabled
-            self.fail(self.EXIT_KUBERNETES_DISABLED)
+            self.fail(exitcode.EXIT_KUBERNETES_DISABLED)
             return None
 
         attempt.kubernetes_task_id = task.get_kubernetes_id()
@@ -1098,7 +1073,7 @@ class KubernetesActionRun(ActionRun, Observer):
         """
         k8s_cluster = KubernetesClusterRepository.get_cluster()
         if not k8s_cluster:
-            self.fail(self.EXIT_KUBERNETES_NOT_CONFIGURED)
+            self.fail(exitcode.EXIT_KUBERNETES_NOT_CONFIGURED)
             return None
 
         # We cannot recover if we can't transition to running
