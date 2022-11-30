@@ -212,7 +212,7 @@ def test_handle_event_spot_interruption_exit(mock_kubernetes_task):
             success=False,
         )
     )
-    assert mock_kubernetes_task.exit_status == 137
+    assert mock_kubernetes_task.exit_status == -10
     assert mock_kubernetes_task.is_failed
     assert mock_kubernetes_task.is_done
 
@@ -257,7 +257,7 @@ def test_handle_event_node_scaledown_exit(mock_kubernetes_task):
             success=False,
         )
     )
-    assert mock_kubernetes_task.exit_status == 143
+    assert mock_kubernetes_task.exit_status == -11
     assert mock_kubernetes_task.is_failed
     assert mock_kubernetes_task.is_done
 

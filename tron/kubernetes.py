@@ -184,15 +184,15 @@ class KubernetesTask(ActionCommand):
                             "deleted" in last_state_termination_metadata.get("message", "")
                             and last_state_termination_metadata.get("reason", "") == "ContainerStatusUnknown"
                         ):
-                            exit_code = 137
+                            exit_code = -10
                             self.log.warning("Tronjob failed due to spot interruption.")
                         # Handling K8s scaling down a node
                         elif state_termination_metadata.get("exitCode", 1) == 143 and (
                             state_termination_metadata.get("reason", "") == "Error"
                         ):
-                            exit_code = 143
+                            exit_code = -11
                             self.log.warning("Tronjob failed due to Kubernetes scaling down a node.")
-                        if exit_code in [137, 143]:
+                        if exit_code in [-10, -11]:
                             self.log.warning(
                                 f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
                             )
