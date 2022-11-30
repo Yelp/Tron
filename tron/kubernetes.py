@@ -33,6 +33,9 @@ DEFAULT_DISK_LIMIT = 1024.0  # arbitrary, same as what was chosen for Mesos-base
 
 KUBERNETES_TASK_LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
 KUBERNETES_TASK_OUTPUT_LOGGER = "tron.kubernetes.task_output"
+KUBERNETES_TERMINAL_TYPE = {"finished", "failed", "killed"}
+KUBERNETES_FAILED_TYPE = {"failed", "killed"}
+KUBERNETES_EXIT_CODE_EXCEPTIONS = {-10, -11}
 
 log = logging.getLogger(__name__)
 
@@ -134,7 +137,7 @@ class KubernetesTask(ActionCommand):
 
         if k8s_type == "running":
             self.started()
-        elif k8s_type == "finished" or k8s_type == "failed" or k8s_type == "killed":
+        elif k8s_type in KUBERNETES_TERMINAL_TYPE:
             raw_object = getattr(event, "raw", {}) or {}
             pod_status = raw_object.get("status", {}) or {}
             container_statuses = pod_status.get("containerStatuses", []) or []
@@ -150,9 +153,13 @@ class KubernetesTask(ActionCommand):
                 main_container_statuses = container_statuses[0]
                 main_container_state = main_container_statuses.get("state", {}) or {}
                 main_container_last_state = main_container_statuses.get("lastState", {}) or {}
-                if (main_container_state is None or main_container_state.get("terminated") is None) and (
+
+                event_missing_state = main_container_state is None or main_container_state.get("terminated") is None
+                event_missing_previous_state = (
                     main_container_last_state is None or main_container_last_state.get("terminated") is None
-                ):
+                )
+
+                if event_missing_state and event_missing_previous_state:
                     self.log.error("Got an event with missing state - assuming success.")
                     self.log.error(f"Event with missing state: {raw_object}")
                 else:
@@ -178,26 +185,26 @@ class KubernetesTask(ActionCommand):
                             self.log.warning(
                                 f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
                             )
-                    elif k8s_type == "failed" or k8s_type == "killed":
+                    elif k8s_type in KUBERNETES_FAILED_TYPE:
                         # Handling spot terminations
-                        if last_state_termination_metadata.get("exitCode", 1) == 137 and (
+                        if last_state_termination_metadata.get("exitCode") == 137 and (
                             "deleted" in last_state_termination_metadata.get("message", "")
-                            and last_state_termination_metadata.get("reason", "") == "ContainerStatusUnknown"
+                            and last_state_termination_metadata.get("reason") == "ContainerStatusUnknown"
                         ):
                             exit_code = -10
                             self.log.warning("Tronjob failed due to spot interruption.")
                         # Handling K8s scaling down a node
-                        elif state_termination_metadata.get("exitCode", 1) == 143 and (
-                            state_termination_metadata.get("reason", "") == "Error"
+                        elif state_termination_metadata.get("exitCode") == 143 and (
+                            state_termination_metadata.get("reason") == "Error"
                         ):
                             exit_code = -11
                             self.log.warning("Tronjob failed due to Kubernetes scaling down a node.")
-                        if exit_code in [-10, -11]:
+                        if exit_code in KUBERNETES_EXIT_CODE_EXCEPTIONS:
                             self.log.warning(
                                 f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
                             )
                             self.log.warning(
-                                "If this job is idempotent, then please consider increasing the number of retries to your action. If your job is not idempotent then please set this job to run on the stable pool rather than the default."
+                                "If this action is idempotent, then please consider enabling automatic retries for your action. If your action is not idempotent, then please configure this action to run on the stable pool rather than the default."
                             )
             self.exited(exit_code)
         elif k8s_type == "lost":

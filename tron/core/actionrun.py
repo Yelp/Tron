@@ -228,7 +228,7 @@ class ActionRun(Observable):
         EXIT_KUBERNETES_TASK_INVALID: "Kubernetes task was not valid",
         EXIT_KUBERNETES_ABNORMAL: "Kubernetes task failed in an unexpected manner",
         EXIT_KUBERNETES_SPOT_INTERRUPTION: "Kubernetes task failed due to spot interruption",
-        EXIT_KUBERNETES_NODE_SCALEDOWN: "Kubernetes task failed due to Kubernetes scaling down a node",
+        EXIT_KUBERNETES_NODE_SCALEDOWN: "Kubernetes task failed due to the autoscaler scaling down a node",
     }
 
     # This is a list of "alternate locations" that we can look for stdout/stderr in
