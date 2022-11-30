@@ -187,8 +187,8 @@ class KubernetesTask(ActionCommand):
                             )
                     elif k8s_type in KUBERNETES_FAILED_TYPE:
                         # Handling spot terminations
-                        if last_state_termination_metadata.get("exitCode") == 137 and (
-                            "deleted" in last_state_termination_metadata.get("message", "")
+                        if (
+                            last_state_termination_metadata.get("exitCode") == 137
                             and last_state_termination_metadata.get("reason") == "ContainerStatusUnknown"
                         ):
                             exit_code = exitcode.EXIT_KUBERNETES_SPOT_INTERRUPTION
