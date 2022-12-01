@@ -195,7 +195,10 @@ class RetryAction:
         response = await asyncio.get_event_loop().run_in_executor(
             None,
             functools.partial(
-                client.request, urljoin(self.tron_client.url_base, self.action_run_id.url), data=self.retry_params,
+                client.request,
+                urljoin(self.tron_client.url_base, self.action_run_id.url),
+                data=self.retry_params,
+                user_attribution=True,
             ),
         )
         if response.error:
@@ -214,7 +217,7 @@ def retry_actions(
     use_latest_command: bool = False,
     deps_timeout_s: int = RetryAction.NO_TIMEOUT,
 ) -> List[RetryAction]:
-    tron_client = client.Client(tron_server)
+    tron_client = client.Client(tron_server, user_attribution=True)
     r_actions = [RetryAction(tron_client, name, use_latest_command=use_latest_command) for name in full_action_names]
 
     loop = asyncio.get_event_loop()

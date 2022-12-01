@@ -153,6 +153,24 @@ class TestClient(TestCase):
         )
 
 
+class TestUserAttribution(TestCase):
+    def test_default_user_agent(self):
+        url = "http://localhost:8089/"
+        with mock.patch("tron.commands.client.os.environ", autospec=True,) as mock_environ:
+            mock_environ.get.return_value = "testuser"
+            default_client = client.Client(url, user_attribution=False)
+            # we do not add user attribution by default
+            assert "(testuser)" not in default_client.headers["User-Agent"]
+
+    def test_attributed_user_agent(self):
+        url = "http://localhost:8089/"
+        with mock.patch("tron.commands.client.os.environ", autospec=True,) as mock_environ:
+            mock_environ.get.return_value = "testuser"
+            default_client = client.Client(url, user_attribution=True)
+            # we do not add user attribution by default
+            assert "(testuser)" in default_client.headers["User-Agent"]
+
+
 class TestGetUrl(TestCase):
     def test_get_job_url_for_action_run(self):
         url = client.get_job_url("MASTER.name.1.act")

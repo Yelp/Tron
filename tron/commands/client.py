@@ -2,10 +2,13 @@
 A command line http client used by tronview, tronctl, and tronfig
 """
 import logging
+import os
 import urllib.error
 import urllib.parse
 import urllib.request
 from collections import namedtuple
+from typing import Dict
+from typing import Mapping
 
 import tron
 from tron.config.schema import MASTER_NAMESPACE
@@ -68,8 +71,11 @@ def build_http_error_response(exc):
     return Response(exc.code, exc.msg, content)
 
 
-def request(uri, data=None, headers=None, method=None):
+def request(uri, data=None, headers=None, method=None, user_attribution=False):
     log.info("Request to %s with %s", uri, data)
+    headers = headers or default_headers
+    if user_attribution:
+        headers = ensure_user_attribution(headers)
     request = build_url_request(uri, data, headers=headers, method=method)
     try:
         response = urllib.request.urlopen(request)
@@ -91,16 +97,27 @@ def build_get_url(url, data=None):
         return url
 
 
+def ensure_user_attribution(headers: Mapping[str, str]) -> Dict[str, str]:
+    headers = headers.copy()
+    if "User-Agent" not in headers:
+        headers["User-Agent"] = USER_AGENT
+    headers["User-Agent"] += f' ({os.environ.get("USER", "anonymous")})'
+    return headers
+
+
 class Client:
     """An HTTP client used to issue commands to the Tron API.
     """
 
-    def __init__(self, url_base, cluster_name=None):
+    def __init__(self, url_base, cluster_name=None, user_attribution=False):
         """Create a new client.
             url_base - A url with a schema, hostname and port
         """
         self.url_base = url_base
         self.cluster_name = cluster_name
+        self.headers = default_headers
+        if user_attribution:
+            self.headers = ensure_user_attribution(self.headers)
 
     def status(self):
         return self.http_get("/api/status")
@@ -166,7 +183,7 @@ class Client:
     def request(self, url, data=None):
         log.info(f"Request: {self.url_base}, {url}, {data}")
         uri = urllib.parse.urljoin(self.url_base, url)
-        response = request(uri, data)
+        response = request(uri, data, headers=self.headers)
         if response.error:
             if response.content:
                 raise RequestError(response.content)
