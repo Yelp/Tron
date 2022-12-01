@@ -160,6 +160,8 @@ class KubernetesTask(ActionCommand):
                     main_container_last_state is None or main_container_last_state.get("terminated") is None
                 )
 
+                # We are expecting this code to never be hit as we are expecting both state and last_state have values
+                # The else statement should handle the situation gracefully when either current/last state are missing
                 if event_missing_state and event_missing_previous_state:
                     self.log.error("Got an event with missing state - assuming success.")
                     self.log.error(f"Event with missing state: {raw_object}")
@@ -206,6 +208,14 @@ class KubernetesTask(ActionCommand):
                             self.log.warning(
                                 "If this action is idempotent, then please consider enabling automatic retries for your action. If your action is not idempotent, then please configure this action to run on the stable pool rather than the default."
                             )
+                    else:
+                        # Capture the real exit code
+                        state_exit_code = state_termination_metadata.get("exitCode")
+                        last_state_exit_code = last_state_termination_metadata.get("exitCode")
+                        if state_exit_code:
+                            exit_code = state_exit_code
+                        elif last_state_exit_code:
+                            exit_code = last_state_exit_code
             self.exited(exit_code)
         elif k8s_type == "lost":
             # Using 'lost' instead of 'unknown' for now until we are sure that before reconcile() is called,
