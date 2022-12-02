@@ -12,6 +12,7 @@ from tron.config.schema import ConfigVolume
 from tron.kubernetes import DEFAULT_DISK_LIMIT
 from tron.kubernetes import KubernetesCluster
 from tron.kubernetes import KubernetesTask
+from tron.utils import exitcode
 
 
 @pytest.fixture
@@ -130,9 +131,9 @@ def test_handle_event_exit_on_finished(mock_kubernetes_task):
                         "terminated": {
                             "containerID": "docker://asdf",
                             "exitCode": 0,
-                            "finishedAt": None,
+                            "finishedAt": "2022-11-19 00:11:02+00:00",
                             "message": None,
-                            "reason": None,
+                            "reason": "Completed",
                             "signal": None,
                             "startedAt": None,
                         },
@@ -151,7 +152,6 @@ def test_handle_event_exit_on_finished(mock_kubernetes_task):
             success=True,
         )
     )
-    assert mock_kubernetes_task.exit_status == -9
     assert mock_kubernetes_task.state == mock_kubernetes_task.COMPLETE
     assert mock_kubernetes_task.is_complete
 
@@ -212,7 +212,7 @@ def test_handle_event_spot_interruption_exit(mock_kubernetes_task):
             success=False,
         )
     )
-    assert mock_kubernetes_task.exit_status == -10
+    assert mock_kubernetes_task.exit_status == exitcode.EXIT_KUBERNETES_SPOT_INTERRUPTION
     assert mock_kubernetes_task.is_failed
     assert mock_kubernetes_task.is_done
 
@@ -257,7 +257,7 @@ def test_handle_event_node_scaledown_exit(mock_kubernetes_task):
             success=False,
         )
     )
-    assert mock_kubernetes_task.exit_status == -11
+    assert mock_kubernetes_task.exit_status == exitcode.EXIT_KUBERNETES_NODE_SCALEDOWN
     assert mock_kubernetes_task.is_failed
     assert mock_kubernetes_task.is_done
 
@@ -302,7 +302,7 @@ def test_handle_event_abnormal_exit(mock_kubernetes_task):
             success=False,
         )
     )
-
+    assert mock_kubernetes_task.exit_status == exitcode.EXIT_KUBERNETES_ABNORMAL
     assert mock_kubernetes_task.is_failed
     assert mock_kubernetes_task.is_done
 

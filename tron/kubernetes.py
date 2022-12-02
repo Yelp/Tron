@@ -34,9 +34,9 @@ DEFAULT_DISK_LIMIT = 1024.0  # arbitrary, same as what was chosen for Mesos-base
 
 KUBERNETES_TASK_LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
 KUBERNETES_TASK_OUTPUT_LOGGER = "tron.kubernetes.task_output"
-KUBERNETES_TERMINAL_TYPE = {"finished", "failed", "killed"}
-KUBERNETES_FAILED_TYPE = {"failed", "killed"}
-KUBERNETES_EXIT_CODE_EXCEPTIONS = {exitcode.EXIT_KUBERNETES_SPOT_INTERRUPTION, exitcode.EXIT_KUBERNETES_NODE_SCALEDOWN}
+KUBERNETES_TERMINAL_TYPES = {"finished", "failed", "killed"}
+KUBERNETES_FAILURE_TYPES = {"failed", "killed"}
+KUBERNETES_LOST_NODE_EXIT_CODES = {exitcode.EXIT_KUBERNETES_SPOT_INTERRUPTION, exitcode.EXIT_KUBERNETES_NODE_SCALEDOWN}
 
 log = logging.getLogger(__name__)
 
@@ -138,7 +138,7 @@ class KubernetesTask(ActionCommand):
 
         if k8s_type == "running":
             self.started()
-        elif k8s_type in KUBERNETES_TERMINAL_TYPE:
+        elif k8s_type in KUBERNETES_TERMINAL_TYPES:
             raw_object = getattr(event, "raw", {}) or {}
             pod_status = raw_object.get("status", {}) or {}
             container_statuses = pod_status.get("containerStatuses", []) or []
@@ -187,7 +187,7 @@ class KubernetesTask(ActionCommand):
                             self.log.warning(
                                 f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
                             )
-                    elif k8s_type in KUBERNETES_FAILED_TYPE:
+                    elif k8s_type in KUBERNETES_FAILURE_TYPES:
                         # Handling spot terminations
                         if (
                             last_state_termination_metadata.get("exitCode") == 137
@@ -201,21 +201,22 @@ class KubernetesTask(ActionCommand):
                         ):
                             exit_code = exitcode.EXIT_KUBERNETES_NODE_SCALEDOWN
                             self.log.warning("Tronjob failed due to Kubernetes scaling down a node.")
-                        if exit_code in KUBERNETES_EXIT_CODE_EXCEPTIONS:
+                        else:
+                            # Capture the real exit code
+                            state_exit_code = state_termination_metadata.get("exitCode")
+                            last_state_exit_code = last_state_termination_metadata.get("exitCode")
+                            if state_exit_code:
+                                exit_code = state_exit_code
+                            elif last_state_exit_code:
+                                exit_code = last_state_exit_code
+
+                        if exit_code in KUBERNETES_LOST_NODE_EXIT_CODES:
                             self.log.warning(
                                 f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
                             )
                             self.log.warning(
                                 "If this action is idempotent, then please consider enabling automatic retries for your action. If your action is not idempotent, then please configure this action to run on the stable pool rather than the default."
                             )
-                    else:
-                        # Capture the real exit code
-                        state_exit_code = state_termination_metadata.get("exitCode")
-                        last_state_exit_code = last_state_termination_metadata.get("exitCode")
-                        if state_exit_code:
-                            exit_code = state_exit_code
-                        elif last_state_exit_code:
-                            exit_code = last_state_exit_code
             self.exited(exit_code)
         elif k8s_type == "lost":
             # Using 'lost' instead of 'unknown' for now until we are sure that before reconcile() is called,

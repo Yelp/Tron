@@ -1,4 +1,4 @@
-# TRON-1826 Refactored code and moved exit codes to a new file to be imported in both Kubernetes.py and actionrun.py
+# TRON-1826
 EXIT_INVALID_COMMAND = -1
 EXIT_NODE_ERROR = -2
 EXIT_STOP_KILL = -3
