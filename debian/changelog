@@ -1,3 +1,13 @@
+tron (1.23.8) bionic; urgency=medium
+
+  * 1.23.8 tagged with 'make release'
+    Commit: TRON-1825: Add additional failure handling of specific
+    errors (#886)  Adds additional failure handling of specific errors
+    Adds handling of spot interruptions and k8s scaling down Captures
+    real exit codes from failures.
+
+ -- root <root@b5061e28e264>  Mon, 05 Dec 2022 15:43:23 +0000
+
 tron (1.23.7) bionic; urgency=medium
 
   * 1.23.7 tagged with 'make release'
