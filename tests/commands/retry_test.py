@@ -177,7 +177,9 @@ def test_wait_for_retry_deps_done(fake_retry_action, mock_client_request, event_
     )
     assert fake_retry_action._elapsed.seconds == 1  # init delay only
     mock_client_request.assert_called_once_with(
-        "http://localhost/a_fake_job/0/a_fake_action", data=dict(command="retry", use_latest_command=1)
+        "http://localhost/a_fake_job/0/a_fake_action",
+        data=dict(command="retry", use_latest_command=1),
+        user_attribution=True,
     )
 
 

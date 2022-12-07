@@ -94,6 +94,7 @@ class BackfillRun:
                 client.request,
                 urljoin(self.tron_client.url_base, self.job_id.url),
                 data=dict(command="start", run_time=self.run_time),
+                user_attribution=True,
             ),
         )
 
@@ -184,7 +185,10 @@ class BackfillRun:
             response = await loop.run_in_executor(
                 None,
                 functools.partial(
-                    client.request, urljoin(self.tron_client.url_base, self.run_id.url), data=dict(command="cancel"),
+                    client.request,
+                    urljoin(self.tron_client.url_base, self.run_id.url),
+                    data=dict(command="cancel"),
+                    user_attribution=True,
                 ),
             )
             if response.error:
@@ -218,7 +222,7 @@ async def run_backfill_for_date_range(
     most, max_parallel runs can run in parallel to prevent resource exhaustion.
     """
     loop = asyncio.get_event_loop()
-    tron_client = client.Client(server)
+    tron_client = client.Client(server, user_attribution=True)
     url_index = tron_client.index()
 
     # check job_name identifies a valid tron object

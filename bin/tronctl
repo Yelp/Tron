@@ -202,7 +202,8 @@ def parse_cli():
 
 
 def request(url: str, data: Dict[str, Any], headers=None, method=None) -> bool:
-    response = client.request(url, data=data, headers=headers, method=method)
+    # We want every tronctl request to be attributable
+    response = client.request(url, data=data, headers=headers, method=method, user_attribution=True)
     if response.error:
         print(f"Error: {response.content}")
         return False
@@ -250,7 +251,7 @@ def _get_triggers_for_action(server: str, action_identifier: str) -> Optional[Tu
 
 
 def control_objects(args: argparse.Namespace):
-    tron_client = client.Client(args.server)
+    tron_client = client.Client(args.server, user_attribution=True)
     url_index = tron_client.index()
     for identifier in args.id:
         try:
@@ -320,7 +321,7 @@ def move(args):
     except IndexError as e:
         raise SystemExit(f"Error: Move command needs two arguments.\n{e}")
 
-    tron_client = client.Client(args.server)
+    tron_client = client.Client(args.server, user_attribution=True)
     url_index = tron_client.index()
     job_index = url_index["jobs"]
     if old_name not in job_index.keys():
