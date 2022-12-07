@@ -1,3 +1,12 @@
+tron (1.23.9) bionic; urgency=medium
+
+  * 1.23.9 tagged with 'make release'
+    Commit: Merge pull request #887 from Yelp/u/jfong/TRON-1723  TRON-
+    1723: Add user attribution into user agent when invoking tronctl
+    commands
+
+ -- root <root@35f519810749>  Wed, 07 Dec 2022 20:29:42 +0000
+
 tron (1.23.8) bionic; urgency=medium
 
   * 1.23.8 tagged with 'make release'
