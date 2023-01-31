@@ -2,7 +2,7 @@ Source: tron
 Section: admin
 Priority: optional
 Maintainer: Daniel Nephin <dnephin@yelp.com>
-Build-Depends: debhelper (>= 7), python3.6-dev, libdb5.3-dev, libyaml-dev, libssl-dev, libffi-dev, dh-virtualenv
+Build-Depends: bsdutils, debhelper (>= 7), python3.6-dev, libdb5.3-dev, libyaml-dev, libssl-dev, libffi-dev, dh-virtualenv
 Standards-Version: 3.8.3
 
 Package: tron
