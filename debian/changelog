@@ -1,3 +1,12 @@
+tron (1.23.10) bionic; urgency=medium
+
+  * 1.23.10 tagged with 'make release'
+    Commit: Merge pull request #890 from
+    Yelp/u/cuza/logging_tron_exit_status  Adding ExecStopPost to systemd
+    unit file to log tron exit status
+
+ -- root <root@ba896c01f138>  Tue, 31 Jan 2023 18:27:19 +0000
+
 tron (1.23.9) bionic; urgency=medium
 
   * 1.23.9 tagged with 'make release'
