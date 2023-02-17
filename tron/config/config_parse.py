@@ -7,6 +7,7 @@ import getpass
 import itertools
 import logging
 import os
+from functools import lru_cache
 from urllib.parse import urlparse
 
 import pytz
@@ -623,6 +624,7 @@ class ValidateJob(Validator):
         return in_dict
 
     # TODO: extract common code to a util function
+    @lru_cache(maxsize=1, typed=True)
     def _validate_dependencies(
         self, job, actions, base_action, current_action=None, stack=None,
     ):
@@ -632,6 +634,8 @@ class ValidateJob(Validator):
 
         stack.append(current_action.name)
         for dep in current_action.requires:
+            if len(stack) > 20:
+                continue
             if dep == base_action.name and len(stack) > 0:
                 msg = "Circular dependency in job.%s: %s"
                 raise ConfigError(msg % (job["name"], " -> ".join(stack)))
