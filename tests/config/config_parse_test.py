@@ -36,7 +36,10 @@ BASE_CONFIG = dict(
     ssh_options=dict(agent=False, identities=["tests/test_id_rsa"]),
     time_zone="EST",
     output_stream_dir="/tmp",
-    nodes=[dict(name="node0", hostname="node0"), dict(name="node1", hostname="node1"),],
+    nodes=[
+        dict(name="node0", hostname="node0"),
+        dict(name="node1", hostname="node1"),
+    ],
     node_pools=[dict(name="NodePool", nodes=["node0", "node1"])],
 )
 
@@ -55,7 +58,14 @@ def make_ssh_options():
 
 
 def make_mock_schedule():
-    return ConfigDailyScheduler(days=set(), hour=0, minute=0, second=0, original="00:00:00 ", jitter=None,)
+    return ConfigDailyScheduler(
+        days=set(),
+        hour=0,
+        minute=0,
+        second=0,
+        original="00:00:00 ",
+        jitter=None,
+    )
 
 
 def make_command_context():
@@ -67,14 +77,27 @@ def make_command_context():
 
 def make_nodes():
     return {
-        "node0": schema.ConfigNode(name="node0", username="foo", hostname="node0", port=22,),
-        "node1": schema.ConfigNode(name="node1", username="foo", hostname="node1", port=22,),
+        "node0": schema.ConfigNode(
+            name="node0",
+            username="foo",
+            hostname="node0",
+            port=22,
+        ),
+        "node1": schema.ConfigNode(
+            name="node1",
+            username="foo",
+            hostname="node1",
+            port=22,
+        ),
     }
 
 
 def make_node_pools():
     return {
-        "NodePool": schema.ConfigNodePool(nodes=("node0", "node1"), name="NodePool",),
+        "NodePool": schema.ConfigNodePool(
+            nodes=("node0", "node1"),
+            name="NodePool",
+        ),
     }
 
 
@@ -122,7 +145,12 @@ def make_job(**kwargs):
     kwargs.setdefault(
         "schedule",
         schedule_parse.ConfigDailyScheduler(
-            days=set(), hour=16, minute=30, second=0, original="16:30:00 ", jitter=None,
+            days=set(),
+            hour=16,
+            minute=30,
+            second=0,
+            original="16:30:00 ",
+            jitter=None,
         ),
     )
     kwargs.setdefault("actions", {"action": make_action()})
@@ -141,16 +169,29 @@ def make_job(**kwargs):
 def make_master_jobs():
     return {
         "MASTER.test_job0": make_job(
-            name="MASTER.test_job0", schedule=make_mock_schedule(), expected_runtime=datetime.timedelta(1),
+            name="MASTER.test_job0",
+            schedule=make_mock_schedule(),
+            expected_runtime=datetime.timedelta(1),
         ),
         "MASTER.test_job1": make_job(
             name="MASTER.test_job1",
             schedule=schedule_parse.ConfigDailyScheduler(
-                days={1, 3, 5}, hour=0, minute=30, second=0, original="00:30:00 MWF", jitter=None,
+                days={1, 3, 5},
+                hour=0,
+                minute=30,
+                second=0,
+                original="00:30:00 MWF",
+                jitter=None,
             ),
             actions={
-                "action": make_action(requires=("action1",), expected_runtime=datetime.timedelta(0, 7200),),
-                "action1": make_action(name="action1", expected_runtime=datetime.timedelta(0, 7200),),
+                "action": make_action(
+                    requires=("action1",),
+                    expected_runtime=datetime.timedelta(0, 7200),
+                ),
+                "action1": make_action(
+                    name="action1",
+                    expected_runtime=datetime.timedelta(0, 7200),
+                ),
             },
             time_zone=pytz.timezone("Pacific/Auckland"),
             expected_runtime=datetime.timedelta(1),
@@ -160,7 +201,12 @@ def make_master_jobs():
         "MASTER.test_job2": make_job(
             name="MASTER.test_job2",
             node="node1",
-            actions={"action2_0": make_action(name="action2_0", command="test_command2.0",),},
+            actions={
+                "action2_0": make_action(
+                    name="action2_0",
+                    command="test_command2.0",
+                ),
+            },
             time_zone=pytz.timezone("Pacific/Auckland"),
             expected_runtime=datetime.timedelta(1),
             cleanup_action=None,
@@ -172,7 +218,11 @@ def make_master_jobs():
             actions={
                 "action": make_action(),
                 "action1": make_action(name="action1"),
-                "action2": make_action(name="action2", requires=("action", "action1"), node="node0",),
+                "action2": make_action(
+                    name="action2",
+                    requires=("action", "action1"),
+                    node="node0",
+                ),
             },
             cleanup_action=None,
             expected_runtime=datetime.timedelta(1),
@@ -181,7 +231,12 @@ def make_master_jobs():
             name="MASTER.test_job4",
             node="NodePool",
             schedule=schedule_parse.ConfigDailyScheduler(
-                original="00:00:00 ", hour=0, minute=0, second=0, days=set(), jitter=None,
+                original="00:00:00 ",
+                hour=0,
+                minute=0,
+                second=0,
+                days=set(),
+                jitter=None,
             ),
             all_nodes=True,
             enabled=False,
@@ -192,7 +247,12 @@ def make_master_jobs():
             name="MASTER.test_job_mesos",
             node="NodePool",
             schedule=schedule_parse.ConfigDailyScheduler(
-                original="00:00:00 ", hour=0, minute=0, second=0, days=set(), jitter=None,
+                original="00:00:00 ",
+                hour=0,
+                minute=0,
+                second=0,
+                days=set(),
+                jitter=None,
             ),
             actions={
                 "action_mesos": make_action(
@@ -212,7 +272,12 @@ def make_master_jobs():
             name="MASTER.test_job_k8s",
             node="NodePool",
             schedule=schedule_parse.ConfigDailyScheduler(
-                original="00:00:00 ", hour=0, minute=0, second=0, days=set(), jitter=None,
+                original="00:00:00 ",
+                hour=0,
+                minute=0,
+                second=0,
+                days=set(),
+                jitter=None,
             ),
             actions={
                 "action_k8s": make_action(
@@ -229,7 +294,13 @@ def make_master_jobs():
                         TEST_SECRET=schema.ConfigSecretSource(secret_name="tron-secret-test-secret--1", key="secret_1")
                     ),
                     node_selectors={"yelp.com/pool": "default"},
-                    node_affinities=(ConfigNodeAffinity(key="instance_type", operator="In", value=("a1.1xlarge",),),),
+                    node_affinities=(
+                        ConfigNodeAffinity(
+                            key="instance_type",
+                            operator="In",
+                            value=("a1.1xlarge",),
+                        ),
+                    ),
                 ),
             },
             cleanup_action=None,
@@ -287,8 +358,17 @@ class ConfigTestCase(TestCase):
                 allow_overlap=True,
                 time_zone="Pacific/Auckland",
                 actions=[
-                    dict(name="action", command="command", requires=["action1"], expected_runtime="2h",),
-                    dict(name="action1", command="command", expected_runtime="2h",),
+                    dict(
+                        name="action",
+                        command="command",
+                        requires=["action1"],
+                        expected_runtime="2h",
+                    ),
+                    dict(
+                        name="action1",
+                        command="command",
+                        expected_runtime="2h",
+                    ),
                 ],
             ),
             dict(
@@ -306,7 +386,11 @@ class ConfigTestCase(TestCase):
                 actions=dict(
                     action=dict(command="command"),
                     action1=dict(command="command"),
-                    action2=dict(node="node0", command="command", requires=["action", "action1"],),
+                    action2=dict(
+                        node="node0",
+                        command="command",
+                        requires=["action", "action1"],
+                    ),
                 ),
             ),
             dict(
@@ -358,7 +442,12 @@ class ConfigTestCase(TestCase):
     )
 
     config = dict(
-        command_context=dict(batch_dir="/tron/batch/test/foo", python="/usr/bin/python",), **BASE_CONFIG, **JOBS_CONFIG,
+        command_context=dict(
+            batch_dir="/tron/batch/test/foo",
+            python="/usr/bin/python",
+        ),
+        **BASE_CONFIG,
+        **JOBS_CONFIG,
     )
 
     @mock.patch.dict("tron.config.config_parse.ValidateNode.defaults")
@@ -430,7 +519,18 @@ class TestNamedConfig(TestCase):
             },
         )
         master_config = dict(
-            nodes=[dict(name="node0", hostname="node0",),], node_pools=[dict(name="nodepool0", nodes=["node0"],),],
+            nodes=[
+                dict(
+                    name="node0",
+                    hostname="node0",
+                ),
+            ],
+            node_pools=[
+                dict(
+                    name="nodepool0",
+                    nodes=["node0"],
+                ),
+            ],
         )
         test_config = validate_fragment(
             "test_namespace",
@@ -451,7 +551,14 @@ class TestNamedConfig(TestCase):
         assert_equal(test_config, expected)
 
     def test_invalid_job_node_with_master_context(self):
-        master_config = dict(nodes=[dict(name="node0", hostname="node0",),],)
+        master_config = dict(
+            nodes=[
+                dict(
+                    name="node0",
+                    hostname="node0",
+                ),
+            ],
+        )
         test_config = dict(
             jobs=[
                 dict(
@@ -465,12 +572,29 @@ class TestNamedConfig(TestCase):
             ],
         )
         expected_message = "Unknown node name node1 at test_namespace.NamedConfigFragment.jobs.Job.test_job.node"
-        exception = assert_raises(ConfigError, validate_fragment, "test_namespace", test_config, master_config,)
+        exception = assert_raises(
+            ConfigError,
+            validate_fragment,
+            "test_namespace",
+            test_config,
+            master_config,
+        )
         assert_in(expected_message, str(exception))
 
     def test_invalid_action_node_with_master_context(self):
         master_config = dict(
-            nodes=[dict(name="node0", hostname="node0",),], node_pools=[dict(name="nodepool0", nodes=["node0"],),],
+            nodes=[
+                dict(
+                    name="node0",
+                    hostname="node0",
+                ),
+            ],
+            node_pools=[
+                dict(
+                    name="nodepool0",
+                    nodes=["node0"],
+                ),
+            ],
         )
         test_config = dict(
             jobs=[
@@ -486,25 +610,52 @@ class TestNamedConfig(TestCase):
         )
         expected_message = "Unknown node name nodepool1 at test_namespace.NamedConfigFragment.jobs.Job.test_job.actions.Action.action.node"
 
-        exception = assert_raises(ConfigError, validate_fragment, "test_namespace", test_config, master_config,)
+        exception = assert_raises(
+            ConfigError,
+            validate_fragment,
+            "test_namespace",
+            test_config,
+            master_config,
+        )
         assert_in(expected_message, str(exception))
 
 
 class TestJobConfig(TestCase):
     def test_no_actions(self):
-        test_config = dict(jobs=[dict(name="test_job0", node="node0", schedule="daily 00:30:00 "),], **BASE_CONFIG,)
+        test_config = dict(
+            jobs=[
+                dict(name="test_job0", node="node0", schedule="daily 00:30:00 "),
+            ],
+            **BASE_CONFIG,
+        )
 
         expected_message = "Job test_job0 is missing options: actions"
-        exception = assert_raises(ConfigError, valid_config, test_config,)
+        exception = assert_raises(
+            ConfigError,
+            valid_config,
+            test_config,
+        )
         assert_in(expected_message, str(exception))
 
     def test_empty_actions(self):
         test_config = dict(
-            jobs=[dict(name="test_job0", node="node0", schedule="daily 00:30:00 ", actions=None,),], **BASE_CONFIG,
+            jobs=[
+                dict(
+                    name="test_job0",
+                    node="node0",
+                    schedule="daily 00:30:00 ",
+                    actions=None,
+                ),
+            ],
+            **BASE_CONFIG,
         )
 
         expected_message = "Value at config.jobs.Job.test_job0.actions"
-        exception = assert_raises(ConfigError, valid_config, test_config,)
+        exception = assert_raises(
+            ConfigError,
+            valid_config,
+            test_config,
+        )
         assert_in(expected_message, str(exception))
 
     def test_dupe_names(self):
@@ -514,14 +665,21 @@ class TestJobConfig(TestCase):
                     name="test_job0",
                     node="node0",
                     schedule="daily 00:30:00",
-                    actions=[dict(name="action", command="cmd"), dict(name="action", command="cmd"),],
+                    actions=[
+                        dict(name="action", command="cmd"),
+                        dict(name="action", command="cmd"),
+                    ],
                 ),
             ],
             **BASE_CONFIG,
         )
 
         expected = "Duplicate name action at config.jobs.Job.test_job0.actions"
-        exception = assert_raises(ConfigError, valid_config, test_config,)
+        exception = assert_raises(
+            ConfigError,
+            valid_config,
+            test_config,
+        )
         assert_in(expected, str(exception))
 
     def test_bad_requires(self):
@@ -537,14 +695,24 @@ class TestJobConfig(TestCase):
                     name="test_job1",
                     node="node0",
                     schedule="daily 00:30:00",
-                    actions=[dict(name="action1", command="cmd", requires=["action"],),],
+                    actions=[
+                        dict(
+                            name="action1",
+                            command="cmd",
+                            requires=["action"],
+                        ),
+                    ],
                 ),
             ],
             **BASE_CONFIG,
         )
 
         expected_message = "jobs.MASTER.test_job1.action1 has a dependency " '"action" that is not in the same job!'
-        exception = assert_raises(ConfigError, valid_config, test_config,)
+        exception = assert_raises(
+            ConfigError,
+            valid_config,
+            test_config,
+        )
         assert_in(expected_message, str(exception))
 
     def test_circular_dependency(self):
@@ -555,8 +723,16 @@ class TestJobConfig(TestCase):
                     node="node0",
                     schedule="daily 00:30:00",
                     actions=[
-                        dict(name="action1", command="cmd", requires=["action2"],),
-                        dict(name="action2", command="cmd", requires=["action1"],),
+                        dict(
+                            name="action1",
+                            command="cmd",
+                            requires=["action2"],
+                        ),
+                        dict(
+                            name="action2",
+                            command="cmd",
+                            requires=["action1"],
+                        ),
                     ],
                 ),
             ],
@@ -564,7 +740,11 @@ class TestJobConfig(TestCase):
         )
 
         expect = "Circular dependency in job.MASTER.test_job0: action1 -> action2"
-        exception = assert_raises(ConfigError, valid_config, test_config,)
+        exception = assert_raises(
+            ConfigError,
+            valid_config,
+            test_config,
+        )
         assert_in(expect, str(exception))
 
     def test_config_cleanup_name_collision(self):
@@ -574,13 +754,19 @@ class TestJobConfig(TestCase):
                     name="test_job0",
                     node="node0",
                     schedule="daily 00:30:00",
-                    actions=[dict(name=CLEANUP_ACTION_NAME, command="cmd"),],
+                    actions=[
+                        dict(name=CLEANUP_ACTION_NAME, command="cmd"),
+                    ],
                 ),
             ],
             **BASE_CONFIG,
         )
         expected_message = "config.jobs.Job.test_job0.actions.Action.cleanup.name"
-        exception = assert_raises(ConfigError, valid_config, test_config,)
+        exception = assert_raises(
+            ConfigError,
+            valid_config,
+            test_config,
+        )
         assert_in(expected_message, str(exception))
 
     def test_config_cleanup_action_name(self):
@@ -590,7 +776,9 @@ class TestJobConfig(TestCase):
                     name="test_job0",
                     node="node0",
                     schedule="daily 00:30:00",
-                    actions=[dict(name="action", command="cmd"),],
+                    actions=[
+                        dict(name="action", command="cmd"),
+                    ],
                     cleanup_action=dict(name="gerald", command="cmd"),
                 ),
             ],
@@ -598,7 +786,11 @@ class TestJobConfig(TestCase):
         )
 
         expected_msg = "Cleanup actions cannot have custom names"
-        exception = assert_raises(ConfigError, valid_config, test_config,)
+        exception = assert_raises(
+            ConfigError,
+            valid_config,
+            test_config,
+        )
         assert_in(expected_msg, str(exception))
 
     def test_config_cleanup_requires(self):
@@ -608,7 +800,9 @@ class TestJobConfig(TestCase):
                     name="test_job0",
                     node="node0",
                     schedule="daily 00:30:00",
-                    actions=[dict(name="action", command="cmd"),],
+                    actions=[
+                        dict(name="action", command="cmd"),
+                    ],
                     cleanup_action=dict(command="cmd", requires=["action"]),
                 ),
             ],
@@ -616,14 +810,33 @@ class TestJobConfig(TestCase):
         )
 
         expected_msg = "Unknown keys in CleanupAction : requires"
-        exception = assert_raises(ConfigError, valid_config, test_config,)
+        exception = assert_raises(
+            ConfigError,
+            valid_config,
+            test_config,
+        )
         assert_equal(expected_msg, str(exception))
 
     def test_validate_job_no_actions(self):
-        job_config = dict(name="job_name", node="localhost", schedule="daily 00:30:00", actions=[],)
-        config_context = config_utils.ConfigContext("config", ["localhost"], None, None,)
+        job_config = dict(
+            name="job_name",
+            node="localhost",
+            schedule="daily 00:30:00",
+            actions=[],
+        )
+        config_context = config_utils.ConfigContext(
+            "config",
+            ["localhost"],
+            None,
+            None,
+        )
         expected_msg = "Required non-empty list at config.Job.job_name.actions"
-        exception = assert_raises(ConfigError, valid_job, job_config, config_context,)
+        exception = assert_raises(
+            ConfigError,
+            valid_job,
+            job_config,
+            config_context,
+        )
         assert_in(expected_msg, str(exception))
 
 
@@ -638,7 +851,9 @@ class TestValidSecretSource(TestCase):
 
     def test_validate_job_extra_secret_env(self):
         secret_env = dict(
-            secret_name="tron-secret-k8s-name-no--secret--name", key="no_secret_name", extra_key="unknown",
+            secret_name="tron-secret-k8s-name-no--secret--name",
+            key="no_secret_name",
+            extra_key="unknown",
         )
         with pytest.raises(ConfigError) as missing_exc:
             config_parse.valid_secret_source(secret_env, NullConfigContext)
@@ -646,7 +861,10 @@ class TestValidSecretSource(TestCase):
         assert "Unknown keys in SecretSource : extra_key" in str(missing_exc.value)
 
     def test_valid_job_secret_env_success(self):
-        secret_env = dict(secret_name="tron-secret-k8s-name-no--secret--name", key="no_secret_name",)
+        secret_env = dict(
+            secret_name="tron-secret-k8s-name-no--secret--name",
+            key="no_secret_name",
+        )
 
         expected_env = schema.ConfigSecretSource(**secret_env)
 
@@ -656,14 +874,20 @@ class TestValidSecretSource(TestCase):
 
 class TestNodeConfig(TestCase):
     def test_validate_node_pool(self):
-        config_node_pool = valid_node_pool(dict(name="theName", nodes=["node1", "node2"]),)
+        config_node_pool = valid_node_pool(
+            dict(name="theName", nodes=["node1", "node2"]),
+        )
         assert_equal(config_node_pool.name, "theName")
         assert_equal(len(config_node_pool.nodes), 2)
 
     def test_overlap_node_and_node_pools(self):
         tron_config = dict(
-            nodes=[dict(name="sameName", hostname="localhost"),],
-            node_pools=[dict(name="sameName", nodes=["sameNode"]),],
+            nodes=[
+                dict(name="sameName", hostname="localhost"),
+            ],
+            node_pools=[
+                dict(name="sameName", nodes=["sameNode"]),
+            ],
         )
         expected_msg = "Node and NodePool names must be unique sameName"
         exception = assert_raises(ConfigError, valid_config, tron_config)
@@ -683,13 +907,23 @@ class TestNodeConfig(TestCase):
         )
 
         expected_msg = "Unknown node name unknown_node at config.jobs.Job.test_job0.node"
-        exception = assert_raises(ConfigError, valid_config, test_config,)
+        exception = assert_raises(
+            ConfigError,
+            valid_config,
+            test_config,
+        )
         assert_equal(expected_msg, str(exception))
 
     def test_invalid_nested_node_pools(self):
         test_config = dict(
-            nodes=[dict(name="node0", hostname="node0"), dict(name="node1", hostname="node1"),],
-            node_pools=[dict(name="pool0", nodes=["node1"]), dict(name="pool1", nodes=["node0", "pool0"]),],
+            nodes=[
+                dict(name="node0", hostname="node0"),
+                dict(name="node1", hostname="node1"),
+            ],
+            node_pools=[
+                dict(name="pool0", nodes=["node1"]),
+                dict(name="pool1", nodes=["node0", "pool0"]),
+            ],
             jobs=[
                 dict(
                     name="test_job0",
@@ -701,13 +935,23 @@ class TestNodeConfig(TestCase):
         )
 
         expected_msg = "NodePool pool1 contains other NodePools: pool0"
-        exception = assert_raises(ConfigError, valid_config, test_config,)
+        exception = assert_raises(
+            ConfigError,
+            valid_config,
+            test_config,
+        )
         assert_in(expected_msg, str(exception))
 
     def test_invalid_node_pool_config(self):
         test_config = dict(
-            nodes=[dict(name="node0", hostname="node0"), dict(name="node1", hostname="node1"),],
-            node_pools=[dict(name="pool0", hostname=["node1"]), dict(name="pool1", nodes=["node0", "pool0"]),],
+            nodes=[
+                dict(name="node0", hostname="node0"),
+                dict(name="node1", hostname="node1"),
+            ],
+            node_pools=[
+                dict(name="pool0", hostname=["node1"]),
+                dict(name="pool1", nodes=["node0", "pool0"]),
+            ],
             jobs=[
                 dict(
                     name="test_job0",
@@ -719,13 +963,22 @@ class TestNodeConfig(TestCase):
         )
 
         expected_msg = "NodePool pool0 is missing options"
-        exception = assert_raises(ConfigError, valid_config, test_config,)
+        exception = assert_raises(
+            ConfigError,
+            valid_config,
+            test_config,
+        )
         assert_in(expected_msg, str(exception))
 
     def test_invalid_named_update(self):
         test_config = dict(bozray=None)
         expected_message = "Unknown keys in NamedConfigFragment : bozray"
-        exception = assert_raises(ConfigError, validate_fragment, "foo", test_config,)
+        exception = assert_raises(
+            ConfigError,
+            validate_fragment,
+            "foo",
+            test_config,
+        )
         assert_in(expected_message, str(exception))
 
 
@@ -739,7 +992,11 @@ class TestValidateJobs(TestCase):
                     schedule="daily",
                     expected_runtime="20m",
                     actions=[
-                        dict(name="action", command="command", expected_runtime="20m",),
+                        dict(
+                            name="action",
+                            command="command",
+                            expected_runtime="20m",
+                        ),
                         dict(
                             name="action_mesos",
                             command="command",
@@ -747,11 +1004,26 @@ class TestValidateJobs(TestCase):
                             cpus=4,
                             mem=300,
                             disk=600,
-                            constraints=[dict(attribute="pool", operator="LIKE", value="default",),],
+                            constraints=[
+                                dict(
+                                    attribute="pool",
+                                    operator="LIKE",
+                                    value="default",
+                                ),
+                            ],
                             docker_image="my_container:latest",
-                            docker_parameters=[dict(key="label", value="labelA"), dict(key="label", value="labelB"),],
+                            docker_parameters=[
+                                dict(key="label", value="labelA"),
+                                dict(key="label", value="labelB"),
+                            ],
                             env=dict(USER="batch"),
-                            extra_volumes=[dict(container_path="/tmp", host_path="/home/tmp", mode="RO",),],
+                            extra_volumes=[
+                                dict(
+                                    container_path="/tmp",
+                                    host_path="/home/tmp",
+                                    mode="RO",
+                                ),
+                            ],
                         ),
                         dict(
                             name="test_trigger_attrs",
@@ -771,48 +1043,85 @@ class TestValidateJobs(TestCase):
                 name="MASTER.test_job0",
                 schedule=make_mock_schedule(),
                 actions={
-                    "action": make_action(expected_runtime=datetime.timedelta(0, 1200),),
+                    "action": make_action(
+                        expected_runtime=datetime.timedelta(0, 1200),
+                    ),
                     "action_mesos": make_action(
                         name="action_mesos",
                         executor=schema.ExecutorTypes.mesos.value,
                         cpus=4.0,
                         mem=300.0,
                         disk=600.0,
-                        constraints=(schema.ConfigConstraint(attribute="pool", operator="LIKE", value="default",),),
+                        constraints=(
+                            schema.ConfigConstraint(
+                                attribute="pool",
+                                operator="LIKE",
+                                value="default",
+                            ),
+                        ),
                         docker_image="my_container:latest",
                         docker_parameters=(
-                            schema.ConfigParameter(key="label", value="labelA",),
-                            schema.ConfigParameter(key="label", value="labelB",),
+                            schema.ConfigParameter(
+                                key="label",
+                                value="labelA",
+                            ),
+                            schema.ConfigParameter(
+                                key="label",
+                                value="labelB",
+                            ),
                         ),
                         env={"USER": "batch"},
                         extra_volumes=(
                             schema.ConfigVolume(
-                                container_path="/tmp", host_path="/home/tmp", mode=schema.VolumeModes.RO.value,
+                                container_path="/tmp",
+                                host_path="/home/tmp",
+                                mode=schema.VolumeModes.RO.value,
                             ),
                         ),
                         expected_runtime=datetime.timedelta(hours=24),
                     ),
                     "test_trigger_attrs": make_action(
-                        name="test_trigger_attrs", command="foo", triggered_by=("foo.bar",), trigger_downstreams=True,
+                        name="test_trigger_attrs",
+                        command="foo",
+                        triggered_by=("foo.bar",),
+                        trigger_downstreams=True,
                     ),
                 },
                 expected_runtime=datetime.timedelta(0, 1200),
             ),
         }
 
-        context = config_utils.ConfigContext("config", ["node0"], None, MASTER_NAMESPACE,)
+        context = config_utils.ConfigContext(
+            "config",
+            ["node0"],
+            None,
+            MASTER_NAMESPACE,
+        )
         config_parse.validate_jobs(test_config, context)
         assert expected_jobs == test_config["jobs"]
 
 
 class TestValidMesosAction(TestCase):
     def test_missing_docker_image(self):
-        config = dict(name="test_missing", command="echo hello", executor="mesos", cpus=0.2, mem=150, disk=450,)
+        config = dict(
+            name="test_missing",
+            command="echo hello",
+            executor="mesos",
+            cpus=0.2,
+            mem=150,
+            disk=450,
+        )
         with pytest.raises(ConfigError):
             config_parse.valid_action(config, NullConfigContext)
 
     def test_cleanup_missing_docker_image(self):
-        config = dict(command="echo hello", executor="mesos", cpus=0.2, mem=150, disk=450,)
+        config = dict(
+            command="echo hello",
+            executor="mesos",
+            cpus=0.2,
+            mem=150,
+            disk=450,
+        )
         with pytest.raises(ConfigError):
             config_parse.valid_action(config, NullConfigContext)
 
@@ -824,7 +1133,10 @@ class TestValidCleanupActionName(TestCase):
 
     def test_valid_cleanup_action_name_fail(self):
         assert_raises(
-            ConfigError, valid_cleanup_action_name, "other", NullConfigContext,
+            ConfigError,
+            valid_cleanup_action_name,
+            "other",
+            NullConfigContext,
         )
 
 
@@ -842,7 +1154,12 @@ class TestValidOutputStreamDir(TestCase):
         assert_equal(self.dir, path)
 
     def test_missing_dir(self):
-        exception = assert_raises(ConfigError, valid_output_stream_dir, "bogus-dir", NullConfigContext,)
+        exception = assert_raises(
+            ConfigError,
+            valid_output_stream_dir,
+            "bogus-dir",
+            NullConfigContext,
+        )
         assert_in("is not a directory", str(exception))
 
     # TODO: docker tests run as root so everything is writeable
@@ -873,17 +1190,32 @@ class TestBuildFormatStringValidator(TestCase):
 
     def test_validator_unknown_variable_error(self):
         template = "The {one} thing I {seven} is {unknown}"
-        exception = assert_raises(ConfigError, self.validator, template, NullConfigContext,)
+        exception = assert_raises(
+            ConfigError,
+            self.validator,
+            template,
+            NullConfigContext,
+        )
         assert_in("Unknown context variable", str(exception))
 
     def test_validator_passes_with_context(self):
         template = "The {one} thing I {seven} is {mars}"
-        context = config_utils.ConfigContext(None, None, {"mars": "ok"}, None,)
+        context = config_utils.ConfigContext(
+            None,
+            None,
+            {"mars": "ok"},
+            None,
+        )
         assert self.validator(template, context) == template
 
     def test_validator_valid_string_without_no_percent_escape(self):
         template = "The {one} {seven} thing is {mars} --year %Y"
-        context = config_utils.ConfigContext(path=None, nodes=None, command_context={"mars": "ok"}, namespace=None,)
+        context = config_utils.ConfigContext(
+            path=None,
+            nodes=None,
+            command_context={"mars": "ok"},
+            namespace=None,
+        )
         assert self.validator(template, context)
 
 
@@ -933,7 +1265,9 @@ class TestConfigContainer(TestCase):
     def test_create_missing_master(self):
         config_mapping = {"other": mock.Mock()}
         assert_raises(
-            ConfigError, config_parse.ConfigContainer.create, config_mapping,
+            ConfigError,
+            config_parse.ConfigContainer.create,
+            config_mapping,
         )
 
     def test_get_job_names(self):
@@ -978,13 +1312,19 @@ class TestValidateSSHOptions(TestCase):
         if "SSH_AUTH_SOCK" in os.environ:
             del os.environ["SSH_AUTH_SOCK"]
         assert_raises(
-            ConfigError, config_parse.valid_ssh_options.validate, self.config, self.context,
+            ConfigError,
+            config_parse.valid_ssh_options.validate,
+            self.config,
+            self.context,
         )
 
     @mock.patch.dict("tron.config.config_parse.os.environ")
     def test_post_validation_success(self):
         os.environ["SSH_AUTH_SOCK"] = "something"
-        config = config_parse.valid_ssh_options.validate(self.config, self.context,)
+        config = config_parse.valid_ssh_options.validate(
+            self.config,
+            self.context,
+        )
         assert_equal(config.agent, True)
 
 
@@ -995,12 +1335,22 @@ class TestValidateIdentityFile(TestCase):
         self.private_file = tempfile.NamedTemporaryFile()
 
     def test_valid_identity_file_missing_private_key(self):
-        exception = assert_raises(ConfigError, config_parse.valid_identity_file, "/file/not/exist", self.context,)
+        exception = assert_raises(
+            ConfigError,
+            config_parse.valid_identity_file,
+            "/file/not/exist",
+            self.context,
+        )
         assert_in("Private key file", str(exception))
 
     def test_valid_identity_files_missing_public_key(self):
         filename = self.private_file.name
-        exception = assert_raises(ConfigError, config_parse.valid_identity_file, filename, self.context,)
+        exception = assert_raises(
+            ConfigError,
+            config_parse.valid_identity_file,
+            filename,
+            self.context,
+        )
         assert_in("Public key file", str(exception))
 
     def test_valid_identity_files_valid(self):
@@ -1027,17 +1377,28 @@ class TestValidKnownHostsFile(TestCase):
         self.known_hosts_file = tempfile.NamedTemporaryFile()
 
     def test_valid_known_hosts_file_exists(self):
-        filename = config_parse.valid_known_hosts_file(self.known_hosts_file.name, self.context,)
+        filename = config_parse.valid_known_hosts_file(
+            self.known_hosts_file.name,
+            self.context,
+        )
         assert_equal(filename, self.known_hosts_file.name)
 
     def test_valid_known_hosts_file_missing(self):
-        exception = assert_raises(ConfigError, config_parse.valid_known_hosts_file, "/bogus/path", self.context,)
+        exception = assert_raises(
+            ConfigError,
+            config_parse.valid_known_hosts_file,
+            "/bogus/path",
+            self.context,
+        )
         assert_in("Known hosts file /bogus/path", str(exception))
 
     def test_valid_known_hosts_file_missing_partial_context(self):
         context = config_utils.PartialConfigContext
         expected = "/bogus/does/not/exist"
-        filename = config_parse.valid_known_hosts_file(expected, context,)
+        filename = config_parse.valid_known_hosts_file(
+            expected,
+            context,
+        )
         assert_equal(filename, expected)
 
 
@@ -1053,7 +1414,10 @@ class TestValidateVolume(TestCase):
             "mode": "RO",
         }
         assert_raises(
-            ConfigError, config_parse.valid_volume.validate, config, self.context,
+            ConfigError,
+            config_parse.valid_volume.validate,
+            config,
+            self.context,
         )
 
     def test_missing_host_path(self):
@@ -1063,7 +1427,10 @@ class TestValidateVolume(TestCase):
             "mode": "RO",
         }
         assert_raises(
-            ConfigError, config_parse.valid_volume.validate, config, self.context,
+            ConfigError,
+            config_parse.valid_volume.validate,
+            config,
+            self.context,
         )
 
     def test_invalid_mode(self):
@@ -1073,7 +1440,10 @@ class TestValidateVolume(TestCase):
             "mode": "RA",
         }
         assert_raises(
-            ConfigError, config_parse.valid_volume.validate, config, self.context,
+            ConfigError,
+            config_parse.valid_volume.validate,
+            config,
+            self.context,
         )
 
     def test_valid(self):
@@ -1083,14 +1453,23 @@ class TestValidateVolume(TestCase):
             "mode": schema.VolumeModes.RO.value,
         }
         assert_equal(
-            schema.ConfigVolume(**config), config_parse.valid_volume.validate(config, self.context),
+            schema.ConfigVolume(**config),
+            config_parse.valid_volume.validate(config, self.context),
         )
 
     def test_mesos_default_volumes(self):
         mesos_options = {"master_address": "mesos_master"}
         mesos_options["default_volumes"] = [
-            {"container_path": "/nail/srv", "host_path": "/tmp", "mode": "RO",},
-            {"container_path": "/nail/srv", "host_path": "/tmp", "mode": "invalid",},
+            {
+                "container_path": "/nail/srv",
+                "host_path": "/tmp",
+                "mode": "RO",
+            },
+            {
+                "container_path": "/nail/srv",
+                "host_path": "/tmp",
+                "mode": "invalid",
+            },
         ]
 
         with pytest.raises(ConfigError):
@@ -1098,13 +1477,24 @@ class TestValidateVolume(TestCase):
 
         # After we fix the error, expect error to go away.
         mesos_options["default_volumes"][1]["mode"] = "RW"
-        assert config_parse.valid_mesos_options.validate(mesos_options, self.context,)
+        assert config_parse.valid_mesos_options.validate(
+            mesos_options,
+            self.context,
+        )
 
     def test_k8s_default_volumes(self):
         k8s_options = {"kubeconfig_path": "some_path"}
         k8s_options["default_volumes"] = [
-            {"container_path": "/nail/srv", "host_path": "/tmp", "mode": "RO",},
-            {"container_path": "/nail/srv", "host_path": "/tmp", "mode": "invalid",},
+            {
+                "container_path": "/nail/srv",
+                "host_path": "/tmp",
+                "mode": "RO",
+            },
+            {
+                "container_path": "/nail/srv",
+                "host_path": "/tmp",
+                "mode": "invalid",
+            },
         ]
 
         with pytest.raises(ConfigError):
@@ -1112,7 +1502,10 @@ class TestValidateVolume(TestCase):
 
         # After we fix the error, expect error to go away.
         k8s_options["default_volumes"][1]["mode"] = "RW"
-        assert config_parse.valid_kubernetes_options.validate(k8s_options, self.context,)
+        assert config_parse.valid_kubernetes_options.validate(
+            k8s_options,
+            self.context,
+        )
 
 
 class TestValidMasterAddress:
@@ -1121,7 +1514,13 @@ class TestValidMasterAddress:
         return config_utils.NullConfigContext
 
     @pytest.mark.parametrize(
-        "url", ["http://blah.com", "http://blah.com/", "blah.com", "blah.com/",],
+        "url",
+        [
+            "http://blah.com",
+            "http://blah.com/",
+            "blah.com",
+            "blah.com/",
+        ],
     )
     def test_valid(self, url, context):
         normalized = "http://blah.com"
@@ -1129,7 +1528,14 @@ class TestValidMasterAddress:
         assert result == normalized
 
     @pytest.mark.parametrize(
-        "url", ["https://blah.com", "http://blah.com/something", "blah.com/other", "http://", "blah.com?a=1",],
+        "url",
+        [
+            "https://blah.com",
+            "http://blah.com/something",
+            "blah.com/other",
+            "http://",
+            "blah.com?a=1",
+        ],
     )
     def test_invalid(self, url, context):
         with pytest.raises(ConfigError):

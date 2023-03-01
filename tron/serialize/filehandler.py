@@ -95,8 +95,8 @@ class FileHandleManager:
 
     def __init__(self, max_idle_time=60):
         """
-            Create a new instance.
-            max_idle_time           - max idle time in seconds
+        Create a new instance.
+        max_idle_time           - max idle time in seconds
         """
         if self.__class__._instance:
             msg = "FileHandleManager is a singleton. Call get_instance()"

@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 """
 Write pid and stdout/stderr to a standard location before execing a command.
 """
@@ -36,14 +36,25 @@ class StatusFile:
     def wrap(self, command, run_id, proc):
         with open(self.filename, "w") as fh:
             yaml.safe_dump(
-                self.get_content(run_id=run_id, command=command, proc=proc,), fh, explicit_start=True, width=1000000,
+                self.get_content(
+                    run_id=run_id,
+                    command=command,
+                    proc=proc,
+                ),
+                fh,
+                explicit_start=True,
+                width=1000000,
             )
         try:
             yield
         finally:
             with open(self.filename, "a") as fh:
                 yaml.safe_dump(
-                    self.get_content(run_id=run_id, command=command, proc=proc,),
+                    self.get_content(
+                        run_id=run_id,
+                        command=command,
+                        proc=proc,
+                    ),
                     fh,
                     explicit_start=True,
                     width=1000000,
@@ -86,7 +97,9 @@ def run_proc(output_path, command, run_id, proc):
     logging.warning(f"{run_id} running as pid {proc.pid}")
     status_file = StatusFile(os.path.join(output_path, STATUS_FILE))
     with status_file.wrap(
-        command=command, run_id=run_id, proc=proc,
+        command=command,
+        run_id=run_id,
+        proc=proc,
     ):
         returncode = proc.wait()
         logging.warning(f"pid {proc.pid} exited with returncode {returncode}")
@@ -96,20 +109,27 @@ def run_proc(output_path, command, run_id, proc):
 def parse_args():
     parser = argparse.ArgumentParser(description="Action Runner for Tron")
     parser.add_argument(
-        "output_dir", help="The directory to store the state of the action run",
+        "output_dir",
+        help="The directory to store the state of the action run",
     )
     parser.add_argument(
-        "command", help="the command to run",
+        "command",
+        help="the command to run",
     )
     parser.add_argument(
-        "run_id", help="run_id of the action",
+        "run_id",
+        help="run_id of the action",
     )
     return parser.parse_args()
 
 
 def run_command(command, run_id):
     return subprocess.Popen(
-        command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, env=build_environment(run_id=run_id),
+        command,
+        shell=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        env=build_environment(run_id=run_id),
     )
 
 
@@ -134,7 +154,9 @@ def stream(source, dst):
 def configure_logging(run_id, output_dir):
     output_file = os.path.join(output_dir, f"{run_id}-{os.getpid()}.log")
     logging.basicConfig(
-        filename=output_file, format="%(asctime)s %(levelname)s %(message)s", datefmt="%Y-%m-%dT%H:%M:%S%z",
+        filename=output_file,
+        format="%(asctime)s %(levelname)s %(message)s",
+        datefmt="%Y-%m-%dT%H:%M:%S%z",
     )
 
 
@@ -149,7 +171,12 @@ def main():
     ]
     for t in threads:
         t.start()
-    returncode = run_proc(output_path=args.output_dir, run_id=args.run_id, command=args.command, proc=proc,)
+    returncode = run_proc(
+        output_path=args.output_dir,
+        run_id=args.run_id,
+        command=args.command,
+        proc=proc,
+    )
 
     for t in threads:
         t.join()

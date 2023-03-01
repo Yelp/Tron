@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.6
+#!/usr/bin/env python3.7
 import datetime
 import logging
 import pprint
@@ -39,10 +39,15 @@ class State(Enum):
 def parse_cli():
     parser = cmd_utils.build_option_parser()
     parser.add_argument(
-        "--dry-run", action="store_true", default=False, help="Don't actually send alerts out. Defaults to %(default)s",
+        "--dry-run",
+        action="store_true",
+        default=False,
+        help="Don't actually send alerts out. Defaults to %(default)s",
     )
     parser.add_argument(
-        "--job", default=None, help="Check a particular job. If unset checks all jobs",
+        "--job",
+        default=None,
+        help="Check a particular job. If unset checks all jobs",
     )
     parser.add_argument(
         "--run-interval",
@@ -69,7 +74,10 @@ def _timestamp_to_timeobj(timestamp):
 
 
 def _timestamp_to_shortdate(timestamp, separator="."):
-    return time.strftime("%Y{0}%m{0}%d".format(separator), _timestamp_to_timeobj(timestamp),)
+    return time.strftime(
+        "%Y{0}%m{0}%d".format(separator),
+        _timestamp_to_timeobj(timestamp),
+    )
 
 
 def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_stderr=False):
@@ -88,7 +96,9 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
         kwargs["status"] = 2
         return kwargs
     else:  # if no run scheduled, no run_time available
-        relevant_job_run_date = _timestamp_to_shortdate(relevant_job_run["run_time"],)
+        relevant_job_run_date = _timestamp_to_shortdate(
+            relevant_job_run["run_time"],
+        )
 
     # A job_run is like MASTER.foo.1
     job_run_id = relevant_job_run["id"]
@@ -96,9 +106,14 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
     # A job action is like MASTER.foo.1.step1
     actions_expected_runtime = job_content.get("actions_expected_runtime", {})
     relevant_action = get_relevant_action(
-        action_runs=relevant_job_run["runs"], last_state=last_state, actions_expected_runtime=actions_expected_runtime,
+        action_runs=relevant_job_run["runs"],
+        last_state=last_state,
+        actions_expected_runtime=actions_expected_runtime,
     )
-    action_run_id = get_object_type_from_identifier(url_index, relevant_action["id"],)
+    action_run_id = get_object_type_from_identifier(
+        url_index,
+        relevant_action["id"],
+    )
 
     if last_state in (State.STUCK, State.FAILED, State.UNKNOWN):
         if _skip_sensu_failure_logging:
@@ -191,7 +206,9 @@ def get_relevant_run_and_state(job_content):
     #   3. If there are multiple running ones, then most recent run_time wins
     #   4. If nothing is currently running, then most recent end_time wins
     job_runs = sorted(
-        job_content.get("runs", []), key=lambda k: (k["end_time"] is None, k["end_time"], k["run_time"]), reverse=True,
+        job_content.get("runs", []),
+        key=lambda k: (k["end_time"] is None, k["end_time"], k["run_time"]),
+        reverse=True,
     )
     if len(job_runs) == 0:
         return None, State.NO_RUN_YET
@@ -226,13 +243,20 @@ def is_action_failed_or_unknown(job_run):
 
 
 def is_job_stuck(
-    job_runs, job_expected_runtime, actions_expected_runtime, allow_overlap, queueing,
+    job_runs,
+    job_expected_runtime,
+    actions_expected_runtime,
+    allow_overlap,
+    queueing,
 ):
     next_run_time = None
     for job_run in job_runs:
         states_to_check = {"running", "waiting"}
         if job_run.get("state", "unknown") in states_to_check:
-            if is_job_run_exceeding_expected_runtime(job_run, job_expected_runtime,):
+            if is_job_run_exceeding_expected_runtime(
+                job_run,
+                job_expected_runtime,
+            ):
                 return job_run
             # check if it is still running at next scheduled job run time
             if not allow_overlap and queueing and next_run_time:
@@ -240,7 +264,10 @@ def is_job_stuck(
                 if time.time() > time.mktime(difftime):
                     return job_run
             for action_run in job_run.get("runs", []):
-                if is_action_run_exceeding_expected_runtime(action_run, actions_expected_runtime,):
+                if is_action_run_exceeding_expected_runtime(
+                    action_run,
+                    actions_expected_runtime,
+                ):
                     return job_run
 
         next_run_time = job_run.get("run_time", None)
@@ -249,7 +276,14 @@ def is_job_stuck(
 
 def is_job_run_exceeding_expected_runtime(job_run, job_expected_runtime):
     states_to_check = {"running", "waiting"}
-    if job_expected_runtime is not None and job_run.get("state", "unknown",) in states_to_check:
+    if (
+        job_expected_runtime is not None
+        and job_run.get(
+            "state",
+            "unknown",
+        )
+        in states_to_check
+    ):
         duration_seconds = pytimeparse.parse(job_run.get("duration", ""))
         if duration_seconds and duration_seconds > job_expected_runtime:
             return True
@@ -257,12 +291,15 @@ def is_job_run_exceeding_expected_runtime(job_run, job_expected_runtime):
 
 
 def is_action_run_exceeding_expected_runtime(
-    action_run, actions_expected_runtime,
+    action_run,
+    actions_expected_runtime,
 ):
     if action_run.get("state", "unknown") == "running":
         action_name = action_run.get("action_name", None)
         if action_name in actions_expected_runtime and actions_expected_runtime[action_name] is not None:
-            duration_seconds = pytimeparse.parse(action_run.get("duration", ""),)
+            duration_seconds = pytimeparse.parse(
+                action_run.get("duration", ""),
+            )
             if duration_seconds > actions_expected_runtime[action_name]:
                 return True
     return False
@@ -277,7 +314,10 @@ def get_relevant_action(*, action_runs, last_state, actions_expected_runtime):
                 return action_run
         except ValueError:
             if last_state == State.STUCK:
-                if is_action_run_exceeding_expected_runtime(action_run, actions_expected_runtime,):
+                if is_action_run_exceeding_expected_runtime(
+                    action_run,
+                    actions_expected_runtime,
+                ):
                     return action_run
                 if action_state == "running":
                     stuck_action_run_candidate = action_run
@@ -297,7 +337,9 @@ def guess_realert_every(job):
         ]
         if len(job_runs_started) == 0:
             return -1
-        job_previous_run = max(job_runs_started,)
+        job_previous_run = max(
+            job_runs_started,
+        )
         time_diff = time.mktime(_timestamp_to_timeobj(job_next_run)) - time.mktime(
             _timestamp_to_timeobj(job_previous_run)
         )
@@ -314,12 +356,13 @@ def get_earliest_run_time_to_check(job_content, interval):
 
     earliest_run_time = min(time.mktime(_timestamp_to_timeobj(run["run_time"])) for run in job_content["runs"])
     return max(
-        earliest_run_time, time.time() - datetime.timedelta(**{f"{interval}s": NUM_PRECIOUS - 1}).total_seconds(),
+        earliest_run_time,
+        time.time() - datetime.timedelta(**{f"{interval}s": NUM_PRECIOUS - 1}).total_seconds(),
     )
 
 
 def sort_runs_by_interval(job_content, interval="day", until=None):
-    """ Sorts a job's runs by a time interval (day, hour, minute, or second),
+    """Sorts a job's runs by a time interval (day, hour, minute, or second),
     according to a job run's run time.
     """
     interval_formats = {
@@ -350,7 +393,10 @@ def sort_runs_by_interval(job_content, interval="day", until=None):
 
         # Bucket runs by interval
         for run in job_content["runs"]:
-            run_time = time.strftime(interval_formats[interval], _timestamp_to_timeobj(run["run_time"]),)
+            run_time = time.strftime(
+                interval_formats[interval],
+                _timestamp_to_timeobj(run["run_time"]),
+            )
             if run_time not in run_buckets:
                 continue
             run_buckets[run_time].append(run)
@@ -358,7 +404,10 @@ def sort_runs_by_interval(job_content, interval="day", until=None):
 
 
 def compute_check_result_for_job(client, job, url_index):
-    kwargs = m(name=f"check_tron_job.{job['name']}", source=client.cluster_name,)
+    kwargs = m(
+        name=f"check_tron_job.{job['name']}",
+        source=client.cluster_name,
+    )
     if "realert_every" not in kwargs:
         kwargs = kwargs.set("realert_every", guess_realert_every(job))
     kwargs = kwargs.set("check_every", f"{_run_interval}s")
@@ -376,13 +425,21 @@ def compute_check_result_for_job(client, job, url_index):
     hide_stderr = kwargs.get("hide_stderr", False)
     kwargs_list = []
     if job["status"] == "disabled":
-        kwargs = kwargs.set("output", f"OK: {job['name']} is disabled and won't be checked.",)
+        kwargs = kwargs.set(
+            "output",
+            f"OK: {job['name']} is disabled and won't be checked.",
+        )
         kwargs = kwargs.set("status", 0)
         kwargs_list.append(kwargs)
     else:
         # The job is not disabled, therefore we have to look at its run history
         tron_id = get_object_type_from_identifier(url_index, job["name"])
-        job_content = pmap(client.job(tron_id.url, include_action_runs=True,),)
+        job_content = pmap(
+            client.job(
+                tron_id.url,
+                include_action_runs=True,
+            ),
+        )
 
         if job["monitoring"].get(PRECIOUS_JOB_ATTR, False):
             dated_runs = sort_runs_by_interval(job_content, interval="day")
@@ -399,7 +456,10 @@ def compute_check_result_for_job(client, job, url_index):
             )
             dated_kwargs = kwargs.update(results)
             if date:  # if empty date, leave job name alone
-                dated_kwargs = dated_kwargs.set("name", f"{kwargs['name']}-{date}",)
+                dated_kwargs = dated_kwargs.set(
+                    "name",
+                    f"{kwargs['name']}-{date}",
+                )
             kwargs_list.append(dated_kwargs)
 
     return [dict(kws) for kws in kwargs_list]
