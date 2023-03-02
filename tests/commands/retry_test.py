@@ -1,6 +1,6 @@
 import random
+from unittest import mock
 
-import mock
 import pytest
 
 from tron.commands import client

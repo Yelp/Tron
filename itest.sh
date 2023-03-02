@@ -53,7 +53,7 @@ tronfig -n MASTER /work/testfiles/MASTER.yaml
 tronfig /work/testfiles/MASTER.yaml
 cat /work/testfiles/MASTER.yaml | tronfig -n MASTER -
 
-if test -L /opt/venvs/tron/lib/python3.7/encodings/punycode.py; then
+if test -L /opt/venvs/tron/lib/python3.8/encodings/punycode.py; then
     echo "Whoa, the tron package shouldn't have an encoding symlink!"
     echo "Check out https://github.com/spotify/dh-virtualenv/issues/272"
     exit 1

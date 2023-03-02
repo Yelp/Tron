@@ -42,7 +42,7 @@ class JSONEncoder(json.JSONEncoder):
         if isinstance(o, datetime.date):
             return o.isoformat()
 
-        if isinstance(o, collections.KeysView):
+        if isinstance(o, collections.abc.KeysView):
             return list(o)
 
         return super().default(o)

@@ -23,7 +23,7 @@ mesos_options:
 # action_runner:
 #   runner_type: "subprocess"
 #   remote_status_path: "pg/tron/status"
-#   remote_exec_path: "pg/tron/.tox/py37/bin"
+#   remote_exec_path: "pg/tron/.tox/py38/bin"
 
 jobs:
   testjob0:

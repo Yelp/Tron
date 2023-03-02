@@ -18,7 +18,7 @@ RUN apt-get -q update && \
         libyaml-dev \
         libssl-dev \
         libffi-dev \
-        python3.7-dev \
+        python3.8-dev \
         python3-pip \
         python-tox \
         rust-all \
