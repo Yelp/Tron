@@ -73,7 +73,7 @@ requests-oauthlib==1.2.0
 responses==0.10.6
 rsa==4.0
 s3transfer==0.2.1
-setuptools==41.4.0
+setuptools==65.5.1
 six==1.15.0
 sshpubkeys==3.1.0
 task-processing==0.9.0
