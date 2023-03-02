@@ -86,7 +86,8 @@ def test_retry_action_init_ok(fake_retry_action):
     assert fake_retry_action.retry_params == dict(command="retry", use_latest_command=1)
     assert fake_retry_action.full_action_name == "a_fake_job.0.a_fake_action"
     fake_retry_action.tron_client.action_runs.assert_called_once_with(
-        "/a_fake_job/0/a_fake_action", num_lines=0,
+        "/a_fake_job/0/a_fake_action",
+        num_lines=0,
     )
     assert fake_retry_action.action_name == "a_fake_action"
     assert fake_retry_action.action_run_id.url == "/a_fake_job/0/a_fake_action"
@@ -100,7 +101,8 @@ def test_check_trigger_statuses(fake_retry_action, event_loop):
     expected = dict(a_fake_trigger_0=True, a_fake_trigger_1=False)
     assert expected == event_loop.run_until_complete(fake_retry_action.check_trigger_statuses())
     assert fake_retry_action.tron_client.action_runs.call_args_list[1] == mock.call(  # 0th call is in init
-        "/a_fake_job/0/a_fake_action", num_lines=0,
+        "/a_fake_job/0/a_fake_action",
+        num_lines=0,
     )
 
 
@@ -139,7 +141,11 @@ def test_wait_for_deps_all_deps_done(fake_retry_action, event_loop):
         "a_fake_trigger_0 (done), a_fake_trigger_1 (done)",
     ]
     fake_retry_action.tron_client.action_runs.side_effect = [
-        dict(action_name="a_fake_action", requirements=["required_action_0", "required_action_1"], triggered_by=r,)
+        dict(
+            action_name="a_fake_action",
+            requirements=["required_action_0", "required_action_1"],
+            triggered_by=r,
+        )
         for r in triggered_by_results
     ]
 

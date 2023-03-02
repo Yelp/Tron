@@ -34,7 +34,9 @@ class TestBuildFilledContext(TestCase):
         assert not output.next
 
     def test_build_filled_context_single(self):
-        output = command_context.build_filled_context(command_context.JobContext,)
+        output = command_context.build_filled_context(
+            command_context.JobContext,
+        )
         assert isinstance(output.base, command_context.JobContext)
         assert not output.next
 
@@ -80,8 +82,13 @@ class SimpleObjectContextTestCase(SimpleContextTestCaseBase):
 class ChainedDictContextTestCase(SimpleContextTestCaseBase):
     @setup
     def build_context(self):
-        self.next_context = command_context.CommandContext(dict(foo="bar", next_foo="next_bar"),)
-        self.context = command_context.CommandContext(dict(), self.next_context,)
+        self.next_context = command_context.CommandContext(
+            dict(foo="bar", next_foo="next_bar"),
+        )
+        self.context = command_context.CommandContext(
+            dict(),
+            self.next_context,
+        )
 
     def test_chain_get(self):
         assert_equal(self.context["next_foo"], "next_bar")
@@ -90,8 +97,13 @@ class ChainedDictContextTestCase(SimpleContextTestCaseBase):
 class ChainedDictOverrideContextTestCase(SimpleContextTestCaseBase):
     @setup
     def build_context(self):
-        self.next_context = command_context.CommandContext(dict(foo="your mom", next_foo="next_bar"),)
-        self.context = command_context.CommandContext(dict(foo="bar"), self.next_context,)
+        self.next_context = command_context.CommandContext(
+            dict(foo="your mom", next_foo="next_bar"),
+        )
+        self.context = command_context.CommandContext(
+            dict(foo="bar"),
+            self.next_context,
+        )
 
     def test_chain_get(self):
         assert_equal(self.context["next_foo"], "next_bar")
@@ -106,7 +118,9 @@ class ChainedObjectOverrideContextTestCase(SimpleContextTestCaseBase):
         obj = MyObject()
         obj.foo = "bar"
 
-        self.next_context = command_context.CommandContext(dict(foo="your mom", next_foo="next_bar"),)
+        self.next_context = command_context.CommandContext(
+            dict(foo="your mom", next_foo="next_bar"),
+        )
         self.context = command_context.CommandContext(obj, self.next_context)
 
     def test_chain_get(self):
@@ -118,8 +132,15 @@ class TestJobContext(TestCase):
     def setup_job(self):
         self.last_success = mock.Mock(run_time=datetime.datetime(2012, 3, 14))
         mock_scheduler = mock.create_autospec(scheduler.GeneralScheduler)
-        run_collection = mock.create_autospec(JobRunCollection, last_success=self.last_success,)
-        self.job = job.Job("MASTER.jobname", mock_scheduler, run_collection=run_collection,)
+        run_collection = mock.create_autospec(
+            JobRunCollection,
+            last_success=self.last_success,
+        )
+        self.job = job.Job(
+            "MASTER.jobname",
+            mock_scheduler,
+            run_collection=run_collection,
+        )
         self.context = command_context.JobContext(self.job)
 
     def test_name(self):
@@ -185,7 +206,11 @@ class TestActionRunContext(TestCase):
     @setup
     def build_context(self):
         mock_node = mock.create_autospec(node.Node, hostname="something")
-        self.action_run = mock.create_autospec(actionrun.ActionRun, action_name="something", node=mock_node,)
+        self.action_run = mock.create_autospec(
+            actionrun.ActionRun,
+            action_name="something",
+            node=mock_node,
+        )
         self.context = command_context.ActionRunContext(self.action_run)
 
     def test_actionname(self):
