@@ -28,7 +28,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_today():
         "tron.utils.scribereader.scribereader.get_stream_tailer",
         autospec=True,
     ) as mock_stream_tailer, mock.patch(
-        "tron.utils.habitat.get_superregion",
+        "tron.utils.scribereader.get_superregion",
         autospec=True,
         return_value="fake",
     ), mock.patch(
@@ -104,7 +104,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_different_days():
         "tron.utils.scribereader.scribereader.get_stream_tailer",
         autospec=True,
     ) as mock_stream_tailer, mock.patch(
-        "tron.utils.habitat.get_superregion",
+        "tron.utils.scribereader.get_superregion",
         autospec=True,
         return_value="fake",
     ), mock.patch(
@@ -202,7 +202,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_in_past():
         "tron.utils.scribereader.scribereader.get_stream_tailer",
         autospec=True,
     ) as mock_stream_tailer, mock.patch(
-        "tron.utils.habitat.get_superregion",
+        "tron.utils.scribereader.get_superregion",
         autospec=True,
         return_value="fake",
     ), mock.patch(
@@ -268,7 +268,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
         "tron.utils.scribereader.scribereader.get_stream_tailer",
         autospec=True,
     ) as mock_stream_tailer, mock.patch(
-        "tron.utils.habitat.get_superregion",
+        "tron.utils.scribereader.get_superregion",
         autospec=True,
         return_value="fake",
     ), mock.patch(
