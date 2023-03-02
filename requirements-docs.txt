@@ -1,5 +1,5 @@
 docutils==0.14
-Jinja2==2.10.1
+Jinja2==2.11.3
 markupsafe==2.0.1
 mock==2.0.0
 Pygments==2.2.0
