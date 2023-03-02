@@ -98,9 +98,9 @@ yelpy:
 	.tox/py38/bin/pip-custom-platform install -i https://pypi.yelpcorp.com/simple -r yelp_package/extra_requirements_yelp.txt
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/[\x27\x22]/\\\x27/g')
-release: docker_bionic docs
-	$(DOCKER_RUN) tron-builder-bionic /bin/bash -c " \
-		dch -v $(VERSION) --distribution bionic --changelog debian/changelog \
+release: docker_jammy docs
+	$(DOCKER_RUN) tron-builder-jammy /bin/bash -c " \
+		dch -v $(VERSION) --distribution jammy --changelog debian/changelog \
 			$$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)' && \
 		chown $(UID):$(GID) debian/changelog \
 	"
