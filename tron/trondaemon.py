@@ -134,7 +134,11 @@ class TronDaemon:
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        threading.Thread(target=reactor.run, daemon=True, kwargs=dict(installSignalHandlers=0),).start()
+        threading.Thread(
+            target=reactor.run,
+            daemon=True,
+            kwargs=dict(installSignalHandlers=0),
+        ).start()
 
     def _handle_shutdown(self, sig_num, stack_frame):
         log.info(f"Shutdown requested via {str(sig_num)}")

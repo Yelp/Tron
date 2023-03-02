@@ -1,6 +1,8 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
+DH_VERBOSE := 1
+
 %:
 	dh $@ --with python-virtualenv
 
@@ -18,13 +20,14 @@ override_dh_auto_test:
 override_dh_virtualenv:
 	echo $(PIP_INDEX_URL)
 	dh_virtualenv --index-url $(PIP_INDEX_URL) \
-                --python=/usr/bin/python3.6 \
+                --python=/usr/bin/python3.8 \
                 --preinstall no-manylinux1 \
                 --preinstall cython \
                 --preinstall pip-custom-platform \
-                --preinstall pip==9.0.1 \
+                --preinstall pip==18.1 \
                 --preinstall setuptools==46.1.3 \
                 --pip-tool pip-custom-platform \
+                --extra-pip-arg "-vvv"
 
 override_dh_installinit:
 	dh_installinit --noscripts
