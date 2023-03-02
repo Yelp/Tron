@@ -2,6 +2,6 @@ docutils==0.14
 Jinja2==2.10.1
 markupsafe==2.0.1
 mock==2.0.0
-Pygments==2.2.0
+Pygments==2.7.4
 Sphinx==2.2.0
 Sphinx-PyPI-upload==0.2.1
