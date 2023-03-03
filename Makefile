@@ -1,4 +1,4 @@
-VERSION=$(shell python setup.py --version)
+VERSION=$(shell python3 setup.py --version)
 DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw -v $(CURDIR)/.tox-indocker:/work/.tox:rw
 UID:=$(shell id -u)
 GID:=$(shell id -g)
@@ -98,12 +98,9 @@ yelpy:
 	.tox/py38/bin/pip-custom-platform install -i https://pypi.yelpcorp.com/simple -r yelp_package/extra_requirements_yelp.txt
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/[\x27\x22]/\\\x27/g')
-release: docker_jammy docs
-	$(DOCKER_RUN) tron-builder-jammy /bin/bash -c " \
-		dch -v $(VERSION) --distribution jammy --changelog debian/changelog \
-			$$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)' && \
-		chown $(UID):$(GID) debian/changelog \
-	"
+release:
+	/bin/bash -c "dch -v $(VERSION) --distribution jammy --changelog debian/changelog \
+	$$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)'"
 	@git diff
 	@echo "Now Run:"
 	@echo 'git commit -a -m "Released $(VERSION) via make release"'
