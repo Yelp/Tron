@@ -38,7 +38,12 @@ class AsyncResource:
     @staticmethod
     def bounded(fn):
         def wrapper(resource, request):
-            d = threads.deferToThread(AsyncResource.process, fn, resource, request,)
+            d = threads.deferToThread(
+                AsyncResource.process,
+                fn,
+                resource,
+                request,
+            )
             d.addCallback(AsyncResource.finish, request, resource)
             d.addErrback(request.processingFailed)
             return server.NOT_DONE_YET

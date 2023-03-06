@@ -49,8 +49,18 @@ class TestDisplayJobs(TestCase):
     @setup
     def setup_data(self):
         self.data = [
-            dict(name="important_things", status="running", scheduler=mock.MagicMock(), last_success=None,),
-            dict(name="other_thing", status="enabled", scheduler=mock.MagicMock(), last_success="2012-01-23 10:23:23",),
+            dict(
+                name="important_things",
+                status="running",
+                scheduler=mock.MagicMock(),
+                last_success=None,
+            ),
+            dict(
+                name="other_thing",
+                status="enabled",
+                scheduler=mock.MagicMock(),
+                last_success="2012-01-23 10:23:23",
+            ),
         ]
 
     def do_format(self):
@@ -69,7 +79,10 @@ class TestDisplayActions(TestCase):
         self.data = {
             "id": "something.23",
             "state": "UNKWN",
-            "node": {"hostname": "something", "username": "a",},
+            "node": {
+                "hostname": "something",
+                "username": "a",
+            },
             "run_time": "sometime",
             "start_time": "sometime",
             "end_time": "sometime",
