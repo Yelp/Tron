@@ -624,18 +624,20 @@ class ValidateJob(Validator):
         return in_dict
 
     # TODO: extract common code to a util function
-    @lru_cache(maxsize=1, typed=True)
     def _validate_dependencies(
-        self, job, actions, base_action, current_action=None, stack=None,
+        self, job, actions, base_action, current_action=None, stack=None, already_validated=None
     ):
         """Check for circular or misspelled dependencies."""
         stack = stack or []
         current_action = current_action or base_action
-
+        already_validated = already_validated or set()
+        validated = (job["name"], base_action)
+        if validated in already_validated:
+            return
+        else:
+            already_validated.add(validated)
         stack.append(current_action.name)
         for dep in current_action.requires:
-            if len(stack) > 20:
-                continue
             if dep == base_action.name and len(stack) > 0:
                 msg = "Circular dependency in job.%s: %s"
                 raise ConfigError(msg % (job["name"], " -> ".join(stack)))
@@ -645,7 +647,7 @@ class ValidateJob(Validator):
                     " that is not in the same job!" % (job["name"], current_action.name, dep),
                 )
             self._validate_dependencies(
-                job, actions, base_action, actions[dep], stack,
+                job, actions, base_action, actions[dep], stack, already_validated
             )
 
         stack.pop()
