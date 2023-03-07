@@ -7,6 +7,7 @@ import os
 import signal
 import threading
 import time
+from functools import lru_cache
 
 import ipdb
 import pkg_resources
@@ -54,6 +55,7 @@ def setup_logging(options):
     # Show stack traces for errors in twisted deferreds.
     if options.debug:
         defer.setDebugging(True)
+    logging.getLogger = lru_cache(maxsize=None)(logging.getLogger)
 
 
 @contextlib.contextmanager
