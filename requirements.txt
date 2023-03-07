@@ -28,7 +28,7 @@ http-parser==0.9.0
 humanize==0.5.1
 hyperlink==19.0.0
 idna==2.8
-incremental==17.5.0
+incremental==22.10.0
 ipdb==0.13.2
 ipython==7.8.0
 ipython-genutils==0.2.0
@@ -58,7 +58,6 @@ pyasn1-modules==0.2.8
 pycparser==2.19
 pyformance==0.4
 Pygments==2.4.2
-PyHamcrest==2.0.2
 pymesos==0.3.9
 pyrsistent==0.15.4
 pysensu-yelp==0.4.4
@@ -78,7 +77,7 @@ six==1.15.0
 sshpubkeys==3.1.0
 task-processing==0.9.0
 traitlets==4.3.3
-Twisted==20.3.0
+Twisted==22.10.0
 typing-extensions==4.5.0
 urllib3==1.25.6
 wcwidth==0.1.7
