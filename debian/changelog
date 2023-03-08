@@ -1,3 +1,20 @@
+tron (1.24.1) jammy; urgency=medium
+
+  * 1.24.1 tagged with 'make release'
+    Commit: Upgrades requirements and adds caching on get loggers (#900)
+    * updates axe-core  * Upgrade twisted  * Stop locking on getting
+    loggers  * Adds better description and commit suggestions  *
+    Upgrades Werkzeug dependency  * Upgrades future dependency  *
+    Upgrades ipython dependency  * Upgrades cryptography dependency  *
+    Upgrades setuptools dependency  * Upgrades certifi dependency  *
+    Upgrades urllib3 dependency  * Upgrades rsa dependency  * Upgrades
+    Pygments dependency  * Upgrades jinja2 for docs dependency  *
+    Upgrades docs dependencies  * Update tron/trondaemon.py  Co-authored-
+    by: Luis Pérez <luisp@yelp.com>  ---------  Co-authored-by: Luis
+    Pérez <luisp@yelp.com>
+
+ -- Jon Lee <jonlee@yelp.com>  Wed, 08 Mar 2023 10:13:38 -0800
+
 tron (1.24.0) jammy; urgency=medium
 
   * 1.24.0 tagged with 'make release'
