@@ -22,7 +22,7 @@ decorator==4.4.0
 docker==4.1.0
 docutils==0.15.2
 ecdsa==0.13.3
-future==0.18.1
+future==0.18.3
 google-auth==1.23.0
 http-parser==0.9.0
 humanize==0.5.1
