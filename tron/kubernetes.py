@@ -11,7 +11,7 @@ from task_processing.interfaces.event import Event
 from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig
 from task_processing.runners.subscription import Subscription
 from task_processing.task_processor import TaskProcessor
-from twisted.internet.defer import Deferred  # type: ignore  # need to upgrade twisted
+from twisted.internet.defer import Deferred
 from twisted.internet.defer import logError
 
 import tron.metrics as metrics
@@ -337,12 +337,14 @@ class KubernetesCluster:
         * control: events regarding how the task_proc plugin is running - handled directly
         * task: events regarding how the actual tasks/Pods we're running our doing - forwarded to KubernetesTask
         """
-        if self.deferred and not self.deferred.called:
+        if self.deferred is not None and not self.deferred.called:
             log.warning("Already have handlers waiting for next event in queue, not adding more")
             return
 
         self.deferred = self.queue.get()
-
+        if self.deferred is None:
+            log.warning("Unable to get a handler for next event in queue - this should never happen!")
+            return
         # we want to process the event we just popped off the queue, but we also want
         # to form a sort of event loop, so we add two callbacks:
         # * one to actually deal with the event
