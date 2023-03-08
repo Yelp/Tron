@@ -55,6 +55,10 @@ def setup_logging(options):
     # Show stack traces for errors in twisted deferreds.
     if options.debug:
         defer.setDebugging(True)
+    # Adds lru_cache to getLogger as we are seeing kubernetes-client locking on logging causing potential events to be missed
+    # This is a workaround and ideally we would want to remove this once this is fixed on kubernetes-client library
+    # For more details on the issue visit: https://github.com/kubernetes-client/python/issues/1867
+    # misc/jolt#148 has a similar workaround for this issue as well. See https://github.yelpcorp.com/misc/jolt/pull/148
     logging.getLogger = lru_cache(maxsize=None)(logging.getLogger)
 
 

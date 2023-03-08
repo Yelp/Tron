@@ -342,8 +342,9 @@ class KubernetesCluster:
             return
 
         self.deferred = self.queue.get()
-        assert self.deferred is not None
-
+        if self.deferred is None:
+            log.warning("Unable to get a handler for next event in queue - this should never happen!")
+            return
         # we want to process the event we just popped off the queue, but we also want
         # to form a sort of event loop, so we add two callbacks:
         # * one to actually deal with the event
