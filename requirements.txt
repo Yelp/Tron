@@ -7,8 +7,8 @@ aws-sam-translator==1.15.1
 aws-xray-sdk==2.4.2
 backcall==0.1.0
 boto==2.49.0
-boto3==1.9.249
-botocore==1.12.249
+boto3==1.26.85
+botocore==1.29.86
 bsddb3==6.2.7
 cachetools==4.2.1
 certifi==2022.12.7
@@ -21,7 +21,6 @@ dataclasses==0.6
 DateTime==4.3
 decorator==4.4.0
 docker==4.1.0
-docutils==0.15.2
 ecdsa==0.13.3
 executing==1.2.0
 future==0.18.3
@@ -71,11 +70,11 @@ python-jose==3.0.1
 pytimeparse==1.1.8
 pytz==2019.3
 PyYAML==5.4.1
-requests==2.22.0
+requests==2.25.0
 requests-oauthlib==1.2.0
 responses==0.10.6
 rsa==4.0
-s3transfer==0.2.1
+s3transfer==0.6.0
 setuptools==65.5.1
 six==1.15.0
 sshpubkeys==3.1.0
@@ -84,7 +83,7 @@ task-processing==0.9.0
 traitlets==5.0.0
 Twisted==22.10.0
 typing-extensions==4.5.0
-urllib3==1.25.6
+urllib3==1.26.5
 wcwidth==0.1.7
 websocket-client==0.56.0
 Werkzeug==2.2.3
