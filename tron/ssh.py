@@ -10,10 +10,11 @@ from twisted.conch.ssh import keys
 from twisted.internet import defer
 from twisted.python import failure
 
-# We are ignoring CryptographyDeprecationWarning as it is coming from the twisted upstream library
-# The two deprecated warnings we are seeing are Blowfish and CAST5
-# Ideally we can remove this once removed in https://github.com/twisted/twisted/blob/trunk/src/twisted/conch/ssh/transport.py#L95-L109
+# Ignore CryptographyDeprecationWarning as we don't use `cryptography` directly and
+# the warnings are coming from one of our dependencies (Twisted) that does. There's
+# nothing we can do until they stop using the deprecated ciphers - so ignoring these warnings should be safe
 warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
+# These need to be imported after filtering warnings
 from twisted.conch.client import default  # noqa: E402
 from twisted.conch.ssh import transport  # noqa: E402
 
