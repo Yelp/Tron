@@ -7,7 +7,11 @@ import getpass
 import itertools
 import logging
 import os
-from functools import lru_cache
+from typing import Dict
+from typing import List
+from typing import Optional
+from typing import Set
+from typing import Tuple
 from urllib.parse import urlparse
 
 import pytz
@@ -647,22 +651,28 @@ class ValidateJob(Validator):
     # TODO: extract common code to a util function
     def _validate_dependencies(
         self,
-        job,
-        actions,
-        base_action,
-        current_action=None,
-        stack=None,
-        already_validated=None
+        job,  # TODO: create TypedDict for this
+        # TODO: setup UniqueNameDict for use with mypy so that the following line
+        # is not a lie
+        actions: Dict[str, ConfigAction],
+        base_action: ConfigAction,
+        current_action: Optional[ConfigAction] = None,
+        stack: Optional[List[str]] = None,
+        already_validated: Optional[Set[Tuple[str, str]]] = None,
     ):
         """Check for circular or misspelled dependencies."""
-        stack = stack or []
-        current_action = current_action or base_action
+        # for large graphs, we can end up validating the same jobs/actions repeatedly
+        # this is unnecessary and we can skip a ton of work simply by caching what we've
+        # already validated
         already_validated = already_validated or set()
-        validated = (job["name"], base_action)
+        validated = (job["name"], base_action.name)
         if validated in already_validated:
             return
         else:
             already_validated.add(validated)
+
+        current_action = current_action or base_action
+        stack = stack or []
         stack.append(current_action.name)
         for dep in current_action.requires:
             if dep == base_action.name and len(stack) > 0:
@@ -673,14 +683,7 @@ class ValidateJob(Validator):
                     'Action jobs.%s.%s has a dependency "%s"'
                     " that is not in the same job!" % (job["name"], current_action.name, dep),
                 )
-            self._validate_dependencies(
-                job,
-                actions,
-                base_action,
-                actions[dep],
-                stack,
-                already_validated
-            )
+            self._validate_dependencies(job, actions, base_action, actions[dep], stack, already_validated)
 
         stack.pop()
 
