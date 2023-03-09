@@ -1,14 +1,23 @@
 import logging
 import struct
+import warnings
 
-from twisted.conch.client import default
+from cryptography.utils import CryptographyDeprecationWarning
 from twisted.conch.ssh import channel
 from twisted.conch.ssh import common
 from twisted.conch.ssh import connection
 from twisted.conch.ssh import keys
-from twisted.conch.ssh import transport
 from twisted.internet import defer
 from twisted.python import failure
+
+# Ignore CryptographyDeprecationWarning as we don't use `cryptography` directly and
+# the warnings are coming from one of our dependencies (Twisted) that does. There's
+# nothing we can do until they stop using the deprecated ciphers - so ignoring these warnings should be safe
+warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
+# These need to be imported after filtering warnings
+from twisted.conch.client import default  # noqa: E402
+from twisted.conch.ssh import transport  # noqa: E402
+
 
 log = logging.getLogger("tron.ssh")
 
