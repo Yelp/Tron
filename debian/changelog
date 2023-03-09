@@ -1,3 +1,11 @@
+tron (1.24.2) jammy; urgency=medium
+
+  * 1.24.2 tagged with 'make release'
+    Commit: Ignores CryptographyDeprecationWarning (#901)  * Ignores
+    CryptographyDeprecationWarning
+
+ -- Jon Lee <jonlee@yelp.com>  Thu, 09 Mar 2023 11:46:44 -0800
+
 tron (1.24.1) jammy; urgency=medium
 
   * 1.24.1 tagged with 'make release'
