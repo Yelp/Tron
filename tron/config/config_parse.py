@@ -665,13 +665,13 @@ class ValidateJob(Validator):
         # this is unnecessary and we can skip a ton of work simply by caching what we've
         # already validated
         already_validated = already_validated or set()
-        validated = (job["name"], base_action.name)
+        current_action = current_action or base_action
+        validated = (job["name"], current_action.name)
         if validated in already_validated:
             return
         else:
             already_validated.add(validated)
 
-        current_action = current_action or base_action
         stack = stack or []
         stack.append(current_action.name)
         for dep in current_action.requires:
