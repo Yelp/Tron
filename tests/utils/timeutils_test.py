@@ -350,6 +350,20 @@ class DateArithmeticYMDHTest(TestCase):
         s = timeutils.DateArithmetic.parse("ym-1", dt=dt)
         assert s == "2019-02"
 
+    def test_ymd_plus_whitespace(self):
+        def parse(*ymd):
+            return DateArithmetic.parse("ymd + 1", datetime.datetime(*ymd))
+
+        assert_equal(parse(2018, 1, 1), "2018-01-02")
+        assert_equal(parse(2018, 1, 31), "2018-02-01")
+
+    def test_ymd_minus_whitespace(self):
+        def parse(*ymd):
+            return DateArithmetic.parse("ymd- 1", datetime.datetime(*ymd))
+
+        assert_equal(parse(2018, 1, 1), "2017-12-31")
+        assert_equal(parse(2018, 1, 2), "2018-01-01")
+
 
 class TestDateArithmeticWithTimezone(DateArithmeticTestCase):
 
