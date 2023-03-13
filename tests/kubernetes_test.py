@@ -357,6 +357,39 @@ def test_handle_event_abnormal_exit(mock_kubernetes_task):
     assert mock_kubernetes_task.is_done
 
 
+def test_handle_event_missing_state(mock_kubernetes_task):
+    mock_kubernetes_task.started()
+    raw_event_data = {
+        "status": {
+            "containerStatuses": [
+                {
+                    "containerID": "docker://asdf",
+                    "image": "someimage",
+                    "imageID": "docker-pullable://someimage:sometag",
+                    "lastState": {},
+                    "name": "main",
+                    "ready": False,
+                    "restartCount": 0,
+                    "started": False,
+                    "state": None,
+                },
+            ],
+        }
+    }
+    mock_kubernetes_task.handle_event(
+        mock_event_factory(
+            task_id=mock_kubernetes_task.get_kubernetes_id(),
+            raw=raw_event_data,
+            platform_type="killed",
+            terminal=True,
+            success=False,
+        )
+    )
+    assert mock_kubernetes_task.exit_status == exitcode.EXIT_KUBERNETES_ABNORMAL
+    assert mock_kubernetes_task.is_failed
+    assert mock_kubernetes_task.is_done
+
+
 def test_handle_event_lost(mock_kubernetes_task):
     mock_kubernetes_task.started()
     mock_kubernetes_task.handle_event(

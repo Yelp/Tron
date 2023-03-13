@@ -145,7 +145,7 @@ class KubernetesTask(ActionCommand):
             raw_object = getattr(event, "raw", {}) or {}
             pod_status = raw_object.get("status", {}) or {}
             container_statuses = pod_status.get("containerStatuses", []) or []
-            exit_code = 0 if k8s_type == "finished" else 1
+            exit_code = 0 if k8s_type == "finished" else exitcode.EXIT_KUBERNETES_ABNORMAL
 
             if len(container_statuses) > 1 or len(container_statuses) == 0:
                 # shouldn't happen right now, but who knows what future us will do :p
@@ -158,8 +158,8 @@ class KubernetesTask(ActionCommand):
                 main_container_state = main_container_statuses.get("state", {}) or {}
                 main_container_last_state = main_container_statuses.get("lastState", {}) or {}
 
-                event_missing_state = main_container_state is None
-                event_missing_previous_state = main_container_last_state is None
+                event_missing_state = not main_container_state
+                event_missing_previous_state = not main_container_last_state
 
                 # We are expecting this code to never be hit as we are expecting both state and last_state have values
                 # The else statement should handle the situation gracefully when either current/last state are missing
