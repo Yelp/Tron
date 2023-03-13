@@ -40,7 +40,7 @@ KUBERNETES_LOST_NODE_EXIT_CODES = {exitcode.EXIT_KUBERNETES_SPOT_INTERRUPTION, e
 
 log = logging.getLogger(__name__)
 try:
-    import clog
+    import clog  # type: ignore
 except ImportError:
     clog = None
 
