@@ -390,6 +390,51 @@ def test_handle_event_missing_state(mock_kubernetes_task):
     assert mock_kubernetes_task.is_done
 
 
+def test_handle_event_code_from_state(mock_kubernetes_task):
+    mock_kubernetes_task.started()
+    raw_event_data = {
+        "status": {
+            "containerStatuses": [
+                {
+                    "containerID": "docker://asdf",
+                    "image": "someimage",
+                    "imageID": "docker-pullable://someimage:sometag",
+                    "lastState": {},
+                    "name": "main",
+                    "ready": False,
+                    "restartCount": 0,
+                    "started": False,
+                    "state": {
+                        "running": None,
+                        "terminated": {
+                            "containerID": "docker://asdf",
+                            "exitCode": 1337,
+                            "finishedAt": None,
+                            "message": None,
+                            "reason": None,
+                            "signal": None,
+                            "startedAt": None,
+                        },
+                        "waiting": None,
+                    },
+                },
+            ],
+        }
+    }
+    mock_kubernetes_task.handle_event(
+        mock_event_factory(
+            task_id=mock_kubernetes_task.get_kubernetes_id(),
+            raw=raw_event_data,
+            platform_type="failed",
+            terminal=True,
+            success=False,
+        )
+    )
+    assert mock_kubernetes_task.exit_status == 1337
+    assert mock_kubernetes_task.is_failed
+    assert mock_kubernetes_task.is_done
+
+
 def test_handle_event_lost(mock_kubernetes_task):
     mock_kubernetes_task.started()
     mock_kubernetes_task.handle_event(
