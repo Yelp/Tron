@@ -145,7 +145,7 @@ class KubernetesTask(ActionCommand):
             raw_object = getattr(event, "raw", {}) or {}
             pod_status = raw_object.get("status", {}) or {}
             container_statuses = pod_status.get("containerStatuses", []) or []
-            exit_code = 0 if k8s_type == "finished" else 1
+            exit_code = 0 if k8s_type == "finished" else exitcode.EXIT_KUBERNETES_ABNORMAL
 
             if len(container_statuses) > 1 or len(container_statuses) == 0:
                 # shouldn't happen right now, but who knows what future us will do :p
@@ -158,15 +158,15 @@ class KubernetesTask(ActionCommand):
                 main_container_state = main_container_statuses.get("state", {}) or {}
                 main_container_last_state = main_container_statuses.get("lastState", {}) or {}
 
-                event_missing_state = main_container_state is None or main_container_state.get("terminated") is None
-                event_missing_previous_state = (
-                    main_container_last_state is None or main_container_last_state.get("terminated") is None
-                )
+                event_missing_state = not main_container_state
+                event_missing_previous_state = not main_container_last_state
 
                 # We are expecting this code to never be hit as we are expecting both state and last_state have values
                 # The else statement should handle the situation gracefully when either current/last state are missing
                 if event_missing_state and event_missing_previous_state:
-                    self.log.error("Got an event with missing state - assuming success.")
+                    self.log.error(
+                        f"Got an event with missing state - assuming {'success' if exit_code==0 else 'failure'}."
+                    )
                     self.log.error(f"Event with missing state: {raw_object}")
                 else:
                     state_termination_metadata = main_container_state.get("terminated", {}) or {}
@@ -191,8 +191,13 @@ class KubernetesTask(ActionCommand):
                                 f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
                             )
                     elif k8s_type in KUBERNETES_FAILURE_TYPES:
+                        # pod killed before it reached terminal state, assume node scaledown
+                        if not (state_termination_metadata or last_state_termination_metadata):
+                            self.log.warning("Container did not complete, likely due to scaling down a node.")
+                            exit_code = exitcode.EXIT_KUBERNETES_NODE_SCALEDOWN
+
                         # Handling spot terminations
-                        if (
+                        elif (
                             last_state_termination_metadata.get("exitCode") == 137
                             and last_state_termination_metadata.get("reason") == "ContainerStatusUnknown"
                         ):
