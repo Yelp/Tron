@@ -39,10 +39,6 @@ KUBERNETES_FAILURE_TYPES = {"failed", "killed"}
 KUBERNETES_LOST_NODE_EXIT_CODES = {exitcode.EXIT_KUBERNETES_SPOT_INTERRUPTION, exitcode.EXIT_KUBERNETES_NODE_SCALEDOWN}
 
 log = logging.getLogger(__name__)
-try:
-    import clog  # type: ignore
-except ImportError:
-    clog = None
 
 
 def combine_volumes(
@@ -344,16 +340,6 @@ class KubernetesCluster:
         if self.deferred is not None and not self.deferred.called:
             log.warning("Already have handlers waiting for next event in queue, not adding more")
             return
-        if clog is None:
-            log.debug("CLog logger unavailable. Unable to log self.deferred")
-        else:
-            clog.config.configure(
-                scribe_host="169.254.255.254",
-                scribe_port=1463,
-                monk_disable=False,
-                scribe_disable=False,
-            )
-            clog.log_line("tmp_missed_tronevents", self.deferred)  # Capture self.deferred
         self.deferred = self.queue.get()
         if self.deferred is None:
             log.warning("Unable to get a handler for next event in queue - this should never happen!")
