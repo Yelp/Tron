@@ -25,9 +25,7 @@ class TestActionStatus(TestCase):
 
     @mock.patch("tron.bin.action_status.os.killpg", autospec=True)
     @mock.patch(
-        "tron.bin.action_status.os.getpgid",
-        autospec=True,
-        return_value=42,
+        "tron.bin.action_status.os.getpgid", autospec=True, return_value=42,
     )
     def test_send_signal(self, mock_getpgid, mock_kill):
         action_status.send_signal(signal.SIGKILL, self.status_file)
@@ -42,9 +40,7 @@ class TestActionStatus(TestCase):
             "run_id": "MASTER.foo.bar.1234",
             "command": "echo " + "really_long" * 100,
         }
-        self.status_file.write(
-            yaml.safe_dump(additional_status_content, explicit_start=True),
-        )
+        self.status_file.write(yaml.safe_dump(additional_status_content, explicit_start=True),)
         self.status_file.flush()
         self.status_file.seek(0)
         assert action_status.get_field("return_code", self.status_file) == 0

@@ -38,17 +38,13 @@ def parse_options():
         "state_persistence section configured for the state file/database.",
     )
     parser.add_option(
-        "--source-working-dir",
-        help="The working directory for source dir to resolve relative paths.",
+        "--source-working-dir", help="The working directory for source dir to resolve relative paths.",
     )
     parser.add_option(
-        "--dest-working-dir",
-        help="The working directory for dest dir to resolve relative paths.",
+        "--dest-working-dir", help="The working directory for dest dir to resolve relative paths.",
     )
     parser.add_option(
-        "--namespace",
-        action="store_true",
-        help="Move jobs which are missing a namespace to the MASTER",
+        "--namespace", action="store_true", help="Move jobs which are missing a namespace to the MASTER",
     )
 
     opts, args = parser.parse_args()
@@ -62,7 +58,8 @@ def parse_options():
 
 
 def get_state_manager_from_config(config_path, working_dir):
-    """Return a state manager from the configuration."""
+    """Return a state manager from the configuration.
+    """
     config_manager = manager.ConfigManager(config_path)
     config_container = config_manager.load()
     state_config = config_container.get_master().state_persistence
@@ -84,14 +81,8 @@ def strip_namespace(names):
 
 
 def convert_state(opts):
-    source_manager = get_state_manager_from_config(
-        opts.source,
-        opts.source_working_dir,
-    )
-    dest_manager = get_state_manager_from_config(
-        opts.dest,
-        opts.dest_working_dir,
-    )
+    source_manager = get_state_manager_from_config(opts.source, opts.source_working_dir,)
+    dest_manager = get_state_manager_from_config(opts.dest, opts.dest_working_dir,)
     container = get_current_config(opts.source)
 
     msg = "Migrating state from %s to %s"
@@ -101,10 +92,7 @@ def convert_state(opts):
     if opts.namespace:
         job_names = strip_namespace(job_names)
 
-    job_states = source_manager.restore(
-        job_names,
-        skip_validation=True,
-    )
+    job_states = source_manager.restore(job_names, skip_validation=True,)
     source_manager.cleanup()
 
     if opts.namespace:

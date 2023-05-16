@@ -31,9 +31,7 @@ class TestTimeSpecification(TestCase):
         self._cmp((2012, 12, 22), (2013, 1, 1))
 
     def test_get_match_monthdays(self):
-        self.time_spec = trontimespec.TimeSpecification(
-            monthdays=[10, 3, 3, 10],
-        )
+        self.time_spec = trontimespec.TimeSpecification(monthdays=[10, 3, 3, 10],)
         self._cmp((2012, 3, 14), (2012, 4, 3))
         self._cmp((2012, 3, 1), (2012, 3, 3))
 
@@ -70,10 +68,7 @@ class TestTimeSpecification(TestCase):
         assert_equal(list(gen), [2, 5, 9, 12, 16, 19, 23, 26, 30])
 
     def test_next_day_weekdays_with_ordinals(self):
-        time_spec = trontimespec.TimeSpecification(
-            weekdays=[1, 5],
-            ordinals=[1, 3],
-        )
+        time_spec = trontimespec.TimeSpecification(weekdays=[1, 5], ordinals=[1, 3],)
         gen = time_spec.next_day(14, 2012, 3)
         assert_equal(list(gen), [16, 19])
 
@@ -103,10 +98,7 @@ class TestTimeSpecification(TestCase):
         assert_equal(time, datetime.time(4, 0))
 
     def test_next_time_minutes(self):
-        time_spec = trontimespec.TimeSpecification(
-            minutes=[30, 20, 30],
-            seconds=[0],
-        )
+        time_spec = trontimespec.TimeSpecification(minutes=[30, 20, 30], seconds=[0],)
         start_date = datetime.datetime(2012, 3, 14, 0, 25)
         time = time_spec.next_time(start_date, True)
         assert_equal(time, datetime.time(0, 30))
@@ -117,11 +109,7 @@ class TestTimeSpecification(TestCase):
         assert_equal(time, datetime.time(0, 20))
 
     def test_next_time_hours_and_minutes_and_seconds(self):
-        time_spec = trontimespec.TimeSpecification(
-            minutes=[20, 30],
-            hours=[1, 5],
-            seconds=[4, 5],
-        )
+        time_spec = trontimespec.TimeSpecification(minutes=[20, 30], hours=[1, 5], seconds=[4, 5],)
         start_date = datetime.datetime(2012, 3, 14, 1, 25)
         time = time_spec.next_time(start_date, True)
         assert_equal(time, datetime.time(1, 30, 4))
@@ -134,10 +122,7 @@ class TestTimeSpecification(TestCase):
     def test_get_match_dst_spring_forward(self):
         tz = pytz.timezone("US/Pacific")
         time_spec = trontimespec.TimeSpecification(
-            hours=[0, 1, 2, 3, 4],
-            minutes=[0],
-            seconds=[0],
-            timezone="US/Pacific",
+            hours=[0, 1, 2, 3, 4], minutes=[0], seconds=[0], timezone="US/Pacific",
         )
         start = trontimespec.naive_as_timezone(datetime.datetime(2020, 3, 8, 1), tz)
         # Springing forward, the next hour after 1AM should be 3AM
@@ -147,10 +132,7 @@ class TestTimeSpecification(TestCase):
     def test_get_match_dst_fall_back(self):
         tz = pytz.timezone("US/Pacific")
         time_spec = trontimespec.TimeSpecification(
-            hours=[0, 1, 2, 3, 4],
-            minutes=[0],
-            seconds=[0],
-            timezone="US/Pacific",
+            hours=[0, 1, 2, 3, 4], minutes=[0], seconds=[0], timezone="US/Pacific",
         )
         start = trontimespec.naive_as_timezone(datetime.datetime(2020, 11, 1, 1), tz)
         # Falling back, the next hour after 1AM is 1AM again. But we only run on the first 1AM

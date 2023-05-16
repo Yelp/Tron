@@ -109,13 +109,7 @@ class Job(Observable, Observer):
 
     @classmethod
     def from_config(
-        cls,
-        job_config,
-        scheduler,
-        parent_context,
-        output_path,
-        action_runner,
-        action_graph,
+        cls, job_config, scheduler, parent_context, output_path, action_runner, action_graph,
     ):
         """Factory method to create a new Job instance from configuration."""
         runs = jobrun.JobRunCollection.from_config(job_config)
@@ -208,11 +202,7 @@ class Job(Observable, Observer):
         """Apply a previous state to this Job."""
         self.enabled = state_data["enabled"]
         job_runs = jobrun.job_runs_from_state(
-            state_data["runs"],
-            self.action_graph,
-            self.output_path.clone(),
-            self.context,
-            self.node_pool,
+            state_data["runs"], self.action_graph, self.output_path.clone(), self.context, self.node_pool,
         )
         return job_runs
 

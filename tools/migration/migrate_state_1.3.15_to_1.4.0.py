@@ -10,20 +10,13 @@ from tron.utils import chdir
 def parse_args():
     parser = argparse.ArgumentParser()
     parser.add_argument(
-        "--back",
-        help="Flag to migrate back from new state back to old state",
-        action="store_true",
-        default=False,
+        "--back", help="Flag to migrate back from new state back to old state", action="store_true", default=False,
     )
     parser.add_argument(
-        "--working-dir",
-        help="Working directory for the Tron daemon",
-        required=True,
+        "--working-dir", help="Working directory for the Tron daemon", required=True,
     )
     parser.add_argument(
-        "--config-path",
-        help="Path in working dir with configs",
-        required=True,
+        "--config-path", help="Path in working dir with configs", required=True,
     )
     return parser.parse_args()
 

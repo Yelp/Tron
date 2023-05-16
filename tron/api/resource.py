@@ -42,7 +42,7 @@ class JSONEncoder(json.JSONEncoder):
         if isinstance(o, datetime.date):
             return o.isoformat()
 
-        if isinstance(o, collections.abc.KeysView):
+        if isinstance(o, collections.KeysView):
             return list(o)
 
         return super().default(o)
@@ -61,14 +61,7 @@ def respond(request, response, code=None, headers=None):
     for key, val in (headers or {}).items():
         request.setHeader(str(key), str(val))
 
-    result = (
-        json.dumps(
-            response,
-            cls=JSONEncoder,
-        )
-        if response
-        else ""
-    )
+    result = json.dumps(response, cls=JSONEncoder,) if response else ""
 
     if type(result) is not bytes:
         result = result.encode("utf8")
@@ -86,18 +79,10 @@ def handle_command(request, api_controller, obj, **kwargs):
     except controller.UnknownCommandError:
         error_msg = f"Unknown command '{command}' for '{obj}'"
         log.warning(error_msg)
-        return respond(
-            request=request,
-            response={"error": error_msg},
-            code=http.NOT_IMPLEMENTED,
-        )
+        return respond(request=request, response={"error": error_msg}, code=http.NOT_IMPLEMENTED,)
     except controller.InvalidCommandForActionState as e:
         log.warning(e.message)
-        return respond(
-            request=request,
-            response={"error": e.message},
-            code=http.CONFLICT,
-        )
+        return respond(request=request, response={"error": e.message}, code=http.CONFLICT,)
     except Exception as e:
         log.exception("%r while executing command %s for %s", e, command, obj)
         trace = traceback.format_exc()
@@ -105,8 +90,8 @@ def handle_command(request, api_controller, obj, **kwargs):
 
 
 class ErrorResource(resource.Resource):
-    """Equivalent to resource.NoResource, except error message is returned
-    as JSON, not HTML"""
+    """ Equivalent to resource.NoResource, except error message is returned
+    as JSON, not HTML """
 
     def __init__(self, error="No Such Resource", code=http.NOT_FOUND):
         resource.Resource.__init__(self)
@@ -122,7 +107,7 @@ class ErrorResource(resource.Resource):
         return respond(request=request, response={"error": self.error}, code=self.code)
 
     def getChild(self, chnam, request):
-        """Overrided getChild to ensure a NoResource is not returned"""
+        """ Overrided getChild to ensure a NoResource is not returned """
         return self
 
 
@@ -163,12 +148,7 @@ class ActionRunResource(resource.Resource):
     @AsyncResource.exclusive
     def render_POST(self, request):
         use_latest_command = requestargs.get_bool(request, "use_latest_command", False)
-        return handle_command(
-            request,
-            self.controller,
-            self.action_run,
-            use_latest_command=use_latest_command,
-        )
+        return handle_command(request, self.controller, self.action_run, use_latest_command=use_latest_command,)
 
 
 class JobRunResource(resource.Resource):
@@ -187,18 +167,14 @@ class JobRunResource(resource.Resource):
             action_run = self.job_run.action_runs[action_name]
             return ActionRunResource(action_run, self.job_run)
 
-        return ErrorResource(
-            f"Cannot find action '{action_name}' for " f"'{self.job_run}'",
-        )
+        return ErrorResource(f"Cannot find action '{action_name}' for " f"'{self.job_run}'",)
 
     @AsyncResource.bounded
     def render_GET(self, request):
         include_runs = requestargs.get_bool(request, "include_action_runs")
         include_graph = requestargs.get_bool(request, "include_action_graph")
         run_adapter = adapter.JobRunAdapter(
-            self.job_run,
-            include_action_runs=include_runs,
-            include_action_graph=include_graph,
+            self.job_run, include_action_runs=include_runs, include_action_graph=include_graph,
         )
         return respond(request=request, response=run_adapter.get_repr())
 
@@ -244,10 +220,7 @@ class JobResource(resource.Resource):
 
     @AsyncResource.bounded
     def render_GET(self, request):
-        include_action_runs = requestargs.get_bool(
-            request,
-            "include_action_runs",
-        )
+        include_action_runs = requestargs.get_bool(request, "include_action_runs",)
         include_graph = requestargs.get_bool(request, "include_action_graph")
         num_runs = requestargs.get_integer(request, "num_runs")
         job_adapter = adapter.JobAdapter(
@@ -262,12 +235,7 @@ class JobResource(resource.Resource):
     @AsyncResource.exclusive
     def render_POST(self, request):
         run_time = requestargs.get_datetime(request, "run_time")
-        return handle_command(
-            request,
-            self.controller,
-            self.job_scheduler,
-            run_time=run_time,
-        )
+        return handle_command(request, self.controller, self.job_scheduler, run_time=run_time,)
 
 
 class ActionRunHistoryResource(resource.Resource):
@@ -280,10 +248,7 @@ class ActionRunHistoryResource(resource.Resource):
 
     @AsyncResource.bounded
     def render_GET(self, request):
-        return respond(
-            request=request,
-            response=adapter.adapt_many(adapter.ActionRunAdapter, self.action_runs),
-        )
+        return respond(request=request, response=adapter.adapt_many(adapter.ActionRunAdapter, self.action_runs),)
 
 
 class JobCollectionResource(resource.Resource):
@@ -300,11 +265,7 @@ class JobCollectionResource(resource.Resource):
         return resource_from_collection(self.job_collection, name, JobResource)
 
     def get_data(
-        self,
-        include_job_run=False,
-        include_action_runs=False,
-        include_action_graph=True,
-        include_node_pool=True,
+        self, include_job_run=False, include_action_runs=False, include_action_graph=True, include_node_pool=True,
     ):
         return adapter.adapt_many(
             adapter.JobAdapter,
@@ -317,41 +278,17 @@ class JobCollectionResource(resource.Resource):
         )
 
     def get_job_index(self):
-        jobs = adapter.adapt_many(
-            adapter.JobIndexAdapter,
-            self.job_collection.get_jobs(),
-        )
+        jobs = adapter.adapt_many(adapter.JobIndexAdapter, self.job_collection.get_jobs(),)
         return {job["name"]: job["actions"] for job in jobs}
 
     @AsyncResource.bounded
     def render_GET(self, request):
-        include_job_runs = requestargs.get_bool(
-            request,
-            "include_job_runs",
-            default=False,
-        )
-        include_action_runs = requestargs.get_bool(
-            request,
-            "include_action_runs",
-            default=False,
-        )
-        include_action_graph = requestargs.get_bool(
-            request,
-            "include_action_graph",
-            default=True,
-        )
-        include_node_pool = requestargs.get_bool(
-            request,
-            "include_node_pool",
-            default=True,
-        )
+        include_job_runs = requestargs.get_bool(request, "include_job_runs", default=False,)
+        include_action_runs = requestargs.get_bool(request, "include_action_runs", default=False,)
+        include_action_graph = requestargs.get_bool(request, "include_action_graph", default=True,)
+        include_node_pool = requestargs.get_bool(request, "include_node_pool", default=True,)
         response = dict(
-            jobs=self.get_data(
-                include_job_runs,
-                include_action_runs,
-                include_action_graph,
-                include_node_pool,
-            ),
+            jobs=self.get_data(include_job_runs, include_action_runs, include_action_graph, include_node_pool,),
         )
         return respond(request=request, response=response)
 
@@ -385,9 +322,7 @@ class ConfigResource(resource.Resource):
         config_name = requestargs.get_string(request, "name")
         if not config_name:
             return respond(
-                request=request,
-                response={"error": "'name' for config is required."},
-                code=http.BAD_REQUEST,
+                request=request, response={"error": "'name' for config is required."}, code=http.BAD_REQUEST,
             )
         response = self.controller.read_config(config_name)
         return respond(request=request, response=response)
@@ -401,9 +336,7 @@ class ConfigResource(resource.Resource):
 
         if not name:
             return respond(
-                request=request,
-                response={"error": "'name' for config is required."},
-                code=http.BAD_REQUEST,
+                request=request, response={"error": "'name' for config is required."}, code=http.BAD_REQUEST,
             )
 
         response = {"status": "Active"}
@@ -474,11 +407,7 @@ class EventsResource(resource.Resource):
     def render_POST(self, request):
         command = requestargs.get_string(request, "command")
         if command not in self.controller.COMMANDS:
-            return respond(
-                request=request,
-                response=dict(error=f"Unknown command: {command}"),
-                code=http.BAD_REQUEST,
-            )
+            return respond(request=request, response=dict(error=f"Unknown command: {command}"), code=http.BAD_REQUEST,)
         event = requestargs.get_string(request, "event")
         fn = getattr(self.controller, command)
         response = fn(event)
@@ -492,8 +421,7 @@ class ApiRootResource(resource.Resource):
 
         # Setup children
         self.putChild(
-            b"jobs",
-            JobCollectionResource(mcp.get_job_collection()),
+            b"jobs", JobCollectionResource(mcp.get_job_collection()),
         )
 
         self.putChild(b"config", ConfigResource(mcp))

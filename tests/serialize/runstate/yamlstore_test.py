@@ -16,15 +16,9 @@ class TestYamlStateStore(TestCase):
         self.filename = os.path.join(tempfile.gettempdir(), "yaml_state")
         self.store = yamlstore.YamlStateStore(self.filename)
         self.test_data = {
-            "one": {
-                "a": 1,
-            },
-            "two": {
-                "b": 2,
-            },
-            "three": {
-                "c": 3,
-            },
+            "one": {"a": 1,},
+            "two": {"b": 2,},
+            "three": {"c": 3,},
         }
 
     @teardown

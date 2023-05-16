@@ -18,9 +18,7 @@ DEFAULT_POLLING_INTERVAL_S = 10
 
 
 def get_date_range(
-    start_date: datetime.datetime,
-    end_date: datetime.datetime,
-    descending: bool = False,
+    start_date: datetime.datetime, end_date: datetime.datetime, descending: bool = False,
 ) -> List[datetime.datetime]:
     dates = []
     delta = end_date - start_date
@@ -128,10 +126,7 @@ class BackfillRun:
             loop = asyncio.get_event_loop()
             try:
                 self.run_id = await loop.run_in_executor(
-                    None,
-                    client.get_object_type_from_identifier,
-                    self.tron_client.index(),
-                    self.run_name,
+                    None, client.get_object_type_from_identifier, self.tron_client.index(), self.run_name,
                 )
 
             except client.RequestError as e:

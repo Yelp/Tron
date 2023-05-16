@@ -29,9 +29,7 @@ class Machine:
             state for (_, dst) in transitions.items() for (_, state) in (dst or {}).items()
         )
         if initial not in self.states:
-            raise RuntimeError(
-                f"invalid machine: {initial} not in {self.states}",
-            )
+            raise RuntimeError(f"invalid machine: {initial} not in {self.states}",)
         self.state = initial
         self.initial = initial
 

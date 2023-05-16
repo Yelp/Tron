@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3.6
 import argparse
 import logging
 import signal
@@ -27,9 +27,7 @@ class StatusFileWatcher:
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(
-        description="Check if a action runner has exited; wait otherwise",
-    )
+    parser = argparse.ArgumentParser(description="Check if a action runner has exited; wait otherwise",)
     parser.add_argument("filepath")
     return parser.parse_args()
 
@@ -87,8 +85,7 @@ def run(fpath):
     # If not, wait for updates to the file.
     notify_queue = Queue()
     StatusFileWatcher(
-        fpath,
-        lambda *args, **kwargs: notify(notify_queue, *args, **kwargs),
+        fpath, lambda *args, **kwargs: notify(notify_queue, *args, **kwargs),
     )
     reactor.run()
     exit_code, error_message = notify_queue.get()

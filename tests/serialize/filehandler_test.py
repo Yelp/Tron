@@ -204,14 +204,12 @@ class TestFileHandleManager(TestCase):
         fh_wrapper1 = self.manager.open(self.file1.name)
         fh_wrapper2 = self.manager.open(self.file2.name)
         assert_equal(
-            list(self.manager.cache.keys()),
-            [fh_wrapper1.name, fh_wrapper2.name],
+            list(self.manager.cache.keys()), [fh_wrapper1.name, fh_wrapper2.name],
         )
 
         self.manager.update(fh_wrapper1)
         assert_equal(
-            list(self.manager.cache.keys()),
-            [fh_wrapper2.name, fh_wrapper1.name],
+            list(self.manager.cache.keys()), [fh_wrapper2.name, fh_wrapper1.name],
         )
 
 
