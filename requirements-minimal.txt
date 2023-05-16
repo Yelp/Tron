@@ -7,7 +7,7 @@ ecdsa>=0.13.3
 humanize
 ipdb
 ipython
-Jinja2>=3.1.2
+Jinja2>=2.10.1
 lockfile
 moto
 psutil
