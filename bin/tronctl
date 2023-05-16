@@ -27,6 +27,7 @@ from tron.commands import cmd_utils
 from tron.commands.backfill import BackfillRun
 from tron.commands.backfill import confirm_backfill
 from tron.commands.backfill import DEFAULT_MAX_PARALLEL_RUNS
+from tron.commands.backfill import LIMIT_MAX_PARALLEL_RUNS
 from tron.commands.backfill import get_date_range
 from tron.commands.backfill import print_backfill_cmds
 from tron.commands.backfill import print_backfill_runs_table
@@ -169,7 +170,19 @@ def parse_cli():
             "If it needs a lot, keep this number low, because there may not be "
             "enough resources in the cluster too satisfy the demand, which can "
             "adversely affect other jobs. "
-            "The default is %(default)s."
+            "The default is %(default) and cannot exceed the --max-parallel-limit."
+        ),
+    )
+    backfill_parser.add_argument(
+        "--max-parallel-limit",
+        type=int,
+        dest="max_parallel_limit",
+        default=LIMIT_MAX_PARALLEL_RUNS,
+        help=(
+            "This flag controls the maximum value allowed for --max-parallel to "
+            "safeguard against overloading Tron. Please consult the Tron team before "
+            "you change this value for your job to avoid potential site events. "
+            "The default is %(default)."
         ),
     )
     backfill_parser.add_argument(
@@ -300,8 +313,8 @@ def control_objects(args: argparse.Namespace):
             # and changing the API would be painful, so instead we call skip + publish separately from the client
             # (i.e., this file) to implement this functionality
             if request(
-                url=urljoin(args.server, tron_id.url),
-                data={"command": "skip"},
+                    url=urljoin(args.server, tron_id.url),
+                    data={"command": "skip"},
             ):
                 # a single action can have 0..N triggers to publish and these can be arbitrarily named, so we need to
                 # query the API and figure out what triggers exist
@@ -371,6 +384,25 @@ def move(args):
     yield request(urljoin(args.server, "/api/jobs"), data)
 
 
+def get_validated_max_parallel(max_parallel, max_parallel_limit):
+    if max_parallel <= 0:
+        raise SystemExit(f"The flag --max-parallel must be a positive integer.")
+    if max_parallel_limit <= 0:
+        raise SystemExit(f"The flag --max-parallel-limit must be a positive integer.")
+
+    if max_parallel_limit > LIMIT_MAX_PARALLEL_RUNS:
+        print(f"The flag --max-parallel-limit is overwritten to {max_parallel_limit} which is higher than " +
+              f"the suggested limit of {LIMIT_MAX_PARALLEL_RUNS}. If you haven't consulted the Tron team yet, " +
+              f"then please do so now to avoid overloading Tron with too many backfill jobs.")
+
+    if max_parallel > max_parallel_limit:
+        print(f"The flag --max-parallel is set to {max_parallel} but the --max-parallel-limit only allows " +
+              f"{max_parallel_limit}. Overriding concurrency to enforce the limit of {max_parallel_limit}.")
+        return max_parallel_limit
+    else:
+        return max_parallel
+
+
 def backfill(args):
     if not args.id:
         print("Error: must provide at least one id argument")
@@ -397,7 +429,7 @@ def backfill(args):
                         args.server,
                         job_name,
                         dates,
-                        max_parallel=args.max_parallel,
+                        max_parallel=get_validated_max_parallel(args.max_parallel, args.max_parallel_limit),
                         ignore_errors=(not args.fail_on_error),
                     ),
                 )

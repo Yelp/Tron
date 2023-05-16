@@ -13,7 +13,8 @@ from tron.commands import client
 from tron.commands import display
 from tron.core.actionrun import ActionRun
 
-DEFAULT_MAX_PARALLEL_RUNS = 10
+DEFAULT_MAX_PARALLEL_RUNS = 4
+LIMIT_MAX_PARALLEL_RUNS = 10
 DEFAULT_POLLING_INTERVAL_S = 10
 
 
