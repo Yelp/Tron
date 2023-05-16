@@ -575,31 +575,11 @@ class TestJobConfig(TestCase):
                     node="node0",
                     schedule="daily 00:30:00",
                     actions=[
-                        dict(
-                            name="action1",
-                            command="cmd",
-                            requires=["action2"],
-                        ),
-                        dict(
-                            name="action2",
-                            command="cmd",
-                            requires=["action3"],
-                        ),
-                        dict(
-                            name="action3",
-                            command="cmd",
-                            requires=["action4"],
-                        ),
-                        dict(
-                            name="action4",
-                            command="cmd",
-                            requires=["action5"],
-                        ),
-                        dict(
-                            name="action5",
-                            command="cmd",
-                            requires=["action3"],
-                        ),
+                        dict(name="action1", command="cmd", requires=["action2"],),
+                        dict(name="action2", command="cmd", requires=["action3"],),
+                        dict(name="action3", command="cmd", requires=["action4"],),
+                        dict(name="action4", command="cmd", requires=["action5"],),
+                        dict(name="action5", command="cmd", requires=["action3"],),
                     ],
                 ),
             ],
@@ -607,11 +587,7 @@ class TestJobConfig(TestCase):
         )
 
         expect = "Circular dependency in job.MASTER.test_job0: action3 -> action4 -> action5"
-        exception = assert_raises(
-            ConfigError,
-            valid_config,
-            test_config,
-        )
+        exception = assert_raises(ConfigError, valid_config, test_config,)
         assert_in(expect, str(exception))
 
     def test_config_cleanup_name_collision(self):

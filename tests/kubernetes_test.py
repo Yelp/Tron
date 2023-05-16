@@ -276,11 +276,7 @@ def test_handle_event_exit_not_terminated(mock_kubernetes_task):
                     "ready": False,
                     "restartCount": 0,
                     "started": False,
-                    "state": {
-                        "running": None,
-                        "terminated": None,
-                        "waiting": {"reason": "ContainerCreating"},
-                    },
+                    "state": {"running": None, "terminated": None, "waiting": {"reason": "ContainerCreating"},},
                 },
             ],
         }
