@@ -86,7 +86,8 @@ def get_jitter_str(time_delta):
 
 
 class GeneralScheduler:
-    """Scheduler which uses a TimeSpecification."""
+    """Scheduler which uses a TimeSpecification.
+    """
 
     schedule_on_complete = False
 
@@ -106,17 +107,17 @@ class GeneralScheduler:
         jitter=None,
     ):
         """Parameters:
-        timestr     - the time of day to run, as 'HH:MM'
-        ordinals    - first, second, third &c, as a set of integers in 1..5 to
-                      be used with "1st <weekday>", etc.
-        monthdays   - set of integers to be used with "<month> 3rd", etc.
-        months      - the months that this should run, as a set of integers in
-                      1..12
-        weekdays    - the days of the week that this should run, as a set of
-                      integers, 0=Sunday, 6=Saturday
-        timezone    - the optional timezone as a string for this specification.
-                      Defaults to UTC - valid entries are things like
-                      Australia/Victoria or PST8PDT.
+          timestr     - the time of day to run, as 'HH:MM'
+          ordinals    - first, second, third &c, as a set of integers in 1..5 to
+                        be used with "1st <weekday>", etc.
+          monthdays   - set of integers to be used with "<month> 3rd", etc.
+          months      - the months that this should run, as a set of integers in
+                        1..12
+          weekdays    - the days of the week that this should run, as a set of
+                        integers, 0=Sunday, 6=Saturday
+          timezone    - the optional timezone as a string for this specification.
+                        Defaults to UTC - valid entries are things like
+                        Australia/Victoria or PST8PDT.
         """
         self.time_zone = time_zone
         self.jitter = jitter
@@ -139,13 +140,7 @@ class GeneralScheduler:
         if not start_time:
             start_time = timeutils.current_time(tz=self.time_zone)
         elif self.time_zone:
-            if (
-                start_time.tzinfo is None
-                or start_time.tzinfo.utcoffset(
-                    start_time,
-                )
-                is None
-            ):
+            if start_time.tzinfo is None or start_time.tzinfo.utcoffset(start_time,) is None:
                 # tz-naive start times need to be localized first to the requested
                 # time zone.
                 start_time = trontimespec.naive_as_timezone(start_time, self.time_zone)
@@ -156,13 +151,7 @@ class GeneralScheduler:
         return f"{self.name} {self.original}{get_jitter_str(self.jitter)}"
 
     def __eq__(self, other):
-        return (
-            hasattr(
-                other,
-                "time_spec",
-            )
-            and self.time_spec == other.time_spec
-        )
+        return hasattr(other, "time_spec",) and self.time_spec == other.time_spec
 
     def __ne__(self, other):
         return not self == other

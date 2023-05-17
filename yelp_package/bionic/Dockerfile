@@ -18,10 +18,9 @@ RUN apt-get -q update && \
         libyaml-dev \
         libssl-dev \
         libffi-dev \
-        python3.8-dev \
+        python3.6-dev \
         python3-pip \
         python-tox \
-        rust-all \
         wget \
     && apt-get -q clean
 

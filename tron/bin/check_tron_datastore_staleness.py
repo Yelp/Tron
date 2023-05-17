@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3.6
 import argparse
 import logging
 import os
@@ -40,15 +40,10 @@ def parse_cli():
         help="Working directory for the Tron daemon, default %(default)s",
     )
     parser.add_argument(
-        "-c",
-        "--config-path",
-        default=DEFAULT_CONF_PATH,
-        help="File path to the Tron configuration file",
+        "-c", "--config-path", default=DEFAULT_CONF_PATH, help="File path to the Tron configuration file",
     )
     parser.add_argument(
-        "--job-name",
-        required=True,
-        help="The job name to read timestamp from",
+        "--job-name", required=True, help="The job name to read timestamp from",
     )
     parser.add_argument(
         "--staleness-threshold",
@@ -57,10 +52,7 @@ def parse_cli():
     )
     args = parser.parse_args()
     args.working_dir = os.path.abspath(args.working_dir)
-    args.config_path = os.path.join(
-        args.working_dir,
-        args.config_path,
-    )
+    args.config_path = os.path.join(args.working_dir, args.config_path,)
     return args
 
 

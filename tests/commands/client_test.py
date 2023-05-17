@@ -18,8 +18,7 @@ from tron.commands.client import TronObjectType
 
 def build_file_mock(content):
     return mock.Mock(
-        read=mock.Mock(return_value=content),
-        headers=mock.Mock(get_content_charset=mock.Mock(return_value="utf-8")),
+        read=mock.Mock(return_value=content), headers=mock.Mock(get_content_charset=mock.Mock(return_value="utf-8")),
     )
 
 
@@ -30,10 +29,7 @@ class TestRequest(TestCase):
 
     @setup_teardown
     def patch_urllib(self):
-        patcher = mock.patch(
-            "tron.commands.client.urllib.request.urlopen",
-            autospec=True,
-        )
+        patcher = mock.patch("tron.commands.client.urllib.request.urlopen", autospec=True,)
         with patcher as self.mock_urlopen:
             yield
 
@@ -95,24 +91,13 @@ class TestClientRequest(TestCase):
 
     @setup_teardown
     def patch_request(self):
-        with mock.patch(
-            "tron.commands.client.request",
-            autospec=True,
-        ) as self.mock_request:
+        with mock.patch("tron.commands.client.request", autospec=True,) as self.mock_request:
             yield
 
     def test_request_error(self):
-        error_response = Response(
-            error="404",
-            msg="Not Found",
-            content="big kahuna error",
-        )
+        error_response = Response(error="404", msg="Not Found", content="big kahuna error",)
         client.request = mock.Mock(return_value=error_response)
-        exception = assert_raises(
-            client.RequestError,
-            self.client.request,
-            "/jobs",
-        )
+        exception = assert_raises(client.RequestError, self.client.request, "/jobs",)
 
         assert str(exception) == error_response.content
 
@@ -143,9 +128,7 @@ class TestClient(TestCase):
 
     def test_config_get_default(self):
         self.client.config("config_name")
-        self.client.request.assert_called_with(
-            "/api/config?name=config_name",
-        )
+        self.client.request.assert_called_with("/api/config?name=config_name",)
 
     def test_http_get(self):
         self.client.http_get("/api/jobs", {"include": 1})
@@ -153,21 +136,15 @@ class TestClient(TestCase):
 
     def test_action_runs(self):
         self.client.action_runs("/api/jobs/name/0/act", num_lines=40)
-        self.client.request.assert_called_with(
-            "/api/jobs/name/0/act?include_stderr=1&include_stdout=1&num_lines=40",
-        )
+        self.client.request.assert_called_with("/api/jobs/name/0/act?include_stderr=1&include_stdout=1&num_lines=40",)
 
     def test_job_runs(self):
         self.client.job_runs("/api/jobs/name/0")
-        self.client.request.assert_called_with(
-            "/api/jobs/name/0?include_action_graph=0&include_action_runs=1",
-        )
+        self.client.request.assert_called_with("/api/jobs/name/0?include_action_graph=0&include_action_runs=1",)
 
     def test_job(self):
         self.client.job("/api/jobs/name", count=20)
-        self.client.request.assert_called_with(
-            "/api/jobs/name?include_action_runs=0&num_runs=20",
-        )
+        self.client.request.assert_called_with("/api/jobs/name?include_action_runs=0&num_runs=20",)
 
     def test_jobs(self):
         self.client.jobs()
@@ -179,10 +156,7 @@ class TestClient(TestCase):
 class TestUserAttribution(TestCase):
     def test_default_user_agent(self):
         url = "http://localhost:8089/"
-        with mock.patch(
-            "tron.commands.client.os.environ",
-            autospec=True,
-        ) as mock_environ:
+        with mock.patch("tron.commands.client.os.environ", autospec=True,) as mock_environ:
             mock_environ.get.return_value = "testuser"
             default_client = client.Client(url, user_attribution=False)
             # we do not add user attribution by default
@@ -190,10 +164,7 @@ class TestUserAttribution(TestCase):
 
     def test_attributed_user_agent(self):
         url = "http://localhost:8089/"
-        with mock.patch(
-            "tron.commands.client.os.environ",
-            autospec=True,
-        ) as mock_environ:
+        with mock.patch("tron.commands.client.os.environ", autospec=True,) as mock_environ:
             mock_environ.get.return_value = "testuser"
             default_client = client.Client(url, user_attribution=True)
             # we do not add user attribution by default
@@ -216,11 +187,7 @@ class TestGetContentFromIdentifier(TestCase):
         self.options = mock.Mock()
         self.index = {
             "namespaces": ["OTHER", "MASTER"],
-            "jobs": {
-                "MASTER.namea": "",
-                "MASTER.nameb": "",
-                "OTHER.nameg": "",
-            },
+            "jobs": {"MASTER.namea": "", "MASTER.nameb": "", "OTHER.nameg": "",},
         }
 
     def test_get_url_from_identifier_job_no_namespace(self):
@@ -229,26 +196,17 @@ class TestGetContentFromIdentifier(TestCase):
         assert_equal(identifier.type, TronObjectType.job)
 
     def test_get_url_from_identifier_job(self):
-        identifier = get_object_type_from_identifier(
-            self.index,
-            "MASTER.namea",
-        )
+        identifier = get_object_type_from_identifier(self.index, "MASTER.namea",)
         assert_equal(identifier.url, "/api/jobs/MASTER.namea")
         assert_equal(identifier.type, TronObjectType.job)
 
     def test_get_url_from_identifier_job_run(self):
-        identifier = get_object_type_from_identifier(
-            self.index,
-            "MASTER.nameb.7",
-        )
+        identifier = get_object_type_from_identifier(self.index, "MASTER.nameb.7",)
         assert_equal(identifier.url, "/api/jobs/MASTER.nameb/7")
         assert_equal(identifier.type, TronObjectType.job_run)
 
     def test_get_url_from_identifier_action_run(self):
-        identifier = get_object_type_from_identifier(
-            self.index,
-            "MASTER.nameb.7.run",
-        )
+        identifier = get_object_type_from_identifier(self.index, "MASTER.nameb.7.run",)
         assert_equal(identifier.url, "/api/jobs/MASTER.nameb/7/run")
         assert_equal(identifier.type, TronObjectType.action_run)
 
@@ -258,12 +216,7 @@ class TestGetContentFromIdentifier(TestCase):
         assert_equal(identifier.type, TronObjectType.job)
 
     def test_get_url_from_identifier_no_match(self):
-        exc = assert_raises(
-            ValueError,
-            get_object_type_from_identifier,
-            self.index,
-            "MASTER.namec",
-        )
+        exc = assert_raises(ValueError, get_object_type_from_identifier, self.index, "MASTER.namec",)
         assert_in("namec", str(exc))
 
 

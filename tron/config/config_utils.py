@@ -55,13 +55,13 @@ def unique_names(fmt_string, *seqs):
 
 def build_type_validator(validator, error_fmt):
     """Create a validator function using `validator` to validate the value.
-    validator - a function which takes a single argument `value`
-    error_fmt - a string which accepts two format variables (path, value)
+        validator - a function which takes a single argument `value`
+        error_fmt - a string which accepts two format variables (path, value)
 
-    Returns a function func(value, config_context) where
-        value - the value to validate
-        config_context - a ConfigContext object
-        Returns True if the value is valid
+        Returns a function func(value, config_context) where
+            value - the value to validate
+            config_context - a ConfigContext object
+            Returns True if the value is valid
     """
 
     def f(value, config_context):
@@ -90,29 +90,16 @@ valid_int = functools.partial(valid_number, int)
 valid_float = functools.partial(valid_number, float)
 
 valid_identifier = build_type_validator(
-    lambda s: isinstance(s, str) and IDENTIFIER_RE.match(s),
-    "Identifier at %s is not a valid identifier: %s",
+    lambda s: isinstance(s, str) and IDENTIFIER_RE.match(s), "Identifier at %s is not a valid identifier: %s",
 )
 
-valid_list = build_type_validator(
-    lambda s: isinstance(s, list),
-    "Value at %s is not a list: %s",
-)
+valid_list = build_type_validator(lambda s: isinstance(s, list), "Value at %s is not a list: %s",)
 
-valid_string = build_type_validator(
-    lambda s: isinstance(s, str),
-    "Value at %s is not a string: %s",
-)
+valid_string = build_type_validator(lambda s: isinstance(s, str), "Value at %s is not a string: %s",)
 
-valid_dict = build_type_validator(
-    lambda s: isinstance(s, dict),
-    "Value at %s is not a dictionary: %s",
-)
+valid_dict = build_type_validator(lambda s: isinstance(s, dict), "Value at %s is not a dictionary: %s",)
 
-valid_bool = build_type_validator(
-    lambda s: isinstance(s, bool),
-    "Value at %s is not a boolean: %s",
-)
+valid_bool = build_type_validator(lambda s: isinstance(s, bool), "Value at %s is not a boolean: %s",)
 
 
 def build_enum_validator(enum):
@@ -126,9 +113,7 @@ def build_real_enum_validator(enum):
         try:
             return enum(value).value
         except Exception:
-            raise ConfigError(
-                f"Value at {config_context.path} is not in {enum!r}: {value!r}",
-            )
+            raise ConfigError(f"Value at {config_context.path} is not in {enum!r}: {value!r}",)
 
     return enum_validator
 
@@ -197,18 +182,12 @@ def build_list_of_type_validator(item_validator, allow_empty=False):
 
 def build_dict_name_validator(item_validator, allow_empty=False):
     """Build a validator which validates a list or dict, and returns a dict.
-    Item validator must expect a "name" key, mapped to the key of the dict item"""
+       Item validator must expect a "name" key, mapped to the key of the dict item"""
     valid = build_list_of_type_validator(item_validator, allow_empty)
 
     def validator(value, config_context):
         if isinstance(value, dict):
-            value = [
-                {
-                    "name": name,
-                    **config,
-                }
-                for name, config in value.items()
-            ]
+            value = [{"name": name, **config,} for name, config in value.items()]
 
         msg = "Duplicate name %%s at %s" % config_context.path
         name_dict = UniqueNameDict(msg)

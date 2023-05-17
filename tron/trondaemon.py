@@ -7,7 +7,6 @@ import os
 import signal
 import threading
 import time
-from functools import lru_cache
 
 import ipdb
 import pkg_resources
@@ -55,11 +54,6 @@ def setup_logging(options):
     # Show stack traces for errors in twisted deferreds.
     if options.debug:
         defer.setDebugging(True)
-    # Cache getLogger calls as we are seeing kubernetes-client locking on logging causing event processing to be extremely delayed
-    # This is a workaround and ideally we would want to remove this once this is fixed upstream in kubernetes-client
-    # For more details: https://github.com/kubernetes-client/python/issues/1867
-    # For Yelpers, misc/jolt#148 has a similar workaround for this issue internally.
-    logging.getLogger = lru_cache(maxsize=None)(logging.getLogger)
 
 
 @contextlib.contextmanager
@@ -140,11 +134,7 @@ class TronDaemon:
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        threading.Thread(
-            target=reactor.run,
-            daemon=True,
-            kwargs=dict(installSignalHandlers=0),
-        ).start()
+        threading.Thread(target=reactor.run, daemon=True, kwargs=dict(installSignalHandlers=0),).start()
 
     def _handle_shutdown(self, sig_num, stack_frame):
         log.info(f"Shutdown requested via {str(sig_num)}")

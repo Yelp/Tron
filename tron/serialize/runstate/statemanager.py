@@ -76,13 +76,7 @@ class StateMetadata:
 
         if metadata["version"][0] > cls.version[0]:
             msg = "State version %s, expected <= %s"
-            raise VersionMismatchError(
-                msg
-                % (
-                    metadata["version"],
-                    cls.version,
-                ),
-            )
+            raise VersionMismatchError(msg % (metadata["version"], cls.version,),)
 
 
 class StateSaveBuffer:
@@ -134,10 +128,7 @@ class PersistentStateManager:
         self.enabled = True
         self._buffer = buffer
         self._impl = persistence_impl
-        self.metadata_key = self._impl.build_key(
-            runstate.MCP_STATE,
-            StateMetadata.name,
-        )
+        self.metadata_key = self._impl.build_key(runstate.MCP_STATE, StateMetadata.name,)
 
     def restore(self, job_names, skip_validation=False):
         """Return the most recent serialized state."""
@@ -263,9 +254,7 @@ class StateChangeWatcher(observer.Observer):
             return False
 
         self.shutdown()
-        self.state_manager = PersistenceManagerFactory.from_config(
-            state_config,
-        )
+        self.state_manager = PersistenceManagerFactory.from_config(state_config,)
         self.config = state_config
         return True
 

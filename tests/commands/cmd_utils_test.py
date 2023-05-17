@@ -42,11 +42,7 @@ class TestGetConfig(TestCase):
         prefix = ""
         expected = ["M.foo", "M.bar"]
         assert_equal(
-            cmd_utils.filter_jobs_actions_runs(
-                prefix,
-                inputs,
-            ),
-            expected,
+            cmd_utils.filter_jobs_actions_runs(prefix, inputs,), expected,
         )
 
     def test_filter_jobs_actions_runs_with_almost_a_job(self):
@@ -60,11 +56,7 @@ class TestGetConfig(TestCase):
         prefix = "M.f"
         expected = ["M.foo"]
         assert_equal(
-            cmd_utils.filter_jobs_actions_runs(
-                prefix,
-                inputs,
-            ),
-            expected,
+            cmd_utils.filter_jobs_actions_runs(prefix, inputs,), expected,
         )
 
     def test_filter_jobs_actions_runs_with_a_job_run(self):
@@ -79,11 +71,7 @@ class TestGetConfig(TestCase):
         prefix = "M.foo."
         expected = ["M.foo.1", "M.foo.2"]
         assert_equal(
-            cmd_utils.filter_jobs_actions_runs(
-                prefix,
-                inputs,
-            ),
-            expected,
+            cmd_utils.filter_jobs_actions_runs(prefix, inputs,), expected,
         )
 
     def test_filter_jobs_actions_runs_with_a_job_run_and_id(self):
@@ -97,11 +85,7 @@ class TestGetConfig(TestCase):
         prefix = "M.foo.1"
         expected = ["M.foo.1", "M.foo.1.action1"]
         assert_equal(
-            cmd_utils.filter_jobs_actions_runs(
-                prefix,
-                inputs,
-            ),
-            expected,
+            cmd_utils.filter_jobs_actions_runs(prefix, inputs,), expected,
         )
 
 
@@ -113,14 +97,9 @@ class TestBuildOptionParser(TestCase):
         usage = "Something"
         epilog = "Something"
         argparse.ArgumentParser = mock.Mock()
-        parser = cmd_utils.build_option_parser(
-            usage=usage,
-            epilog=epilog,
-        )
+        parser = cmd_utils.build_option_parser(usage=usage, epilog=epilog,)
         argparse.ArgumentParser.assert_called_with(
-            usage=usage,
-            formatter_class=argparse.RawDescriptionHelpFormatter,
-            epilog=epilog,
+            usage=usage, formatter_class=argparse.RawDescriptionHelpFormatter, epilog=epilog,
         )
         assert parser.add_argument.call_count == 5
 
@@ -146,16 +125,10 @@ class TestSuggestions(TestCase):
 
     def test_suggest_possibilities_many(self):
         expected = "FOOO, FOOBAR"
-        actual = cmd_utils.suggest_possibilities(
-            word="FOO",
-            possibilities=["FOOO", "FOOBAR"],
-        )
+        actual = cmd_utils.suggest_possibilities(word="FOO", possibilities=["FOOO", "FOOBAR"],)
         assert_in(expected, actual)
 
     def test_suggest_possibilities_one(self):
         expected = "FOOBAR?"
-        actual = cmd_utils.suggest_possibilities(
-            word="FOO",
-            possibilities=["FOOBAR", "BAZ"],
-        )
+        actual = cmd_utils.suggest_possibilities(word="FOO", possibilities=["FOOBAR", "BAZ"],)
         assert_in(expected, actual)
