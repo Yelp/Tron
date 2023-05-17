@@ -170,7 +170,7 @@ def parse_cli():
             "If it needs a lot, keep this number low, because there may not be "
             "enough resources in the cluster too satisfy the demand, which can "
             "adversely affect other jobs. "
-            "The default is %(default) and cannot exceed the --max-parallel-limit."
+            "The default is %(default)s."
         ),
     )
     backfill_parser.add_argument(
@@ -301,8 +301,8 @@ def control_objects(args: argparse.Namespace):
             # and changing the API would be painful, so instead we call skip + publish separately from the client
             # (i.e., this file) to implement this functionality
             if request(
-               url=urljoin(args.server, tron_id.url),
-               data={"command": "skip"},
+                url=urljoin(args.server, tron_id.url),
+                data={"command": "skip"},
             ):
                 # a single action can have 0..N triggers to publish and these can be arbitrarily named, so we need to
                 # query the API and figure out what triggers exist
