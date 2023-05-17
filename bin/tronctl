@@ -376,6 +376,9 @@ def backfill(args):
     if not args.id:
         print("Error: must provide at least one id argument")
         yield False
+    if args.max_parallel > LIMIT_MAX_PARALLEL_RUNS:
+        raise SystemExit(f"The flag --max-parallel exceeds the allowed limit of {LIMIT_MAX_PARALLEL_RUNS}. " +
+                         "Please reach out to the Tron team if you need to run backfills with higher limits.")
 
     if args.start_date:
         if args.end_date is None:
@@ -390,9 +393,6 @@ def backfill(args):
         print_backfill_cmds(job_name, date_strs)
         yield True
     else:
-        if args.max_parallel > LIMIT_MAX_PARALLEL_RUNS:
-            raise SystemExit(f"The flag --max-parallel exceeds the allowed limit of {LIMIT_MAX_PARALLEL_RUNS}. " +
-                             "Please reach out to the Tron team for configuring safe limits.")
         if confirm_backfill(job_name, date_strs):
             loop = asyncio.get_event_loop()
             try:
