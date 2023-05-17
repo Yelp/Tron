@@ -174,18 +174,6 @@ def parse_cli():
         ),
     )
     backfill_parser.add_argument(
-        "--max-parallel-limit",
-        type=int,
-        dest="max_parallel_limit",
-        default=LIMIT_MAX_PARALLEL_RUNS,
-        help=(
-            "This flag controls the maximum value allowed for --max-parallel to "
-            "safeguard against overloading Tron. Please consult the Tron team before "
-            "you change this value for your job to avoid potential site events. "
-            "The default is %(default)."
-        ),
-    )
-    backfill_parser.add_argument(
         "--fail-on-error",
         dest="fail_on_error",
         action="store_true",
@@ -384,25 +372,6 @@ def move(args):
     yield request(urljoin(args.server, "/api/jobs"), data)
 
 
-def get_validated_max_parallel(max_parallel, max_parallel_limit):
-    if max_parallel <= 0:
-        raise SystemExit(f"The flag --max-parallel must be a positive integer.")
-    if max_parallel_limit <= 0:
-        raise SystemExit(f"The flag --max-parallel-limit must be a positive integer.")
-
-    if max_parallel_limit > LIMIT_MAX_PARALLEL_RUNS:
-        print(f"The flag --max-parallel-limit is overwritten to {max_parallel_limit} which is higher than " +
-              f"the suggested limit of {LIMIT_MAX_PARALLEL_RUNS}. If you haven't consulted the Tron team yet, " +
-              f"then please do so now to avoid overloading Tron with too many backfill jobs.")
-
-    if max_parallel > max_parallel_limit:
-        print(f"The flag --max-parallel is set to {max_parallel} but the --max-parallel-limit only allows " +
-              f"{max_parallel_limit}. Overriding concurrency to enforce the limit of {max_parallel_limit}.")
-        return max_parallel_limit
-    else:
-        return max_parallel
-
-
 def backfill(args):
     if not args.id:
         print("Error: must provide at least one id argument")
@@ -421,6 +390,9 @@ def backfill(args):
         print_backfill_cmds(job_name, date_strs)
         yield True
     else:
+        if args.max_parallel > LIMIT_MAX_PARALLEL_RUNS:
+            raise SystemExit(f"The flag --max-parallel exceeds the allowed limit of {LIMIT_MAX_PARALLEL_RUNS}. " +
+                             "Please reach out to the Tron team for configuring safe limits.")
         if confirm_backfill(job_name, date_strs):
             loop = asyncio.get_event_loop()
             try:
@@ -429,7 +401,7 @@ def backfill(args):
                         args.server,
                         job_name,
                         dates,
-                        max_parallel=get_validated_max_parallel(args.max_parallel, args.max_parallel_limit),
+                        max_parallel=args.max_parallel,
                         ignore_errors=(not args.fail_on_error),
                     ),
                 )
