@@ -1,3 +1,14 @@
+tron (1.24.5) jammy; urgency=medium
+
+  * 1.24.5 tagged with 'make release'
+    Commit: Revert python/jammy upgrades (#907)  * Revert 'Upgrades
+    requirements and adds caching on get loggers (#900)'  This reverts
+    commit 0ac2b69d648bb3b915a80637a4f3051e06a16296.  * Revert 'Adds
+    Python 3.8; build for Jammy (#896)'  This reverts commit
+    f7679b9a281d026b4d956c5735875eded5602310.
+
+ -- Luis Perez <luisp@10-40-27-179-uswest1cdevc.dev.yelpcorp.com>  Wed, 17 May 2023 08:44:16 -0700
+
 tron (1.24.4) jammy; urgency=medium
 
   * 1.24.4 tagged with 'make release'
