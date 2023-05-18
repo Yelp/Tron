@@ -1,3 +1,20 @@
+tron (1.25.0) jammy; urgency=medium
+
+  * 1.25.0 tagged with 'make release'
+    Commit: COMPINFRA-2565: enforce an upper limit on backfill
+    concurrency (#906)  Problem  ----- The Kubernetes control plane can
+    be overwhelmed if a high number of concurrent backfills are
+    executed. We currently set a relatively high default of  and enforce
+    no upper limit at all.  Solution ----- * Reduce the default  from
+    to  to reduce the baseline pressure of Tron backfill jobs. *
+    Introduce and enforce a hard limit of  concurrent backfills per
+    tronctl invocation  In a future PR, we might want to track the total
+    count of running backfills per user in Zookeeper but this change
+    should already safeguard against overwhelming Tron with backfills in
+    the meantime.  Signed-off-by: Max Falk <gfalk@yelp.com>
+
+ -- Luis Perez <luisp@10-40-27-179-uswest1cdevc.dev.yelpcorp.com>  Thu, 18 May 2023 09:06:24 -0700
+
 tron (1.24.5) jammy; urgency=medium
 
   * 1.24.5 tagged with 'make release'
