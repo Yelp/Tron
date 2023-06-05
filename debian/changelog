@@ -1,3 +1,11 @@
+tron (1.25.1) jammy; urgency=low
+
+  * 1.25.1 tagged with 'make release'
+    Commit: Merge pull request #911 from Yelp/tchen/link-tronweb-url
+    Link tronweb_url
+
+ -- Tianle Chen <tchen@yelp.com>  Mon, 05 Jun 2023 09:21:09 -0700
+
 tron (1.25.0) jammy; urgency=medium
 
   * 1.25.0 tagged with 'make release'
