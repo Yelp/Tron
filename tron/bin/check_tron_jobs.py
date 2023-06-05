@@ -104,7 +104,7 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
         if _skip_sensu_failure_logging:
             job_run_url = "/".join(job_run_id.rsplit(".", 1))
             tronweb_url = f"http://y/tron-{get_superregion()}/#job/{job_run_url}"
-            stderr_default = f"Please visit {tronweb_url} for stderr details."
+            stderr_default = f"Please visit [{tronweb_url}]({tronweb_url}) for stderr details."
             action_run_details = {}
         else:
             stderr_default = "(No stderr available)"
