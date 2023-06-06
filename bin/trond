@@ -3,6 +3,7 @@
 import argparse
 import logging
 import os
+import queue
 import traceback
 
 import pkg_resources
@@ -19,6 +20,14 @@ DEFAULT_CONF_PATH = "config/"
 DEFAULT_WORKING_DIR = "/var/lib/tron/"
 DEFAULT_LOCKFILE = "tron.lock"
 DEFAULT_LOCKPATH = "/var/run/" + DEFAULT_LOCKFILE
+
+
+def patch_queue() -> None:
+    # this is absolutely disgusting, but something about the locking behavior in the C version of this
+    # appears to be wreaking havoc on either our taskproc queues or potentially Twisted-internal queues.
+    # we've gone the gevent route (see gevent/gevent#1253) and monkey-patched back to the Python implementation
+    # (i.e., the implementation used in py36).
+    queue.SimpleQueue = queue._PySimpleQueue
 
 
 def parse_cli():
@@ -146,6 +155,7 @@ def main():
     args = parse_cli()
 
     setup_environment(args)
+    patch_queue()
     trond = trondaemon.TronDaemon(args)
     trond.run()
 
