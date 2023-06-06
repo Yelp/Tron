@@ -113,7 +113,13 @@ class ActionRunAdapter(RunAdapter):
     ]
 
     def __init__(
-        self, action_run, job_run=None, max_lines=10, include_stdout=False, include_stderr=False, include_meta=False,
+        self,
+        action_run,
+        job_run=None,
+        max_lines=10,
+        include_stdout=False,
+        include_stderr=False,
+        include_meta=False,
     ):
         super().__init__(action_run)
         self.job_run = job_run
@@ -149,7 +155,12 @@ class ActionRunAdapter(RunAdapter):
             formatted_alt_path = os.path.join(
                 # This ugliness is getting the "root output directory"
                 self._obj.context.next.next.base.job.output_path.base,
-                alt_path.format(namespace=namespace, jobname=jobname, run_num=run_num, action=action,),
+                alt_path.format(
+                    namespace=namespace,
+                    jobname=jobname,
+                    run_num=run_num,
+                    action=action,
+                ),
             )
             if os.path.exists(formatted_alt_path):
                 yield formatted_alt_path
@@ -351,7 +362,10 @@ class JobRunAdapter(RunAdapter):
     ]
 
     def __init__(
-        self, job_run, include_action_runs=False, include_action_graph=False,
+        self,
+        job_run,
+        include_action_runs=False,
+        include_action_graph=False,
     ):
         super().__init__(job_run)
         self.include_action_runs = include_action_runs
@@ -433,7 +447,11 @@ class JobAdapter(ReprAdapter):
 
     @toggle_flag("include_job_runs")
     def get_runs(self):
-        runs = adapt_many(JobRunAdapter, list(self._obj.runs)[: self.num_runs or None], self.include_action_runs,)
+        runs = adapt_many(
+            JobRunAdapter,
+            list(self._obj.runs)[: self.num_runs or None],
+            self.include_action_runs,
+        )
         return runs
 
     def get_max_runtime(self):

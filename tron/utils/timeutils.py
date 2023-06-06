@@ -15,10 +15,9 @@ def current_timestamp():
 
 
 def delta_total_seconds(td):
-    """Equivalent to timedelta.total_seconds() available in Python 2.7.
-    """
+    """Equivalent to timedelta.total_seconds() available in Python 2.7."""
     microseconds, seconds, days = td.microseconds, td.seconds, td.days
-    return (microseconds + (seconds + days * 24 * 3600) * 10 ** 6) / 10 ** 6
+    return (microseconds + (seconds + days * 24 * 3600) * 10**6) / 10**6
 
 
 def macro_timedelta(start_date, years=0, months=0, days=0, hours=0, minutes=0):
@@ -41,7 +40,13 @@ def macro_timedelta(start_date, years=0, months=0, days=0, hours=0, minutes=0):
     _, days_in_month = calendar.monthrange(new_year, new_month)
     new_day = min(start_date.day, days_in_month)
 
-    end_date = datetime.datetime(new_year, new_month, new_day, start_date.hour, start_date.minute,)
+    end_date = datetime.datetime(
+        new_year,
+        new_month,
+        new_day,
+        start_date.hour,
+        start_date.minute,
+    )
     month_and_year_delta = end_date - start_date.replace(tzinfo=None)
     delta += month_and_year_delta
 

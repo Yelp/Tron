@@ -18,7 +18,9 @@ from tron.utils import exitcode
 @pytest.fixture
 def mock_kubernetes_task():
     with mock.patch(
-        "tron.kubernetes.logging.getLogger", return_value=mock.Mock(handlers=[mock.Mock()]), autospec=None,
+        "tron.kubernetes.logging.getLogger",
+        return_value=mock.Mock(handlers=[mock.Mock()]),
+        autospec=None,
     ):
         yield KubernetesTask(
             action_run_id="mock_service.mock_job.1.mock_action",
@@ -31,8 +33,12 @@ def mock_kubernetes_task():
 @pytest.fixture
 def mock_kubernetes_cluster():
     with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
-        "tron.kubernetes.TaskProcessor", autospec=True,
-    ), mock.patch("tron.kubernetes.Subscription", autospec=True,) as mock_runner:
+        "tron.kubernetes.TaskProcessor",
+        autospec=True,
+    ), mock.patch(
+        "tron.kubernetes.Subscription",
+        autospec=True,
+    ) as mock_runner:
         mock_runner.return_value.configure_mock(
             stopping=False, TASK_CONFIG_INTERFACE=mock.Mock(spec=KubernetesTaskConfig)
         )
@@ -42,9 +48,11 @@ def mock_kubernetes_cluster():
 @pytest.fixture
 def mock_disabled_kubernetes_cluster():
     with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
-        "tron.kubernetes.TaskProcessor", autospec=True,
+        "tron.kubernetes.TaskProcessor",
+        autospec=True,
     ), mock.patch(
-        "tron.kubernetes.Subscription", autospec=True,
+        "tron.kubernetes.Subscription",
+        autospec=True,
     ):
         yield KubernetesCluster("kube-cluster-a:1234", enabled=False)
 
@@ -93,7 +101,11 @@ def test_handle_event_log_event_info_exception(mock_kubernetes_task):
 
 
 def test_handle_event_exit_early_on_misrouted_event(mock_kubernetes_task):
-    with mock.patch.object(mock_kubernetes_task, "log_event_info", autospec=True,) as mock_log_event_info:
+    with mock.patch.object(
+        mock_kubernetes_task,
+        "log_event_info",
+        autospec=True,
+    ) as mock_log_event_info:
         mock_kubernetes_task.handle_event(
             mock_event_factory(task_id="not-the-pods-youre-looking-for", platform_type="finished")
         )
@@ -276,7 +288,11 @@ def test_handle_event_exit_not_terminated(mock_kubernetes_task):
                     "ready": False,
                     "restartCount": 0,
                     "started": False,
-                    "state": {"running": None, "terminated": None, "waiting": {"reason": "ContainerCreating"},},
+                    "state": {
+                        "running": None,
+                        "terminated": None,
+                        "waiting": {"reason": "ContainerCreating"},
+                    },
                 },
             ],
         }
@@ -422,7 +438,10 @@ def test_handle_event_code_from_state(mock_kubernetes_task):
 def test_handle_event_lost(mock_kubernetes_task):
     mock_kubernetes_task.started()
     mock_kubernetes_task.handle_event(
-        mock_event_factory(task_id=mock_kubernetes_task.get_kubernetes_id(), platform_type="lost",)
+        mock_event_factory(
+            task_id=mock_kubernetes_task.get_kubernetes_id(),
+            platform_type="lost",
+        )
     )
 
     assert mock_kubernetes_task.is_unknown
@@ -652,7 +671,10 @@ def test_set_enabled_enable_already_on(mock_kubernetes_cluster):
     assert mock_kubernetes_cluster.runner is not None
     assert mock_kubernetes_cluster.deferred is not None
     mock_kubernetes_cluster.deferred.addCallback.assert_has_calls(
-        [mock.call(mock_kubernetes_cluster.process_event), mock.call(mock_kubernetes_cluster.handle_next_event),]
+        [
+            mock.call(mock_kubernetes_cluster.process_event),
+            mock.call(mock_kubernetes_cluster.handle_next_event),
+        ]
     )
 
 
@@ -687,14 +709,20 @@ def test_set_enabled_disable(mock_kubernetes_cluster):
 def test_configure_default_volumes():
     # default_volume validation is done at config time, we just need to validate we are setting it
     with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
-        "tron.kubernetes.TaskProcessor", autospec=True,
+        "tron.kubernetes.TaskProcessor",
+        autospec=True,
     ), mock.patch(
-        "tron.kubernetes.Subscription", autospec=True,
+        "tron.kubernetes.Subscription",
+        autospec=True,
     ):
         mock_kubernetes_cluster = KubernetesCluster("kube-cluster-a:1234", default_volumes=[])
     assert mock_kubernetes_cluster.default_volumes == []
     expected_volumes = [
-        ConfigVolume(container_path="/tmp", host_path="/host/tmp", mode="RO",),
+        ConfigVolume(
+            container_path="/tmp",
+            host_path="/host/tmp",
+            mode="RO",
+        ),
     ]
     mock_kubernetes_cluster.configure_tasks(default_volumes=expected_volumes)
     assert mock_kubernetes_cluster.default_volumes == expected_volumes
