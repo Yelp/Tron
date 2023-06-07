@@ -20,7 +20,10 @@ from tron.core.job_scheduler import JobScheduler
 
 @pytest.fixture
 def mock_node_repo():
-    with mock.patch("tron.core.job.node.NodePoolRepository", autospec=True,) as mock_node_repo:
+    with mock.patch(
+        "tron.core.job.node.NodePoolRepository",
+        autospec=True,
+    ) as mock_node_repo:
         yield mock_node_repo
 
 
@@ -53,10 +56,18 @@ class TestJob:
         assert str(self.job.output_path).endswith(self.job.name)
 
     def test_from_config(self, mock_node_repo):
-        action = mock.MagicMock(name="first", command="doit", node=None, requires=[],)
+        action = mock.MagicMock(
+            name="first",
+            command="doit",
+            node=None,
+            requires=[],
+        )
         job_config = mock.Mock(
             node="thenodepool",
-            monitoring={"team": "foo", "page": True,},
+            monitoring={
+                "team": "foo",
+                "page": True,
+            },
             all_nodes=False,
             queueing=True,
             enabled=True,
@@ -68,7 +79,9 @@ class TestJob:
         scheduler = "scheduler_token"
         parent_context = "parent_context_token"
         output_path = ["base_path"]
-        mock_action_runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory,)
+        mock_action_runner = mock.create_autospec(
+            actioncommand.SubprocessActionRunnerFactory,
+        )
         new_job = job.Job.from_config(
             job_config,
             scheduler,
@@ -80,14 +93,21 @@ class TestJob:
 
         assert_equal(new_job.scheduler, scheduler)
         assert_equal(new_job.context.next, parent_context)
-        mock_node_repo.get_instance().get_by_name.assert_called_with(job_config.node,)
+        mock_node_repo.get_instance().get_by_name.assert_called_with(
+            job_config.node,
+        )
         assert_equal(new_job.enabled, True)
         assert_equal(new_job.get_monitoring()["team"], "foo")
         assert new_job.action_graph
 
     def test_update_from_job(self):
         action_runner = mock.Mock()
-        other_job = job.Job("otherjob", "scheduler", action_runner=action_runner, run_limit=10,)
+        other_job = job.Job(
+            "otherjob",
+            "scheduler",
+            action_runner=action_runner,
+            run_limit=10,
+        )
         self.job.update_from_job(other_job)
         assert_equal(self.job.name, "otherjob")
         assert_equal(self.job.scheduler, "scheduler")
@@ -141,7 +161,12 @@ class TestJob:
         self.job.node_pool.next.assert_called_with()
         node = self.job.node_pool.next.return_value
         assert_call(
-            self.job.runs.build_new_run, 0, self.job, run_time, node, manual=False,
+            self.job.runs.build_new_run,
+            0,
+            self.job,
+            run_time,
+            node,
+            manual=False,
         )
         assert_length(runs, 1)
         self.job.watch.assert_called_with(runs[0])
@@ -157,7 +182,12 @@ class TestJob:
         for i in range(len(runs)):
             node = self.job.node_pool.nodes[i]
             assert_call(
-                self.job.runs.build_new_run, i, self.job, run_time, node, manual=False,
+                self.job.runs.build_new_run,
+                i,
+                self.job,
+                run_time,
+                node,
+                manual=False,
             )
 
         calls = []
@@ -173,7 +203,12 @@ class TestJob:
         node = self.job.node_pool.next.return_value
         assert_length(runs, 1)
         assert_call(
-            self.job.runs.build_new_run, 0, self.job, run_time, node, manual=True,
+            self.job.runs.build_new_run,
+            0,
+            self.job,
+            run_time,
+            node,
+            manual=True,
         )
         self.job.watch.assert_called_with(runs[0])
 
@@ -211,8 +246,16 @@ class TestJob:
 def test_job_watch_notifies_about_runs(mock_job):
     # Separate from the above tests because we don't want
     # watch to be mocked here.
-    new_run = jobrun.JobRun(job_name="test", run_num=1, run_time="some_time", node="node",)
-    with mock.patch.object(mock_job, "handler",) as mock_handler, mock.patch.object(mock_job, "notify",) as mock_notify:
+    new_run = jobrun.JobRun(
+        job_name="test",
+        run_num=1,
+        run_time="some_time",
+        node="node",
+    )
+    with mock.patch.object(mock_job, "handler",) as mock_handler, mock.patch.object(
+        mock_job,
+        "notify",
+    ) as mock_notify:
         mock_job.watch(new_run)
 
         # Make sure that the job is still watching correctly
@@ -248,15 +291,18 @@ class TestJobScheduler:
         self.job.get_job_runs_from_state.return_value = mock_runs
 
         with mock.patch(
-            "tron.core.job_scheduler.recovery.launch_recovery_actionruns_for_job_runs", autospec=True,
+            "tron.core.job_scheduler.recovery.launch_recovery_actionruns_for_job_runs",
+            autospec=True,
         ) as mock_launch_recovery:
             mock_launch_recovery.return_value = mock.Mock(autospec=True)
             self.job_scheduler.restore_state(
-                job_state_data, mock_action_runner,
+                job_state_data,
+                mock_action_runner,
             )
             assert self.job.runs.runs == collections.deque(mock_runs)
             mock_launch_recovery.assert_called_once_with(
-                job_runs=mock_runs, master_action_runner=mock_action_runner,
+                job_runs=mock_runs,
+                master_action_runner=mock_action_runner,
             )
             calls = [mock.call(mock_runs[i]) for i in range(0, len(mock_runs))]
             self.job.watch.assert_has_calls(calls)
@@ -288,7 +334,9 @@ class TestJobScheduler:
 
         assert self.job.runs.remove_pending.call_count == 1
         assert self.job_scheduler.create_and_schedule_runs.call_args_list == [
-            mock.call(next_run_time="a_run_time",),
+            mock.call(
+                next_run_time="a_run_time",
+            ),
         ]
 
     def test_schedule(self):

@@ -68,5 +68,6 @@ class TestMappingCollections(TestCase):
         item = mock.Mock()
         self.collection.replace(item)
         self.collection.add.assert_called_with(
-            item, self.collection.remove_item,
+            item,
+            self.collection.remove_item,
         )

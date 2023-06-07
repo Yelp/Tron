@@ -15,8 +15,15 @@ Please check if you have deleted/renamed any of them or their containing jobs.""
 
 
 def _setup_job_graph_config_container():
-    action1 = ConfigAction(name="action1", command="do something",)
-    action2 = ConfigAction(name="action2", command="do something", requires=["action1"],)
+    action1 = ConfigAction(
+        name="action1",
+        command="do something",
+    )
+    action2 = ConfigAction(
+        name="action2",
+        command="do something",
+        requires=["action1"],
+    )
     job1_config = ConfigJob(
         name="job1",
         node="default",
@@ -26,13 +33,22 @@ def _setup_job_graph_config_container():
     )
 
     action3 = ConfigAction(
-        name="action3", command="do something", triggered_by=["MASTER.job1.action2.shortdate.{shortdate}"],
+        name="action3",
+        command="do something",
+        triggered_by=["MASTER.job1.action2.shortdate.{shortdate}"],
     )
     job2_config = ConfigJob(
-        name="job1", node="default", schedule=mock.Mock(), actions={"action3": action3}, namespace="other",
+        name="job1",
+        node="default",
+        schedule=mock.Mock(),
+        actions={"action3": action3},
+        namespace="other",
     )
 
-    action4 = ConfigAction(name="action4", command="do something",)
+    action4 = ConfigAction(
+        name="action4",
+        command="do something",
+    )
     action5 = ConfigAction(
         name="action5",
         command="do something",
@@ -64,7 +80,8 @@ class TestJobGraph:
         missing_dependency_config_container.get_jobs.return_value.pop("other.job2")
         with pytest.raises(ValueError) as e:
             JobGraph(
-                missing_dependency_config_container, should_validate_missing_dependency=True,
+                missing_dependency_config_container,
+                should_validate_missing_dependency=True,
             )
         assert str(e.value) == MISSING_DEPENDENCY_ERR_MSG
 

@@ -32,8 +32,14 @@ replaces = [
     replace(r"^from testify.assertions import ", "from testifycompat import "),
     replace(r"^import testify as T", "import testifycompat as T"),
     # Replace test classes
-    replace(r"^class (?:Test)?(\w+)(?:Test|TestCase)\((?:T\.)?TestCase\):$", "class Test\\1(object):",),
-    replace(r"^class (?:Test)?(\w+)(?:Test|TestCase)(\(\w+TestCase\)):$", "class Test\\1\\2:",),
+    replace(
+        r"^class (?:Test)?(\w+)(?:Test|TestCase)\((?:T\.)?TestCase\):$",
+        "class Test\\1(object):",
+    ),
+    replace(
+        r"^class (?:Test)?(\w+)(?:Test|TestCase)(\(\w+TestCase\)):$",
+        "class Test\\1\\2:",
+    ),
     # Replace some old assertions
     replace(r"self.assert_\((.*)\)", "assert \\1"),
 ]

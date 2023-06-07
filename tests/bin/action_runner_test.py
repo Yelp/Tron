@@ -23,9 +23,18 @@ class TestStatusFile(TestCase):
         ) as fakepid:
             faketime.return_value = 0
             fakepid.return_value = 2
-            content = self.status_file.get_content(command=command, proc=proc, run_id=run_id,)
+            content = self.status_file.get_content(
+                command=command,
+                proc=proc,
+                run_id=run_id,
+            )
             expected = dict(
-                run_id=run_id, command=command, pid=proc.pid, return_code=proc.returncode, runner_pid=2, timestamp=0,
+                run_id=run_id,
+                command=command,
+                pid=proc.pid,
+                return_code=proc.returncode,
+                runner_pid=2,
+                timestamp=0,
             )
         assert_equal(content, expected)
 
@@ -73,11 +82,18 @@ class TestRegister(TestCase):
         self.mock_isdir.return_value = True
         self.mock_access.return_value = True
         action_runner.run_proc(
-            self.output_path, self.command, self.run_id, self.proc,
+            self.output_path,
+            self.command,
+            self.run_id,
+            self.proc,
         )
-        self.mock_status_file.assert_called_with(self.output_path + "/" + action_runner.STATUS_FILE,)
+        self.mock_status_file.assert_called_with(
+            self.output_path + "/" + action_runner.STATUS_FILE,
+        )
         self.mock_status_file.return_value.wrap.assert_called_with(
-            command=self.command, run_id=self.run_id, proc=self.proc,
+            command=self.command,
+            run_id=self.run_id,
+            proc=self.proc,
         )
         self.proc.wait.assert_called_with()
 
@@ -85,7 +101,9 @@ class TestRegister(TestCase):
 class TestBuildEnvironment:
     def test_build_environment(self):
         with mock.patch(
-            "tron.bin.action_runner.os.environ", dict(PATH="/usr/bin/nowhere"), autospec=None,
+            "tron.bin.action_runner.os.environ",
+            dict(PATH="/usr/bin/nowhere"),
+            autospec=None,
         ):
             env = action_runner.build_environment("MASTER.foo.10.bar")
 
@@ -99,7 +117,9 @@ class TestBuildEnvironment:
 
     def test_build_environment_invalid_run_id(self):
         with mock.patch(
-            "tron.bin.action_runner.os.environ", dict(PATH="/usr/bin/nowhere"), autospec=None,
+            "tron.bin.action_runner.os.environ",
+            dict(PATH="/usr/bin/nowhere"),
+            autospec=None,
         ):
             env = action_runner.build_environment("asdf")
 
@@ -113,7 +133,9 @@ class TestBuildEnvironment:
 
     def test_build_environment_too_long_run_id(self):
         with mock.patch(
-            "tron.bin.action_runner.os.environ", dict(PATH="/usr/bin/nowhere"), autospec=None,
+            "tron.bin.action_runner.os.environ",
+            dict(PATH="/usr/bin/nowhere"),
+            autospec=None,
         ):
             env = action_runner.build_environment("MASTER.foo.10.bar.baz")
 

@@ -159,7 +159,9 @@ class ClientProxy:
 def verify_environment():
     for env_var in ["SSH_AUTH_SOCK", "PYTHONPATH"]:
         if not os.environ.get(env_var):
-            raise TronSandboxException("Missing $%s in test environment." % env_var,)
+            raise TronSandboxException(
+                "Missing $%s in test environment." % env_var,
+            )
 
 
 class TronSandbox:
@@ -241,7 +243,9 @@ class TronSandbox:
         wait_on_sandbox(lambda: bool(self.client.home()))
 
     def tronfig(
-        self, config_content=None, name=schema.MASTER_NAMESPACE,
+        self,
+        config_content=None,
+        name=schema.MASTER_NAMESPACE,
     ):
         args = ["--server", self.api_uri, name]
         args += ["-"] if config_content else ["-p"]

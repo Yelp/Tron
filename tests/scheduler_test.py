@@ -105,7 +105,12 @@ class GeneralSchedulerTodayTest(GeneralSchedulerTimeTestBase):
         next_run_date = run_time.date()
 
         assert_equal(next_run_date, self.now.date())
-        earlier_time = datetime.datetime(self.now.year, self.now.month, self.now.day, hour=13,)
+        earlier_time = datetime.datetime(
+            self.now.year,
+            self.now.month,
+            self.now.day,
+            hour=13,
+        )
         assert_lte(earlier_time, run_time)
 
 
@@ -120,7 +125,12 @@ class GeneralSchedulerTomorrowTest(GeneralSchedulerTimeTestBase):
         tomorrow = self.now.date() + datetime.timedelta(days=1)
 
         assert_equal(next_run_date, tomorrow)
-        earlier_time = datetime.datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day, hour=13,)
+        earlier_time = datetime.datetime(
+            year=tomorrow.year,
+            month=tomorrow.month,
+            day=tomorrow.day,
+            hour=13,
+        )
         assert_lte(earlier_time, run_time)
 
 
@@ -260,11 +270,14 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(cfg.months, {3, 4, 9})
         assert_equal(cfg.timestr, "00:00")
         assert_equal(
-            scheduler_from_config(config_string), scheduler_from_config(config_string),
+            scheduler_from_config(config_string),
+            scheduler_from_config(config_string),
         )
 
     def test_parse_no_weekday(self):
-        cfg = parse_groc("1st,2nd,3rd,10th day of march,apr,September at 00:00",)
+        cfg = parse_groc(
+            "1st,2nd,3rd,10th day of march,apr,September at 00:00",
+        )
         assert_equal(cfg.ordinals, None)
         assert_equal(cfg.monthdays, {1, 2, 3, 10})
         assert_equal(cfg.weekdays, None)
@@ -322,7 +335,12 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
 
         assert_gte(next_run_date, self.now)
         assert_equal(
-            calendar.weekday(next_run_date.year, next_run_date.month, next_run_date.day,), 0,
+            calendar.weekday(
+                next_run_date.year,
+                next_run_date.month,
+                next_run_date.day,
+            ),
+            0,
         )
 
     def test_weekly_in_month(self):
@@ -335,7 +353,12 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_date.hour, 0)
         assert_equal(next_run_date.minute, 1)
         assert_equal(
-            calendar.weekday(next_run_date.year, next_run_date.month, next_run_date.day,), 0,
+            calendar.weekday(
+                next_run_date.year,
+                next_run_date.month,
+                next_run_date.day,
+            ),
+            0,
         )
 
     def test_monthly(self):

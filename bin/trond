@@ -3,6 +3,7 @@
 import argparse
 import logging
 import os
+import queue
 import traceback
 
 import pkg_resources
@@ -21,11 +22,21 @@ DEFAULT_LOCKFILE = "tron.lock"
 DEFAULT_LOCKPATH = "/var/run/" + DEFAULT_LOCKFILE
 
 
+def patch_queue() -> None:
+    # this is absolutely disgusting, but something about the locking behavior in the C version of this
+    # appears to be wreaking havoc on either our taskproc queues or potentially Twisted-internal queues.
+    # we've gone the gevent route (see gevent/gevent#1253) and monkey-patched back to the Python implementation
+    # (i.e., the implementation used in py36).
+    queue.SimpleQueue = queue._PySimpleQueue
+
+
 def parse_cli():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
-        "--version", action="version", version=f"{parser.prog} {tron.__version__}",
+        "--version",
+        action="version",
+        version=f"{parser.prog} {tron.__version__}",
     )
 
     parser.add_argument(
@@ -36,15 +47,22 @@ def parse_cli():
     )
 
     parser.add_argument(
-        "-c", "--config-path", default=DEFAULT_CONF_PATH, help="File path to the Tron configuration file",
+        "-c",
+        "--config-path",
+        default=DEFAULT_CONF_PATH,
+        help="File path to the Tron configuration file",
     )
 
     parser.add_argument(
-        "--nodaemon", action="store_true", default=False, help="[DEPRECATED] Disable daemonizing, default %(default)s",
+        "--nodaemon",
+        action="store_true",
+        default=False,
+        help="[DEPRECATED] Disable daemonizing, default %(default)s",
     )
 
     parser.add_argument(  # for backwards compatibility
-        "--pid-file", help="[DEPRECATED] File path to pid file. Use --lock-file instead.",
+        "--pid-file",
+        help="[DEPRECATED] File path to pid file. Use --lock-file instead.",
     )
 
     parser.add_argument(
@@ -55,15 +73,23 @@ def parse_cli():
 
     logging_group = parser.add_argument_group("logging", "")
     logging_group.add_argument(
-        "--log-conf", "-l", help="File path to a custom logging.conf",
+        "--log-conf",
+        "-l",
+        help="File path to a custom logging.conf",
     )
 
     logging_group.add_argument(
-        "-v", "--verbose", action="count", default=0, help="Verbose logging. Repeat for more verbosity.",
+        "-v",
+        "--verbose",
+        action="count",
+        default=0,
+        help="Verbose logging. Repeat for more verbosity.",
     )
 
     logging_group.add_argument(
-        "--debug", action="store_true", help="Debug mode, extra error reporting, no daemonizing",
+        "--debug",
+        action="store_true",
+        help="Debug mode, extra error reporting, no daemonizing",
     )
 
     api_group = parser.add_argument_group("Web Service API", "")
@@ -87,7 +113,10 @@ def parse_cli():
     requirement = pkg_resources.Requirement.parse("tron")
     api_group.add_argument(
         "--web-path",
-        default=pkg_resources.resource_filename(requirement, "tronweb",),
+        default=pkg_resources.resource_filename(
+            requirement,
+            "tronweb",
+        ),
         help="Path to static web resources, default %(default)s.",
     )
 
@@ -108,7 +137,10 @@ def parse_cli():
             args.lock_file = DEFAULT_LOCKFILE
 
     args.lock_file = os.path.join(args.working_dir, args.lock_file)
-    args.config_path = os.path.join(args.working_dir, args.config_path,)
+    args.config_path = os.path.join(
+        args.working_dir,
+        args.config_path,
+    )
 
     return args
 
@@ -146,6 +178,7 @@ def main():
     args = parse_cli()
 
     setup_environment(args)
+    patch_queue()
     trond = trondaemon.TronDaemon(args)
     trond.run()
 

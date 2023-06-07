@@ -93,7 +93,8 @@ class TestRunAdapter(TestCase):
     @mock.patch("tron.api.adapter.NodeAdapter", autospec=True)
     def test_get_node(self, mock_node_adapter):
         assert_equal(
-            self.adapter.get_node(), mock_node_adapter.return_value.get_repr.return_value,
+            self.adapter.get_node(),
+            mock_node_adapter.return_value.get_repr.return_value,
         )
         mock_node_adapter.assert_called_with(self.original.node)
 
@@ -136,7 +137,12 @@ class TestActionRunGraphAdapter(TestCase):
         self.action_runs = mock.create_autospec(
             actionrun.ActionRunCollection,
             action_graph=actiongraph.ActionGraph(
-                {"a1": self.a1, "a2": self.a2,}, {"a1": set(), "a2": {"a1"}}, {"a1": set(), "a2": set()},
+                {
+                    "a1": self.a1,
+                    "a2": self.a2,
+                },
+                {"a1": set(), "a2": {"a1"}},
+                {"a1": set(), "a2": set()},
             ),
         )
         self.adapter = adapter.ActionRunGraphAdapter(self.action_runs)
@@ -156,7 +162,10 @@ class TestJobRunAdapter(TestCase):
     def setup_adapter(self):
         action_runs = mock.MagicMock()
         action_runs.__iter__.return_value = iter([mock.Mock(), mock.Mock()])
-        self.job_run = mock.Mock(action_runs=action_runs, action_graph=mocks.MockActionGraph(),)
+        self.job_run = mock.Mock(
+            action_runs=action_runs,
+            action_graph=mocks.MockActionGraph(),
+        )
         self.adapter = JobRunAdapter(self.job_run, include_action_runs=True)
 
     def test__init__(self):
@@ -194,7 +203,8 @@ class TestNodePoolAdapter(TestCase):
         result = self.adapter.get_repr()
         assert_equal(result["name"], self.pool.get_name.return_value)
         mock_many.assert_called_with(
-            adapter.NodeAdapter, self.pool.get_nodes.return_value,
+            adapter.NodeAdapter,
+            self.pool.get_nodes.return_value,
         )
 
 

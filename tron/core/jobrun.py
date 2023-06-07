@@ -97,13 +97,21 @@ class JobRun(Observable, Observer):
             action_graph=job.action_graph,
             manual=manual,
         )
-        action_runs = ActionRunFactory.build_action_run_collection(run, job.action_runner,)
+        action_runs = ActionRunFactory.build_action_run_collection(
+            run,
+            job.action_runner,
+        )
         run.action_runs = action_runs
         return run
 
     @classmethod
     def from_state(
-        cls, state_data, action_graph, output_path, context, run_node,
+        cls,
+        state_data,
+        action_graph,
+        output_path,
+        context,
+        run_node,
     ):
         """Restore a JobRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
@@ -121,7 +129,9 @@ class JobRun(Observable, Observer):
             base_context=context,
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
-            job_run, state_data["runs"], state_data["cleanup_run"],
+            job_run,
+            state_data["runs"],
+            state_data["cleanup_run"],
         )
         job_run.action_runs = action_runs
         return job_run
@@ -153,14 +163,26 @@ class JobRun(Observable, Observer):
             action_run.setup_subscriptions()
 
         self.action_runs_proxy = proxy.AttributeProxy(
-            run_collection, ["queue", "cancel", "success", "fail", "start_time", "end_time",],
+            run_collection,
+            [
+                "queue",
+                "cancel",
+                "success",
+                "fail",
+                "start_time",
+                "end_time",
+            ],
         )
 
     def _del_action_runs(self):
         self._action_runs = None
         self.action_runs_proxy = None
 
-    action_runs = property(_get_action_runs, _set_action_runs, _del_action_runs,)
+    action_runs = property(
+        _get_action_runs,
+        _set_action_runs,
+        _del_action_runs,
+    )
 
     def update_action_config(self, action_graph):
         self.action_graph = action_graph
@@ -216,13 +238,16 @@ class JobRun(Observable, Observer):
 
             started = self._start_action_runs()
             if any(started):
-                log.info(f"{self} action runs triggered: " f"{', '.join(str(s) for s in started)}",)
+                log.info(
+                    f"{self} action runs triggered: " f"{', '.join(str(s) for s in started)}",
+                )
             return
 
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
         self.log_state_update(
-            state=action_run.state, action_name=action_run.name,
+            state=action_run.state,
+            action_name=action_run.name,
         )
 
         if not action_run.is_done:
@@ -234,7 +259,9 @@ class JobRun(Observable, Observer):
         if not action_run.is_broken:
             started = self._start_action_runs()
             if any(started):
-                log.info(f"{self} action runs started: " f"{', '.join(str(s) for s in started)}",)
+                log.info(
+                    f"{self} action runs started: " f"{', '.join(str(s) for s in started)}",
+                )
                 return
 
         if not self.action_runs.is_done:
@@ -313,8 +340,7 @@ class JobRun(Observable, Observer):
 
     @property
     def state(self):
-        """The overall state of this job run. Based on the state of its actions.
-        """
+        """The overall state of this job run. Based on the state of its actions."""
         if not self.action_runs:
             log.info(f"{self} has no action runs to determine state")
             return ActionRun.UNKNOWN
@@ -408,8 +434,7 @@ class JobRunCollection:
         return next_or_none(r for r in self.runs if r.run_num == num)
 
     def get_run_by_index(self, index):
-        """Return the job run at index. Jobs are indexed from oldest to newest.
-        """
+        """Return the job run at index. Jobs are indexed from oldest to newest."""
         try:
             return self.runs[index * -1 - 1]
         except IndexError:
@@ -476,10 +501,26 @@ class JobRunCollection:
         return iter(self.runs)
 
     def __str__(self):
-        return "{}[{}]".format(type(self).__name__, ", ".join(f"{r.run_num}({r.state})" for r in self.runs),)
+        return "{}[{}]".format(
+            type(self).__name__,
+            ", ".join(f"{r.run_num}({r.state})" for r in self.runs),
+        )
 
 
 def job_runs_from_state(
-    runs, action_graph, output_path, context, node_pool,
+    runs,
+    action_graph,
+    output_path,
+    context,
+    node_pool,
 ):
-    return [JobRun.from_state(run, action_graph, output_path.clone(), context, node_pool.next(),) for run in runs]
+    return [
+        JobRun.from_state(
+            run,
+            action_graph,
+            output_path.clone(),
+            context,
+            node_pool.next(),
+        )
+        for run in runs
+    ]

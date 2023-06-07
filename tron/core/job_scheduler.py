@@ -33,7 +33,8 @@ class JobScheduler(Observer):
         log.info(f"{self} restored")
 
         recovery.launch_recovery_actionruns_for_job_runs(
-            job_runs=job_runs, master_action_runner=config_action_runner,
+            job_runs=job_runs,
+            master_action_runner=config_action_runner,
         )
 
         scheduled = self.job.runs.get_scheduled()
@@ -78,8 +79,7 @@ class JobScheduler(Observer):
         return manual_runs
 
     def schedule_reconfigured(self):
-        """Remove the pending run and create new runs with the new JobScheduler.
-        """
+        """Remove the pending run and create new runs with the new JobScheduler."""
         if not self.job.enabled:
             return
 
@@ -104,7 +104,7 @@ class JobScheduler(Observer):
         self.create_and_schedule_runs(next_run_time=next_run_time)
 
     def update_from_job_scheduler(self, job_scheduler):
-        """ Update a job scheduler by copying another. """
+        """Update a job scheduler by copying another."""
         curr_job = self.get_job()
         new_job = job_scheduler.get_job()
 

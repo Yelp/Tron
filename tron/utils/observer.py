@@ -51,7 +51,9 @@ class Observable:
     def notify(self, event, event_data=None):
         """Notify all observers of the event."""
         handlers = self._get_handlers_for_event(event)
-        log.debug(f"Notifying {len(handlers)} listeners for new event {event!r}",)
+        log.debug(
+            f"Notifying {len(handlers)} listeners for new event {event!r}",
+        )
         for handler in handlers:
             handler.handler(self, event, event_data)
 

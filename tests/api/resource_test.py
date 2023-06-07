@@ -23,10 +23,14 @@ from tron.core.job_collection import JobCollection
 from tron.core.job_scheduler import JobScheduler
 
 with mock.patch(
-    "tron.api.async_resource.AsyncResource.bounded", lambda fn: fn, autospec=None,
+    "tron.api.async_resource.AsyncResource.bounded",
+    lambda fn: fn,
+    autospec=None,
 ):
     with mock.patch(
-        "tron.api.async_resource.AsyncResource.exclusive", lambda fn: fn, autospec=None,
+        "tron.api.async_resource.AsyncResource.exclusive",
+        lambda fn: fn,
+        autospec=None,
     ):
         from tron.api import resource as www
 
@@ -46,7 +50,10 @@ def mock_request():
 
 @pytest.fixture
 def mock_respond():
-    with mock.patch("tron.api.resource.respond", autospec=True,) as mock_respond:
+    with mock.patch(
+        "tron.api.resource.respond",
+        autospec=True,
+    ) as mock_respond:
         mock_respond.side_effect = lambda request, response, code=None: response
         yield mock_respond
 
@@ -90,7 +97,9 @@ class TestHandleCommand:
         www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
         mock_respond.assert_called_with(
-            request=request, response={"error": f"Unknown command '{command}' for '{obj}'"}, code=http.NOT_IMPLEMENTED,
+            request=request,
+            response={"error": f"Unknown command '{command}' for '{obj}'"},
+            code=http.NOT_IMPLEMENTED,
         )
 
     def test_handle_command(self, mock_respond):
@@ -100,7 +109,8 @@ class TestHandleCommand:
         www.handle_command(request, mock_controller, obj)
         mock_controller.handle_command.assert_called_with(command)
         mock_respond.assert_called_with(
-            request=request, response={"result": mock_controller.handle_command.return_value},
+            request=request,
+            response={"result": mock_controller.handle_command.return_value},
         )
 
     def test_handle_command_error(self, mock_respond):
@@ -120,7 +130,8 @@ class TestActionRunResource(WWWTestCase):
         self.job_run = mock.MagicMock()
         self.action_run = mock.MagicMock(output_path=["one"])
         with mock.patch("tron.config.static_config.load_yaml_file", autospec=True,), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True,
+            "tron.config.static_config.build_configuration_watcher",
+            autospec=True,
         ):
             self.resource = www.ActionRunResource(self.action_run, self.job_run)
 
@@ -273,7 +284,8 @@ class TestJobResource(WWWTestCase):
 
     def test_getChild_action_run_history(self):
         autospec_method(
-            self.resource.get_run_from_identifier, return_value=None,
+            self.resource.get_run_from_identifier,
+            return_value=None,
         )
         action_name = "action_name"
         action_runs = [mock.Mock(), mock.Mock()]
@@ -289,7 +301,9 @@ class TestConfigResource:
     def setup_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
         self.resource = www.ConfigResource(self.mcp)
-        self.controller = self.resource.controller = mock.create_autospec(controller.ConfigController,)
+        self.controller = self.resource.controller = mock.create_autospec(
+            controller.ConfigController,
+        )
 
     def test_render_GET(self, mock_respond):
         name = "the_name"
@@ -297,7 +311,8 @@ class TestConfigResource:
         self.resource.render_GET(request)
         self.controller.read_config.assert_called_with(name)
         mock_respond.assert_called_with(
-            request=request, response=self.resource.controller.read_config.return_value,
+            request=request,
+            response=self.resource.controller.read_config.return_value,
         )
 
     def test_render_POST_update(self, mock_respond):
@@ -335,7 +350,8 @@ class TestStatusResource:
             "boot_time": self.mcp.boot_time,
         }
         mock_respond.assert_called_with(
-            request=request, response=expected_response,
+            request=request,
+            response=expected_response,
         )
 
 
@@ -345,14 +361,18 @@ class TestMetricsResource:
         resource = www.MetricsResource()
         resource.render_GET(request)
         mock_respond.assert_called_with(
-            request=request, response=mock_view_metrics.return_value,
+            request=request,
+            response=mock_view_metrics.return_value,
         )
 
 
 class TestTronSite:
     @mock.patch("tron.api.resource.meter", autospec=True)
     def test_log_request(self, mock_meter):
-        site = www.TronSite.create(mock.create_autospec(mcp.MasterControlProgram), "webpath",)
+        site = www.TronSite.create(
+            mock.create_autospec(mcp.MasterControlProgram),
+            "webpath",
+        )
         request = mock.Mock(code=500)
         site.log(request)
         assert mock_meter.call_count == 1

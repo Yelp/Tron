@@ -53,7 +53,12 @@ class DynamoDBStateStore:
             cand_keys = keys[i : min(len(keys), i + 100)]
             while True:
                 resp = self.client.batch_get_item(
-                    RequestItems={self.name: {"Keys": cand_keys, "ConsistentRead": True,},},
+                    RequestItems={
+                        self.name: {
+                            "Keys": cand_keys,
+                            "ConsistentRead": True,
+                        },
+                    },
                 )
                 items.extend(resp["Responses"][self.name])
                 if resp["UnprocessedKeys"].get(self.name) and count < 10:
@@ -170,10 +175,18 @@ class DynamoDBStateStore:
             item = {
                 "Put": {
                     "Item": {
-                        "key": {"S": key,},
-                        "index": {"N": str(index),},
-                        "val": {"B": val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],},
-                        "num_partitions": {"N": str(num_partitions),},
+                        "key": {
+                            "S": key,
+                        },
+                        "index": {
+                            "N": str(index),
+                        },
+                        "val": {
+                            "B": val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],
+                        },
+                        "num_partitions": {
+                            "N": str(num_partitions),
+                        },
                     },
                     "TableName": self.name,
                 },
@@ -190,13 +203,15 @@ class DynamoDBStateStore:
                     count += 1
                     if count > 3:
                         timer(
-                            name="tron.dynamodb.setitem", delta=time.time() - start,
+                            name="tron.dynamodb.setitem",
+                            delta=time.time() - start,
                         )
                         raise e
                     else:
                         log.warning(f"Got error while saving {key}, trying again: {repr(e)}")
         timer(
-            name="tron.dynamodb.setitem", delta=time.time() - start,
+            name="tron.dynamodb.setitem",
+            delta=time.time() - start,
         )
 
     def _delete_item(self, key: str) -> None:
@@ -204,10 +219,16 @@ class DynamoDBStateStore:
         try:
             with self.table.batch_writer() as batch:
                 for index in range(self._get_num_of_partitions(key)):
-                    batch.delete_item(Key={"key": key, "index": index,},)
+                    batch.delete_item(
+                        Key={
+                            "key": key,
+                            "index": index,
+                        },
+                    )
         finally:
             timer(
-                name="tron.dynamodb.delete", delta=time.time() - start,
+                name="tron.dynamodb.delete",
+                delta=time.time() - start,
             )
 
     def _get_num_of_partitions(self, key: str) -> int:
@@ -216,7 +237,12 @@ class DynamoDBStateStore:
         """
         try:
             partition = self.table.get_item(
-                Key={"key": key, "index": 0,}, ProjectionExpression="num_partitions", ConsistentRead=True,
+                Key={
+                    "key": key,
+                    "index": 0,
+                },
+                ProjectionExpression="num_partitions",
+                ConsistentRead=True,
             )
             return int(partition.get("Item", {}).get("num_partitions", 0))
         except self.client.exceptions.ResourceNotFoundException:

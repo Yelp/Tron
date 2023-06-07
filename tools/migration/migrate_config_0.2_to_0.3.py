@@ -109,12 +109,20 @@ def update_references(content):
     def key_length_func(kv):
         return len(kv[0])
 
-    anchors_by_length = sorted(anchor_mapping.items(), key=key_length_func, reverse=True,)
+    anchors_by_length = sorted(
+        anchor_mapping.items(),
+        key=key_length_func,
+        reverse=True,
+    )
     for anchor_name, string_name in anchors_by_length:
         # Remove the anchors
         content = re.sub(r"\s*&%s ?" % anchor_name, "", content)
         # Update the reference to use the string identifier
-        content = re.sub(r"\*%s\b" % anchor_name, '"%s"' % string_name, content,)
+        content = re.sub(
+            r"\*%s\b" % anchor_name,
+            '"%s"' % string_name,
+            content,
+        )
 
     return content
 

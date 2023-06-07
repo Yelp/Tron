@@ -18,7 +18,11 @@ def mock_file():
 @mock.patch.object(recover_batch, "reactor")
 @mock.patch("tron.bin.recover_batch.get_exit_code", autospec=True)
 @pytest.mark.parametrize(
-    "exit_code,error_msg,should_stop", [(1, "failed", True), (None, None, False),],
+    "exit_code,error_msg,should_stop",
+    [
+        (1, "failed", True),
+        (None, None, False),
+    ],
 )
 def test_notify(mock_get_exit_code, mock_reactor, exit_code, error_msg, should_stop):
     mock_get_exit_code.return_value = exit_code, error_msg
@@ -38,7 +42,12 @@ def test_notify(mock_get_exit_code, mock_reactor, exit_code, error_msg, should_s
 @pytest.mark.parametrize(
     "line,exit_code,is_running,error_msg",
     [
-        ({"return_code": 0, "runner_pid": 12345}, 0, False, None,),  # action runner finishes successfully
+        (
+            {"return_code": 0, "runner_pid": 12345},
+            0,
+            False,
+            None,
+        ),  # action runner finishes successfully
         (  # action runner is killed
             {"return_code": -9, "runner_pid": 12345},
             9,
@@ -51,12 +60,27 @@ def test_notify(mock_get_exit_code, mock_reactor, exit_code, error_msg, should_s
             False,
             "Action runner pid 12345 no longer running. Assuming an exit of 1.",
         ),
-        ({"runner_pid": 12345}, None, True, None,),  # No return code but action_runner pid is running
-        ({}, None, Exception, None,),  # No return code or PID from the file
+        (
+            {"runner_pid": 12345},
+            None,
+            True,
+            None,
+        ),  # No return code but action_runner pid is running
+        (
+            {},
+            None,
+            Exception,
+            None,
+        ),  # No return code or PID from the file
     ],
 )
 def test_get_exit_code(
-    mock_read_last_yaml_entries, mock_pid_running, line, exit_code, is_running, error_msg,
+    mock_read_last_yaml_entries,
+    mock_pid_running,
+    line,
+    exit_code,
+    is_running,
+    error_msg,
 ):
     fake_path = "/file/path"
     mock_read_last_yaml_entries.return_value = line
@@ -92,7 +116,12 @@ def test_read_last_yaml_roundtrip(mock_file):
 @mock.patch("tron.bin.recover_batch.StatusFileWatcher", autospec=True)
 @pytest.mark.parametrize("existing_code,watcher_code", [(None, 1), (123, None)])
 def test_run(
-    mock_watcher, mock_get_exit_code, mock_queue, mock_reactor, existing_code, watcher_code,
+    mock_watcher,
+    mock_get_exit_code,
+    mock_queue,
+    mock_reactor,
+    existing_code,
+    watcher_code,
 ):
     mock_get_exit_code.return_value = (existing_code, "")
     mock_queue.return_value.get.return_value = (watcher_code, "")

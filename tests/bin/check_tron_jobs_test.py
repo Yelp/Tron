@@ -23,13 +23,23 @@ class TestCheckJobs(TestCase):
     @patch("tron.bin.check_tron_jobs.cmd_utils", autospec=True)
     @patch("tron.bin.check_tron_jobs.parse_cli", autospec=True)
     def test_check_job_result_exception(
-        self, mock_args, mock_cmd_utils, mock_client, mock_check_job_result,
+        self,
+        mock_args,
+        mock_cmd_utils,
+        mock_client,
+        mock_check_job_result,
     ):
         type(mock_args.return_value).job = PropertyMock(return_value=None)
         mock_client.return_value.jobs.return_value = [
-            {"name": "job1",},
-            {"name": "job2",},
-            {"name": "job3",},
+            {
+                "name": "job1",
+            },
+            {
+                "name": "job2",
+            },
+            {
+                "name": "job3",
+            },
         ]
         mock_check_job_result.side_effect = [
             KeyError("foo"),
@@ -49,20 +59,32 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.3",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.2",
                     "state": "running",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1700),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
                 },
             ],
         }
@@ -78,24 +100,42 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.3",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.2",
                     "state": "running",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                     "runs": [
-                        {"id": "MASTER.test.2.action2", "state": "running",},
-                        {"id": "MASTER.test.1.action1", "state": "succeeded",},
+                        {
+                            "id": "MASTER.test.2.action2",
+                            "state": "running",
+                        },
+                        {
+                            "id": "MASTER.test.1.action1",
+                            "state": "succeeded",
+                        },
                     ],  # noqa: E122
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1700),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
                 },
             ],
         }
@@ -109,28 +149,41 @@ class TestCheckJobs(TestCase):
                 "id": "MASTER.test.action1",
                 "action_name": "action1",
                 "state": "succeeded",
-                "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1200),),
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 1200),
+                ),
                 "duration": "0:18:01.475067",
             },
             {
                 "id": "MASTER.test.action2",
                 "action_name": "action2",
                 "state": "succeeded",
-                "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 600),
+                ),
                 "duration": "0:08:02.005783",
             },
             {
                 "id": "MASTER.test.action1",
                 "action_name": "action1",
                 "state": "succeeded",
-                "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()),),
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time()),
+                ),
                 "duration": "0:00:01.006305",
             },
         ]
         actual = check_tron_jobs.get_relevant_action(
             action_runs=action_runs,
             last_state=State.SUCCEEDED,
-            actions_expected_runtime={"action1": 86400.0, "action2": 86400.0, "action3": 86400.0,},
+            actions_expected_runtime={
+                "action1": 86400.0,
+                "action2": 86400.0,
+                "action3": 86400.0,
+            },
         )
         assert_equal(actual["id"], "MASTER.test.action1")
 
@@ -143,20 +196,32 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.3",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.2",
                     "state": "running",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "failed",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1700),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
                 },
             ],
         }
@@ -172,20 +237,35 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.3",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.2",
                     "state": "succeeded",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1700),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "failed",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 500),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 500),
+                    ),
                 },
             ],
         }
@@ -201,26 +281,47 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.4",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.3",
                     "state": "failed",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 100),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 100),
+                    ),
                 },
                 {
                     "id": "MASTER.test.2",
                     "state": "succeeded",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 500),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 500),
+                    ),
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "failed",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1700),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
                 },
             ],
         }
@@ -236,24 +337,42 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.3",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.2",
                     "state": "running",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                     "runs": [
-                        {"id": "MASTER.test.2.action2", "state": "running",},
-                        {"id": "MASTER.test.1.action1", "state": "failed",},
+                        {
+                            "id": "MASTER.test.2.action2",
+                            "state": "running",
+                        },
+                        {
+                            "id": "MASTER.test.1.action1",
+                            "state": "failed",
+                        },
                     ],  # noqa: E122
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1700),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
                 },
             ],
         }
@@ -264,7 +383,12 @@ class TestCheckJobs(TestCase):
     def test_get_relevant_action_picks_the_one_that_failed(self):
         action_runs = [
             {
-                "node": {"username": "batch", "hostname": "localhost", "name": "localhost", "port": 22,},
+                "node": {
+                    "username": "batch",
+                    "hostname": "localhost",
+                    "name": "localhost",
+                    "port": 22,
+                },
                 "raw_command": "/bin/false",
                 "requirements": [],
                 "run_num": "582",
@@ -281,7 +405,12 @@ class TestCheckJobs(TestCase):
                 "job_name": "MASTER.kwatest",
             },
             {
-                "node": {"username": "batch", "hostname": "localhost", "name": "localhost", "port": 22,},
+                "node": {
+                    "username": "batch",
+                    "hostname": "localhost",
+                    "name": "localhost",
+                    "port": 22,
+                },
                 "raw_command": "/bin/true",
                 "requirements": [],
                 "run_num": "582",
@@ -299,7 +428,9 @@ class TestCheckJobs(TestCase):
             },
         ]
         actual = check_tron_jobs.get_relevant_action(
-            action_runs=action_runs, last_state=State.FAILED, actions_expected_runtime={},
+            action_runs=action_runs,
+            last_state=State.FAILED,
+            actions_expected_runtime={},
         )
         assert_equal(actual["state"], "failed")
 
@@ -312,13 +443,19 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.2",
                     "state": "queued",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "running",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1200),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1200),
+                    ),
                     "end_time": None,
                 },
             ],
@@ -336,20 +473,32 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.3",
                     "state": "queued",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.2",
                     "state": "running",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1200),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1200),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1700),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
                 },
             ],
         }
@@ -367,20 +516,32 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.3",
                     "state": "cancelled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.2",
                     "state": "running",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1200),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1200),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1700),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
                 },
             ],
         }
@@ -398,7 +559,10 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.100",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
                     "end_time": None,
                     "start_time": None,
                     "duration": "",
@@ -406,8 +570,14 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.99",
                     "state": "running",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
-                    "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
+                    "start_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                     "duration": "0:10:01.883601",
                 },
@@ -427,7 +597,10 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.100",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
                     "end_time": None,
                     "start_time": None,
                     "duration": "",
@@ -435,8 +608,14 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.99",
                     "state": "waiting",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
-                    "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
+                    "start_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                     "duration": "0:10:01.883601",
                 },
@@ -450,19 +629,28 @@ class TestCheckJobs(TestCase):
         job_runs = {
             "status": "running",
             "next_run": None,
-            "actions_expected_runtime": {"action1": 720.0, "action2": 480.0,},
+            "actions_expected_runtime": {
+                "action1": 720.0,
+                "action2": 480.0,
+            },
             "runs": [
                 dict(
                     id="MASTER.test.3",
                     state="scheduled",
-                    run_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+                    run_time=time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
                     end_time=None,
                     duration="",
                 ),
                 dict(
                     id="MASTER.test.2",
                     state="running",
-                    run_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    run_time=time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     end_time=None,
                     duration="0:10:01.883601",
                     runs=[
@@ -470,14 +658,20 @@ class TestCheckJobs(TestCase):
                             id="MASTER.test.2.action2",
                             state="running",
                             action_name="action2",
-                            start_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                            start_time=time.strftime(
+                                "%Y-%m-%d %H:%M:%S",
+                                time.localtime(time.time() - 600),
+                            ),
                             duration="0:10:01.883601",
                         ),
                         dict(
                             id="MASTER.test.2.action1",
                             state="running",
                             action_name="action1",
-                            start_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                            start_time=time.strftime(
+                                "%Y-%m-%d %H:%M:%S",
+                                time.localtime(time.time() - 600),
+                            ),
                             duration="0:10:01.885401",
                         ),
                     ],
@@ -485,8 +679,14 @@ class TestCheckJobs(TestCase):
                 dict(
                     id="MASTER.test.1",
                     state="succeeded",
-                    run_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    end_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1700),),
+                    run_time=time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    end_time=time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
                     duration="0:15:00.453601",
                 ),
             ],
@@ -499,12 +699,18 @@ class TestCheckJobs(TestCase):
         job_runs = {
             "status": "running",
             "next_run": None,
-            "actions_expected_runtime": {"action1": 720.0, "action2": 480.0,},
+            "actions_expected_runtime": {
+                "action1": 720.0,
+                "action2": 480.0,
+            },
             "runs": [
                 dict(
                     id="MASTER.test.1",
                     state="running",
-                    run_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    run_time=time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     end_time=None,
                     duration="0:10:01.883601",
                     runs=[
@@ -512,14 +718,20 @@ class TestCheckJobs(TestCase):
                             id="MASTER.test.1.action2",
                             state="failed",
                             action_name="action2",
-                            start_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                            start_time=time.strftime(
+                                "%Y-%m-%d %H:%M:%S",
+                                time.localtime(time.time() - 600),
+                            ),
                             duration="0:10:01.883601",
                         ),
                         dict(
                             id="MASTER.test.1.action1",
                             state="running",
                             action_name="action1",
-                            start_time=time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                            start_time=time.strftime(
+                                "%Y-%m-%d %H:%M:%S",
+                                time.localtime(time.time() - 600),
+                            ),
                             duration="0:10:01.885401",
                         ),
                     ],
@@ -538,13 +750,19 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.2",
                     "state": "running",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time()),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time()),
+                    ),
                     "end_time": None,
                 },
             ],
@@ -558,26 +776,39 @@ class TestCheckJobs(TestCase):
             {
                 "id": "MASTER.test.1.action3",
                 "state": "succeeded",
-                "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1200),),
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 1200),
+                ),
                 "duration": "0:18:01.475067",
             },
             {
                 "id": "MASTER.test.1.action2",
                 "state": "running",
-                "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1100),),
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 1100),
+                ),
                 "duration": "0:18:40.005783",
             },
             {
                 "id": "MASTER.test.1.action1",
                 "state": "succeeded",
-                "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1000),),
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 1000),
+                ),
                 "duration": "0:00:01.006305",
             },
         ]
         actual = check_tron_jobs.get_relevant_action(
             action_runs=action_runs,
             last_state=State.STUCK,
-            actions_expected_runtime={"action1": 86400.0, "action2": 86400.0, "action3": 86400.0,},
+            actions_expected_runtime={
+                "action1": 86400.0,
+                "action2": 86400.0,
+                "action3": 86400.0,
+            },
         )
         assert_equal(actual["id"], "MASTER.test.1.action2")
 
@@ -586,19 +817,28 @@ class TestCheckJobs(TestCase):
             {
                 "id": "MASTER.test.1.action3",
                 "state": "running",
-                "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 600),
+                ),
                 "duration": "0:10:00.006305",
             },
             {
                 "id": "MASTER.test.1.action2",
                 "state": "running",
-                "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 600),
+                ),
                 "duration": "0:10:00.006383",
             },
             {
                 "id": "MASTER.test.1.action1",
                 "state": "succeeded",
-                "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 600),
+                ),
                 "duration": "0:10:00.006331",
             },
         ]
@@ -608,31 +848,44 @@ class TestCheckJobs(TestCase):
             "action1": 900.0,
         }
         actual = check_tron_jobs.get_relevant_action(
-            action_runs=action_runs, last_state=State.STUCK, actions_expected_runtime=actions_expected_runtime,
+            action_runs=action_runs,
+            last_state=State.STUCK,
+            actions_expected_runtime=actions_expected_runtime,
         )
         assert_equal(actual["id"], "MASTER.test.1.action3")
 
-    def test_get_relevant_action_pick_the_one_exceeds_expected_runtime_with_long_duration(self,):
+    def test_get_relevant_action_pick_the_one_exceeds_expected_runtime_with_long_duration(
+        self,
+    ):
         action_runs = [
             {
                 "id": "MASTER.test.1.action3",
                 "action_name": "action3",
                 "state": "running",
-                "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 600),
+                ),
                 "duration": "1 day, 0:10:00.006305",
             },
             {
                 "id": "MASTER.test.1.action2",
                 "action_name": "action2",
                 "state": "running",
-                "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 600),
+                ),
                 "duration": "2 days, 0:10:00.006383",
             },
             {
                 "id": "MASTER.test.1.action1",
                 "action_name": "action1",
                 "state": "running",
-                "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 600),
+                ),
                 "duration": "1 day, 0:10:00.006331",
             },
         ]
@@ -642,12 +895,14 @@ class TestCheckJobs(TestCase):
             "action1": 100000.0,
         }
         actual = check_tron_jobs.get_relevant_action(
-            action_runs=action_runs, last_state=State.STUCK, actions_expected_runtime=actions_expected_runtime,
+            action_runs=action_runs,
+            last_state=State.STUCK,
+            actions_expected_runtime=actions_expected_runtime,
         )
         assert_equal(actual["id"], "MASTER.test.1.action2")
 
     def test_no_job_scheduled_or_queuing(self):
-        """ If the past 2 runs succeeded but no future job is scheuled,
+        """If the past 2 runs succeeded but no future job is scheuled,
         we should consider the job to have suceeded.
         """
         job_runs = {
@@ -657,14 +912,26 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.2",
                     "state": "succeeded",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 300),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 300),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 900),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1200),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 900),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1200),
+                    ),
                 },
             ],
             "monitoring": {},
@@ -682,7 +949,10 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.1",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 1200),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 1200),
+                    ),
                     "end_time": None,
                 },
             ],
@@ -710,20 +980,32 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.3",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.2",
                     "state": "unknown",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1200),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1200),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1700),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
                 },
             ],
         }
@@ -739,24 +1021,42 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.3",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.2",
                     "state": "running",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                     "runs": [
-                        {"id": "MASTER.test.2.action2", "state": "running",},
-                        {"id": "MASTER.test.1.action1", "state": "unknown",},
+                        {
+                            "id": "MASTER.test.2.action2",
+                            "state": "running",
+                        },
+                        {
+                            "id": "MASTER.test.1.action1",
+                            "state": "unknown",
+                        },
                     ],  # noqa: E122
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1700),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
                 },
             ],
         }
@@ -772,24 +1072,42 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.3",
                     "state": "scheduled",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
                     "end_time": None,
                 },
                 {
                     "id": "MASTER.test.2",
                     "state": "waiting",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                     "end_time": None,
                     "runs": [
-                        {"id": "MASTER.test.2.action2", "state": "waiting",},
-                        {"id": "MASTER.test.1.action1", "state": "unknown",},
+                        {
+                            "id": "MASTER.test.2.action2",
+                            "state": "waiting",
+                        },
+                        {
+                            "id": "MASTER.test.1.action1",
+                            "state": "unknown",
+                        },
                     ],  # noqa: E122
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
-                    "end_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1700),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
                 },
             ],
         }
@@ -801,23 +1119,35 @@ class TestCheckJobs(TestCase):
     def test_guess_realert_every(self):
         job_runs = {
             "status": "running",
-            "next_run": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+            "next_run": time.strftime(
+                "%Y-%m-%d %H:%M:%S",
+                time.localtime(time.time() + 600),
+            ),
             "runs": [
                 {
                     "id": "MASTER.test.3",
                     "state": "scheduled",
                     "start_time": None,
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
                 },
                 {
                     "id": "MASTER.test.2",
                     "state": "failed",
-                    "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "start_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
+                    "start_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
                 },
             ],  # noqa: E122
         }
@@ -827,20 +1157,36 @@ class TestCheckJobs(TestCase):
     def test_guess_realert_every_no_action_run_starts(self):
         job_runs = {
             "status": "running",
-            "next_run": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
+            "next_run": time.strftime(
+                "%Y-%m-%d %H:%M:%S",
+                time.localtime(time.time() + 600),
+            ),
             "runs": [
-                {"id": "MASTER.test.3", "state": "scheduled", "start_time": None,},
+                {
+                    "id": "MASTER.test.3",
+                    "state": "scheduled",
+                    "start_time": None,
+                },
                 {
                     "id": "MASTER.test.2",
                     "state": "failed",
                     "start_time": None,
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 200),),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 200),
+                    ),
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
-                    "run_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "start_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                 },
             ],  # noqa: E122
         }
@@ -852,16 +1198,26 @@ class TestCheckJobs(TestCase):
             "status": "running",
             "next_run": None,
             "runs": [
-                {"id": "MASTER.test.3", "state": "queued", "start_time": None,},
+                {
+                    "id": "MASTER.test.3",
+                    "state": "queued",
+                    "start_time": None,
+                },
                 {
                     "id": "MASTER.test.2",
                     "state": "running",
-                    "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 600),),
+                    "start_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 1800),),
+                    "start_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
                 },
             ],
         }
@@ -871,18 +1227,31 @@ class TestCheckJobs(TestCase):
     def test_guess_realert_every_frequent_run(self):
         job_runs = {
             "status": "running",
-            "next_run": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 10),),
+            "next_run": time.strftime(
+                "%Y-%m-%d %H:%M:%S",
+                time.localtime(time.time() + 10),
+            ),
             "runs": [
-                {"id": "MASTER.test.3", "state": "scheduled", "start_time": None,},
+                {
+                    "id": "MASTER.test.3",
+                    "state": "scheduled",
+                    "start_time": None,
+                },
                 {
                     "id": "MASTER.test.2",
                     "state": "failed",
-                    "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 10),),
+                    "start_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 10),
+                    ),
                 },
                 {
                     "id": "MASTER.test.1",
                     "state": "succeeded",
-                    "start_time": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() - 20),),
+                    "start_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 20),
+                    ),
                 },
             ],  # noqa: E122
         }
@@ -892,8 +1261,17 @@ class TestCheckJobs(TestCase):
     def test_guess_realert_every_first_time_job(self):
         job_runs = {
             "status": "enabled",
-            "next_run": time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(time.time() + 600),),
-            "runs": [{"id": "MASTER.test.1", "state": "scheduled", "start_time": None,},],
+            "next_run": time.strftime(
+                "%Y-%m-%d %H:%M:%S",
+                time.localtime(time.time() + 600),
+            ),
+            "runs": [
+                {
+                    "id": "MASTER.test.1",
+                    "state": "scheduled",
+                    "start_time": None,
+                },
+            ],
         }
         realert_every = check_tron_jobs.guess_realert_every(job_runs)
         assert_equal(realert_every, -1)
@@ -1039,13 +1417,18 @@ class TestCheckPreciousJobs:
         assert len(run_buckets) == 7
 
     @patch(
-        "tron.bin.check_tron_jobs.guess_realert_every", mock.Mock(return_value=1), autospec=None,
+        "tron.bin.check_tron_jobs.guess_realert_every",
+        mock.Mock(return_value=1),
+        autospec=None,
     )
     @patch("tron.bin.check_tron_jobs.Client", autospec=True)
     @patch("tron.bin.check_tron_jobs.compute_check_result_for_job_runs", autospec=True)
     @patch("tron.bin.check_tron_jobs.get_object_type_from_identifier", autospec=True)
     def test_compute_check_result_for_job_not_precious(
-        self, mock_get_obj_type, mock_check_job_runs, mock_client,
+        self,
+        mock_get_obj_type,
+        mock_check_job_runs,
+        mock_client,
     ):
         client = mock_client("fake_server")
         client.cluster_name = "fake_cluster"
@@ -1056,18 +1439,27 @@ class TestCheckPreciousJobs:
             "status": "fake_status",
         }
 
-        results = check_tron_jobs.compute_check_result_for_job(client, self.job, url_index={},)
+        results = check_tron_jobs.compute_check_result_for_job(
+            client,
+            self.job,
+            url_index={},
+        )
 
         # make sure all job runs for a job are included by not incl count arg
         assert client.job.call_args_list == [
-            mock.call(mock_get_obj_type.return_value.url, include_action_runs=True,),
+            mock.call(
+                mock_get_obj_type.return_value.url,
+                include_action_runs=True,
+            ),
         ]
         assert len(results) == 1
         assert results[0]["name"] == "check_tron_job.fake_job"
         assert mock_check_job_runs.call_count == 1
 
     @patch(
-        "tron.bin.check_tron_jobs.guess_realert_every", mock.Mock(return_value=1), autospec=None,
+        "tron.bin.check_tron_jobs.guess_realert_every",
+        mock.Mock(return_value=1),
+        autospec=None,
     )
     @patch("tron.bin.check_tron_jobs.Client", autospec=True)
     def test_compute_check_result_for_job_disabled(self, mock_client):
@@ -1075,21 +1467,30 @@ class TestCheckPreciousJobs:
         client.cluster_name = "fake_cluster"
         self.job["status"] = "disabled"
 
-        results = check_tron_jobs.compute_check_result_for_job(client, self.job, url_index={},)
+        results = check_tron_jobs.compute_check_result_for_job(
+            client,
+            self.job,
+            url_index={},
+        )
 
         assert len(results) == 1
         assert results[0]["status"] == 0
         assert results[0]["output"] == "OK: fake_job is disabled and won't be checked."
 
     @patch(
-        "tron.bin.check_tron_jobs.guess_realert_every", mock.Mock(return_value=1), autospec=None,
+        "tron.bin.check_tron_jobs.guess_realert_every",
+        mock.Mock(return_value=1),
+        autospec=None,
     )
     @patch("time.time", mock.Mock(return_value=1539460800.0), autospec=None)
     @patch("tron.bin.check_tron_jobs.Client", autospec=True)
     @patch("tron.bin.check_tron_jobs.compute_check_result_for_job_runs", autospec=True)
     @patch("tron.bin.check_tron_jobs.get_object_type_from_identifier", autospec=True)
     def test_compute_check_result_for_job_enabled(
-        self, mock_get_obj_type, mock_check_job_runs, mock_client,
+        self,
+        mock_get_obj_type,
+        mock_check_job_runs,
+        mock_client,
     ):
         client = mock_client("fake_server")
         client.cluster_name = "fake_cluster"
@@ -1101,14 +1502,21 @@ class TestCheckPreciousJobs:
             "status": "fake_status",
         }
 
-        results = check_tron_jobs.compute_check_result_for_job(client, self.job, url_index={},)
+        results = check_tron_jobs.compute_check_result_for_job(
+            client,
+            self.job,
+            url_index={},
+        )
 
         # Test that hide_stderr is passed to check_job_runs
         assert mock_check_job_runs.call_args_list[0][1]["hide_stderr"] is True
 
         # make sure all job runs for a job are included by not incl count arg
         assert client.job.call_args_list == [
-            mock.call(mock_get_obj_type.return_value.url, include_action_runs=True,),
+            mock.call(
+                mock_get_obj_type.return_value.url,
+                include_action_runs=True,
+            ),
         ]
         assert len(results) == 4
         assert {res["name"] for res in results} == {
