@@ -12,6 +12,7 @@ from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
+from typing import Union
 from urllib.parse import urlparse
 
 import pytz
@@ -48,6 +49,8 @@ from tron.config.schema import ConfigMesos
 from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigSecretSource
+from tron.config.schema import ConfigSecretVolume
+from tron.config.schema import ConfigSecretVolumeItem
 from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigState
 from tron.config.schema import ConfigVolume
@@ -270,6 +273,70 @@ class ValidateSecretSource(Validator):
 valid_secret_source = ValidateSecretSource()
 
 
+def valid_permission_mode(value: Union[str, int], config_context: ConfigContext) -> str:
+    try:
+        decimal_value = int(
+            str(value), base=8
+        )  # take in permission mode as string or int representation of an octal number. Goes from 0 to 4095 in decimal.
+    except ValueError:
+        error_msg = "Could not parse {} as octal permission mode at {}"
+        raise ConfigError(error_msg.format(value, config_context.path))
+    if decimal_value > 4095 or decimal_value < 0:
+        error_msg = "Octal permission mode {} out of bound at {}"
+        raise ConfigError(error_msg.format(value, config_context.path))
+    return str(value)
+
+
+class ValidateSecretVolumeItem(Validator):
+    config_class = ConfigSecretVolumeItem
+
+    validators = {
+        "key": valid_string,  # name of current secret
+        "path": valid_string,  # New secret filename
+        "mode": valid_permission_mode,  # Octal permission mode
+    }
+
+
+valid_secret_volume_item = ValidateSecretVolumeItem()
+
+
+class ValidateSecretVolume(Validator):
+    config_class = ConfigSecretVolume
+
+    optional = True
+    defaults = {
+        "default_mode": "0644",
+        "items": None,
+    }
+
+    validators = {
+        "container_path": valid_string,
+        "secret_volume_name": valid_string,
+        "secret_name": valid_string,
+        "default_mode": valid_permission_mode,
+        "items": build_list_of_type_validator(valid_secret_volume_item, allow_empty=True),
+    }
+
+    def post_validation(self, valid_input, config_context):
+        """Propagate default mode and enforce the secret-key match."""
+        # Our secrets will really only ever have one key, so weirdly we only care about a single item of this array AND it must have the same name as the secret (which is the single key)
+        items = valid_input.get("items", [])
+
+        if len(items) > 1:
+            raise ConfigError(
+                "There is more than one item in the items array. This is unsupported as we don't support multi-key secrets."
+            )
+
+        for item in items:
+            if item.key != valid_input.get("secret_name"):
+                raise ConfigError("item key does not match the secret name.")
+            if item.mode is None:
+                item._replace(mode=valid_input.get("default_mode", self.defaults["default_mode"]))
+
+
+valid_secret_volume = ValidateSecretVolume()
+
+
 class ValidateFieldSelectorSource(Validator):
     config_class = ConfigFieldSelectorSource
     validators = {
@@ -453,6 +520,7 @@ class ValidateAction(Validator):
         "docker_parameters": None,
         "env": None,
         "secret_env": None,
+        "secret_volumes": None,
         "field_selector_env": None,
         "extra_volumes": None,
         "trigger_downstreams": None,
@@ -486,6 +554,7 @@ class ValidateAction(Validator):
         "docker_parameters": build_list_of_type_validator(valid_docker_parameter, allow_empty=True,),
         "env": valid_dict,
         "secret_env": build_dict_value_validator(valid_secret_source),
+        "secret_volumes": build_list_of_type_validator(valid_secret_volume, allow_empty=True),
         "field_selector_env": build_dict_value_validator(valid_field_selector_source),
         "extra_volumes": build_list_of_type_validator(valid_volume, allow_empty=True),
         "trigger_downstreams": valid_trigger_downstreams,
@@ -534,6 +603,7 @@ class ValidateCleanupAction(Validator):
         "docker_parameters": None,
         "env": None,
         "secret_env": None,
+        "secret_volumes": None,
         "field_selector_env": None,
         "extra_volumes": None,
         "trigger_downstreams": None,
@@ -565,6 +635,7 @@ class ValidateCleanupAction(Validator):
         "docker_parameters": build_list_of_type_validator(valid_docker_parameter, allow_empty=True,),
         "env": valid_dict,
         "secret_env": build_dict_value_validator(valid_secret_source),
+        "secret_volumes": build_list_of_type_validator(valid_secret_volume, allow_empty=True),
         "field_selector_env": build_dict_value_validator(valid_field_selector_source),
         "extra_volumes": build_list_of_type_validator(valid_volume, allow_empty=True),
         "trigger_downstreams": valid_trigger_downstreams,

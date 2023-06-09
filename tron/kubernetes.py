@@ -21,6 +21,7 @@ from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigKubernetes
 from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigSecretSource
+from tron.config.schema import ConfigSecretVolume
 from tron.config.schema import ConfigVolume
 from tron.serialize.filehandler import OutputStreamSerializer
 from tron.utils import exitcode
@@ -444,6 +445,7 @@ class KubernetesCluster:
         docker_image: str,
         env: Dict[str, str],
         secret_env: Dict[str, ConfigSecretSource],
+        secret_volumes: Collection[ConfigSecretVolume],
         field_selector_env: Dict[str, ConfigFieldSelectorSource],
         volumes: Collection[ConfigVolume],
         cap_add: Collection[str],
@@ -478,6 +480,7 @@ class KubernetesCluster:
                 disk=DEFAULT_DISK_LIMIT if disk is None else disk,
                 environment=env,
                 secret_environment={k: v._asdict() for k, v in secret_env.items()},
+                secret_volumes=[volume._asdict() for volume in secret_volumes],
                 field_selector_environment={k: v._asdict() for k, v in field_selector_env.items()},
                 cap_add=cap_add,
                 cap_drop=cap_drop,

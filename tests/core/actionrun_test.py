@@ -1632,6 +1632,7 @@ class TestKubernetesActionRun:
                 field_selector_env=mock_k8s_action_run.command_config.field_selector_env,
                 serializer=serializer,
                 volumes=mock_k8s_action_run.command_config.extra_volumes,
+                secret_volumes=mock_k8s_action_run.command_config.secret_volumes,
                 cap_add=mock_k8s_action_run.command_config.cap_add,
                 cap_drop=mock_k8s_action_run.command_config.cap_drop,
                 task_id=last_attempt.kubernetes_task_id,

@@ -141,6 +141,7 @@ ConfigAction = config_object_factory(
         "docker_parameters",  # List of ConfigParameter
         "env",  # dict
         "secret_env",  # dict of str, ConfigSecretSource
+        "secret_volumes",  # List of ConfigSecretVolume
         "field_selector_env",  # dict of str, ConfigFieldSelectorSource
         "extra_volumes",  # List of ConfigVolume
         "expected_runtime",  # datetime.Timedelta
@@ -177,6 +178,7 @@ ConfigCleanupAction = config_object_factory(
         "docker_parameters",  # List of ConfigParameter
         "env",  # dict
         "secret_env",  # dict of str, ConfigSecretSource
+        "secret_volumes",  # List of ConfigSecretVolume
         "field_selector_env",  # dict of str, ConfigFieldSelectorSource
         "extra_volumes",  # List of ConfigVolume
         "trigger_downstreams",  # None, bool or dict
@@ -196,9 +198,31 @@ ConfigConstraint = config_object_factory(
     name="ConfigConstraint", required=["attribute", "operator", "value",], optional=[],
 )
 
-ConfigVolume = config_object_factory(
-    name="ConfigVolume", required=["container_path", "host_path", "mode",], optional=[],
+ConfigVolume = config_object_factory(name="ConfigVolume", required=["container_path", "host_path",], optional=["mode"],)
+
+
+ConfigSecretVolumeItem = config_object_factory(
+    name="ConfigSecretVolumeItem", required=["key", "path",], optional=["mode"],
 )
+
+
+_ConfigSecretVolume = config_object_factory(
+    name="ConfigSecretVolume",
+    required=["secret_volume_name", "secret_name", "container_path"],
+    optional=["default_mode", "items"],
+)
+
+
+class ConfigSecretVolume(_ConfigSecretVolume):
+    def _asdict(self) -> dict:
+        d = super()._asdict().copy()
+        items = d.get("items", [])
+        if items is not None and items:
+            for i, item in enumerate(items):
+                if isinstance(item, ConfigSecretVolumeItem):
+                    d["items"][i] = item._asdict()
+        return d
+
 
 ConfigSecretSource = config_object_factory(name="ConfigSecretSource", required=["secret_name", "key"], optional=[],)
 

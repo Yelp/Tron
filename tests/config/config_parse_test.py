@@ -228,6 +228,15 @@ def make_master_jobs():
                     secret_env=dict(
                         TEST_SECRET=schema.ConfigSecretSource(secret_name="tron-secret-test-secret--1", key="secret_1")
                     ),
+                    secret_volumes=(
+                        schema.ConfigSecretVolume(
+                            secret_volume_name="abc",
+                            secret_name="secret1",
+                            container_path="/b/c",
+                            default_mode="0644",
+                            items=(schema.ConfigSecretVolumeItem(key="secret1", path="abcd", mode="777"),),
+                        ),
+                    ),
                     node_selectors={"yelp.com/pool": "default"},
                     node_affinities=(ConfigNodeAffinity(key="instance_type", operator="In", value=("a1.1xlarge",),),),
                 ),
@@ -347,6 +356,15 @@ class ConfigTestCase(TestCase):
                         disk=600,
                         docker_image="container:latest",
                         secret_env=dict(TEST_SECRET=dict(secret_name="tron-secret-test-secret--1", key="secret_1")),
+                        secret_volumes=[
+                            dict(
+                                secret_volume_name="abc",
+                                secret_name="secret1",
+                                container_path="/b/c",
+                                default_mode="0644",
+                                items=[dict(key="secret1", path="abcd", mode="777"),],
+                            ),
+                        ],
                         cap_add=["KILL"],
                         cap_drop=["CHOWN", "KILL"],
                         node_selectors={"yelp.com/pool": "default"},
@@ -380,7 +398,6 @@ class ConfigTestCase(TestCase):
             assert job_name in test_config.jobs, f"{job_name} in test_config.jobs"
             assert job_name in expected.jobs, f"{job_name} in test_config.jobs"
             assert test_config.jobs[job_name] == expected.jobs[job_name]
-
         assert test_config == expected
 
     def test_empty_node_test(self):
@@ -1136,6 +1153,100 @@ class TestValidateVolume(TestCase):
         # After we fix the error, expect error to go away.
         k8s_options["default_volumes"][1]["mode"] = "RW"
         assert config_parse.valid_kubernetes_options.validate(k8s_options, self.context,)
+
+
+class TestValidPermissionMode:
+    @pytest.mark.parametrize(
+        ("permission", "normalized"),
+        [("777", "777"), ("0", "0"), ("0000", "0000"), ("0123", "0123"), (0, "0"), (7777, "7777")],
+    )
+    def test_valid_permissions(self, permission, normalized):
+        result = config_parse.valid_permission_mode(permission, NullConfigContext)
+        assert result == normalized
+
+    @pytest.mark.parametrize("permission", ["778", "é", -1, "", {}, [], ()])
+    def test_invalid_permissions(self, permission):
+        with pytest.raises(ConfigError):
+            config_parse.valid_permission_mode(permission, NullConfigContext)
+
+
+class TestValidSecretVolumeItem:
+    @pytest.mark.parametrize(
+        "config",
+        [
+            {"path": "abc"},
+            {"key": "abc",},
+            {"key": "abc", "path": "abc", "extra_key": None,},
+            {"key": "abc", "path": "abc", "mode": "a"},
+        ],
+    )
+    def test_invalid(self, config):
+        with pytest.raises(ConfigError):
+            config_parse.valid_secret_volume_item(config, NullConfigContext)
+
+    @pytest.mark.parametrize(
+        "config", [{"key": "abc", "path": "abc"}, {"key": "abc", "path": "abc", "mode": "777"}],
+    )
+    def test_valid_job_secret_volume_success(self, config):
+        config_parse.valid_secret_volume_item(config, NullConfigContext)
+
+
+class TestValidSecretVolume:
+    @pytest.mark.parametrize(
+        "config",
+        [
+            dict(
+                secret_volume_name="abc",
+                secret_name="secret1",
+                container_path="/b/c",
+                default_mode="0644",
+                items=[dict(key="secret1", path="abcd", mode="7778"),],
+            ),
+            dict(
+                secret_volume_name="abc",
+                container_path="/b/c",
+                default_mode="0644",
+                items=[dict(key="secret1", path="abcd", mode="7777"),],
+            ),
+            dict(secret_volume_name="abc", secret_name="secret1", container_path=123,),
+            dict(
+                secret_volume_name="abc",
+                secret_name="secret1",
+                container_path="/b/c",
+                items=[dict(key="secret1", path="abcd", mode="7777"), dict(key="secret1", path="abcde", mode="7777")],
+            ),
+        ],
+    )
+    def test_invalid(self, config):
+        with pytest.raises(ConfigError):
+            config_parse.valid_secret_volume(config, NullConfigContext)
+
+    def test_wrong_item_key(self):
+        config = dict(
+            secret_volume_name="abc",
+            secret_name="secret1",
+            container_path="/b/c",
+            items=[dict(key="secret2", path="abc"),],
+        )
+        with pytest.raises(ConfigError):
+            config_parse.valid_secret_volume(config, NullConfigContext)
+
+    @pytest.mark.parametrize(
+        "config",
+        [
+            dict(
+                secret_volume_name="abc",
+                secret_name="secret1",
+                container_path="/b/c",
+                default_mode="0644",
+                items=[dict(key="secret1", path="abc"),],
+            ),
+            dict(secret_volume_name="abc", secret_name="secret1", container_path="/b/c", items=[],),
+            dict(secret_volume_name="abc", secret_name="secret1", container_path="/b/c",),
+        ],
+    )
+    def test_valid(self, config):
+        config_parse.valid_secret_volume(config, NullConfigContext)
 
 
 class TestValidMasterAddress:
