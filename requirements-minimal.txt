@@ -22,5 +22,6 @@ PyYAML>=5.1
 requests
 task_processing[mesos_executor,k8s]
 Twisted>=19.7.0
+typing-extensions>=3.10.0.0
 urllib3>=1.24.2
 Werkzeug>=0.15.3
