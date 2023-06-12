@@ -8,6 +8,8 @@ from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig
 
 from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigSecretSource
+from tron.config.schema import ConfigSecretVolume
+from tron.config.schema import ConfigSecretVolumeItem
 from tron.config.schema import ConfigVolume
 from tron.kubernetes import DEFAULT_DISK_LIMIT
 from tron.kubernetes import KubernetesCluster
@@ -442,6 +444,7 @@ def test_create_task_disabled():
         docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
         env={},
         secret_env={},
+        secret_volumes=[],
         field_selector_env={},
         volumes=[],
         cap_add=[],
@@ -470,6 +473,7 @@ def test_create_task(mock_kubernetes_cluster):
         docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
         env={},
         secret_env={},
+        secret_volumes=[],
         field_selector_env={},
         volumes=[],
         cap_add=[],
@@ -499,6 +503,7 @@ def test_create_task_with_task_id(mock_kubernetes_cluster):
         docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
         env={},
         secret_env={},
+        secret_volumes=[],
         field_selector_env={},
         volumes=[],
         cap_add=[],
@@ -531,6 +536,7 @@ def test_create_task_with_invalid_task_id(mock_kubernetes_cluster):
             docker_image="docker-paasta.yelpcorp.com:443/bionic_yelp",
             env={},
             secret_env={},
+            secret_volumes=[],
             field_selector_env={},
             volumes=[],
             cap_add=[],
@@ -554,6 +560,15 @@ def test_create_task_with_config(mock_kubernetes_cluster):
     mock_serializer = mock.MagicMock()
 
     config_volumes = [ConfigVolume(container_path="/tmp", host_path="/host", mode="RO")]
+    config_secret_volumes = [
+        ConfigSecretVolume(
+            secret_volume_name="secretvolumename",
+            secret_name="secret",
+            container_path="/b",
+            default_mode="0644",
+            items=[ConfigSecretVolumeItem(key="key", path="path", mode="0755")],
+        ),
+    ]
     config_secrets = {"TEST_SECRET": ConfigSecretSource(secret_name="tron-secret-test-secret--A", key="secret_A")}
     config_field_selector = {"POD_IP": ConfigFieldSelectorSource(field_path="status.podIP")}
 
@@ -566,6 +581,7 @@ def test_create_task_with_config(mock_kubernetes_cluster):
         "disk": DEFAULT_DISK_LIMIT,
         "environment": {"TEST_ENV": "foo"},
         "secret_environment": {k: v._asdict() for k, v in config_secrets.items()},
+        "secret_volumes": [v._asdict() for v in config_secret_volumes],
         "field_selector_environment": {k: v._asdict() for k, v in config_field_selector.items()},
         "volumes": [v._asdict() for v in default_volumes + config_volumes],
         "cap_add": ["KILL"],
@@ -589,6 +605,7 @@ def test_create_task_with_config(mock_kubernetes_cluster):
         docker_image=expected_args["image"],
         env=expected_args["environment"],
         secret_env=config_secrets,
+        secret_volumes=config_secret_volumes,
         field_selector_env=config_field_selector,
         volumes=config_volumes,
         cap_add=["KILL"],
