@@ -1,3 +1,11 @@
+tron (1.26.0) jammy; urgency=medium
+
+  * 1.26.0 tagged with 'make release'
+    Commit: Merge pull request #909 from Yelp/u/vit/tron-secret-volume
+    TRON-1636: Pass secret_volumes to taskproc from kubernetes
+
+ -- Vincent Thibault <vit@yelp.com>  Mon, 12 Jun 2023 09:03:39 -0700
+
 tron (1.25.1) jammy; urgency=low
 
   * 1.25.1 tagged with 'make release'
