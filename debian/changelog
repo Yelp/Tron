@@ -1,3 +1,11 @@
+tron (1.27.0) jammy; urgency=medium
+
+  * 1.27.0 tagged with 'make release'
+    Commit: Remove tronweb2 code (#914)  This isn't currently being used
+    and is complicating the internal build process
+
+ -- Luis Perez <luisp@yelp.com>  Tue, 13 Jun 2023 08:49:02 -0700
+
 tron (1.26.0) jammy; urgency=medium
 
   * 1.26.0 tagged with 'make release'
