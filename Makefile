@@ -36,7 +36,7 @@ docker_%:
 	[ -d dist ] || mkdir -p dist
 	cd ./yelp_package/$* && docker build --build-arg PIP_INDEX_URL=${PIP_INDEX_URL} --build-arg NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY} -t tron-builder-$* .
 
-deb_%: clean docker_% coffee_% react_%
+deb_%: clean docker_% coffee_%
 	@echo "Building deb for $*"
 	# backup these files so we can temp modify them
 	cp requirements.txt requirements.txt.old
@@ -57,14 +57,6 @@ coffee_%: docker_%
 		mkdir -p tronweb/js/cs &&                      \
 		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
 		chown -R $(UID):$(GID) tronweb/js/cs/          \
-	'
-
-react_%: docker_%
-	@echo "Building tronweb2"
-	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '       \
-		YARN_REGISTRY=${NPM_CONFIG_REGISTRY} yarn --cwd tronweb2 &&                         \
-		YARN_REGISTRY=${NPM_CONFIG_REGISTRY} yarn --cwd tronweb2 build &&                   \
-		chown -R $(UID):$(GID) tronweb2/build/ tronweb2/node_modules         \
 	'
 
 test:
