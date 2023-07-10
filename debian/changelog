@@ -1,3 +1,14 @@
+tron (1.27.1) jammy; urgency=medium
+
+  * 1.27.1 tagged with 'make release'
+    Commit: Update to the latest task_proc (#915)  This version pulls in
+    a fix that stops pods from being launched with a null request. This
+    has been running fine in infrastage where I've verified that Pods
+    are indeed being launched with the correct metadata  I've verified
+    this as well with unit tests in task_proc :)
+
+ -- Luis Perez <luisp@yelp.com>  Mon, 10 Jul 2023 08:28:15 -0700
+
 tron (1.27.0) jammy; urgency=medium
 
   * 1.27.0 tagged with 'make release'
