@@ -11,7 +11,7 @@ from task_processing.interfaces.event import Event
 from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig
 from task_processing.runners.subscription import Subscription
 from task_processing.task_processor import TaskProcessor
-from twisted.internet.defer import Deferred  # type: ignore  # need to upgrade twisted
+from twisted.internet.defer import Deferred
 from twisted.internet.defer import logError
 
 import tron.metrics as metrics
@@ -42,7 +42,10 @@ KUBERNETES_LOST_NODE_EXIT_CODES = {exitcode.EXIT_KUBERNETES_SPOT_INTERRUPTION, e
 log = logging.getLogger(__name__)
 
 
-def combine_volumes(defaults: Collection[ConfigVolume], overrides: Collection[ConfigVolume],) -> List[ConfigVolume]:
+def combine_volumes(
+    defaults: Collection[ConfigVolume],
+    overrides: Collection[ConfigVolume],
+) -> List[ConfigVolume]:
     """Helper to reconcile lists of volume mounts.
 
     If any volumes have the same container path, the one in overrides wins.
@@ -239,7 +242,9 @@ class KubernetesTask(ActionCommand):
             self.log.warning(f"    tronctl fail {self.id}")
             self.exited(None)
         else:
-            self.log.info(f"Did not handle unknown kubernetes event type: {event}",)
+            self.log.info(
+                f"Did not handle unknown kubernetes event type: {event}",
+            )
 
         if event.terminal:
             self.log.info("This Kubernetes event was terminal, ending this action")
@@ -338,12 +343,14 @@ class KubernetesCluster:
         * control: events regarding how the task_proc plugin is running - handled directly
         * task: events regarding how the actual tasks/Pods we're running our doing - forwarded to KubernetesTask
         """
-        if self.deferred and not self.deferred.called:
+        if self.deferred is not None and not self.deferred.called:
             log.warning("Already have handlers waiting for next event in queue, not adding more")
             return
 
         self.deferred = self.queue.get()
-
+        if self.deferred is None:
+            log.warning("Unable to get a handler for next event in queue - this should never happen!")
+            return
         # we want to process the event we just popped off the queue, but we also want
         # to form a sort of event loop, so we add two callbacks:
         # * one to actually deal with the event
@@ -507,7 +514,11 @@ class KubernetesCluster:
                 log.error(f"Invalid {task_id} for {action_run_id}")
                 return None
 
-        return KubernetesTask(action_run_id=action_run_id, task_config=task_config, serializer=serializer,)
+        return KubernetesTask(
+            action_run_id=action_run_id,
+            task_config=task_config,
+            serializer=serializer,
+        )
 
     def _check_connection(self) -> None:
         """
