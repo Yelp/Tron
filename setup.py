@@ -27,7 +27,10 @@ setup(
         "Intended Audience :: System Administrators",
         "Development Status :: 4 - Beta",
     ],
-    packages=find_packages(exclude=["tests.*", "tests", "example-cluster"],) + ["tronweb"],
+    packages=find_packages(
+        exclude=["tests.*", "tests", "example-cluster"],
+    )
+    + ["tronweb"],
     scripts=glob.glob("bin/*") + glob.glob("tron/bin/*.py"),
     include_package_data=True,
     long_description="""

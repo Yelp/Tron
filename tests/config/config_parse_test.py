@@ -446,7 +446,9 @@ class ConfigTestCase(TestCase):
                                 secret_name="secret1",
                                 container_path="/b/c",
                                 default_mode="0644",
-                                items=[dict(key="secret1", path="abcd", mode="777"),],
+                                items=[
+                                    dict(key="secret1", path="abcd", mode="777"),
+                                ],
                             ),
                         ],
                         cap_add=["KILL"],
@@ -1592,8 +1594,14 @@ class TestValidSecretVolumeItem:
         "config",
         [
             {"path": "abc"},
-            {"key": "abc",},
-            {"key": "abc", "path": "abc", "extra_key": None,},
+            {
+                "key": "abc",
+            },
+            {
+                "key": "abc",
+                "path": "abc",
+                "extra_key": None,
+            },
             {"key": "abc", "path": "abc", "mode": "a"},
         ],
     )
@@ -1602,7 +1610,8 @@ class TestValidSecretVolumeItem:
             config_parse.valid_secret_volume_item(config, NullConfigContext)
 
     @pytest.mark.parametrize(
-        "config", [{"key": "abc", "path": "abc"}, {"key": "abc", "path": "abc", "mode": "777"}],
+        "config",
+        [{"key": "abc", "path": "abc"}, {"key": "abc", "path": "abc", "mode": "777"}],
     )
     def test_valid_job_secret_volume_success(self, config):
         config_parse.valid_secret_volume_item(config, NullConfigContext)
@@ -1617,15 +1626,23 @@ class TestValidSecretVolume:
                 secret_name="secret1",
                 container_path="/b/c",
                 default_mode="0644",
-                items=[dict(key="secret1", path="abcd", mode="7778"),],
+                items=[
+                    dict(key="secret1", path="abcd", mode="7778"),
+                ],
             ),
             dict(
                 secret_volume_name="abc",
                 container_path="/b/c",
                 default_mode="0644",
-                items=[dict(key="secret1", path="abcd", mode="7777"),],
+                items=[
+                    dict(key="secret1", path="abcd", mode="7777"),
+                ],
             ),
-            dict(secret_volume_name="abc", secret_name="secret1", container_path=123,),
+            dict(
+                secret_volume_name="abc",
+                secret_name="secret1",
+                container_path=123,
+            ),
             dict(
                 secret_volume_name="abc",
                 secret_name="secret1",
@@ -1643,7 +1660,9 @@ class TestValidSecretVolume:
             secret_volume_name="abc",
             secret_name="secret1",
             container_path="/b/c",
-            items=[dict(key="secret2", path="abc"),],
+            items=[
+                dict(key="secret2", path="abc"),
+            ],
         )
         with pytest.raises(ConfigError):
             config_parse.valid_secret_volume(config, NullConfigContext)
@@ -1656,10 +1675,21 @@ class TestValidSecretVolume:
                 secret_name="secret1",
                 container_path="/b/c",
                 default_mode="0644",
-                items=[dict(key="secret1", path="abc"),],
+                items=[
+                    dict(key="secret1", path="abc"),
+                ],
             ),
-            dict(secret_volume_name="abc", secret_name="secret1", container_path="/b/c", items=[],),
-            dict(secret_volume_name="abc", secret_name="secret1", container_path="/b/c",),
+            dict(
+                secret_volume_name="abc",
+                secret_name="secret1",
+                container_path="/b/c",
+                items=[],
+            ),
+            dict(
+                secret_volume_name="abc",
+                secret_name="secret1",
+                container_path="/b/c",
+            ),
         ],
     )
     def test_valid(self, config):

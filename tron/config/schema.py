@@ -233,11 +233,23 @@ ConfigConstraint = config_object_factory(
     optional=[],
 )
 
-ConfigVolume = config_object_factory(name="ConfigVolume", required=["container_path", "host_path",], optional=["mode"],)
+ConfigVolume = config_object_factory(
+    name="ConfigVolume",
+    required=[
+        "container_path",
+        "host_path",
+    ],
+    optional=["mode"],
+)
 
 
 ConfigSecretVolumeItem = config_object_factory(
-    name="ConfigSecretVolumeItem", required=["key", "path",], optional=["mode"],
+    name="ConfigSecretVolumeItem",
+    required=[
+        "key",
+        "path",
+    ],
+    optional=["mode"],
 )
 
 
@@ -259,7 +271,11 @@ class ConfigSecretVolume(_ConfigSecretVolume):
         return d
 
 
-ConfigSecretSource = config_object_factory(name="ConfigSecretSource", required=["secret_name", "key"], optional=[],)
+ConfigSecretSource = config_object_factory(
+    name="ConfigSecretSource",
+    required=["secret_name", "key"],
+    optional=[],
+)
 
 ConfigFieldSelectorSource = config_object_factory(
     name="ConfigFieldSelectorSource",

@@ -46,7 +46,13 @@ class TestAction:
                     items=[ConfigSecretVolumeItem(key="key", path="path", mode="0755")],
                 ),
             ],
-            extra_volumes=[ConfigVolume(host_path="/tmp", container_path="/nail/tmp", mode="RO",),],
+            extra_volumes=[
+                ConfigVolume(
+                    host_path="/tmp",
+                    container_path="/nail/tmp",
+                    mode="RO",
+                ),
+            ],
             trigger_downstreams=True,
             triggered_by=["foo.bar"],
         )
