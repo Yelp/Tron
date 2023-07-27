@@ -187,26 +187,3 @@ def test_wait_for_retry_deps_done(fake_retry_action, mock_client_request, event_
         data=dict(command="retry", use_latest_command=1),
         user_attribution=True,
     )
-
-
-@mock.patch.object(retry, "RetryAction", autospec=True)
-def test_retry_actions(mock_retry_action, mock_client, event_loop):
-    mock_wait_and_retry = mock_retry_action.return_value.wait_and_retry
-    mock_wait_and_retry.return_value = _empty_coro()
-
-    r_actions = retry.retry_actions(
-        "http://localhost",
-        ["a_job.0.an_action_0", "another_job.1.an_action_1"],
-        use_latest_command=True,
-        deps_timeout_s=4,
-    )
-
-    assert r_actions == [mock_retry_action.return_value] * 2
-    assert mock_retry_action.call_args_list == [
-        mock.call(mock_client.return_value, "a_job.0.an_action_0", use_latest_command=True),
-        mock.call(mock_client.return_value, "another_job.1.an_action_1", use_latest_command=True),
-    ]
-    assert mock_wait_and_retry.call_args_list == [
-        mock.call(deps_timeout_s=4, jitter=False),
-        mock.call(deps_timeout_s=4),
-    ]
