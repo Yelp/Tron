@@ -70,7 +70,7 @@ python-dateutil==2.8.1
 python-jose==3.0.1
 pytimeparse==1.1.8
 pytz==2019.3
-PyYAML==5.4.1
+PyYAML==6.0.1
 requests==2.22.0
 requests-oauthlib==1.2.0
 responses==0.10.6
