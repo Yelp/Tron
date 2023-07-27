@@ -11,11 +11,12 @@ endif
 
 NOOP = true
 ifeq ($(PAASTA_ENV),YELP)
-	export PIP_INDEX_URL ?= https://pypi.yelpcorp.com/simple
+	# This index must match the Ubuntu codename in the dockerfile.
+	DOCKER_PIP_INDEX_URL ?= http://169.254.255.254:20641/bionic/simple/
 	export NPM_CONFIG_REGISTRY ?= https://npm.yelpcorp.com/
 	ADD_MISSING_DEPS_MAYBE:=-diff --unchanged-line-format= --old-line-format= --new-line-format='%L' ./requirements.txt ./yelp_package/extra_requirements_yelp.txt >> ./requirements.txt
 else
-	export PIP_INDEX_URL ?= https://pypi.python.org/simple
+	DOCKER_PIP_INDEX_URL ?= https://pypi.python.org/simple
 	export NPM_CONFIG_REGISTRY ?= https://registry.npmjs.org
 	ADD_MISSING_DEPS_MAYBE:=$(NOOP)
 endif
@@ -34,14 +35,14 @@ endif
 docker_%:
 	@echo "Building docker image for $*"
 	[ -d dist ] || mkdir -p dist
-	cd ./yelp_package/$* && docker build --build-arg PIP_INDEX_URL=${PIP_INDEX_URL} --build-arg NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY} -t tron-builder-$* .
+	cd ./yelp_package/$* && docker build --build-arg PIP_INDEX_URL=${DOCKER_PIP_INDEX_URL} --build-arg NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY} -t tron-builder-$* .
 
 deb_%: clean docker_% coffee_%
 	@echo "Building deb for $*"
 	# backup these files so we can temp modify them
 	cp requirements.txt requirements.txt.old
 	$(ADD_MISSING_DEPS_MAYBE)
-	$(DOCKER_RUN) -e PIP_INDEX_URL=${PIP_INDEX_URL} tron-builder-$* /bin/bash -c ' \
+	$(DOCKER_RUN) -e PIP_INDEX_URL=${DOCKER_PIP_INDEX_URL} tron-builder-$* /bin/bash -c ' \
 		dpkg-buildpackage -d &&                  \
 		mv ../*.deb dist/ &&                     \
 		rm -rf debian/tron &&                    \
@@ -87,7 +88,7 @@ example_cluster:
 	tox -e example-cluster
 
 yelpy:
-	.tox/py36/bin/pip-custom-platform install -i https://pypi.yelpcorp.com/simple -r yelp_package/extra_requirements_yelp.txt
+	.tox/py36/bin/pip install -r yelp_package/extra_requirements_yelp.txt
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/[\x27\x22]/\\\x27/g')
 release:
