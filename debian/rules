@@ -18,12 +18,11 @@ override_dh_auto_test:
 override_dh_virtualenv:
 	echo $(PIP_INDEX_URL)
 	dh_virtualenv --index-url $(PIP_INDEX_URL) \
+	            --extra-pip-arg  --trusted-host=169.254.255.254 \
                 --python=/usr/bin/python3.6 \
                 --preinstall cython==0.29.36 \
-                --preinstall pip-custom-platform \
                 --preinstall pip==9.0.1 \
-                --preinstall setuptools==46.1.3 \
-                --pip-tool pip-custom-platform \
+                --preinstall setuptools==46.1.3
 
 override_dh_installinit:
 	dh_installinit --noscripts
