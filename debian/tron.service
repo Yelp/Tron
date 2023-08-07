@@ -9,7 +9,7 @@ ExecStart=/usr/bin/trond --lock-file=${LOCKFILE:-$PIDFILE} --working-dir=${WORKI
 ExecStopPost=/usr/bin/logger -t tron_exit_status "SERVICE_RESULT:${SERVICE_RESULT} EXIT_CODE:${EXIT_CODE} EXIT_STATUS:${EXIT_STATUS}"
 TimeoutStopSec=20
 Restart=always
-LimitNOFILE=10000
+LimitNOFILE=100000
 
 [Install]
 WantedBy=multi-user.target
