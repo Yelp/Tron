@@ -29,9 +29,7 @@ services:
       - MESOS_SYSTEMD_ENABLE_SUPPORT=false
 
   tronmaster:
-    build:
-      context: ../
-      dockerfile: ./yelp_package/itest_dockerfiles/tronmaster/Dockerfile
+    build: ../yelp_package/itest_dockerfiles/tronmaster/
     command: 'tox -e trond_inside_container'
     ports:
       - 8089
