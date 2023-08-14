@@ -1,3 +1,12 @@
+tron (1.27.2) jammy; urgency=medium
+
+  * 1.27.2 tagged with 'make release'
+    Commit: Merge pull request #924 from Yelp/u/vit/fix-
+    configsecretvolume  Fix item assignment issue with
+    ConfigSecretVolume
+
+ -- Vincent Thibault <vit@yelp.com>  Mon, 14 Aug 2023 13:36:37 -0700
+
 tron (1.27.1) jammy; urgency=medium
 
   * 1.27.1 tagged with 'make release'
