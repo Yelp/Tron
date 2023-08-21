@@ -9,7 +9,6 @@ from typing import Optional
 
 from dataclasses import dataclass
 from dataclasses import fields
-from pyrsistent import InvariantException
 from twisted.internet import reactor
 
 from tron import command_context
@@ -1047,7 +1046,7 @@ class KubernetesActionRun(ActionRun, Observer):
                 service_account_name=attempt.command_config.service_account_name,
                 ports=attempt.command_config.ports,
             )
-        except InvariantException:
+        except Exception:
             log.exception(f"Unable to create task for ActionRun {self.id}")
             self.fail(exitcode.EXIT_KUBERNETES_TASK_INVALID)
             return None
@@ -1061,7 +1060,14 @@ class KubernetesActionRun(ActionRun, Observer):
 
         # Watch before submitting, in case submit causes a transition
         self.watch(task)
-        k8s_cluster.submit(task)
+
+        try:
+            k8s_cluster.submit(task)
+        except Exception:
+            log.exception(f"Unable to submit task for ActionRun {self.id}")
+            self.fail(exitcode.EXIT_KUBERNETES_TASK_INVALID)
+            return None
+
         return task
 
     def recover(self) -> Optional[KubernetesTask]:
