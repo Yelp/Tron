@@ -1,3 +1,15 @@
+tron (1.27.3) jammy; urgency=medium
+
+  * 1.27.3 tagged with 'make release'
+    Commit: Catch all exceptions in k8s submit_command() (#926)  It's
+    entirely possible that creating a task_processing task (and/or
+    submitting one) can result in an exception. At the moment, this
+    results in the affected ActionRun getting stuck in the Starting
+    state - but this is a lie and means that the normal
+    monitoring/alerting on failed runs does not kick in.
+
+ -- Luis Perez <luisp@yelp.com>  Mon, 21 Aug 2023 12:27:26 -0700
+
 tron (1.27.2) jammy; urgency=medium
 
   * 1.27.2 tagged with 'make release'
