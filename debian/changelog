@@ -1,3 +1,11 @@
+tron (1.27.4) jammy; urgency=medium
+
+  * 1.27.4 tagged with 'make release'
+    Commit: Revert 'Link tronweb_url ' (#928)  Reverts #911 as it did
+    not actually result in a clickable link in Slack
+
+ -- Luis Perez <luisp@yelp.com>  Tue, 10 Oct 2023 12:26:07 -0700
+
 tron (1.27.3) jammy; urgency=medium
 
   * 1.27.3 tagged with 'make release'
