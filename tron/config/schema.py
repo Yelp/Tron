@@ -265,6 +265,12 @@ class ConfigSecretVolume(_ConfigSecretVolume):
         d = super()._asdict().copy()
         items = d.get("items", [])
         if items is not None and items:
+            # the config parsing code appears to be turning arrays into tuples - however, updating the
+            # code we think is at fault breaks a non-trivial amount of tests. in the interest of time, we're
+            # just casting to a list here, but we should eventually circle back here
+            # and either ensure that we always get a list from the config parse code OR document that we're
+            # expecting Tron's config parsing code to return immutable data if this is behavior we want to depend on.
+            d["items"] = list(d["items"])
             for i, item in enumerate(items):
                 if isinstance(item, ConfigSecretVolumeItem):
                     d["items"][i] = item._asdict()

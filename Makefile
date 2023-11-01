@@ -81,13 +81,13 @@ itest_%: debitest_%
 	@echo "itest $* OK"
 
 dev:
-	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py38/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0
+	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py38/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0 --web-path=/nail/home/emanelsabban/pg/Tron/tronweb
 
 example_cluster:
 	tox -e example-cluster
 
 yelpy:
-	.tox/py38/bin/pip-custom-platform install -i https://pypi.yelpcorp.com/simple -r yelp_package/extra_requirements_yelp.txt
+	.tox/py38/bin/pip install -i https://pypi.yelpcorp.com/simple -r yelp_package/extra_requirements_yelp.txt
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/[\x27\x22]/\\\x27/g')
 release:
