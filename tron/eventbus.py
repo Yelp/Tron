@@ -144,32 +144,25 @@ class EventBus:
         duration = time.time() - started
         log.info(f"log read from disk, took {duration:.4}s")
 
-    def sync_save_log(self, reason):
+    def sync_save_log(self, reason: str) -> None:
         started = time.time()
-        new_file = os.path.join(self.log_dir, f"{int(started)}.pickle")
-        try:
-            with open(new_file, "xb") as f:
-                pickle.dump(self.event_log, f)
-        except FileExistsError:
-            log.exception(
-                f"unable to dump the log, file {new_file} already exists, "
-                f"too many updates/sec? current: {self.log_updates}, "
-                f"threshold: {self.log_save_updates}",
-            )
-            return False
+        pickle_file = os.path.join(self.log_dir, "events.pickle")
+        with open(pickle_file, "wb") as f:
+            pickle.dump(self.event_log, f)
 
+        # XXX: cleanup symlink shenanigans once we're running with a
+        # XXX: single pickle file
         # atomically replace `current` symlink
         tmplink = os.path.join(self.log_dir, "tmp")
         try:
             os.remove(tmplink)
         except FileNotFoundError:
             pass
-        os.symlink(new_file, tmplink)
+        os.symlink(pickle_file, tmplink)
         os.replace(tmplink, self.log_current)
 
         duration = time.time() - started
         log.info(f"log dumped to disk because {reason}, took {duration:.4}s")
-        return True
 
     def sync_loop(self):
         if not self.enabled:
@@ -194,7 +187,8 @@ class EventBus:
         elif self.log_updates > self.log_save_updates:
             save_reason = f"{self.log_save_updates} updates"
 
-        if save_reason and self.sync_save_log(save_reason):
+        if save_reason:
+            self.sync_save_log(save_reason)
             self.log_last_save = time.time()
             self.log_updates = 0
 

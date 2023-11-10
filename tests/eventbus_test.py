@@ -94,12 +94,12 @@ class EventBusTestCase(TestCase):
         time.time = mock.Mock(return_value=1.0)
         self.eventbus.sync_save_log("test")
         current_link = os.readlink(self.eventbus.log_current)
-        assert_equal(current_link, os.path.join(self.log_dir.name, "1.pickle"))
+        assert_equal(current_link, os.path.join(self.log_dir.name, "events.pickle"))
 
         time.time = mock.Mock(return_value=2.0)
         self.eventbus.sync_save_log("test")
         new_link = os.readlink(self.eventbus.log_current)
-        assert_equal(new_link, os.path.join(self.log_dir.name, "2.pickle"))
+        assert_equal(new_link, os.path.join(self.log_dir.name, "events.pickle"))
         assert os.path.exists(current_link)
         assert os.path.exists(new_link)
 
