@@ -28,6 +28,8 @@ override_dh_virtualenv:
                 --preinstall setuptools==46.1.3 \
                 --pip-tool pip-custom-platform \
                 --extra-pip-arg "-vvv"
+	@echo patching k8s client lib
+	patch debian/tron/opt/venvs/tron/lib/python3.8/site-packages/kubernetes/client/api_client.py contrib/python-k8s-client.diff
 
 override_dh_installinit:
 	dh_installinit --noscripts
