@@ -2,7 +2,7 @@
 +++ b/debian/tron/opt/venvs/tron/lib/python3.8/site-packages/kubernetes/client/configuration.py
 @@ -71,11 +71,11 @@
      """
- 
+
      _default = None
 -
      def __init__(self, host="http://localhost",
@@ -58,7 +58,7 @@
 +            self.debug = False
 +            """Debug switch
 +            """
- 
+
          self.verify_ssl = True
          """SSL/TLS verification
 @@ -178,11 +180,12 @@
@@ -77,5 +77,5 @@
 +            result.logger_file = self.logger_file
 +            result.debug = self.debug
          return result
- 
+
      @classmethod
