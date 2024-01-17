@@ -143,11 +143,8 @@ Optional Fields
 
 **max_runtime** (default **None**)
     A time interval (ex: "2 hours") that limits the duration of each job run.
-    If the job run is still running after this duration, all of it's actions
+    If the job run is still running after this duration, all of its actions
     are sent SIGTERM.
-
-    Note: This requires an :ref:`action_runners` to be configured. If
-    `action_runner` is none max_runtime does nothing.
 
 **time_zone** (default **None**)
     Time zone used for calculating when a job should run. Defaults to

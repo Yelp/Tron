@@ -1178,7 +1178,14 @@ class KubernetesActionRun(ActionRun, Observer):
 
         # Watch before submitting, in case submit causes a transition
         self.watch(task)
-        k8s_cluster.submit(task)
+
+        try:
+            k8s_cluster.submit(task)
+        except Exception:
+            log.exception(f"Unable to submit task for ActionRun {self.id}")
+            self.fail(exitcode.EXIT_KUBERNETES_TASK_INVALID)
+            return None
+
         return task
 
     def recover(self) -> Optional[KubernetesTask]:
