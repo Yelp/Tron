@@ -7,8 +7,8 @@ aws-sam-translator==1.15.1
 aws-xray-sdk==2.4.2
 backcall==0.1.0
 boto==2.49.0
-boto3==1.9.249
-botocore==1.12.249
+boto3==1.17.44
+botocore==1.20.112
 bsddb3==6.2.6
 cachetools==4.2.1
 certifi==2019.11.28
@@ -21,7 +21,6 @@ dataclasses==0.6
 DateTime==4.3
 decorator==4.4.0
 docker==4.1.0
-docutils==0.15.2
 ecdsa==0.13.3
 future==0.18.1
 google-auth==1.23.0
@@ -75,7 +74,7 @@ requests==2.22.0
 requests-oauthlib==1.2.0
 responses==0.10.6
 rsa==4.0
-s3transfer==0.2.1
+s3transfer==0.3.4
 setuptools==41.4.0
 six==1.14.0
 sshpubkeys==3.1.0
@@ -83,7 +82,7 @@ task-processing==0.12.2
 traitlets==4.3.3
 Twisted==20.3.0
 typing-extensions==3.10.0.0
-urllib3==1.25.6
+urllib3==1.25.10
 wcwidth==0.1.7
 websocket-client==0.56.0
 Werkzeug==0.16.0
