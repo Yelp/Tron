@@ -15,7 +15,6 @@ certifi==2022.12.7
 cffi==1.12.3
 cfn-lint==0.24.4
 chardet==3.0.4
-clusterman-metrics==2.2.1  # used by tron for pre-scaling for Spark runs
 constantly==15.1.0
 cryptography==39.0.1
 dataclasses==0.6
@@ -76,12 +75,11 @@ requests-oauthlib==1.2.0
 responses==0.10.6
 rsa==4.9
 s3transfer==0.6.0
-scribereader==0.14.1  # used by tron to get tronjob logs
 setuptools==65.5.1
 six==1.15.0
 sshpubkeys==3.1.0
 stack-data==0.6.2
-task-processing==0.12.2
+task-processing==0.13.0
 traitlets==5.0.0
 Twisted==22.10.0
 typing-extensions==4.5.0
@@ -91,7 +89,4 @@ websocket-client==0.56.0
 Werkzeug==2.2.3
 wrapt==1.11.2
 xmltodict==0.12.0
-yelp-clog==7.0.1  # scribereader dependency
-yelp-logging==4.17.0  # scribereader dependency
-yelp-meteorite==2.1.1  # used by task-processing to emit metrics, clusterman-metrics dependency
 zope.interface==5.1.0

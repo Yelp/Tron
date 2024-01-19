@@ -275,8 +275,8 @@ class PartialConfigContext:
 
 class NullConfigContext:
     path = ""
-    nodes = set()
-    command_context = {}
+    nodes = set()  # type: ignore
+    command_context = {}  # type: ignore
     namespace = MASTER_NAMESPACE
     partial = False
 
@@ -292,8 +292,8 @@ class Validator:
     """
 
     config_class = None
-    defaults = {}
-    validators = {}
+    defaults = {}  # type: ignore
+    validators = {}  # type: ignore
     optional = False
 
     def validate(self, in_dict, config_context):

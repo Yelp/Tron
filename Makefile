@@ -11,7 +11,7 @@ endif
 
 NOOP = true
 ifeq ($(PAASTA_ENV),YELP)
-	export PIP_INDEX_URL ?= https://pypi.yelpcorp.com/simple
+	export PIP_INDEX_URL ?= http://169.254.255.254:20641/$*/simple/
 	export NPM_CONFIG_REGISTRY ?= https://npm.yelpcorp.com/
 	ADD_MISSING_DEPS_MAYBE:=-diff --unchanged-line-format= --old-line-format= --new-line-format='%L' ./requirements.txt ./yelp_package/extra_requirements_yelp.txt >> ./requirements.txt
 else
@@ -47,8 +47,7 @@ deb_%: clean docker_% coffee_%
 	$(DOCKER_RUN) -e PIP_INDEX_URL=${PIP_INDEX_URL} tron-builder-$* /bin/bash -c ' \
 		dpkg-buildpackage -d &&                  \
 		mv ../*.deb dist/ &&                     \
-		rm -rf debian/tron &&                    \
-		chown -R $(UID):$(GID) dist debian       \
+		rm -rf debian/tron                    \
 	'
 	# restore the backed up files
 	mv requirements.txt.old requirements.txt
@@ -58,8 +57,7 @@ coffee_%: docker_%
 	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '       \
 		rm -rf tronweb/js/cs &&                        \
 		mkdir -p tronweb/js/cs &&                      \
-		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
-		chown -R $(UID):$(GID) tronweb/js/cs/          \
+		coffee -o tronweb/js/cs/ -c tronweb/coffee/ \
 	'
 
 test:
@@ -81,13 +79,13 @@ itest_%: debitest_%
 	@echo "itest $* OK"
 
 dev:
-	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py38/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0 --web-path=/nail/home/emanelsabban/pg/Tron/tronweb
+	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py38/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0
 
 example_cluster:
 	tox -e example-cluster
 
 yelpy:
-	.tox/py38/bin/pip install -i https://pypi.yelpcorp.com/simple -r yelp_package/extra_requirements_yelp.txt
+	.tox/py38/bin/pip install -r yelp_package/extra_requirements_yelp.txt
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/[\x27\x22]/\\\x27/g')
 release:

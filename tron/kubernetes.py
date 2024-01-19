@@ -1,4 +1,3 @@
-import json
 import logging
 from logging import Logger
 from typing import cast
@@ -41,17 +40,6 @@ KUBERNETES_FAILURE_TYPES = {"failed", "killed"}
 KUBERNETES_LOST_NODE_EXIT_CODES = {exitcode.EXIT_KUBERNETES_SPOT_INTERRUPTION, exitcode.EXIT_KUBERNETES_NODE_SCALEDOWN}
 
 log = logging.getLogger(__name__)
-try:
-    import clog  # type: ignore
-
-    clog.config.configure(
-        scribe_host="169.254.255.254",
-        scribe_port=1463,
-        monk_disable=False,
-        scribe_disable=False,
-    )
-except ImportError:
-    clog = None
 
 
 def combine_volumes(
@@ -138,9 +126,9 @@ class KubernetesTask(ActionCommand):
         Transitions Tron's state machine for this task based on events from task_processing.
         """
         try:
-            # Might be that somewhere in this function, something is throwing an exception and we're not handling it
-            # wrap this whole function in a big block of try/except block
-            # if handle_event errors out for any reason then we will never see this event at all
+            # we wrap this entire thing in a try-except as otherwise an error in
+            # logging (which is useful, but not critical) will result in us not
+            # processing an event at all (which is critical!)
             event_id = getattr(event, "task_id", None)
             if event_id != self.get_kubernetes_id():
                 self.log.warning(
@@ -273,22 +261,8 @@ class KubernetesTask(ActionCommand):
                     self.log.error("Unexpected failure, exiting")
 
                 self.done()
-        except Exception as e:
+        except Exception:
             self.log.exception(f"unable to handle an event for id={event_id} for event={str(event)}")
-            # clog here and make sure the message is a string
-            if clog is None:
-                log.debug("Clog logger unavailable. Unable to log event")
-            else:
-                clog.log_line(
-                    "tmp_missed_tronevents",
-                    json.dumps(
-                        {
-                            "event": str(event),
-                            "exception": type(e),
-                            "exception_message": str(e),
-                        }
-                    ),
-                )
 
 
 class KubernetesCluster:

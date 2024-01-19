@@ -260,7 +260,7 @@ _ConfigSecretVolume = config_object_factory(
 )
 
 
-class ConfigSecretVolume(_ConfigSecretVolume):
+class ConfigSecretVolume(_ConfigSecretVolume):  # type: ignore
     def _asdict(self) -> dict:
         d = super()._asdict().copy()
         items = d.get("items", [])
@@ -274,7 +274,7 @@ class ConfigSecretVolume(_ConfigSecretVolume):
             for i, item in enumerate(items):
                 if isinstance(item, ConfigSecretVolumeItem):
                     d["items"][i] = item._asdict()
-        return d
+        return d  # type: ignore
 
 
 ConfigSecretSource = config_object_factory(
@@ -304,15 +304,15 @@ ConfigParameter = config_object_factory(
     optional=[],
 )
 
-StatePersistenceTypes = Enum(
+StatePersistenceTypes = Enum(  # type: ignore
     "StatePersistenceTypes",
     dict(shelve="shelve", yaml="yaml", dynamodb="dynamodb"),
 )
 
-ExecutorTypes = Enum("ExecutorTypes", dict(ssh="ssh", mesos="mesos", kubernetes="kubernetes", spark="spark"))
+ExecutorTypes = Enum("ExecutorTypes", dict(ssh="ssh", mesos="mesos", kubernetes="kubernetes", spark="spark"))  # type: ignore
 
-ActionRunnerTypes = Enum("ActionRunnerTypes", dict(none="none", subprocess="subprocess"))
+ActionRunnerTypes = Enum("ActionRunnerTypes", dict(none="none", subprocess="subprocess"))  # type: ignore
 
-VolumeModes = Enum("VolumeModes", dict(RO="RO", RW="RW"))
+VolumeModes = Enum("VolumeModes", dict(RO="RO", RW="RW"))  # type: ignore
 
-ActionOnRerun = Enum("ActionOnRerun", dict(rerun="rerun"))
+ActionOnRerun = Enum("ActionOnRerun", dict(rerun="rerun"))  # type: ignore

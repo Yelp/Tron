@@ -269,7 +269,7 @@ class DisplayJobRuns(TableDisplay):
     colors = {
         "id": partial(Color.set, "yellow"),
         "state": add_color_for_state,
-        "manual": lambda value: Color.set("cyan" if value else None, value),
+        "manual": lambda value: Color.set("cyan" if value else None, value),  # type: ignore  # can't type a lambda
     }
 
     def format_value(self, field_idx, value):

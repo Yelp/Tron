@@ -5,7 +5,7 @@ import shelve
 import sys
 from io import BytesIO
 
-import bsddb3
+import bsddb3  # type: ignore
 
 from tron.utils import maybe_decode
 

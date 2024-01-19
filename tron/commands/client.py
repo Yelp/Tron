@@ -8,7 +8,6 @@ import urllib.parse
 import urllib.request
 from collections import namedtuple
 from typing import Dict
-from typing import Mapping
 
 import tron
 from tron.config.schema import MASTER_NAMESPACE
@@ -18,7 +17,7 @@ try:
 
     assert simplejson  # Pyflakes
 except ImportError:
-    import json as simplejson
+    import json as simplejson  # type: ignore
 
 log = logging.getLogger(__name__)
 
@@ -99,7 +98,7 @@ def build_get_url(url, data=None):
         return url
 
 
-def ensure_user_attribution(headers: Mapping[str, str]) -> Dict[str, str]:
+def ensure_user_attribution(headers: Dict[str, str]) -> Dict[str, str]:
     headers = headers.copy()
     if "User-Agent" not in headers:
         headers["User-Agent"] = USER_AGENT

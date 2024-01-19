@@ -65,7 +65,7 @@ class SSHAuthOptions:
 class NoPasswordAuthClient(default.SSHUserAuthClient):
     """Only support passwordless auth."""
 
-    preferredOrder = ["publickey", "keyboard-interactive"]
+    preferredOrder = ["publickey", "keyboard-interactive"]  # type: ignore
     auth_password = None
 
     def getGenericAnswers(self, name, instruction, prompts):

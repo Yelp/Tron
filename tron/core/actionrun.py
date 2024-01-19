@@ -6,8 +6,11 @@ import logging
 import os
 from dataclasses import dataclass
 from dataclasses import fields
+from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Set
+from typing import Union
 
 from pyrsistent import InvariantException
 from twisted.internet import reactor
@@ -17,7 +20,7 @@ from tron import node
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
-from tron.bin.action_runner import build_environment
+from tron.bin.action_runner import build_environment  # type: ignore # mypy can't find library stub
 from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
@@ -38,7 +41,7 @@ from tron.utils.state import Machine
 log = logging.getLogger(__name__)
 MAX_RECOVER_TRIES = 5
 INITIAL_RECOVER_DELAY = 3
-KUBERNETES_ACTIONRUN_EXECUTORS = {ExecutorTypes.kubernetes.value, ExecutorTypes.spark.value}
+KUBERNETES_ACTIONRUN_EXECUTORS: Set[str] = {ExecutorTypes.kubernetes.value, ExecutorTypes.spark.value}  # type: ignore # mypy can't seem to inspect this enum
 
 
 class ActionRunFactory:
@@ -136,12 +139,12 @@ class ActionRunAttempt:
     """Stores state about one try of an action run."""
 
     command_config: action.ActionCommandConfig
-    start_time: datetime.datetime = None
-    end_time: datetime.datetime = None
-    rendered_command: str = None
-    exit_status: int = None
-    mesos_task_id: str = None
-    kubernetes_task_id: str = None
+    start_time: Optional[datetime.datetime] = None
+    end_time: Optional[datetime.datetime] = None
+    rendered_command: Optional[str] = None
+    exit_status: Optional[int] = None
+    mesos_task_id: Optional[str] = None
+    kubernetes_task_id: Optional[str] = None
 
     def exit(self, exit_status, end_time=None):
         if self.end_time is None:
@@ -466,7 +469,7 @@ class ActionRun(Observable):
             run.transition_and_notify("fail_unknown")
         return run
 
-    def start(self, original_command=True):
+    def start(self, original_command=True) -> Optional[Union[bool, ActionCommand]]:
         """Start this ActionRun."""
         if self.in_delay is not None:
             log.warning(f"{self} cancelling suspend timer")
@@ -492,7 +495,7 @@ class ActionRun(Observable):
         if not self.is_valid_command(new_attempt.rendered_command):
             log.error(f"{self} invalid command: {new_attempt.command_config.command}")
             self.fail(exitcode.EXIT_INVALID_COMMAND)
-            return
+            return None
 
         return self.submit_command(new_attempt)
 
@@ -510,7 +513,7 @@ class ActionRun(Observable):
         self.attempts.append(new_attempt)
         return new_attempt
 
-    def submit_command(self, attempt):
+    def submit_command(self, attempt) -> Optional[Union[bool, ActionCommand]]:
         raise NotImplementedError()
 
     def stop(self):
@@ -522,7 +525,7 @@ class ActionRun(Observable):
     def recover(self):
         raise NotImplementedError()
 
-    def _done(self, target, exit_status=0):
+    def _done(self, target, exit_status=0) -> Optional[bool]:
         if self.machine.check(target):
             if self.triggered_by:
                 EventBus.clear_subscriptions(self.__hash__())
@@ -539,6 +542,7 @@ class ActionRun(Observable):
             log.debug(
                 f"{self} cannot transition from {self.state} via {target}",
             )
+        return None
 
     def retry(self, original_command=True):
         """Invoked externally (via API) when action needs to be re-tried
@@ -567,10 +571,10 @@ class ActionRun(Observable):
         self.in_delay = None
         self.start()
 
-    def restart(self, original_command=True):
+    def restart(self, original_command=True) -> Optional[Union[bool, ActionCommand]]:
         """Used by `fail` when action run has to be re-tried"""
         if self.retries_delay is not None:
-            self.in_delay = reactor.callLater(
+            self.in_delay = reactor.callLater(  # type: ignore  # no twisted stubs
                 self.retries_delay.total_seconds(),
                 self.start_after_delay,
             )
@@ -586,12 +590,12 @@ class ActionRun(Observable):
 
         return self._done("fail", exit_status)
 
-    def _exit_unsuccessful(self, exit_status=None, retry_original_command=True):
+    def _exit_unsuccessful(self, exit_status=None, retry_original_command=True) -> Optional[Union[bool, ActionCommand]]:
         if self.is_done:
             log.info(
                 f"{self} got exit code {exit_status} but already in terminal " f'state "{self.state}", not retrying',
             )
-            return
+            return None
         if self.last_attempt is not None:
             self.last_attempt.exit(exit_status)
         if self.retries_remaining is not None:
@@ -640,7 +644,7 @@ class ActionRun(Observable):
     def remaining_triggers(self):
         return [trig for trig in self.rendered_triggers if not EventBus.has_event(trig)]
 
-    def success(self):
+    def success(self) -> Optional[bool]:
         transition_valid = self._done("success")
         if transition_valid:
             if self.trigger_downstreams:
@@ -800,10 +804,11 @@ class ActionRun(Observable):
     def __str__(self):
         return f"ActionRun: {self.id}"
 
-    def transition_and_notify(self, target):
+    def transition_and_notify(self, target) -> Optional[bool]:
         if self.machine.transition(target):
             self.notify(self.state)
             return True
+        return None
 
 
 class SSHActionRun(ActionRun, Observer):
@@ -1141,6 +1146,13 @@ class KubernetesActionRun(ActionRun, Observer):
             self.fail(exitcode.EXIT_KUBERNETES_NOT_CONFIGURED)
             return None
 
+        if attempt.rendered_command is None:
+            self.fail(exitcode.EXIT_INVALID_COMMAND)
+            return None
+
+        if attempt.command_config.docker_image is None:
+            self.fail(exitcode.EXIT_KUBERNETES_TASK_INVALID)
+            return None
         try:
             task = k8s_cluster.create_task(
                 action_run_id=self.id,
@@ -1204,12 +1216,12 @@ class KubernetesActionRun(ActionRun, Observer):
         # We cannot recover if we can't transition to running
         if not self.machine.check("running"):
             log.error(f"{self} unable to transition from {self.machine.state} to running for recovery")
-            return
+            return None
 
         if not self.attempts or self.attempts[-1].kubernetes_task_id is None:
             log.error(f"{self} no task ID, cannot recover")
             self.fail_unknown()
-            return
+            return None
 
         last_attempt = self.attempts[-1]
 
@@ -1244,7 +1256,7 @@ class KubernetesActionRun(ActionRun, Observer):
                 f"invalid task ID {last_attempt.kubernetes_task_id!r}",
             )
             self.fail_unknown()
-            return
+            return None
 
         self.watch(task)
         k8s_cluster.recover(task)
@@ -1302,7 +1314,7 @@ class KubernetesActionRun(ActionRun, Observer):
 
     def handle_action_command_state_change(
         self, action_command: ActionCommand, event: str, event_data=None
-    ) -> Optional[bool]:
+    ) -> Optional[Union[bool, ActionCommand]]:
         """
         Observe ActionCommand state changes and transition the ActionCommand state machine to a new state.
         """
@@ -1323,6 +1335,7 @@ class KubernetesActionRun(ActionRun, Observer):
                 return self.success()
 
             return self._exit_unsuccessful(action_command.exit_status)
+        return None
 
     handler = handle_action_command_state_change
 
@@ -1341,7 +1354,7 @@ class ActionRunCollection:
 
     def __init__(self, action_graph, run_map):
         self.action_graph = action_graph
-        self.run_map = run_map
+        self.run_map: Dict[str, ActionRun] = run_map
         # Setup proxies
         self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
             self.get_action_runs_with_cleanup,
@@ -1391,7 +1404,7 @@ class ActionRunCollection:
         return updated
 
     @property
-    def cleanup_action_run(self) -> ActionRun:
+    def cleanup_action_run(self) -> Optional[ActionRun]:
         return self.run_map.get(action.CLEANUP_ACTION_NAME)
 
     @property

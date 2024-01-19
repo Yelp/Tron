@@ -6,8 +6,9 @@ import threading
 import time
 from collections import defaultdict
 from collections import OrderedDict
+from typing import DefaultDict
 
-import boto3
+import boto3  # type: ignore
 
 from tron.metrics import timer
 
@@ -24,7 +25,7 @@ class DynamoDBStateStore:
         self.dynamodb_region = dynamodb_region
         self.table = self.dynamodb.Table(name)
         self.stopping = stopping
-        self.save_queue = OrderedDict()
+        self.save_queue: OrderedDict = OrderedDict()
         self.save_lock = threading.Lock()
         self.save_errors = 0
         self.save_thread = threading.Thread(target=self._save_loop, args=(), daemon=True)
@@ -89,7 +90,7 @@ class DynamoDBStateStore:
 
     def _merge_items(self, first_items, remaining_items) -> dict:
         items = defaultdict(list)
-        raw_items = defaultdict(bytearray)
+        raw_items: DefaultDict[str, bytearray] = defaultdict(bytearray)
         # Merge all items based their keys and deserialize their values
         if remaining_items:
             first_items.extend(remaining_items)

@@ -3,10 +3,12 @@ import logging
 import re
 import socket
 import time
+from typing import Any
+from typing import Dict
 from urllib.parse import urlparse
 
 import requests
-import staticconf
+import staticconf  # type: ignore # need to upgrade to get type stubs
 from task_processing.runners.subscription import Subscription
 from task_processing.task_processor import TaskProcessor
 from twisted.internet.defer import logError
@@ -84,8 +86,8 @@ class MesosClusterRepository:
     secret = None
 
     name = "frameworks"
-    clusters = {}
-    state_data = {}
+    clusters: Dict[str, "MesosCluster"] = {}
+    state_data: Dict[str, Any] = {}
     state_watcher = None
 
     @classmethod

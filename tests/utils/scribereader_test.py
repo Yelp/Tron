@@ -21,7 +21,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_today():
         "tron.utils.scribereader.get_scribereader_host_and_port",
         autospec=True,
         return_value=("host", 1234),
-    ), mock.patch(
+    ), mock.patch("tron.utils.scribereader.scribereader", autospec=True,), mock.patch(
         "tron.utils.scribereader.scribereader.get_stream_reader",
         autospec=True,
     ) as mock_stream_reader, mock.patch(
@@ -97,7 +97,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_different_days():
         "tron.utils.scribereader.get_scribereader_host_and_port",
         autospec=True,
         return_value=("host", 1234),
-    ), mock.patch(
+    ), mock.patch("tron.utils.scribereader.scribereader", autospec=True,), mock.patch(
         "tron.utils.scribereader.scribereader.get_stream_reader",
         autospec=True,
     ) as mock_stream_reader, mock.patch(
@@ -195,7 +195,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_in_past():
         "tron.utils.scribereader.get_scribereader_host_and_port",
         autospec=True,
         return_value=("host", 1234),
-    ), mock.patch(
+    ), mock.patch("tron.utils.scribereader.scribereader", autospec=True,), mock.patch(
         "tron.utils.scribereader.scribereader.get_stream_reader",
         autospec=True,
     ) as mock_stream_reader, mock.patch(
@@ -261,7 +261,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
         "tron.utils.scribereader.get_scribereader_host_and_port",
         autospec=True,
         return_value=("host", 1234),
-    ), mock.patch(
+    ), mock.patch("tron.utils.scribereader.scribereader", autospec=True,), mock.patch(
         "tron.utils.scribereader.scribereader.get_stream_reader",
         autospec=True,
     ) as mock_stream_reader, mock.patch(
