@@ -60,7 +60,7 @@ pyasn1==0.4.7
 pyasn1-modules==0.2.8
 pycparser==2.19
 pyformance==0.4
-Pygments==2.4.2
+Pygments==2.15.0
 PyHamcrest==2.0.2
 pymesos==0.3.9
 pyrsistent==0.15.4
