@@ -356,17 +356,18 @@ class KubernetesCluster:
         self.deferred = self.queue.get()
         if self.deferred is None:
             log.warning("Unable to get a handler for next event in queue - this should never happen!")
-            return
+            # TODO: figure out how to recover if we were unable to get a handler
+            # Not adding a callback is very bad here as this means we will never handle this event
         # we want to process the event we just popped off the queue, but we also want
         # to form a sort of event loop, so we add two callbacks:
         # * one to actually deal with the event
         # * and another to grab the next event, in this way creating an event loop :)
-        self.deferred.addCallback(self.process_event)
-        self.deferred.addCallback(self.handle_next_event)
+        self.deferred.addCallback(self.process_event)  # type: ignore
+        self.deferred.addCallback(self.handle_next_event)  # type: ignore
 
         # should an exception be thrown, these callbacks will be run instead
-        self.deferred.addErrback(logError)
-        self.deferred.addErrback(self.handle_next_event)
+        self.deferred.addErrback(logError)  # type: ignore
+        self.deferred.addErrback(self.handle_next_event)  # type: ignore
 
     def process_event(self, event: Event) -> None:
         """
