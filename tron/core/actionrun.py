@@ -12,7 +12,6 @@ from typing import Optional
 from typing import Set
 from typing import Union
 
-from pyrsistent import InvariantException
 from twisted.internet import reactor
 
 from tron import command_context
@@ -1176,7 +1175,7 @@ class KubernetesActionRun(ActionRun, Observer):
                 service_account_name=attempt.command_config.service_account_name,
                 ports=attempt.command_config.ports,
             )
-        except InvariantException:
+        except Exception:
             log.exception(f"Unable to create task for ActionRun {self.id}")
             self.fail(exitcode.EXIT_KUBERNETES_TASK_INVALID)
             return None
