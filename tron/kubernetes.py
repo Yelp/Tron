@@ -357,7 +357,7 @@ class KubernetesCluster:
         if self.deferred is None:
             log.warning("Unable to get a handler for next event in queue - this should never happen!")
             # TODO: figure out how to recover if we were unable to get a handler
-            # Not adding a callback is very bad here as this means we will never handle this event
+            # Not adding a callback is very bad here as this means we will never handle future events
         # we want to process the event we just popped off the queue, but we also want
         # to form a sort of event loop, so we add two callbacks:
         # * one to actually deal with the event
