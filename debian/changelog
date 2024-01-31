@@ -1,3 +1,29 @@
+tron (1.28.0) jammy; urgency=medium
+
+  * 1.28.0 tagged with 'make release'
+    Commit: Upgrading Tron to py3.8 + patching it with the fix (#934)  *
+    Monkeypatch SimpleQueue back to PySimpleQueue  We have a hunch that
+    this is what is causing our pod event loop to have wildly delayed
+    items  * Revert 'Revert python/jammy upgrades (#907)'  This reverts
+    commit 483da5c0fb258b01b8e47912ad034d43554ada7d.  * new formatting
+    * Bump pyyaml  * Rm sad test that is not relevant for validation  *
+    added stuff to run tron locally  * matching the python version with
+    whats currently running in infrastage  * adding also changelog  *
+    This commit includes some requriements for clog and try/except block
+    for handle_events  * This commit adds the patch fix  * Revert
+    'matching the python version with whats currently running in
+    infrastage'  This reverts commit
+    1f81a6d4805d742a7a7a28b1d7d8eef39522a896.  * Revert 'adding also
+    changelog'  This reverts commit
+    951fcc8fc31114bde340bad4b82ced0529e03b65.  * precommit fixes the
+    patch  * Fixing mypy issues and tests failing  * removing return and
+    adding comment for handling defer being none  * addressing wording
+    * fix InvariantException back to Exception  ---------  Co-authored-
+    by: Luis Perez <luisp@yelp.com> Co-authored-by: Vincent Thibault
+    <vit@yelp.com>
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Wed, 31 Jan 2024 09:25:13 -0800
+
 tron (1.27.5) jammy; urgency=medium
 
   * 1.27.5 tagged with 'make release'
