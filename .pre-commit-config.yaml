@@ -1,6 +1,6 @@
 ---
 default_language_version:
-    python: python3.6
+    python: python3.8
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.5.0
@@ -17,7 +17,7 @@ repos:
       - id: pretty-format-json
         args: [--autofix, --indent, '4', --no-sort-keys]
   - repo: https://github.com/PyCQA/flake8
-    rev: 3.9.2
+    rev: 5.0.4
     hooks:
       - id: flake8
         exclude: ^docs/source/conf.py$
@@ -27,10 +27,10 @@ repos:
       - id: reorder-python-imports
         args: [--py3-plus]
   - repo: https://github.com/asottile/pyupgrade
-    rev: v2.0.2
+    rev: v3.3.1
     hooks:
       - id: pyupgrade
-        args: [--py36-plus]
+        args: [--py38-plus]
   - repo: local
     hooks:
       - id: patch-enforce-autospec
@@ -41,8 +41,7 @@ repos:
         language: script
         files: ^tests/.*\.py$
   - repo: http://github.com/psf/black
-    rev: 19.10b0
+    rev: 22.3.0
     hooks:
       - id: black
-        language_version: python3.6
-        args: [--target-version, py36]
+        args: [--target-version, py38]

@@ -11,23 +11,25 @@ endif
 
 NOOP = true
 ifeq ($(PAASTA_ENV),YELP)
-	# This index must match the Ubuntu codename in the dockerfile.
-	DOCKER_PIP_INDEX_URL ?= http://169.254.255.254:20641/bionic/simple/
+	export PIP_INDEX_URL ?= http://169.254.255.254:20641/$*/simple/
 	export NPM_CONFIG_REGISTRY ?= https://npm.yelpcorp.com/
 	ADD_MISSING_DEPS_MAYBE:=-diff --unchanged-line-format= --old-line-format= --new-line-format='%L' ./requirements.txt ./yelp_package/extra_requirements_yelp.txt >> ./requirements.txt
 else
-	DOCKER_PIP_INDEX_URL ?= https://pypi.python.org/simple
+	export PIP_INDEX_URL ?= https://pypi.python.org/simple
 	export NPM_CONFIG_REGISTRY ?= https://registry.npmjs.org
 	ADD_MISSING_DEPS_MAYBE:=$(NOOP)
 endif
 
-.PHONY : all clean tests docs dev cluster_itests
+.PHONY : all clean tests docs dev
 
 -usage:
 	@echo "make test - Run tests"
 	@echo "make deb_bionic - Generate bionic deb package"
 	@echo "make itest_bionic - Run tests and integration checks"
 	@echo "make _itest_bionic - Run only integration checks"
+	@echo "make deb_jammy - Generate bionic deb package"
+	@echo "make itest_jammy - Run tests and integration checks"
+	@echo "make _itest_jammy - Run only integration checks"
 	@echo "make release - Prepare debian info for new release"
 	@echo "make clean - Get rid of scratch and byte files"
 	@echo "make dev - Get a local copy of trond running in debug mode in the foreground"
@@ -35,18 +37,17 @@ endif
 docker_%:
 	@echo "Building docker image for $*"
 	[ -d dist ] || mkdir -p dist
-	cd ./yelp_package/$* && docker build --build-arg PIP_INDEX_URL=${DOCKER_PIP_INDEX_URL} --build-arg NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY} -t tron-builder-$* .
+	cd ./yelp_package/$* && docker build --build-arg PIP_INDEX_URL=${PIP_INDEX_URL} --build-arg NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY} -t tron-builder-$* .
 
 deb_%: clean docker_% coffee_%
 	@echo "Building deb for $*"
 	# backup these files so we can temp modify them
 	cp requirements.txt requirements.txt.old
 	$(ADD_MISSING_DEPS_MAYBE)
-	$(DOCKER_RUN) -e PIP_INDEX_URL=${DOCKER_PIP_INDEX_URL} tron-builder-$* /bin/bash -c ' \
+	$(DOCKER_RUN) -e PIP_INDEX_URL=${PIP_INDEX_URL} tron-builder-$* /bin/bash -c ' \
 		dpkg-buildpackage -d &&                  \
 		mv ../*.deb dist/ &&                     \
-		rm -rf debian/tron &&                    \
-		chown -R $(UID):$(GID) dist debian       \
+		rm -rf debian/tron                    \
 	'
 	# restore the backed up files
 	mv requirements.txt.old requirements.txt
@@ -56,15 +57,14 @@ coffee_%: docker_%
 	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '       \
 		rm -rf tronweb/js/cs &&                        \
 		mkdir -p tronweb/js/cs &&                      \
-		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
-		chown -R $(UID):$(GID) tronweb/js/cs/          \
+		coffee -o tronweb/js/cs/ -c tronweb/coffee/ \
 	'
 
 test:
-	tox -e py36
+	tox -e py38
 
 test_in_docker_%: docker_%
-	$(DOCKER_RUN) tron-builder-$* python3.6 -m tox -vv -e py36
+	$(DOCKER_RUN) tron-builder-$* python3.8 -m tox -vv -e py38
 
 tox_%:
 	tox -e $*
@@ -78,17 +78,14 @@ debitest_%: deb_% _itest_%
 itest_%: debitest_%
 	@echo "itest $* OK"
 
-cluster_itests:
-	tox -e cluster_itests
-
 dev:
-	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py36/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0
+	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py38/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0
 
 example_cluster:
 	tox -e example-cluster
 
 yelpy:
-	.tox/py36/bin/pip install -r yelp_package/extra_requirements_yelp.txt
+	.tox/py38/bin/pip install -r yelp_package/extra_requirements_yelp.txt
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/[\x27\x22]/\\\x27/g')
 release:

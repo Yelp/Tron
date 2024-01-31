@@ -65,7 +65,7 @@ class SSHAuthOptions:
 class NoPasswordAuthClient(default.SSHUserAuthClient):
     """Only support passwordless auth."""
 
-    preferredOrder = ["publickey", "keyboard-interactive"]
+    preferredOrder = ["publickey", "keyboard-interactive"]  # type: ignore
     auth_password = None
 
     def getGenericAnswers(self, name, instruction, prompts):
@@ -199,7 +199,12 @@ class ExecChannel(channel.SSHChannel):
 
             self.command = self.command.encode("utf-8")
 
-            req = self.conn.sendRequest(self, b"exec", common.NS(self.command), wantReply=True,)
+            req = self.conn.sendRequest(
+                self,
+                b"exec",
+                common.NS(self.command),
+                wantReply=True,
+            )
             req.addCallback(self._cbExecSendRequest)
         else:
             # A missing start defer means that we are no longer expected to do
@@ -251,7 +256,9 @@ class ExecChannel(channel.SSHChannel):
 
     def closed(self):
         if self.exit_status is None and self.running and self.exit_defer and not self.exit_defer.called:
-            log.warning("Channel has been closed without receiving an exit" " status",)
+            log.warning(
+                "Channel has been closed without receiving an exit" " status",
+            )
             f = failure.Failure(exc_value=ChannelClosedEarlyError())
             self.exit_defer.errback(f)
 

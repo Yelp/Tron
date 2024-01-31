@@ -95,8 +95,8 @@ class FileHandleManager:
 
     def __init__(self, max_idle_time=60):
         """
-            Create a new instance.
-            max_idle_time           - max idle time in seconds
+        Create a new instance.
+        max_idle_time           - max idle time in seconds
         """
         if self.__class__._instance:
             msg = "FileHandleManager is a singleton. Call get_instance()"
@@ -186,7 +186,7 @@ class OutputStreamSerializer:
         try:
             cmd = ("tail", "-n", str(num_lines), path)
             tail_sub = Popen(cmd, stdout=PIPE)
-            return list(line.rstrip().decode() for line in tail_sub.stdout)
+            return list(line.rstrip().decode() for line in (tail_sub.stdout if tail_sub.stdout else []))
         except OSError as e:
             log.error(f"Could not tail {path}: {e}")
             return []

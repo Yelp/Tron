@@ -132,7 +132,10 @@ class ConfigManager:
         return self.manifest.get_file_name(name) or create_filename()
 
     def validate_with_fragment(
-        self, name, content, should_validate_missing_dependency=True,
+        self,
+        name,
+        content,
+        should_validate_missing_dependency=True,
     ):
         name_mapping = self.get_config_name_mapping()
         name_mapping[name] = content

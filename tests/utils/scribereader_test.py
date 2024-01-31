@@ -18,19 +18,27 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_today():
     min_date = datetime.datetime.now()
     max_date = datetime.datetime.now() + datetime.timedelta(hours=1)
     with mock.patch(
-        "tron.utils.scribereader.get_scribereader_host_and_port", autospec=True, return_value=("host", 1234),
-    ), mock.patch(
-        "tron.utils.scribereader.scribereader.get_stream_reader", autospec=True,
+        "tron.utils.scribereader.get_scribereader_host_and_port",
+        autospec=True,
+        return_value=("host", 1234),
+    ), mock.patch("tron.utils.scribereader.scribereader", autospec=True,), mock.patch(
+        "tron.utils.scribereader.scribereader.get_stream_reader",
+        autospec=True,
     ) as mock_stream_reader, mock.patch(
-        "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
+        "tron.utils.scribereader.scribereader.get_stream_tailer",
+        autospec=True,
     ) as mock_stream_tailer, mock.patch(
-        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
+        "tron.utils.scribereader.get_superregion",
+        autospec=True,
+        return_value="fake",
     ), mock.patch(
-        "tron.config.static_config.build_configuration_watcher", autospec=True,
+        "tron.config.static_config.build_configuration_watcher",
+        autospec=True,
     ), mock.patch(
         "staticconf.read", autospec=True, return_value=1000
     ), mock.patch(
-        "tron.config.static_config.load_yaml_file", autospec=True,
+        "tron.config.static_config.load_yaml_file",
+        autospec=True,
     ):
         # in this case, we shouldn't even try to check the reader, so lets set an exception
         # to make sure we didn't try
@@ -71,7 +79,10 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_today():
 
     mock_stream_reader.assert_not_called()
     mock_stream_tailer.assert_called_once_with(
-        stream_name="stream_paasta_app_output_namespace_job__action", lines=-1, tailing_host="host", tailing_port=1234,
+        stream_name="stream_paasta_app_output_namespace_job__action",
+        lines=-1,
+        tailing_host="host",
+        tailing_port=1234,
     )
     assert output == ["line 1", "line 2"]
 
@@ -83,19 +94,27 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_different_days():
     min_date = datetime.datetime.now() - datetime.timedelta(days=5)
     max_date = datetime.datetime.now()
     with mock.patch(
-        "tron.utils.scribereader.get_scribereader_host_and_port", autospec=True, return_value=("host", 1234),
-    ), mock.patch(
-        "tron.utils.scribereader.scribereader.get_stream_reader", autospec=True,
+        "tron.utils.scribereader.get_scribereader_host_and_port",
+        autospec=True,
+        return_value=("host", 1234),
+    ), mock.patch("tron.utils.scribereader.scribereader", autospec=True,), mock.patch(
+        "tron.utils.scribereader.scribereader.get_stream_reader",
+        autospec=True,
     ) as mock_stream_reader, mock.patch(
-        "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
+        "tron.utils.scribereader.scribereader.get_stream_tailer",
+        autospec=True,
     ) as mock_stream_tailer, mock.patch(
-        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
+        "tron.utils.scribereader.get_superregion",
+        autospec=True,
+        return_value="fake",
     ), mock.patch(
-        "tron.config.static_config.build_configuration_watcher", autospec=True,
+        "tron.config.static_config.build_configuration_watcher",
+        autospec=True,
     ), mock.patch(
         "staticconf.read", autospec=True, return_value=1000
     ), mock.patch(
-        "tron.config.static_config.load_yaml_file", autospec=True,
+        "tron.config.static_config.load_yaml_file",
+        autospec=True,
     ):
         # we should check the reader for data from a previous day
         mock_stream_reader.return_value.__enter__.return_value = iter(
@@ -158,7 +177,10 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_different_days():
         reader_port=1234,
     )
     mock_stream_tailer.assert_called_once_with(
-        stream_name="stream_paasta_app_output_namespace_job__action", lines=-1, tailing_host="host", tailing_port=1234,
+        stream_name="stream_paasta_app_output_namespace_job__action",
+        lines=-1,
+        tailing_host="host",
+        tailing_port=1234,
     )
     assert output == ["line 0", "line 1", "line 2"]
 
@@ -170,19 +192,27 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_in_past():
     min_date = datetime.datetime.now() - datetime.timedelta(days=5)
     max_date = datetime.datetime.now() - datetime.timedelta(days=4)
     with mock.patch(
-        "tron.utils.scribereader.get_scribereader_host_and_port", autospec=True, return_value=("host", 1234),
-    ), mock.patch(
-        "tron.utils.scribereader.scribereader.get_stream_reader", autospec=True,
+        "tron.utils.scribereader.get_scribereader_host_and_port",
+        autospec=True,
+        return_value=("host", 1234),
+    ), mock.patch("tron.utils.scribereader.scribereader", autospec=True,), mock.patch(
+        "tron.utils.scribereader.scribereader.get_stream_reader",
+        autospec=True,
     ) as mock_stream_reader, mock.patch(
-        "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
+        "tron.utils.scribereader.scribereader.get_stream_tailer",
+        autospec=True,
     ) as mock_stream_tailer, mock.patch(
-        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
+        "tron.utils.scribereader.get_superregion",
+        autospec=True,
+        return_value="fake",
     ), mock.patch(
-        "tron.config.static_config.build_configuration_watcher", autospec=True,
+        "tron.config.static_config.build_configuration_watcher",
+        autospec=True,
     ), mock.patch(
         "staticconf.read", autospec=True, return_value=1000
     ), mock.patch(
-        "tron.config.static_config.load_yaml_file", autospec=True,
+        "tron.config.static_config.load_yaml_file",
+        autospec=True,
     ):
         # all the data we want is from the past, so we should only check the reader
         mock_stream_reader.return_value.__enter__.return_value = iter(
@@ -228,19 +258,27 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
     # in tron.yaml in srv-configs
     max_lines = 1000
     with mock.patch(
-        "tron.utils.scribereader.get_scribereader_host_and_port", autospec=True, return_value=("host", 1234),
-    ), mock.patch(
-        "tron.utils.scribereader.scribereader.get_stream_reader", autospec=True,
+        "tron.utils.scribereader.get_scribereader_host_and_port",
+        autospec=True,
+        return_value=("host", 1234),
+    ), mock.patch("tron.utils.scribereader.scribereader", autospec=True,), mock.patch(
+        "tron.utils.scribereader.scribereader.get_stream_reader",
+        autospec=True,
     ) as mock_stream_reader, mock.patch(
-        "tron.utils.scribereader.scribereader.get_stream_tailer", autospec=True,
+        "tron.utils.scribereader.scribereader.get_stream_tailer",
+        autospec=True,
     ) as mock_stream_tailer, mock.patch(
-        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",
+        "tron.utils.scribereader.get_superregion",
+        autospec=True,
+        return_value="fake",
     ), mock.patch(
-        "tron.config.static_config.build_configuration_watcher", autospec=True,
+        "tron.config.static_config.build_configuration_watcher",
+        autospec=True,
     ), mock.patch(
         "staticconf.read", autospec=True, return_value=1000
     ), mock.patch(
-        "tron.config.static_config.load_yaml_file", autospec=True,
+        "tron.config.static_config.load_yaml_file",
+        autospec=True,
     ):
 
         with open("./tests/utils/shortOutputTest.txt") as f:

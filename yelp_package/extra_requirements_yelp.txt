@@ -1,5 +1,5 @@
 clusterman-metrics==2.2.1  # used by tron for pre-scaling for Spark runs
 scribereader==0.14.1  # used by tron to get tronjob logs
-yelp-clog==5.2.3  # scribereader dependency
+yelp-clog==7.0.1  # scribereader dependency
 yelp-logging==4.17.0  # scribereader dependency
 yelp-meteorite==2.1.1  # used by task-processing to emit metrics, clusterman-metrics dependency

@@ -1,3 +1,4 @@
+# Please visit <wiki link> for a guide on how to setup Tron for local development
 state_persistence:
   name: "tron_state"
   table_name: "tmp-tron-state"
@@ -12,18 +13,11 @@ ssh_options:
 nodes:
   - hostname: localhost
 
-mesos_options:
-  master_address: mesos.paasta-mesosstage.yelp
-  master_port: 5050
-  role: '*'
-  enabled: True
-  dockercfg_location: file:///root/.dockercfg
-
 # Replace this with the path relative to your home dir to use
 # action_runner:
 #   runner_type: "subprocess"
 #   remote_status_path: "pg/tron/status"
-#   remote_exec_path: "pg/tron/.tox/py36/bin"
+#   remote_exec_path: "pg/tron/.tox/py38/bin"
 
 jobs:
   testjob0:

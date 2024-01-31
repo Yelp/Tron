@@ -5,7 +5,7 @@ import shelve
 import sys
 from io import BytesIO
 
-import bsddb3
+import bsddb3  # type: ignore
 
 from tron.utils import maybe_decode
 
@@ -89,7 +89,10 @@ class ShelveStateStore:
         self.shelve.sync()
 
     def restore(self, keys):
-        items = zip(keys, (self.shelve.get(str(key.key)) for key in keys),)
+        items = zip(
+            keys,
+            (self.shelve.get(str(key.key)) for key in keys),
+        )
         return dict(filter(operator.itemgetter(1), items))
 
     def cleanup(self):
