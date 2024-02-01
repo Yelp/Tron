@@ -1,3 +1,13 @@
+tron (1.28.2) jammy; urgency=medium
+
+  * 1.28.2 tagged with 'make release'
+    Commit: Remove unnecessary mocks (#937)  This is what I get for
+    trusting GHA rather than also running the tests internally :)  These
+    mocks are no longer required and are actually causing test failures
+    internally.
+
+ -- Luis Perez <luisp@yelp.com>  Thu, 01 Feb 2024 09:10:42 -0800
+
 tron (1.28.1) jammy; urgency=medium
 
   * 1.28.1 tagged with 'make release'
