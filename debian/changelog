@@ -1,3 +1,13 @@
+tron (1.28.1) jammy; urgency=medium
+
+  * 1.28.1 tagged with 'make release'
+    Commit: Downpin yelp-clog (#936)  We had bumped this a couple major
+    versions since we were also bumping scribereader - but we reverted
+    the scribereader bump before merging the jammy/py38 branch and
+    forgot to also revert the yelp-clog bump :)
+
+ -- Luis Perez <luisp@yelp.com>  Thu, 01 Feb 2024 08:51:40 -0800
+
 tron (1.28.0) jammy; urgency=medium
 
   * 1.28.0 tagged with 'make release'
