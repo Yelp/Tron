@@ -5,7 +5,7 @@ After=network.target
 [Service]
 User=tron
 EnvironmentFile=/etc/default/tron
-ExecStart=/usr/bin/trond --lock-file=${LOCKFILE:-$PIDFILE} --working-dir=${WORKINGDIR} --host ${LISTEN_HOST} --port ${LISTEN_PORT} ${DAEMON_OPTS}
+ExecStart=/usr/bin/zk-flock tron_master_${CLUSTER_NAME} "/usr/bin/trond --lock-file=${LOCKFILE:-$PIDFILE} --working-dir=${WORKINGDIR} --host ${LISTEN_HOST} --port ${LISTEN_PORT} ${DAEMON_OPTS}"
 ExecStopPost=/usr/bin/logger -t tron_exit_status "SERVICE_RESULT:${SERVICE_RESULT} EXIT_CODE:${EXIT_CODE} EXIT_STATUS:${EXIT_STATUS}"
 TimeoutStopSec=20
 Restart=always
