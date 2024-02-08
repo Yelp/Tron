@@ -11,15 +11,26 @@ from tron.config import ConfigError
 from tron.config import schema
 from tron.utils import crontab
 
-ConfigGenericSchedule = schema.config_object_factory("ConfigGenericSchedule", ["type", "value"], ["jitter"],)
-
-ConfigGrocScheduler = namedtuple("ConfigGrocScheduler", "original ordinals weekdays monthdays months timestr jitter",)
-
-ConfigCronScheduler = namedtuple(
-    "ConfigCronScheduler", "original minutes hours monthdays months weekdays ordinals jitter",
+ConfigGenericSchedule = schema.config_object_factory(
+    "ConfigGenericSchedule",
+    ["type", "value"],
+    ["jitter"],
 )
 
-ConfigDailyScheduler = namedtuple("ConfigDailyScheduler", "original hour minute second days jitter",)
+ConfigGrocScheduler = namedtuple(
+    "ConfigGrocScheduler",
+    "original ordinals weekdays monthdays months timestr jitter",
+)
+
+ConfigCronScheduler = namedtuple(
+    "ConfigCronScheduler",
+    "original minutes hours monthdays months weekdays ordinals jitter",
+)
+
+ConfigDailyScheduler = namedtuple(
+    "ConfigDailyScheduler",
+    "original hour minute second days jitter",
+)
 
 
 class ScheduleParseError(ConfigError):
@@ -35,7 +46,11 @@ def pad_sequence(seq, size, padding=None):
 def schedule_config_from_string(schedule, config_context):
     """Return a scheduler config object from a string."""
     schedule = schedule.strip()
-    name, schedule_config = pad_sequence(schedule.split(None, 1), 2, padding="",)
+    name, schedule_config = pad_sequence(
+        schedule.split(None, 1),
+        2,
+        padding="",
+    )
     if name not in schedulers:
         config = ConfigGenericSchedule("groc daily", schedule, jitter=None)
         return parse_groc_expression(config, config_context)
@@ -83,13 +98,20 @@ def valid_daily_scheduler(config, config_context):
 
     def valid_day(day):
         if day not in CONVERT_DAYS_INT:
-            raise ConfigError(f"Unknown day {day} at {config_context.path}",)
+            raise ConfigError(
+                f"Unknown day {day} at {config_context.path}",
+            )
         return CONVERT_DAYS_INT[day]
 
     original = f"{time_string} {days}"
     weekdays = {valid_day(day) for day in days or ()}
     return ConfigDailyScheduler(
-        original, time_spec.hour, time_spec.minute, time_spec.second, weekdays, jitter=config.jitter,
+        original,
+        time_spec.hour,
+        time_spec.minute,
+        time_spec.second,
+        weekdays,
+        jitter=config.jitter,
     )
 
 
@@ -105,8 +127,24 @@ def day_canonicalization_map():
     weekday_lists = [
         normalize_weekdays(calendar.day_name),
         normalize_weekdays(calendar.day_abbr),
-        ("u", "m", "t", "w", "r", "f", "s",),
-        ("su", "mo", "tu", "we", "th", "fr", "sa",),
+        (
+            "u",
+            "m",
+            "t",
+            "w",
+            "r",
+            "f",
+            "s",
+        ),
+        (
+            "su",
+            "mo",
+            "tu",
+            "we",
+            "th",
+            "fr",
+            "sa",
+        ),
     ]
     for day_list in weekday_lists:
         for day_name_synonym, day_index in zip(day_list, range(7)):
@@ -177,7 +215,18 @@ def build_groc_schedule_parser_re():
     TIME_EXPR = r"((at\s+)?(?P<time>\d\d:\d\d))?"
 
     DAILY_SCHEDULE_EXPR = "".join(
-        [r"^", MONTH_DAYS_EXPR, r"\s*", DAYS_EXPR, r"\s*", MONTHS_EXPR, r"\s*", TIME_EXPR, r"\s*", r"$",]
+        [
+            r"^",
+            MONTH_DAYS_EXPR,
+            r"\s*",
+            DAYS_EXPR,
+            r"\s*",
+            MONTHS_EXPR,
+            r"\s*",
+            TIME_EXPR,
+            r"\s*",
+            r"$",
+        ]
     )
     return re.compile(DAILY_SCHEDULE_EXPR)
 
@@ -242,7 +291,11 @@ def valid_cron_scheduler(config, config_context):
     """Parse a cron schedule."""
     try:
         crontab_kwargs = crontab.parse_crontab(config.value)
-        return ConfigCronScheduler(original=config.value, jitter=config.jitter, **crontab_kwargs,)
+        return ConfigCronScheduler(
+            original=config.value,
+            jitter=config.jitter,
+            **crontab_kwargs,
+        )
     except ValueError as e:
         msg = "Invalid cron scheduler %s: %s"
         raise ConfigError(msg % (config_context.path, e))

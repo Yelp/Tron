@@ -50,10 +50,16 @@ TronConfig = config_object_factory(
     ],
 )
 
-NamedTronConfig = config_object_factory(name="NamedTronConfig", optional=["jobs",],)  # dict of ConfigJob
+NamedTronConfig = config_object_factory(
+    name="NamedTronConfig",
+    optional=[
+        "jobs",
+    ],
+)  # dict of ConfigJob
 
 ConfigActionRunner = config_object_factory(
-    "ConfigActionRunner", optional=["runner_type", "remote_status_path", "remote_exec_path"],
+    "ConfigActionRunner",
+    optional=["runner_type", "remote_status_path", "remote_exec_path"],
 )
 
 ConfigSSHOptions = config_object_factory(
@@ -70,12 +76,25 @@ ConfigSSHOptions = config_object_factory(
     ],
 )
 
-ConfigNode = config_object_factory(name="ConfigNode", required=["hostname"], optional=["name", "username", "port"],)
+ConfigNode = config_object_factory(
+    name="ConfigNode",
+    required=["hostname"],
+    optional=["name", "username", "port"],
+)
 
 ConfigNodePool = config_object_factory("ConfigNodePool", ["nodes"], ["name"])
 
 ConfigState = config_object_factory(
-    name="ConfigState", required=["name", "store_type",], optional=["buffer_size", "dynamodb_region", "table_name",],
+    name="ConfigState",
+    required=[
+        "name",
+        "store_type",
+    ],
+    optional=[
+        "buffer_size",
+        "dynamodb_region",
+        "table_name",
+    ],
 )
 
 ConfigMesos = config_object_factory(
@@ -94,7 +113,12 @@ ConfigMesos = config_object_factory(
 )
 
 ConfigKubernetes = config_object_factory(
-    name="ConfigKubernetes", optional=["kubeconfig_path", "enabled", "default_volumes",],
+    name="ConfigKubernetes",
+    optional=[
+        "kubeconfig_path",
+        "enabled",
+        "default_volumes",
+    ],
 )
 
 ConfigJob = config_object_factory(
@@ -124,7 +148,10 @@ ConfigJob = config_object_factory(
 
 ConfigAction = config_object_factory(
     name="ConfigAction",
-    required=["name", "command",],  # str  # str
+    required=[
+        "name",
+        "command",
+    ],  # str  # str
     optional=[
         "requires",  # tuple of str
         "node",  # str
@@ -160,7 +187,9 @@ ConfigAction = config_object_factory(
 
 ConfigCleanupAction = config_object_factory(
     name="ConfigCleanupAction",
-    required=["command",],  # str
+    required=[
+        "command",
+    ],  # str
     optional=[
         "name",  # str
         "node",  # str
@@ -195,14 +224,32 @@ ConfigCleanupAction = config_object_factory(
 )
 
 ConfigConstraint = config_object_factory(
-    name="ConfigConstraint", required=["attribute", "operator", "value",], optional=[],
+    name="ConfigConstraint",
+    required=[
+        "attribute",
+        "operator",
+        "value",
+    ],
+    optional=[],
 )
 
-ConfigVolume = config_object_factory(name="ConfigVolume", required=["container_path", "host_path",], optional=["mode"],)
+ConfigVolume = config_object_factory(
+    name="ConfigVolume",
+    required=[
+        "container_path",
+        "host_path",
+    ],
+    optional=["mode"],
+)
 
 
 ConfigSecretVolumeItem = config_object_factory(
-    name="ConfigSecretVolumeItem", required=["key", "path",], optional=["mode"],
+    name="ConfigSecretVolumeItem",
+    required=[
+        "key",
+        "path",
+    ],
+    optional=["mode"],
 )
 
 
@@ -213,7 +260,7 @@ _ConfigSecretVolume = config_object_factory(
 )
 
 
-class ConfigSecretVolume(_ConfigSecretVolume):
+class ConfigSecretVolume(_ConfigSecretVolume):  # type: ignore
     def _asdict(self) -> dict:
         d = super()._asdict().copy()
         items = d.get("items", [])
@@ -227,27 +274,45 @@ class ConfigSecretVolume(_ConfigSecretVolume):
             for i, item in enumerate(items):
                 if isinstance(item, ConfigSecretVolumeItem):
                     d["items"][i] = item._asdict()
-        return d
+        return d  # type: ignore
 
 
-ConfigSecretSource = config_object_factory(name="ConfigSecretSource", required=["secret_name", "key"], optional=[],)
+ConfigSecretSource = config_object_factory(
+    name="ConfigSecretSource",
+    required=["secret_name", "key"],
+    optional=[],
+)
 
 ConfigFieldSelectorSource = config_object_factory(
-    name="ConfigFieldSelectorSource", required=["field_path"], optional=[],
+    name="ConfigFieldSelectorSource",
+    required=["field_path"],
+    optional=[],
 )
 
 ConfigNodeAffinity = config_object_factory(
-    name="ConfigNodeAffinity", required=["key", "operator", "value"], optional=[],
+    name="ConfigNodeAffinity",
+    required=["key", "operator", "value"],
+    optional=[],
 )
 
-ConfigParameter = config_object_factory(name="ConfigParameter", required=["key", "value",], optional=[],)
+ConfigParameter = config_object_factory(
+    name="ConfigParameter",
+    required=[
+        "key",
+        "value",
+    ],
+    optional=[],
+)
 
-StatePersistenceTypes = Enum("StatePersistenceTypes", dict(shelve="shelve", yaml="yaml", dynamodb="dynamodb"),)
+StatePersistenceTypes = Enum(  # type: ignore
+    "StatePersistenceTypes",
+    dict(shelve="shelve", yaml="yaml", dynamodb="dynamodb"),
+)
 
-ExecutorTypes = Enum("ExecutorTypes", dict(ssh="ssh", mesos="mesos", kubernetes="kubernetes", spark="spark"))
+ExecutorTypes = Enum("ExecutorTypes", dict(ssh="ssh", mesos="mesos", kubernetes="kubernetes", spark="spark"))  # type: ignore
 
-ActionRunnerTypes = Enum("ActionRunnerTypes", dict(none="none", subprocess="subprocess"))
+ActionRunnerTypes = Enum("ActionRunnerTypes", dict(none="none", subprocess="subprocess"))  # type: ignore
 
-VolumeModes = Enum("VolumeModes", dict(RO="RO", RW="RW"))
+VolumeModes = Enum("VolumeModes", dict(RO="RO", RW="RW"))  # type: ignore
 
-ActionOnRerun = Enum("ActionOnRerun", dict(rerun="rerun"))
+ActionOnRerun = Enum("ActionOnRerun", dict(rerun="rerun"))  # type: ignore

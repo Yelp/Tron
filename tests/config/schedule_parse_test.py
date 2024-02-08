@@ -33,14 +33,19 @@ class TestPadSequence(TestCase):
 
 class TestScheduleConfigFromString(TestCase):
     @mock.patch(
-        "tron.config.schedule_parse.parse_groc_expression", autospec=True,
+        "tron.config.schedule_parse.parse_groc_expression",
+        autospec=True,
     )
     def test_groc_config(self, mock_parse_groc):
         schedule = "every Mon,Wed at 12:00"
         context = config_utils.NullConfigContext
         config = schedule_parse.schedule_config_from_string(schedule, context)
         assert_equal(config, mock_parse_groc.return_value)
-        generic_config = schedule_parse.ConfigGenericSchedule("groc daily", schedule, None,)
+        generic_config = schedule_parse.ConfigGenericSchedule(
+            "groc daily",
+            schedule,
+            None,
+        )
         mock_parse_groc.assert_called_with(generic_config, context)
 
 
@@ -56,12 +61,20 @@ class TestValidScheduler(TestCase):
 
     def test_cron_from_dict(self):
         schedule = {"type": "cron", "value": "* * * * *"}
-        config = schedule_parse.ConfigGenericSchedule("cron", schedule["value"], datetime.timedelta(),)
+        config = schedule_parse.ConfigGenericSchedule(
+            "cron",
+            schedule["value"],
+            datetime.timedelta(),
+        )
         self.assert_validation(schedule, config)
 
     def test_cron_from_dict_with_jitter(self):
         schedule = {"type": "cron", "value": "* * * * *", "jitter": "5 min"}
-        config = schedule_parse.ConfigGenericSchedule("cron", schedule["value"], datetime.timedelta(minutes=5),)
+        config = schedule_parse.ConfigGenericSchedule(
+            "cron",
+            schedule["value"],
+            datetime.timedelta(minutes=5),
+        )
         self.assert_validation(schedule, config)
 
 

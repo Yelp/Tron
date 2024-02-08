@@ -12,9 +12,24 @@ def all_metrics():
 
 
 def test_get_metric(all_metrics):
-    timer = metrics.get_metric("timer", "api.requests", {"method": "GET"}, mock.Mock(),)
-    same_timer = metrics.get_metric("timer", "api.requests", {"method": "GET"}, mock.Mock(),)
-    other_timer = metrics.get_metric("timer", "api.requests", {"method": "POST"}, mock.Mock(),)
+    timer = metrics.get_metric(
+        "timer",
+        "api.requests",
+        {"method": "GET"},
+        mock.Mock(),
+    )
+    same_timer = metrics.get_metric(
+        "timer",
+        "api.requests",
+        {"method": "GET"},
+        mock.Mock(),
+    )
+    other_timer = metrics.get_metric(
+        "timer",
+        "api.requests",
+        {"method": "POST"},
+        mock.Mock(),
+    )
     metrics.get_metric("something", "name", None, mock.Mock())
     assert timer == same_timer
     assert other_timer != timer
@@ -28,7 +43,10 @@ def test_timer(mock_get_metric):
     metrics.timer("my_metric", 110)
     metrics.timer("my_metric", 84)
     mock_get_metric.assert_called_with(
-        "timer", "my_metric", None, mock.ANY,
+        "timer",
+        "my_metric",
+        None,
+        mock.ANY,
     )
     result = metrics.view_timer(test_metric)
     assert result["count"] == 2
@@ -41,7 +59,10 @@ def test_count(mock_get_metric):
     metrics.count("my_metric", 13)
     metrics.count("my_metric", -1)
     mock_get_metric.assert_called_with(
-        "counter", "my_metric", None, mock.ANY,
+        "counter",
+        "my_metric",
+        None,
+        mock.ANY,
     )
     result = metrics.view_counter(test_metric)
     assert result["count"] == 12
@@ -54,7 +75,10 @@ def test_meter(mock_get_metric):
     metrics.meter("my_metric")
     metrics.meter("my_metric")
     mock_get_metric.assert_called_with(
-        "meter", "my_metric", None, mock.ANY,
+        "meter",
+        "my_metric",
+        None,
+        mock.ANY,
     )
     result = metrics.view_meter(test_metric)
     assert result["count"] == 2
@@ -67,7 +91,10 @@ def test_gauge(mock_get_metric):
     metrics.gauge("my_metric", 23)
     metrics.gauge("my_metric", 102)
     mock_get_metric.assert_called_with(
-        "gauge", "my_metric", None, mock.ANY,
+        "gauge",
+        "my_metric",
+        None,
+        mock.ANY,
     )
     result = metrics.view_gauge(test_metric)
     assert result["value"] == 102
@@ -80,7 +107,10 @@ def test_histogram(mock_get_metric):
     metrics.histogram("my_metric", 2)
     metrics.histogram("my_metric", 92)
     mock_get_metric.assert_called_with(
-        "histogram", "my_metric", None, mock.ANY,
+        "histogram",
+        "my_metric",
+        None,
+        mock.ANY,
     )
     result = metrics.view_histogram(test_metric)
     assert result["count"] == 2

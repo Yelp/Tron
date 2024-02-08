@@ -1,10 +1,10 @@
-from pyformance.meters import Counter
+from pyformance.meters import Counter  # type: ignore
 from pyformance.meters import Histogram
 from pyformance.meters import Meter
 from pyformance.meters import SimpleGauge
 from pyformance.meters import Timer
 
-all_metrics = {}
+all_metrics = {}  # type: ignore
 
 
 def get_metric(metric_type, name, dimensions, default):

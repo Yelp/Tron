@@ -9,12 +9,12 @@ AdjListEntry = namedtuple("AdjListEntry", ["action_name", "is_trigger"])
 
 
 class JobGraph:
-    """ A JobGraph stores the entire DAG of jobs and actions, including
+    """A JobGraph stores the entire DAG of jobs and actions, including
     cross-job dependencies (aka triggers)
     """
 
     def __init__(self, config_container, should_validate_missing_dependency=False):
-        """ Build an adjacency list and a reverse adjacency list for the graph,
+        """Build an adjacency list and a reverse adjacency list for the graph,
         and store all the actions as well as which actions belong to which job
         """
         self.action_map = {}
@@ -55,7 +55,9 @@ class JobGraph:
                 error_messages.append(
                     "Action {} is dependency of actions:\n{}".format(
                         action_name,
-                        "\n".join([f"  - {child_action_name}" for child_action_name in child_action_names],),
+                        "\n".join(
+                            [f"  - {child_action_name}" for child_action_name in child_action_names],
+                        ),
                     ),
                 )
 
@@ -65,11 +67,13 @@ class JobGraph:
                         "The following actions are dependencies of other actions but missing:\n"
                         "{}\n"
                         "Please check if you have deleted/renamed any of them or their containing jobs."
-                    ).format("\n".join(error_messages),),
+                    ).format(
+                        "\n".join(error_messages),
+                    ),
                 )
 
     def get_action_graph_for_job(self, job_name):
-        """ Traverse the JobGraph for a specific job to construct an ActionGraph for it """
+        """Traverse the JobGraph for a specific job to construct an ActionGraph for it"""
         job_action_map = {}
         required_actions, required_triggers = defaultdict(set), defaultdict(set)
 

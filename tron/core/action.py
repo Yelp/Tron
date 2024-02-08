@@ -1,11 +1,11 @@
 import datetime
 import logging
-from typing import List
-from typing import Optional
-
 from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
+from typing import List
+from typing import Optional
+from typing import Union
 
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
@@ -21,13 +21,13 @@ class ActionCommandConfig:
     """A configurable data object for one try of an Action."""
 
     command: str
-    cpus: float = None
-    mem: float = None
-    disk: float = None
+    cpus: Optional[float] = None
+    mem: Optional[float] = None
+    disk: Optional[float] = None
     cap_add: List[str] = field(default_factory=list)
     cap_drop: List[str] = field(default_factory=list)
     constraints: set = field(default_factory=set)
-    docker_image: str = None
+    docker_image: Optional[str] = None
     # XXX: we can get rid of docker_parameters once we're off of Mesos
     docker_parameters: set = field(default_factory=set)
     env: dict = field(default_factory=dict)
@@ -57,14 +57,14 @@ class Action:
     name: str
     command_config: ActionCommandConfig
     node_pool: str
-    retries: int = None
-    retries_delay: datetime.timedelta = None
-    expected_runtime: datetime.timedelta = None
-    executor: str = None
-    trigger_downstreams: (bool, dict) = None
-    triggered_by: set = None
-    on_upstream_rerun: str = None
-    trigger_timeout: datetime.timedelta = None
+    retries: Optional[int] = None
+    retries_delay: Optional[datetime.timedelta] = None
+    expected_runtime: Optional[datetime.timedelta] = None
+    executor: Optional[str] = None
+    trigger_downstreams: Optional[Union[bool, dict]] = None
+    triggered_by: Optional[set] = None
+    on_upstream_rerun: Optional[str] = None
+    trigger_timeout: Optional[datetime.timedelta] = None
 
     @property
     def is_cleanup(self):

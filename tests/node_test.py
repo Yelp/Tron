@@ -64,14 +64,18 @@ class TestNodePoolRepository(TestCase):
         node_pool_config = {"c": mock.Mock(nodes=["a", "b"])}
         ssh_options = mock.Mock(identities=[], known_hosts_file=None)
         node.NodePoolRepository.update_from_config(
-            node_config, node_pool_config, ssh_options,
+            node_config,
+            node_pool_config,
+            ssh_options,
         )
         node_names = [node_config["a"].name, node_config["b"].name]
         assert_equal(
-            set(self.repo.pools), set(node_names + [node_pool_config["c"].name]),
+            set(self.repo.pools),
+            set(node_names + [node_pool_config["c"].name]),
         )
         assert_equal(
-            set(self.repo.nodes), set(list(node_names) + list(mock_nodes.keys())),
+            set(self.repo.nodes),
+            set(list(node_names) + list(mock_nodes.keys())),
         )
 
     def test_nodes_by_name(self):
@@ -106,7 +110,11 @@ class TestKnownHost(TestCase):
 class TestDetermineJitter(TestCase):
     @setup
     def setup_node_settings(self):
-        self.settings = mock.Mock(jitter_load_factor=1, jitter_min_load=4, jitter_max_delay=20,)
+        self.settings = mock.Mock(
+            jitter_load_factor=1,
+            jitter_min_load=4,
+            jitter_max_delay=20,
+        )
 
     @setup_teardown
     def patch_random(self):
@@ -130,7 +138,10 @@ class TestDetermineJitter(TestCase):
 
 
 def build_node(
-    hostname="localhost", username="theuser", name="thename", pub_key=None,
+    hostname="localhost",
+    username="theuser",
+    name="thename",
+    pub_key=None,
 ):
     config = mock.Mock(hostname=hostname, username=username, name=name)
     ssh_opts = mock.create_autospec(ssh.SSHAuthOptions)
@@ -164,11 +175,20 @@ class TestNode(TestCase):
 
     def test_from_config(self):
         ssh_options = self.node.conch_options
-        node_config = mock.Mock(hostname="localhost", username="theuser", name="thename",)
+        node_config = mock.Mock(
+            hostname="localhost",
+            username="theuser",
+            name="thename",
+        )
         ssh_options.__getitem__.return_value = "something"
         public_key = mock.Mock()
         node_settings = mock.Mock()
-        new_node = node.Node.from_config(node_config, ssh_options, public_key, node_settings,)
+        new_node = node.Node.from_config(
+            node_config,
+            ssh_options,
+            public_key,
+            node_settings,
+        )
         assert_equal(new_node.name, node_config.name)
         assert_equal(new_node.hostname, node_config.hostname)
         assert_equal(new_node.username, node_config.username)
@@ -196,12 +216,18 @@ class TestNode(TestCase):
         assert_not_equal(other_node, self.node)
 
     def test_stop_not_tracked(self):
-        action_command = mock.create_autospec(actioncommand.ActionCommand, id=mock.Mock(),)
+        action_command = mock.create_autospec(
+            actioncommand.ActionCommand,
+            id=mock.Mock(),
+        )
         self.node.stop(action_command)
 
     def test_stop(self):
         autospec_method(self.node._fail_run)
-        action_command = mock.create_autospec(actioncommand.ActionCommand, id=mock.Mock(),)
+        action_command = mock.create_autospec(
+            actioncommand.ActionCommand,
+            id=mock.Mock(),
+        )
         self.node.run_states[action_command.id] = mock.Mock()
         self.node.stop(action_command)
         assert_equal(self.node._fail_run.call_count, 1)

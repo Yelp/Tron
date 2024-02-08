@@ -8,7 +8,6 @@ import urllib.parse
 import urllib.request
 from collections import namedtuple
 from typing import Dict
-from typing import Mapping
 
 import tron
 from tron.config.schema import MASTER_NAMESPACE
@@ -18,7 +17,7 @@ try:
 
     assert simplejson  # Pyflakes
 except ImportError:
-    import json as simplejson
+    import json as simplejson  # type: ignore
 
 log = logging.getLogger(__name__)
 
@@ -67,7 +66,9 @@ def build_http_error_response(exc):
             content = simplejson.loads(content)
             content = content["error"]
         except ValueError:
-            log.warning(f"Incorrectly formatted error response: {content}",)
+            log.warning(
+                f"Incorrectly formatted error response: {content}",
+            )
     return Response(exc.code, exc.msg, content)
 
 
@@ -97,7 +98,7 @@ def build_get_url(url, data=None):
         return url
 
 
-def ensure_user_attribution(headers: Mapping[str, str]) -> Dict[str, str]:
+def ensure_user_attribution(headers: Dict[str, str]) -> Dict[str, str]:
     headers = headers.copy()
     if "User-Agent" not in headers:
         headers["User-Agent"] = USER_AGENT
@@ -106,12 +107,11 @@ def ensure_user_attribution(headers: Mapping[str, str]) -> Dict[str, str]:
 
 
 class Client:
-    """An HTTP client used to issue commands to the Tron API.
-    """
+    """An HTTP client used to issue commands to the Tron API."""
 
     def __init__(self, url_base, cluster_name=None, user_attribution=False):
         """Create a new client.
-            url_base - A url with a schema, hostname and port
+        url_base - A url with a schema, hostname and port
         """
         self.url_base = url_base
         self.cluster_name = cluster_name
@@ -126,12 +126,21 @@ class Client:
         return self.http_get("/api/metrics")
 
     def config(
-        self, config_name, config_data=None, config_hash=None, check=False,
+        self,
+        config_name,
+        config_data=None,
+        config_hash=None,
+        check=False,
     ):
         """Retrieve or update the configuration."""
         if config_data is not None:
             data_check = 1 if check else 0
-            request_data = dict(config=config_data, name=config_name, hash=config_hash, check=data_check,)
+            request_data = dict(
+                config=config_data,
+                name=config_name,
+                hash=config_hash,
+                check=data_check,
+            )
             return self.request("/api/config", request_data)
         request_data = dict(name=config_name)
         return self.http_get("/api/config", request_data)
@@ -145,7 +154,11 @@ class Client:
         return get_object_type_from_identifier(self.index(), identifier).url
 
     def jobs(
-        self, include_job_runs=False, include_action_runs=False, include_action_graph=True, include_node_pool=True,
+        self,
+        include_job_runs=False,
+        include_action_runs=False,
+        include_action_graph=True,
+        include_node_pool=True,
     ):
         params = {
             "include_job_runs": int(include_job_runs),
@@ -231,7 +244,7 @@ def first(seq):
 
 
 def get_object_type_from_identifier(url_index, identifier):
-    """Given a string identifier, return a TronObjectIdentifier. """
+    """Given a string identifier, return a TronObjectIdentifier."""
     name_mapping = {
         "jobs": set(url_index["jobs"]),
     }

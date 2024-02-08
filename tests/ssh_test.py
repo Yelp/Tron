@@ -16,7 +16,11 @@ class TestClientTransport(TestCase):
         self.username = "username"
         self.options = mock.Mock()
         self.expected_pub_key = mock.Mock()
-        self.transport = ssh.ClientTransport(self.username, self.options, self.expected_pub_key,)
+        self.transport = ssh.ClientTransport(
+            self.username,
+            self.options,
+            self.expected_pub_key,
+        )
 
     def test_verifyHostKey_missing_pub_key(self):
         self.transport.expected_pub_key = None
@@ -64,12 +68,14 @@ class TestSSHAuthOptions(TestCase):
     def test__eq__true(self):
         config = mock.Mock(agent=True, identities=["one", "two"])
         assert_equal(
-            ssh.SSHAuthOptions.from_config(config), ssh.SSHAuthOptions.from_config(config),
+            ssh.SSHAuthOptions.from_config(config),
+            ssh.SSHAuthOptions.from_config(config),
         )
 
     def test__eq__false(self):
         config = mock.Mock(agent=True, identities=["one", "two"])
         second_config = mock.Mock(agent=True, identities=["two"])
         assert_not_equal(
-            ssh.SSHAuthOptions.from_config(config), ssh.SSHAuthOptions.from_config(second_config),
+            ssh.SSHAuthOptions.from_config(config),
+            ssh.SSHAuthOptions.from_config(second_config),
         )
