@@ -1,3 +1,12 @@
+tron (1.28.3) jammy; urgency=medium
+
+  * 1.28.3 tagged with 'make release'
+    Commit: Merge pull request #938 from Yelp/u/kkasp/TRON-2112-lock-
+    start  Add lock to tron start to mitigate the risk of running
+    duplicate jobs…
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Thu, 08 Feb 2024 11:24:39 -0800
+
 tron (1.28.2) jammy; urgency=medium
 
   * 1.28.2 tagged with 'make release'
