@@ -146,3 +146,26 @@ class TestBuildEnvironment:
             TRON_RUN_NUM="10",
             TRON_ACTION="bar.baz",
         )
+
+
+class TestBuildLabels:
+    def test_build_labels(self):
+        labels = action_runner.build_labels("MASTER.foo.10.bar")
+
+        assert labels == dict(
+            TRON_RUN_NUM="10",
+        )
+
+    def test_build_labels_invalid_run_id(self):
+        labels = action_runner.build_labels("asdf")
+
+        assert labels == dict(
+            TRON_RUN_NUM="UNKNOWN",
+        )
+
+    def test_build_labels_too_long_run_id(self):
+        labels = action_runner.build_labels("MASTER.foo.10.bar.baz")
+
+        assert labels == dict(
+            TRON_RUN_NUM="10",
+        )

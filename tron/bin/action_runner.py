@@ -93,6 +93,24 @@ def build_environment(run_id, original_env=None):
     return new_env
 
 
+def build_labels(run_id, original_labels=None):
+    if original_labels is None:
+        original_labels = dict()
+
+    try:
+        run_num = run_id.split(".", maxsplit=3)[2]
+    except IndexError:
+        # if we can't parse the run_id, we don't want to abort, so just
+        # set these semi-arbitrarily
+        run_num = "UNKNOWN"
+
+    new_labels = dict(original_labels)
+    new_labels["TRON_RUN_NUM"] = run_num
+
+    logging.debug(new_labels)
+    return new_labels
+
+
 def run_proc(output_path, command, run_id, proc):
     logging.warning(f"{run_id} running as pid {proc.pid}")
     status_file = StatusFile(os.path.join(output_path, STATUS_FILE))
