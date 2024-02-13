@@ -320,7 +320,7 @@ def get_relevant_action(*, action_runs, last_state, actions_expected_runtime):
                     actions_expected_runtime,
                 ):
                     return action_run
-                if action_state == "running" or action_state == "starting":
+                if action_state in {"running", "starting"}:
                     stuck_action_run_candidate = action_run
     return stuck_action_run_candidate or action_runs[-1]
 
