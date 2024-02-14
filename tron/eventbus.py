@@ -144,9 +144,10 @@ class EventBus:
         duration = time.time() - started
         log.info(f"log read from disk, took {duration:.4}s")
 
-    def sync_save_log(self, reason):
+    def sync_save_log(self, reason: str) -> bool:
         started = time.time()
         new_file = os.path.join(self.log_dir, f"{int(started)}.pickle")
+        previous_file = os.path.realpath(os.path.join(self.log_dir, "current.pickle"))
         try:
             with open(new_file, "xb") as f:
                 pickle.dump(self.event_log, f)
@@ -165,7 +166,15 @@ class EventBus:
         except FileNotFoundError:
             pass
         os.symlink(new_file, tmplink)
-        os.replace(tmplink, self.log_current)
+        os.replace(src=tmplink, dst=self.log_current)
+        # once we get here, `self.log_current` is now pointing to `new_file`
+        # so we can safely delete the previous `self.log_current` target without
+        # fear of losing data
+        try:
+            os.remove(previous_file)
+        except Exception:
+            # this shouldn't happen - but we also shouldn't crash if the impossible happens
+            log.exception(f"unable to delete {previous_file} - continuing anyway.")
 
         duration = time.time() - started
         log.info(f"log dumped to disk because {reason}, took {duration:.4}s")
