@@ -1,3 +1,12 @@
+tron (1.28.4) jammy; urgency=medium
+
+  * 1.28.4 tagged with 'make release'
+    Commit: Merge pull request #939 from Yelp/u/wilmerrafael/COMPINFRA-
+    3601_adding_tron_run_number_label  Adding tron run id to pod labels
+    for k8s
+
+ -- Wilmer Bandres <wilmerrafael@yelp.com>  Thu, 15 Feb 2024 06:43:40 -0800
+
 tron (1.28.3) jammy; urgency=medium
 
   * 1.28.3 tagged with 'make release'
