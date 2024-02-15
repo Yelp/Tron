@@ -20,6 +20,7 @@ from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.bin.action_runner import build_environment  # type: ignore # mypy can't find library stub
+from tron.bin.action_runner import build_labels
 from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
@@ -1170,7 +1171,7 @@ class KubernetesActionRun(ActionRun, Observer):
                 cap_drop=attempt.command_config.cap_drop,
                 node_selectors=attempt.command_config.node_selectors,
                 node_affinities=attempt.command_config.node_affinities,
-                pod_labels=attempt.command_config.labels,
+                pod_labels=build_labels(run_id=self.id, original_labels=attempt.command_config.labels),
                 pod_annotations=attempt.command_config.annotations,
                 service_account_name=attempt.command_config.service_account_name,
                 ports=attempt.command_config.ports,
@@ -1244,7 +1245,7 @@ class KubernetesActionRun(ActionRun, Observer):
             task_id=last_attempt.kubernetes_task_id,
             node_selectors=last_attempt.command_config.node_selectors,
             node_affinities=last_attempt.command_config.node_affinities,
-            pod_labels=last_attempt.command_config.labels,
+            pod_labels=build_labels(run_id=self.id, original_labels=last_attempt.command_config.labels),
             pod_annotations=last_attempt.command_config.annotations,
             service_account_name=last_attempt.command_config.service_account_name,
             ports=last_attempt.command_config.ports,

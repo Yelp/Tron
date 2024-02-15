@@ -1802,6 +1802,9 @@ class TestKubernetesActionRun:
                 "TRON_RUN_NUM": "42",
                 "TRON_ACTION": "mock_action_name",
             },
+            labels={
+                "tron.yelp.com/run_num": "42",
+            },
         )
 
         return KubernetesActionRun(

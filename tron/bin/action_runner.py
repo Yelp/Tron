@@ -10,6 +10,8 @@ import subprocess
 import sys
 import threading
 import time
+from typing import Dict
+from typing import Optional
 
 from tron import yaml
 
@@ -91,6 +93,24 @@ def build_environment(run_id, original_env=None):
 
     logging.debug(new_env)
     return new_env
+
+
+def build_labels(run_id: str, original_labels: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+    if original_labels is None:
+        original_labels = dict()
+
+    try:
+        # reminder: the format here is "namespace.job.run_num.action"
+        _, _, run_num, _ = run_id.split(".", maxsplit=3)
+    except ValueError:
+        # if we can't parse the run_id, we don't want to abort, so just
+        # set these semi-arbitrarily
+        run_num = "UNKNOWN"
+
+    new_labels = dict(original_labels)
+    new_labels["tron.yelp.com/run_num"] = run_num
+
+    return new_labels
 
 
 def run_proc(output_path, command, run_id, proc):
