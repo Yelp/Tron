@@ -152,38 +152,38 @@ class TestBuildLabels:
     def test_build_labels(self):
         labels = action_runner.build_labels("MASTER.foo.10.bar")
 
-        assert labels == dict(
-            TRON_RUN_NUM="10",
-        )
+        assert labels == {
+            "tron.yelp.com/run_num": "10",
+        }
 
     def test_build_labels_with_merging(self):
         current_labels = {"LABEL1": "value_1"}
         labels = action_runner.build_labels("MASTER.foo.10.bar", current_labels)
 
-        assert labels == dict(
-            TRON_RUN_NUM="10",
-            LABEL1="value_1",
-        )
+        assert labels == {
+            "tron.yelp.com/run_num": "10",
+            "LABEL1": "value_1",
+        }
 
     def test_build_labels_with_merging_on_unknown(self):
         current_labels = {"LABEL1": "value_1"}
         labels = action_runner.build_labels("asdf", current_labels)
 
-        assert labels == dict(
-            TRON_RUN_NUM="UNKNOWN",
-            LABEL1="value_1",
-        )
+        assert labels == {
+            "tron.yelp.com/run_num": "UNKNOWN",
+            "LABEL1": "value_1",
+        }
 
     def test_build_labels_invalid_run_id(self):
         labels = action_runner.build_labels("asdf")
 
-        assert labels == dict(
-            TRON_RUN_NUM="UNKNOWN",
-        )
+        assert labels == {
+            "tron.yelp.com/run_num": "UNKNOWN",
+        }
 
     def test_build_labels_too_long_run_id(self):
         labels = action_runner.build_labels("MASTER.foo.10.bar.baz")
 
-        assert labels == dict(
-            TRON_RUN_NUM="10",
-        )
+        assert labels == {
+            "tron.yelp.com/run_num": "10",
+        }

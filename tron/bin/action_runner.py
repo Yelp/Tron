@@ -108,7 +108,7 @@ def build_labels(run_id: str, original_labels: Optional[Dict[str, str]] = None) 
         run_num = "UNKNOWN"
 
     new_labels = dict(original_labels)
-    new_labels["TRON_RUN_NUM"] = run_num
+    new_labels["tron.yelp.com/run_num"] = run_num
 
     return new_labels
 

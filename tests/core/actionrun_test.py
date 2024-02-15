@@ -1803,7 +1803,7 @@ class TestKubernetesActionRun:
                 "TRON_ACTION": "mock_action_name",
             },
             labels={
-                "TRON_RUN_NUM": "42",
+                "tron.yelp.com/run_num": "42",
             },
         )
 
