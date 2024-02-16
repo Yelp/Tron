@@ -5,6 +5,7 @@ import signal
 import time
 from collections import defaultdict
 from collections import deque
+from typing import Optional
 
 from twisted.internet import reactor
 
@@ -147,7 +148,15 @@ class EventBus:
     def sync_save_log(self, reason: str) -> bool:
         started = time.time()
         new_file = os.path.join(self.log_dir, f"{int(started)}.pickle")
-        previous_file = os.path.realpath(os.path.join(self.log_dir, "current"))
+        previous_file: Optional[str] = os.path.realpath(os.path.join(self.log_dir, "current"))
+        # if we're starting  a fresh Tron server, there won't be a current symlink
+        # and the above line will give us the path to what will eventually be the current
+        # symlink...which is undesirable since we clean up whatever this points to :p
+        # we can tell if this is happening since this previous_file variable should
+        # always point to a file that ends in .pickle under normal operation
+        if previous_file and previous_file.endswith("current"):
+            previous_file = None
+
         try:
             with open(new_file, "xb") as f:
                 pickle.dump(self.event_log, f)
@@ -170,11 +179,12 @@ class EventBus:
         # once we get here, `self.log_current` is now pointing to `new_file`
         # so we can safely delete the previous `self.log_current` target without
         # fear of losing data
-        try:
-            os.remove(previous_file)
-        except Exception:
-            # this shouldn't happen - but we also shouldn't crash if the impossible happens
-            log.exception(f"unable to delete {previous_file} - continuing anyway.")
+        if previous_file:
+            try:
+                os.remove(previous_file)
+            except Exception:
+                # this shouldn't happen - but we also shouldn't crash if the impossible happens
+                log.exception(f"unable to delete {previous_file} - continuing anyway.")
 
         duration = time.time() - started
         log.info(f"log dumped to disk because {reason}, took {duration:.4}s")
