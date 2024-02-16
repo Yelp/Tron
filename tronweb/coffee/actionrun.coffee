@@ -169,12 +169,12 @@ class module.ActionRunView extends Backbone.View
                     <tr><td>Node</td>
                         <td><%= displayNode(node) %></td></tr>
                     <tr><td>Raw original command</td>
-                        <td><code class="command"><%= original_command %></code></td></tr>
+                        <td><code class="command"><%- original_command %></code></td></tr>
                     <tr><td>Config command</td>
-                        <td><code class="command"><%= raw_command %></code></td></tr>
+                        <td><code class="command"><%- raw_command %></code></td></tr>
                     <% if (command) { %>
                     <tr><td>Last run command</td>
-                        <td><code class="command"><%= command %></code></td></tr>
+                        <td><code class="command"><%- command %></code></td></tr>
                     <% } %>
                     <tr><td>Exit codes</td>
                         <td>
@@ -211,15 +211,15 @@ class module.ActionRunView extends Backbone.View
             </div>
             <div class="span12 outline-block">
                 <h2>meta</h2>
-                <pre class="meta" style="display: none;"><%= meta.join('\\n') %></pre>
+                <pre class="meta" style="display: none;"><%- meta.join('\\n') %></pre>
             </div>
             <div class="span12 outline-block">
                 <h2>stdout</h2>
-                <pre class="stdout"><%= stdout.join('\\n') %></pre>
+                <pre class="stdout"><%- stdout.join('\\n') %></pre>
             </div>
             <div class="span12 outline-block">
                 <h2>stderr</h2>
-                <pre class="stderr"><%= stderr.join('\\n') %></pre>
+                <pre class="stderr"><%- stderr.join('\\n') %></pre>
             </div>
 
             <div id="action-run-history">
