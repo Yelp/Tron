@@ -1,3 +1,16 @@
+tron (1.28.5) jammy; urgency=medium
+
+  * 1.28.5 tagged with 'make release'
+    Commit: Stop keeping old copies of eventbus files (#941)  We've
+    never restored from these 'backups', and as long as we ensure that
+    the current file points to a fully written file, it's fine to only
+    keep at most 2 files around: the actual current file and a temporary
+    'new' file.  To ensure that we're not pointing at a half-written
+    file, we continue using the age-old pattern for atomic file updates:
+    write to another file and swap a symlink once the write is complete
+
+ -- Luis Perez <luisp@yelp.com>  Tue, 20 Feb 2024 11:55:45 -0800
+
 tron (1.28.4) jammy; urgency=medium
 
   * 1.28.4 tagged with 'make release'
