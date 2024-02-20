@@ -100,7 +100,10 @@ class EventBusTestCase(TestCase):
         self.eventbus.sync_save_log("test")
         new_link = os.readlink(self.eventbus.log_current)
         assert_equal(new_link, os.path.join(self.log_dir.name, "2.pickle"))
-        assert os.path.exists(current_link)
+        # we clean up the previous link so as not to have a million pickles
+        # on disk
+        assert not os.path.exists(current_link)
+        # so at this point, we should only have the new link
         assert os.path.exists(new_link)
 
     @mock.patch("tron.eventbus.time", autospec=True)
