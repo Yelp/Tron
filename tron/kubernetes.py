@@ -15,6 +15,7 @@ from twisted.internet.defer import Deferred
 from twisted.internet.defer import logError
 
 import tron.metrics as metrics
+import tron.prom_metrics as prom_metrics
 from tron import __version__
 from tron.actioncommand import ActionCommand
 from tron.config.schema import ConfigFieldSelectorSource
@@ -90,7 +91,13 @@ class KubernetesTask(ActionCommand):
         Update internal resource utilization statistics of all tronjobs running for this task's Tron master.
         """
         # TODO(TRON-1612): these should eventually be Prometheus metrics
+        # these should be replaced with gauges in prometheus
         multiplier = -1 if decrement else 1
+        # prometheus gauges
+        prom_metrics.tron_cpu_gauge.inc(self.task_config.cpus * multiplier)
+        prom_metrics.tron_memory_gauge.inc(self.task_config.memory * multiplier)
+        prom_metrics.tron_disk_gauge.inc(self.task_config.disk * multiplier)
+
         metrics.count("tron.mesos.cpus", self.task_config.cpus * multiplier)
         metrics.count("tron.mesos.mem", self.task_config.memory * multiplier)
         metrics.count("tron.mesos.disk", self.task_config.disk * multiplier)
