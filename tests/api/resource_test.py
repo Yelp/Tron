@@ -169,6 +169,7 @@ class TestApiRootResource(WWWTestCase):
             b"metrics",
             b"status",
             b"events",
+            b"prom-metrics",
             b"",
         ]
         assert set(expected_children) == set(self.resource.children)

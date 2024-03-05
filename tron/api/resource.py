@@ -8,6 +8,7 @@ import logging
 import traceback
 
 import staticconf
+from prometheus_client.twisted import MetricsResource as MetricsResourceProm
 
 from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
@@ -500,6 +501,7 @@ class ApiRootResource(resource.Resource):
         self.putChild(b"status", StatusResource(mcp))
         self.putChild(b"events", EventsResource())
         self.putChild(b"metrics", MetricsResource())
+        self.putChild(b"prom-metrics", MetricsResourceProm())
         self.putChild(b"", self)
 
     @AsyncResource.bounded
