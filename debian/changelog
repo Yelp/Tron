@@ -1,3 +1,11 @@
+tron (1.29.0) jammy; urgency=medium
+
+  * 1.29.0 tagged with 'make release'
+    Commit: Merge pull request #944 from Yelp/u/emanelsabban/TRON-2124-
+    expose-prom-metrics  Adding prometheus endpoint in tron - TRON-2124
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Tue, 05 Mar 2024 12:55:14 -0800
+
 tron (1.28.5) jammy; urgency=medium
 
   * 1.28.5 tagged with 'make release'
