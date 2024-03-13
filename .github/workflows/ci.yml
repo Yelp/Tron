@@ -37,6 +37,8 @@ jobs:
       - uses: actions/setup-python@v2
         with:
           python-version: 3.8
+      # Update package lists to ensure we have the latest information
+      - run: sudo apt-get update
       # the container provided by GitHub doesn't include utilities
       # needed for dpkg building, so we need to install `devscripts`
       # to bring those in
