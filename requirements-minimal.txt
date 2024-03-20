@@ -10,7 +10,7 @@ ipython
 Jinja2>=3.1.2
 lockfile
 moto
-prometheus-client==0.20.0
+prometheus-client
 psutil
 py-bcrypt
 pyasn1
