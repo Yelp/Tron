@@ -1,3 +1,11 @@
+tron (1.29.2) jammy; urgency=medium
+
+  * 1.29.2 tagged with 'make release'
+    Commit: Merge pull request #946 from Yelp/u/emanelsabban/edit-
+    messages  Editing some of the messages from previous prs
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Wed, 20 Mar 2024 08:33:45 -0700
+
 tron (1.29.1) jammy; urgency=medium
 
   * 1.29.1 tagged with 'make release'
