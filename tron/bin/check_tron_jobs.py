@@ -226,7 +226,7 @@ def get_relevant_run_and_state(job_content):
         state = run.get("state", "unknown")
         if state in ["failed", "succeeded", "unknown", "skipped"]:
             return run, State(state)
-        elif state in ["running", "waiting"]:
+        elif state in ["running", "waiting", "starting"]:
             action_state = is_action_failed_or_unknown(run)
             if action_state != State.SUCCEEDED:
                 return run, action_state
@@ -251,7 +251,7 @@ def is_job_stuck(
 ):
     next_run_time = None
     for job_run in job_runs:
-        states_to_check = {"running", "waiting"}
+        states_to_check = {"running", "waiting", "starting"}
         if job_run.get("state", "unknown") in states_to_check:
             if is_job_run_exceeding_expected_runtime(
                 job_run,
@@ -275,7 +275,7 @@ def is_job_stuck(
 
 
 def is_job_run_exceeding_expected_runtime(job_run, job_expected_runtime):
-    states_to_check = {"running", "waiting"}
+    states_to_check = {"running", "waiting", "starting"}
     if (
         job_expected_runtime is not None
         and job_run.get(
@@ -294,7 +294,8 @@ def is_action_run_exceeding_expected_runtime(
     action_run,
     actions_expected_runtime,
 ):
-    if action_run.get("state", "unknown") == "running":
+    states_to_check = ["running", "starting"]
+    if action_run.get("state", "unknown") in states_to_check:
         action_name = action_run.get("action_name", None)
         if action_name in actions_expected_runtime and actions_expected_runtime[action_name] is not None:
             duration_seconds = pytimeparse.parse(
@@ -319,7 +320,7 @@ def get_relevant_action(*, action_runs, last_state, actions_expected_runtime):
                     actions_expected_runtime,
                 ):
                     return action_run
-                if action_state == "running":
+                if action_state in {"running", "starting"}:
                     stuck_action_run_candidate = action_run
     return stuck_action_run_candidate or action_runs[-1]
 

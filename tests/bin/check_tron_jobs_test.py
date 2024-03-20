@@ -506,7 +506,7 @@ class TestCheckJobs(TestCase):
         assert_equal(run["id"], "MASTER.test.1")
         assert_equal(state, State.SUCCEEDED)
 
-    def test_job_next_run_starting_no_queueing_not_stuck(self):
+    def test_job_next_run_running_no_queueing_not_stuck(self):
         job_runs = {
             "status": "running",
             "next_run": None,
@@ -525,6 +525,49 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.2",
                     "state": "running",
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1200),
+                    ),
+                    "end_time": None,
+                },
+                {
+                    "id": "MASTER.test.1",
+                    "state": "succeeded",
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1800),
+                    ),
+                    "end_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 1700),
+                    ),
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run["id"], "MASTER.test.1")
+        assert_equal(state, State.SUCCEEDED)
+
+    def test_job_next_run_starting_no_queueing_not_stuck(self):
+        job_runs = {
+            "status": "starting",
+            "next_run": None,
+            "allow_overlap": False,
+            "queueing": False,
+            "runs": [
+                {
+                    "id": "MASTER.test.3",
+                    "state": "cancelled",
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
+                    "end_time": None,
+                },
+                {
+                    "id": "MASTER.test.2",
+                    "state": "starting",
                     "run_time": time.strftime(
                         "%Y-%m-%d %H:%M:%S",
                         time.localtime(time.time() - 1200),
@@ -570,6 +613,44 @@ class TestCheckJobs(TestCase):
                 {
                     "id": "MASTER.test.99",
                     "state": "running",
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
+                    "start_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() - 600),
+                    ),
+                    "end_time": None,
+                    "duration": "0:10:01.883601",
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run["id"], "MASTER.test.99")
+        assert_equal(state, State.STUCK)
+
+    def test_job_starting_job_exceeds_expected_runtime(self):
+        job_runs = {
+            "status": "running",
+            "next_run": None,
+            "expected_runtime": 480.0,
+            "allow_overlap": True,
+            "runs": [
+                {
+                    "id": "MASTER.test.100",
+                    "state": "scheduled",
+                    "run_time": time.strftime(
+                        "%Y-%m-%d %H:%M:%S",
+                        time.localtime(time.time() + 600),
+                    ),
+                    "end_time": None,
+                    "start_time": None,
+                    "duration": "",
+                },
+                {
+                    "id": "MASTER.test.99",
+                    "state": "starting",
                     "run_time": time.strftime(
                         "%Y-%m-%d %H:%M:%S",
                         time.localtime(time.time() - 600),
@@ -817,6 +898,48 @@ class TestCheckJobs(TestCase):
             {
                 "id": "MASTER.test.1.action3",
                 "state": "running",
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 600),
+                ),
+                "duration": "0:10:00.006305",
+            },
+            {
+                "id": "MASTER.test.1.action2",
+                "state": "running",
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 600),
+                ),
+                "duration": "0:10:00.006383",
+            },
+            {
+                "id": "MASTER.test.1.action1",
+                "state": "succeeded",
+                "start_time": time.strftime(
+                    "%Y-%m-%d %H:%M:%S",
+                    time.localtime(time.time() - 600),
+                ),
+                "duration": "0:10:00.006331",
+            },
+        ]
+        actions_expected_runtime = {
+            "action3": 480.0,
+            "action2": 720.0,
+            "action1": 900.0,
+        }
+        actual = check_tron_jobs.get_relevant_action(
+            action_runs=action_runs,
+            last_state=State.STUCK,
+            actions_expected_runtime=actions_expected_runtime,
+        )
+        assert_equal(actual["id"], "MASTER.test.1.action3")
+
+    def test_get_relevant_action_pick_the_one_starting(self):
+        action_runs = [
+            {
+                "id": "MASTER.test.1.action3",
+                "state": "starting",
                 "start_time": time.strftime(
                     "%Y-%m-%d %H:%M:%S",
                     time.localtime(time.time() - 600),
