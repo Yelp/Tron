@@ -174,4 +174,16 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    # this is a little weird, but every now and then we're seeing a mysterious tron exit
+    # that doesn't seem to correspond with anything else - let's catch BaseException
+    # (and therefore SystemExit) in case anything is calling sys.exit() since there's no
+    # traceback when we see this
+    except (
+        BaseException,
+        # technically, we really only need to catch BaseException - but let's be extra-paranoid
+        Exception,
+    ):
+        traceback.print_exc()
+        raise
