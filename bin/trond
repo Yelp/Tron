@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 """ Start the Tron server daemon."""
 import argparse
+import faulthandler
 import logging
 import os
 import traceback
@@ -174,4 +175,21 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    # print tracebacks on signals/faults
+    # NOTE: you likely want to read https://docs.python.org/3/library/faulthandler.html
+    # as these tracebacks will look slightly different
+    faulthandler.enable()
+
+    try:
+        main()
+    # this is a little weird, but every now and then we're seeing a mysterious tron exit
+    # that doesn't seem to correspond with anything else - let's catch BaseException
+    # (and therefore SystemExit) in case anything is calling sys.exit() since there's no
+    # traceback when we see this
+    except (
+        BaseException,
+        # technically, we really only need to catch BaseException - but let's be extra-paranoid
+        Exception,
+    ):
+        traceback.print_exc()
+        raise
