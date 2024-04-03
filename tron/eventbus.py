@@ -140,6 +140,7 @@ class EventBus:
 
     def sync_load_log(self):
         started = time.time()
+        # we are loading the pickle object from the "current" file
         with open(self.log_current, "rb") as f:
             self.event_log = pickle.load(f)
         duration = time.time() - started

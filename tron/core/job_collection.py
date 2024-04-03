@@ -1,4 +1,5 @@
 import logging
+import time
 
 from tron.core.job import Job
 from tron.utils import collections
@@ -40,6 +41,8 @@ class JobCollection:
             else:
                 return config.namespace == namespace_to_reconfigure
 
+        # The below statements don't get called until self.state_watcher.watch_all is called
+        # in apply_config. This will go through the job's configs and build a scheduler for them
         seq = (factory.build(config) for config in job_configs.values() if reconfigure_filter(config))
         return map_to_job_and_schedule(filter(self.add, seq))
 
@@ -66,7 +69,14 @@ class JobCollection:
         job_scheduler.schedule_reconfigured()
         return True
 
-    def restore_state(self, job_state_data, config_action_runner):
+    def restore_state(self, job_state_data, config_action_runner, tron_start_time=None):
+        # we will start looping through the jobs and their runs and restore
+        # state for each run in for a job and as we restore the state
+        # we will also schedule the next runs for that job
+        if tron_start_time is not None:
+            log.info(
+                f"Tron is restoring state for jobs and will start scheduling them! Time elapsed since Tron started {time.time()- tron_start_time}"
+            )
         for name, state in job_state_data.items():
             self.jobs[name].restore_state(state, config_action_runner)
         log.info(f"Loaded state for {len(job_state_data)} jobs")

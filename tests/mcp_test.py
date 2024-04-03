@@ -49,22 +49,23 @@ class TestMasterControlProgram:
         self.mcp._load_config.assert_called_with(reconfigure=True, namespace_to_reconfigure="foo")
 
     @pytest.mark.parametrize(
-        "reconfigure,namespace",
+        "reconfigure,namespace,tron_start_time",
         [
-            (False, None),
-            (True, None),
-            (True, "foo"),
+            (False, None, None),
+            (True, None, None),
+            (True, "foo", 5),
         ],
     )
-    def test_load_config(self, reconfigure, namespace):
+    def test_load_config(self, reconfigure, namespace, tron_start_time):
         autospec_method(self.mcp.apply_config)
         self.mcp.config = mock.create_autospec(manager.ConfigManager)
-        self.mcp._load_config(reconfigure, namespace)
+        self.mcp._load_config(reconfigure, namespace, tron_start_time)
         self.mcp.state_watcher.disabled.assert_called_with()
         self.mcp.apply_config.assert_called_with(
             self.mcp.config.load.return_value,
             reconfigure=reconfigure,
             namespace_to_reconfigure=namespace,
+            tron_start_time=tron_start_time,
         )
 
     @pytest.mark.parametrize(
@@ -163,6 +164,7 @@ class TestMasterControlProgramRestoreState(TestCase):
     def test_restore_state(self, mock_cluster_repo):
         job_state_data = {"1": "things", "2": "things"}
         mesos_state_data = {"3": "things", "4": "things"}
+        tron_start_time = None
         state_data = {
             "mesos_state": mesos_state_data,
             "job_state": job_state_data,
@@ -174,6 +176,7 @@ class TestMasterControlProgramRestoreState(TestCase):
         self.mcp.jobs.restore_state.assert_called_with(
             job_state_data,
             action_runner,
+            tron_start_time,
         )
 
 

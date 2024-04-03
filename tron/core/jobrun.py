@@ -462,6 +462,7 @@ class JobRunCollection:
         )
 
     def get_scheduled(self):
+        # find the scheduled run for the job and return it
         return [r for r in self.runs if r.state == ActionRun.SCHEDULED]
 
     def next_run_num(self):
