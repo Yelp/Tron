@@ -2,6 +2,7 @@ import itertools
 import logging
 import time
 from contextlib import contextmanager
+from typing import Dict
 
 from tron.config import schema
 from tron.core import job
@@ -147,7 +148,7 @@ class PersistentStateManager:
 
         jobs = self._restore_dicts(runstate.JOB_STATE, job_names)
         # jobs should be a dictionary that contains  job name and number of runs
-        # {'Master.k8s': {'run_nums':[0], 'enabled': True}, 'Master.cits_test_frequent_1': {'run_nums'; [1,0], 'enabled': True}}
+        # {'MASTER.k8s': {'run_nums':[0], 'enabled': True}, 'MASTER.cits_test_frequent_1': {'run_nums': [1,0], 'enabled': True}}
         for job_name, job_state in jobs.items():
             job_state["runs"] = self._restore_runs_for_job(job_name, job_state)
         frameworks = self._restore_dicts(runstate.MESOS_STATE, ["frameworks"])
@@ -179,7 +180,7 @@ class PersistentStateManager:
         keys = (self._impl.build_key(item_type, name) for name in names)
         return dict(zip(keys, names))
 
-    def _restore_dicts(self, item_type, items):
+    def _restore_dicts(self, item_type, items) -> Dict[str, dict]:
         """Return a dict mapping of the items name to its state data."""
         key_to_item_map = self._keys_for_items(item_type, items)
         key_to_state_map = self._impl.restore(key_to_item_map.keys())
@@ -265,7 +266,7 @@ class StateChangeWatcher(observer.Observer):
             return False
 
         self.shutdown()
-        # The function below will spin up a thread that will be saving into dynamodb, which will run as daemon
+        # NOTE: this will spin up a thread that will constantly persist data into dynamodb
         self.state_manager = PersistenceManagerFactory.from_config(
             state_config,
         )

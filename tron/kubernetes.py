@@ -279,12 +279,15 @@ class KubernetesCluster:
         enabled: bool = True,
         default_volumes: Optional[List[ConfigVolume]] = None,
         pod_launch_timeout: Optional[int] = None,
+        start_schedule_jobs: bool = True,
     ):
         # general k8s config
         self.kubeconfig_path = kubeconfig_path
         self.enabled = enabled
         self.default_volumes: Optional[List[ConfigVolume]] = default_volumes or []
         self.pod_launch_timeout = pod_launch_timeout or DEFAULT_POD_LAUNCH_TIMEOUT_S
+        # This flag will be used to indicate in logs the first task we start scheduling and running on Kubernetes
+        self.start_schedule_jobs = start_schedule_jobs
 
         # creating a task_proc executor has a couple steps:
         # * create a TaskProcessor

@@ -169,10 +169,10 @@ def setup_environment(args):
 
 def main():
     args = parse_cli()
-    tron_start_time = time.time()
+    boot_time = time.time()
     setup_environment(args)
     trond = trondaemon.TronDaemon(args)
-    trond.run(tron_start_time=tron_start_time)
+    trond.run(boot_time=boot_time)
 
 
 if __name__ == "__main__":

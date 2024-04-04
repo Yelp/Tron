@@ -301,7 +301,6 @@ class ActionRun(Observable):
         on_upstream_rerun=None,
         trigger_timeout_timestamp=None,
         original_command=None,
-        start_schedule_jobs=True,
     ):
         super().__init__()
         self.job_run_id = maybe_decode(job_run_id)
@@ -1135,8 +1134,6 @@ class MesosActionRun(ActionRun, Observer):
 class KubernetesActionRun(ActionRun, Observer):
     """An ActionRun that executes the command on a Kubernetes cluster."""
 
-    start_schedule_jobs = True
-
     def submit_command(self, attempt: ActionRunAttempt) -> Optional[KubernetesTask]:
         """
         Attempt to run a given ActionRunAttempt on the configured Kubernetes cluster.
@@ -1195,11 +1192,11 @@ class KubernetesActionRun(ActionRun, Observer):
         self.watch(task)
 
         try:
-            if self.start_schedule_jobs:
+            if k8s_cluster.start_schedule_jobs:
                 log.info(
                     f"We will start submitting tasks (i.e scheduling jobs). Starting with {task.get_kubernetes_id()}"
                 )
-                self.start_schedule_jobs = False
+                k8s_cluster.start_schedule_jobs = False
             k8s_cluster.submit(task)
         except Exception:
             log.exception(f"Unable to submit task for ActionRun {self.id}")

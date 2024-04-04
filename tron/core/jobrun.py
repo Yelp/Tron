@@ -462,7 +462,8 @@ class JobRunCollection:
         )
 
     def get_scheduled(self):
-        # find the scheduled run for the job and return it
+        # Find the scheduled runs for the jobs and return it
+        # in most cases, there should just be a single run - but it's possible that a delayed job could have N scheduled runs built up
         return [r for r in self.runs if r.state == ActionRun.SCHEDULED]
 
     def next_run_num(self):

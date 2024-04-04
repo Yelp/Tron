@@ -75,7 +75,7 @@ class TronDaemon:
         self.signals = {signal.SIGINT: signal.default_int_handler}
         self.manhole_sock = f"{self.options.working_dir}/manhole.sock"
 
-    def run(self, tron_start_time=None):
+    def run(self, boot_time=None):
         with no_daemon_context(self.working_dir, self.lock_file, self.signals):
             signal_map = {
                 signal.SIGHUP: self._handle_reconfigure,
@@ -85,23 +85,20 @@ class TronDaemon:
                 signal.SIGUSR1: self._handle_debug,
             }
             signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
-            log.info("Starting the setup process of mcp, api, manhole and runnning the reactor")
-            self._run_mcp(tron_start_time=tron_start_time)
+            log.info("Starting setup processes...")
+            self._run_mcp(boot_time=boot_time)
             log.info(
-                f"The master control plane has finished setup. Time elapsed since Tron started {time.time() - tron_start_time}s"
+                f"Master Control Program (MCP) setup complete. Time elapsed since Tron started: {time.time() - boot_time}s"
             )
             self._run_www_api()
-            log.info(
-                f"The Tron API has finished setup. Time elapsed since Tron started {time.time() - tron_start_time}s"
-            )
+            log.info(f"Tron API setup complete. Time elapsed since Tron started: {time.time() - boot_time}s")
             self._run_manhole()
-            log.info(
-                f"The manhole has finished setup. Time elapsed since Tron started {time.time() - tron_start_time}s"
-            )
+            log.info(f"Manhole setup complete. Time elapsed since Tron started: {time.time() - boot_time}s")
             self._run_reactor()
             log.info(
-                f"Twisted reactor has started. The Tron API should be up and ready now to receive requests. Time elapsed since Tron started {time.time() - tron_start_time}s"
+                f"Twisted reactor has started. The Tron API should be up and ready now to receive requests. Time elapsed since Tron started: {time.time() - boot_time}s"
             )
+            log.info("Setup complete!")
 
             while True:
                 signum = signal.sigwait(list(signal_map.keys()))
@@ -129,16 +126,16 @@ class TronDaemon:
         port = self.options.listen_port
         reactor.listenTCP(port, site, interface=self.options.listen_host)
 
-    def _run_mcp(self, tron_start_time=None):
+    def _run_mcp(self, boot_time=None):
         # Local import required because of reactor import in mcp
         from tron import mcp
 
         working_dir = self.options.working_dir
         config_path = self.options.config_path
-        self.mcp = mcp.MasterControlProgram(working_dir, config_path)
+        self.mcp = mcp.MasterControlProgram(working_dir, config_path, boot_time)
 
         try:
-            self.mcp.initial_setup(tron_start_time=tron_start_time)
+            self.mcp.initial_setup()
         except Exception as e:
             msg = "Error in configuration %s: %s"
             log.exception(msg % (config_path, e))
@@ -146,7 +143,7 @@ class TronDaemon:
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        # Starts Tron server
+        # This is what actually starts the Tron server by starting the Twisted event loop
         threading.Thread(
             target=reactor.run,
             daemon=True,

@@ -22,7 +22,7 @@ def apply_master_configuration(mapping, master_config):
     def get_config_value(seq):
         return [getattr(master_config, item) for item in seq]
 
-    # mapping consists of different functions in MCP mapped to their config from tronfig in Master.yaml
+    # Map various MASTER.yaml config options to functions that will apply said options
     # for example, we will have MasterControlProgram.configure_eventbus function mapped to eventbus_enabled option
     for entry in mapping:
         func, args = entry[0], get_config_value(entry[1:])
@@ -32,15 +32,15 @@ def apply_master_configuration(mapping, master_config):
 class MasterControlProgram:
     """Central state object for the Tron daemon."""
 
-    def __init__(self, working_dir, config_path):
+    def __init__(self, working_dir, config_path, boot_time=None):
         super().__init__()
         self.jobs = JobCollection()
         self.working_dir = working_dir
         self.config = manager.ConfigManager(config_path)
         self.context = command_context.CommandContext()
         self.state_watcher = statemanager.StateChangeWatcher()
-        self.boot_time = time.time()
-        current_time = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime())
+        self.boot_time = boot_time
+        current_time = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(boot_time))
         log.info(f"Initialized. Tron started on {current_time}!")
 
     def shutdown(self):
@@ -56,34 +56,32 @@ class MasterControlProgram:
             log.exception(f"reconfigure failure: {e.__class__.__name__}: {e}")
             raise e
 
-    def _load_config(self, reconfigure=False, namespace_to_reconfigure=None, tron_start_time=None):
+    def _load_config(self, reconfigure=False, namespace_to_reconfigure=None):
         """Read config data and apply it."""
         with self.state_watcher.disabled():
             self.apply_config(
                 self.config.load(),
                 reconfigure=reconfigure,
                 namespace_to_reconfigure=namespace_to_reconfigure,
-                tron_start_time=tron_start_time,
             )
 
-    def initial_setup(self, tron_start_time=None):
+    def initial_setup(self):
         """When the MCP is initialized the config is applied before the state.
         In this case jobs shouldn't be scheduled until the state is applied.
         """
-        # The job schedules have been applied in first step
-        self._load_config(tron_start_time=tron_start_time)
-        # Now the jobs will actually get scheduled once the state for action runs are restored
+        # The job schedule factories will be created in the function below
+        self._load_config()
+        # Jobs will also get scheduled (internally) once the state for action runs are restored in restore_state
         self.restore_state(
             actioncommand.create_action_runner_factory_from_config(
                 self.config.load().get_master().action_runner,
             ),
-            tron_start_time=tron_start_time,
         )
         # Any job with existing state would have been scheduled already. Jobs
         # without any state will be scheduled here.
         self.jobs.run_queue_schedule()
 
-    def apply_config(self, config_container, reconfigure=False, namespace_to_reconfigure=None, tron_start_time=None):
+    def apply_config(self, config_container, reconfigure=False, namespace_to_reconfigure=None):
         """Apply a configuration."""
         master_config_directives = [
             (self.update_state_watcher_config, "state_persistence"),
@@ -110,7 +108,7 @@ class MasterControlProgram:
 
         # TODO: unify NOTIFY_STATE_CHANGE and simplify this
         self.job_graph = JobGraph(config_container)
-        # Builds a job scheduler factory for Tron jobs, which will schedule internally in Tron the jobs
+        # This factory is how Tron internally manages scheduling jobs
         factory = self.build_job_scheduler_factory(master_config, self.job_graph)
         updated_jobs = self.jobs.update_from_config(
             config_container.get_jobs(),
@@ -119,14 +117,13 @@ class MasterControlProgram:
             namespace_to_reconfigure,
         )
         # We will build the schedulers once the watcher is invoked
-        if tron_start_time is not None:
-            log.info(
-                f"Tron built the schedulers for Tron jobs internally! Time elapsed since Tron started {time.time() - tron_start_time}s"
-            )
+        log.info(
+            f"Tron built the schedulers for Tron jobs internally! Time elapsed since Tron started {time.time() - self.boot_time}s"
+        )
         self.state_watcher.watch_all(updated_jobs, [Job.NOTIFY_STATE_CHANGE, Job.NOTIFY_NEW_RUN])
 
     def build_job_scheduler_factory(self, master_config, job_graph):
-        """Creates an action runner if option specified in tronfigs and job scheduler instances for Tron jobs"""
+        """Creates JobSchedulerFactory, which are how Tron tracks job schedules internally"""
         output_stream_dir = master_config.output_stream_dir or self.working_dir
         action_runner = actioncommand.create_action_runner_factory_from_config(
             master_config.action_runner,
@@ -164,15 +161,15 @@ class MasterControlProgram:
     def get_config_manager(self):
         return self.config
 
-    def restore_state(self, action_runner, tron_start_time=None):
+    def restore_state(self, action_runner):
         """Use the state manager to retrieve to persisted state and apply it
         to the configured Jobs.
         """
-        log.info("restoring from DynamoDB")
+        log.info("Restoring from DynamoDB")
         states = self.state_watcher.restore(self.jobs.get_names())
         MesosClusterRepository.restore_state(states.get("mesos_state", {}))
 
-        self.jobs.restore_state(states.get("job_state", {}), action_runner, tron_start_time=tron_start_time)
+        self.jobs.restore_state(states.get("job_state", {}), action_runner, boot_time=self.boot_time)
         self.state_watcher.save_metadata()
 
     def __str__(self):

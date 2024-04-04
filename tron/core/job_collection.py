@@ -41,8 +41,7 @@ class JobCollection:
             else:
                 return config.namespace == namespace_to_reconfigure
 
-        # The below statements don't get called until self.state_watcher.watch_all is called
-        # in apply_config. This will go through the job's configs and build a scheduler for them
+        # NOTE: as this is a generator expression, we will only go through job configs and build a scheduler for them once something iterates over us (i.e, once `self.state_watcher.watch_all()` is called)
         seq = (factory.build(config) for config in job_configs.values() if reconfigure_filter(config))
         return map_to_job_and_schedule(filter(self.add, seq))
 
@@ -69,13 +68,15 @@ class JobCollection:
         job_scheduler.schedule_reconfigured()
         return True
 
-    def restore_state(self, job_state_data, config_action_runner, tron_start_time=None):
-        # we will start looping through the jobs and their runs and restore
-        # state for each run in for a job and as we restore the state
-        # we will also schedule the next runs for that job
-        if tron_start_time is not None:
+    def restore_state(self, job_state_data, config_action_runner, boot_time=None):
+        """
+        Loops through the jobs and their runs in order to restore
+        state for each run. As we restore state, we will also schedule the next
+        runs for each job
+        """
+        if boot_time is not None:
             log.info(
-                f"Tron is restoring state for jobs and will start scheduling them! Time elapsed since Tron started {time.time()- tron_start_time}"
+                f"Tron is restoring state for jobs and will start scheduling them! Time elapsed since Tron started {time.time()- boot_time}"
             )
         for name, state in job_state_data.items():
             self.jobs[name].restore_state(state, config_action_runner)
