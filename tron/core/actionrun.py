@@ -1192,11 +1192,6 @@ class KubernetesActionRun(ActionRun, Observer):
         self.watch(task)
 
         try:
-            if k8s_cluster.start_schedule_jobs:
-                log.info(
-                    f"We will start submitting tasks (i.e running the jobs). Starting with {task.get_kubernetes_id()}"
-                )
-                k8s_cluster.start_schedule_jobs = False
             k8s_cluster.submit(task)
         except Exception:
             log.exception(f"Unable to submit task for ActionRun {self.id}")
