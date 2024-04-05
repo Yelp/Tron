@@ -288,7 +288,6 @@ class KubernetesCluster:
         self.pod_launch_timeout = pod_launch_timeout or DEFAULT_POD_LAUNCH_TIMEOUT_S
         # This flag will be used to indicate in logs the first task we start scheduling and running on Kubernetes
         self.start_schedule_jobs = start_schedule_jobs
-
         # creating a task_proc executor has a couple steps:
         # * create a TaskProcessor
         # * load the desired plugin (in this case, the k8s one)
@@ -312,6 +311,7 @@ class KubernetesCluster:
 
         # actually create the executor/runner, as mentioned above.
         self.connect()
+        log.info("Tron connected to task_proc. task_proc will start scheduling now the jobs on k8s")
 
     def connect(self) -> None:
         """

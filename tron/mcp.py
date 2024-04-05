@@ -168,8 +168,13 @@ class MasterControlProgram:
         log.info("Restoring from DynamoDB")
         states = self.state_watcher.restore(self.jobs.get_names())
         MesosClusterRepository.restore_state(states.get("mesos_state", {}))
-
-        self.jobs.restore_state(states.get("job_state", {}), action_runner, boot_time=self.boot_time)
+        log.info(
+            f"Tron will start restoring state for the jobs and will start scheduling them! Time elapsed since Tron started {time.time()- self.boot_time}"
+        )
+        self.jobs.restore_state(states.get("job_state", {}), action_runner)
+        log.info(
+            f"Tron completed restoring state for the jobs. Time elapsed since Tron started {time.time()- self.boot_time}"
+        )
         self.state_watcher.save_metadata()
 
     def __str__(self):

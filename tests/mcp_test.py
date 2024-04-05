@@ -144,7 +144,7 @@ class TestMasterControlProgramRestoreState(TestCase):
     def setup_mcp(self):
         self.working_dir = tempfile.mkdtemp()
         self.config_path = tempfile.mkdtemp()
-        self.boot_time = None
+        self.boot_time = time.time()
         self.mcp = mcp.MasterControlProgram(self.working_dir, self.config_path, self.boot_time)
         self.mcp.jobs = mock.create_autospec(JobCollection)
         self.mcp.state_watcher = mock.create_autospec(
@@ -160,7 +160,6 @@ class TestMasterControlProgramRestoreState(TestCase):
     def test_restore_state(self, mock_cluster_repo):
         job_state_data = {"1": "things", "2": "things"}
         mesos_state_data = {"3": "things", "4": "things"}
-        boot_time = None
         state_data = {
             "mesos_state": mesos_state_data,
             "job_state": job_state_data,
@@ -169,7 +168,7 @@ class TestMasterControlProgramRestoreState(TestCase):
         action_runner = mock.Mock()
         self.mcp.restore_state(action_runner)
         mock_cluster_repo.restore_state.assert_called_with(mesos_state_data)
-        self.mcp.jobs.restore_state.assert_called_with(job_state_data, action_runner, boot_time)
+        self.mcp.jobs.restore_state.assert_called_with(job_state_data, action_runner)
 
 
 if __name__ == "__main__":

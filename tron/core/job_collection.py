@@ -1,5 +1,4 @@
 import logging
-import time
 
 from tron.core.job import Job
 from tron.utils import collections
@@ -68,16 +67,12 @@ class JobCollection:
         job_scheduler.schedule_reconfigured()
         return True
 
-    def restore_state(self, job_state_data, config_action_runner, boot_time=None):
+    def restore_state(self, job_state_data, config_action_runner):
         """
         Loops through the jobs and their runs in order to restore
         state for each run. As we restore state, we will also schedule the next
         runs for each job
         """
-        if boot_time is not None:
-            log.info(
-                f"Tron is restoring state for jobs and will start scheduling them! Time elapsed since Tron started {time.time()- boot_time}"
-            )
         for name, state in job_state_data.items():
             self.jobs[name].restore_state(state, config_action_runner)
         log.info(f"Loaded state for {len(job_state_data)} jobs")
