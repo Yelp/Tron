@@ -136,7 +136,7 @@ class DynamoDBStateStore:
                 log.error(error)
                 with self.save_lock:
                     self.save_queue[key] = val
-        duration = time.time() - start
+        duration = start
         log.info(f"saved {saved} items in {duration}s")
 
         if saved < qlen:

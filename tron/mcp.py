@@ -32,7 +32,7 @@ def apply_master_configuration(mapping, master_config):
 class MasterControlProgram:
     """Central state object for the Tron daemon."""
 
-    def __init__(self, working_dir, config_path, boot_time=None):
+    def __init__(self, working_dir, config_path, boot_time):
         super().__init__()
         self.jobs = JobCollection()
         self.working_dir = working_dir
@@ -169,11 +169,11 @@ class MasterControlProgram:
         states = self.state_watcher.restore(self.jobs.get_names())
         MesosClusterRepository.restore_state(states.get("mesos_state", {}))
         log.info(
-            f"Tron will start restoring state for the jobs and will start scheduling them! Time elapsed since Tron started {time.time()- self.boot_time}"
+            f"Tron will start restoring state for the jobs and will start scheduling them! Time elapsed since Tron started {time.time() - self.boot_time}"
         )
         self.jobs.restore_state(states.get("job_state", {}), action_runner)
         log.info(
-            f"Tron completed restoring state for the jobs. Time elapsed since Tron started {time.time()- self.boot_time}"
+            f"Tron completed restoring state for the jobs. Time elapsed since Tron started {time.time() - self.boot_time}"
         )
         self.state_watcher.save_metadata()
 

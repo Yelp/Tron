@@ -75,7 +75,7 @@ class TronDaemon:
         self.signals = {signal.SIGINT: signal.default_int_handler}
         self.manhole_sock = f"{self.options.working_dir}/manhole.sock"
 
-    def run(self, boot_time=None):
+    def run(self, boot_time):
         with no_daemon_context(self.working_dir, self.lock_file, self.signals):
             signal_map = {
                 signal.SIGHUP: self._handle_reconfigure,

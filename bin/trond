@@ -172,7 +172,7 @@ def main():
     boot_time = time.time()
     setup_environment(args)
     trond = trondaemon.TronDaemon(args)
-    trond.run(boot_time=boot_time)
+    trond.run(boot_time)
 
 
 if __name__ == "__main__":
