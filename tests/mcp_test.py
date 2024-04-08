@@ -1,5 +1,6 @@
 import shutil
 import tempfile
+import time
 from unittest import mock
 
 import pytest
@@ -25,10 +26,8 @@ class TestMasterControlProgram:
     def setup_mcp(self):
         self.working_dir = tempfile.mkdtemp()
         self.config_path = tempfile.mkdtemp()
-        self.mcp = mcp.MasterControlProgram(
-            self.working_dir,
-            self.config_path,
-        )
+        self.boot_time = time.time()
+        self.mcp = mcp.MasterControlProgram(self.working_dir, self.config_path, self.boot_time)
         self.mcp.state_watcher = mock.create_autospec(
             statemanager.StateChangeWatcher,
         )
@@ -145,10 +144,8 @@ class TestMasterControlProgramRestoreState(TestCase):
     def setup_mcp(self):
         self.working_dir = tempfile.mkdtemp()
         self.config_path = tempfile.mkdtemp()
-        self.mcp = mcp.MasterControlProgram(
-            self.working_dir,
-            self.config_path,
-        )
+        self.boot_time = time.time()
+        self.mcp = mcp.MasterControlProgram(self.working_dir, self.config_path, self.boot_time)
         self.mcp.jobs = mock.create_autospec(JobCollection)
         self.mcp.state_watcher = mock.create_autospec(
             statemanager.StateChangeWatcher,
@@ -171,10 +168,7 @@ class TestMasterControlProgramRestoreState(TestCase):
         action_runner = mock.Mock()
         self.mcp.restore_state(action_runner)
         mock_cluster_repo.restore_state.assert_called_with(mesos_state_data)
-        self.mcp.jobs.restore_state.assert_called_with(
-            job_state_data,
-            action_runner,
-        )
+        self.mcp.jobs.restore_state.assert_called_with(job_state_data, action_runner)
 
 
 if __name__ == "__main__":

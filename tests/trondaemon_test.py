@@ -1,5 +1,6 @@
 import os
 import tempfile
+import time
 from unittest import mock
 
 from testifycompat import setup
@@ -43,10 +44,11 @@ class TronDaemonTestCase(TestCase):
             autospec=None,
         ) as ndc:
             ndc.return_value = mock.MagicMock()
+            boot_time = time.time()
             ndc.return_value.__enter__.side_effect = RuntimeError()
             daemon = TronDaemon(mock.Mock())
             try:
-                daemon.run()
+                daemon.run(boot_time)
             except Exception:
                 pass
             assert ndc.call_count == 1

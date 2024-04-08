@@ -1,6 +1,7 @@
 """Tests for reconfiguring mcp."""
 import os
 import tempfile
+import time
 
 import pytest
 
@@ -179,7 +180,7 @@ class TestMCPReconfigure(TestCase):
     @setup
     def setup_mcp(self):
         self.test_dir = tempfile.mkdtemp()
-        self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
+        self.mcp = mcp.MasterControlProgram(self.test_dir, "config", time.time())
         config = {schema.MASTER_NAMESPACE: self._get_config(0, self.test_dir)}
         container = config_parse.ConfigContainer.create(config)
         self.mcp.apply_config(container)
