@@ -1,3 +1,14 @@
+tron (1.29.4) jammy; urgency=medium
+
+  * 1.29.4 tagged with 'make release'
+    Commit: Adding logs to Tron to indicate start and scheduling times -
+    TRON-2152 (#948)  * Adding logs to Tron to indicate start and
+    scheduling times  * Addressed reviews on the PR  * Address reviews
+    2.0  * Deleting the start_schedule_jobs flag  * Making boot_time a
+    required param  * bring back time.time in duration
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Mon, 08 Apr 2024 11:15:48 -0700
+
 tron (1.29.3) jammy; urgency=medium
 
   * 1.29.3 tagged with 'make release'
