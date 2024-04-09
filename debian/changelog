@@ -1,3 +1,11 @@
+tron (1.29.5) jammy; urgency=medium
+
+  * 1.29.5 tagged with 'make release'
+    Commit: Merge pull request #940 from Yelp/jfong/TRON-1850-starting-
+    jobs-stuck  TRON-1850: Include 'starting' pods in check for stuck jobs
+
+ -- Jen Patague <jfong@yelp.com>  Tue, 09 Apr 2024 11:37:15 -0700
+
 tron (1.29.4) jammy; urgency=medium
 
   * 1.29.4 tagged with 'make release'
