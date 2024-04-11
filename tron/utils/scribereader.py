@@ -16,7 +16,7 @@ from tron.config.static_config import NAMESPACE
 
 try:
     from scribereader import scribereader  # type: ignore
-    from clog.readers import StreamTailerSetupError  # type: ignore
+    from scribereader.clog.readers import StreamTailerSetupError  # type: ignore
 except ImportError:
     scribereader = None  # sorry folks, you'll need to add your own way to retrieve logs
 
