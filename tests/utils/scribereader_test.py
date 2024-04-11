@@ -3,13 +3,89 @@ from unittest import mock
 
 import pytest
 
+import tron.utils.scribereader
 from tron.utils.scribereader import read_log_stream_for_action_run
 
 try:
     import scribereader  # noqa: F401
+    from clog.readers import S3LogsReader
 except ImportError:
-    pytest.skip("scribereader not available, skipping tests", allow_module_level=True)
+    pytest.skip("yelp logs readers not available, skipping tests", allow_module_level=True)
 
+
+def static_conf_patch(args={}):
+    return lambda arg, namespace, default=None: args.get(arg)  
+
+
+def test_read_log_stream_for_action_run_not_available():    
+    orig_scribereader = tron.utils.scribereader.scribereader
+    orig_S3LogsReader = tron.utils.scribereader.S3LogsReader
+    tron.utils.scribereader.scribereader = None
+    tron.utils.scribereader.S3LogsReader = None
+    try:
+        output =  tron.utils.scribereader.read_log_stream_for_action_run(
+            "namespace.job.1234.action",
+            component='stdout',
+            min_date=datetime.datetime.now(),
+            max_date=datetime.datetime.now(),
+            paasta_cluster='fake'
+        )
+    finally:
+        tron.utils.scribereader.scribereader = orig_scribereader
+        tron.utils.scribereader.S3LogsReader = orig_S3LogsReader
+    assert 'unable to display logs' in output[0]
+
+
+def test_read_log_stream_for_action_run_yelp_clog():
+    with mock.patch(
+        "staticconf.read", autospec=True, side_effect=static_conf_patch({
+            "logging.use_s3_reader": True,
+            "logging.max_lines_to_display": 1000
+        })
+    ), mock.patch(
+        "tron.config.static_config.build_configuration_watcher",
+        autospec=True,
+    ), mock.patch(
+        "tron.config.static_config.load_yaml_file",
+        autospec=True,
+    ), mock.patch(
+        "tron.utils.scribereader.S3LogsReader", autospec=True
+    ) as mock_s3_reader:
+        
+        mock_s3_reader.return_value.get_log_reader.return_value = iter(
+            [
+                """{
+                "tron_run_number": 1234,
+                "component": "stdout",
+                "message": "line 1",
+                "timestamp": "2021-01-02T18:10:09.169421619Z",
+                "cluster": "fake"
+            }""",
+                """{
+                "tron_run_number": 1234,
+                "component": "stdout",
+                "message": "line 2",
+                "timestamp": "2021-01-02T18:11:09.169421619Z",
+                "cluster": "fake"
+            }""",
+                """{
+                "tron_run_number": 1234,
+                "component": "stderr",
+                "message": "line 3",
+                "timestamp": "2021-01-02T18:12:09.169421619Z",
+                "cluster": "fake"
+            }""",
+            ]
+        )
+
+        output = read_log_stream_for_action_run(
+            "namespace.job.1234.action",
+            component='stdout',
+            min_date=datetime.datetime.now(),
+            max_date=datetime.datetime.now(),
+            paasta_cluster='fake'
+        )
+    assert output == ["line 1", "line 2"]
 
 def test_read_log_stream_for_action_run_min_date_and_max_date_today():
     # NOTE: these tests don't actually depend on the current time apart from
@@ -35,7 +111,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_today():
         "tron.config.static_config.build_configuration_watcher",
         autospec=True,
     ), mock.patch(
-        "staticconf.read", autospec=True, return_value=1000
+        "staticconf.read", autospec=True, side_effect=static_conf_patch({"logging.max_lines_to_display": 1000})
     ), mock.patch(
         "tron.config.static_config.load_yaml_file",
         autospec=True,
@@ -111,7 +187,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_different_days():
         "tron.config.static_config.build_configuration_watcher",
         autospec=True,
     ), mock.patch(
-        "staticconf.read", autospec=True, return_value=1000
+        "staticconf.read", autospec=True, side_effect=static_conf_patch({"logging.max_lines_to_display": 1000})
     ), mock.patch(
         "tron.config.static_config.load_yaml_file",
         autospec=True,
@@ -209,7 +285,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_in_past():
         "tron.config.static_config.build_configuration_watcher",
         autospec=True,
     ), mock.patch(
-        "staticconf.read", autospec=True, return_value=1000
+        "staticconf.read", autospec=True, side_effect=static_conf_patch({"logging.max_lines_to_display": 1000})
     ), mock.patch(
         "tron.config.static_config.load_yaml_file",
         autospec=True,
@@ -275,7 +351,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
         "tron.config.static_config.build_configuration_watcher",
         autospec=True,
     ), mock.patch(
-        "staticconf.read", autospec=True, return_value=1000
+        "staticconf.read", autospec=True, side_effect=static_conf_patch({"logging.max_lines_to_display": 1000})
     ), mock.patch(
         "tron.config.static_config.load_yaml_file",
         autospec=True,
