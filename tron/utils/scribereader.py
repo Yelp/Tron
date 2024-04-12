@@ -4,7 +4,8 @@ import logging
 import operator
 import socket
 from functools import lru_cache
-from typing import Iterator, List
+from typing import Iterator
+from typing import List
 from typing import Optional
 from typing import Tuple
 
@@ -19,11 +20,11 @@ try:
     from scribereader.clog.readers import StreamTailerSetupError  # type: ignore
 except ImportError:
     scribereader = None  # sorry folks, you'll need to add your own way to retrieve logs
-    
+
 try:
-    from clog.readers import S3LogsReader  # type: ignore
+    from clog.readers import S3LogsReader
 except ImportError:
-    S3LogsReader = None  # sorry folks, you'll need to add your own way to retrieve logs
+    S3LogsReader = None  # type: ignore
 
 
 log = logging.getLogger(__name__)
@@ -76,7 +77,7 @@ def get_scribereader_host_and_port(ecosystem, superregion, region: str) -> Optio
     return host, port
 
 
-class PaaSTALogsIterator():
+class PaaSTALogsIterator:
     def __init__(self, component, paasta_cluster, action_run_id: str) -> None:
         self.component = component
         self.paasta_cluster = paasta_cluster
@@ -92,10 +93,10 @@ class PaaSTALogsIterator():
         self.malformed_lines = 0
         self.output: List[Tuple[str, str]] = []
         self.truncated_output = False
-    
-    def iterate_logs(self, stream: Iterator[str], max_lines: int) -> None:
+
+    def iterate_logs(self, stream: Iterator[str], max_lines: Optional[int]) -> None:
         for line in stream:
-            if self.num_lines == max_lines:
+            if max_lines is not None and self.num_lines == max_lines:
                 self.truncated_output = True
                 break
             # it's possible for jobs to run multiple times a day and have obscenely large amounts of output
@@ -106,19 +107,21 @@ class PaaSTALogsIterator():
             try:
                 payload = json.loads(line)
             except json.decoder.JSONDecodeError:
-                log.error(f"Unable to decode log line from stream ({self.stream_name}) for {self.action_run_id}: {line}")
+                log.error(
+                    f"Unable to decode log line from stream ({self.stream_name}) for {self.action_run_id}: {line}"
+                )
                 self.malformed_lines += 1
                 continue
 
             if (
-                int(payload.get("tron_run_number",-1)) == self.run_num
+                int(payload.get("tron_run_number", -1)) == self.run_num
                 and payload.get("component") == self.component
                 and payload.get("message") is not None
                 and payload.get("timestamp") is not None
                 and payload.get("cluster") == self.paasta_cluster
             ):
                 self.output.append((payload["timestamp"], payload["message"]))
-    
+
     def sort_log_lines(self) -> List[str]:
         self.output.sort(key=operator.itemgetter(0))
         return [line for _, line in self.output]
@@ -134,16 +137,16 @@ def read_log_stream_for_action_run(
 ) -> List[str]:
     if min_date is None:
         return [f"{action_run_id} has not started yet."]
-    
+
     use_s3_reader = False
-    
+
     if S3LogsReader:
         config_watcher = get_config_watcher()
         config_watcher.reload_if_changed()
         use_s3_reader = staticconf.read("logging.use_s3_reader", namespace=NAMESPACE, default=False)
-    elif scribereader is None:
+    elif scribereader is None:  # type: ignore
         return ["Neither scribereader nor yelp_clog (internal Yelp packages) are available - unable to display logs."]
-    
+
     if max_lines == USE_SRV_CONFIGS:
         config_watcher = get_config_watcher()
         config_watcher.reload_if_changed()
@@ -158,37 +161,29 @@ def read_log_stream_for_action_run(
         return [
             "Unable to determine where Tron is located. If you're seeing this inside Yelp, report this to #compute-infra"
         ]
-    
+
     if paasta_cluster is None:
         paasta_cluster = superregion
 
     paasta_logs = PaaSTALogsIterator(component, paasta_cluster, action_run_id)
     stream_name = paasta_logs.stream_name
+
     today = datetime.date.today()
-        
-    # yelp_clog S3LogsReader is a newer reader that is supposed to replace scribe readers eventually. 
+    start_date = min_date.date()
+
+    # yelp_clog S3LogsReader is a newer reader that is supposed to replace scribe readers eventually.
     if use_s3_reader:
-        start_date = min_date.date()
         end_date = max_date.date() if max_date else today
-        
+
         log.debug("Using S3LogsReader to retrieve logs")
-        s3_reader = S3LogsReader(get_ecosystem()).get_log_reader(
-            log_name=stream_name,
-            min_date=start_date,
-            max_date=end_date
-        )
-        paasta_logs.iterate_logs(s3_reader, max_lines)          
+        s3_reader = S3LogsReader(ecosystem).get_log_reader(log_name=stream_name, min_date=start_date, max_date=end_date)
+        paasta_logs.iterate_logs(s3_reader, max_lines)
     else:
-        start_date = min_date.date()
-        end_date = max_date.date() if max_date else None    
+        end_date = max_date.date() if max_date else None  # type: ignore
         use_tailer = today in {start_date, end_date}
         use_reader = start_date != today and end_date is not None
 
-        if end_date is not None and end_date == today:
-            end_date -= datetime.timedelta(days=1)
-
         host, port = get_scribereader_host_and_port(ecosystem, superregion, region)  # type: ignore  # the None case is covered by the check above
-        
 
         # We'll only use a stream reader for logs from not-today.
         # that said, it's possible that an action spans more than a single day - in this case, we'll first read "historical" data from
@@ -229,7 +224,9 @@ def read_log_stream_for_action_run(
     # for logs that use Kafka topics with multiple partitions underneath or retrieved by S3LogsReader,
     # data ordering is not guarantied - so we'll sort based on log timestamp set by producer.
     lines = paasta_logs.sort_log_lines()
-    malformed = [f"{paasta_logs.malformed_lines} encountered while retrieving logs"] if paasta_logs.malformed_lines else []
+    malformed = (
+        [f"{paasta_logs.malformed_lines} encountered while retrieving logs"] if paasta_logs.malformed_lines else []
+    )
     try:
         location_selector = f"-s {paasta_cluster}" if "prod" in paasta_cluster else f'-e {paasta_cluster.split("-")[1]}'
     except IndexError:
