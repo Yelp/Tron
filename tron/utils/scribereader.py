@@ -68,7 +68,7 @@ def get_ecosystem() -> str:
 
 
 @lru_cache(maxsize=1)
-def get_scribereader_host_and_port(ecosystem, superregion, region: str) -> Optional[Tuple[str, int]]:
+def get_scribereader_host_and_port(ecosystem: str, superregion: str, region: str) -> Tuple[str, int]:
     # NOTE: Passing in an ecosystem of prod is not supported by scribereader
     # as there's no mapping of ecosystem->scribe-kafka-services discovery hosts
     # for this ecosystem
@@ -80,8 +80,8 @@ def get_scribereader_host_and_port(ecosystem, superregion, region: str) -> Optio
     return host, port
 
 
-class PaaSTALogsIterator:
-    def __init__(self, component, paasta_cluster, action_run_id: str) -> None:
+class PaaSTALogs:
+    def __init__(self, component: str, paasta_cluster: str, action_run_id: str) -> None:
         self.component = component
         self.paasta_cluster = paasta_cluster
         self.action_run_id = action_run_id
@@ -97,7 +97,7 @@ class PaaSTALogsIterator:
         self.output: List[Tuple[str, str]] = []
         self.truncated_output = False
 
-    def iterate_logs(self, stream: Iterator[str], max_lines: Optional[int]) -> None:
+    def fetch(self, stream: Iterator[str], max_lines: Optional[int]) -> None:
         for line in stream:
             if max_lines is not None and self.num_lines == max_lines:
                 self.truncated_output = True
@@ -125,7 +125,7 @@ class PaaSTALogsIterator:
             ):
                 self.output.append((payload["timestamp"], payload["message"]))
 
-    def sort_log_lines(self) -> List[str]:
+    def sorted_lines(self) -> List[str]:
         self.output.sort(key=operator.itemgetter(0))
         return [line for _, line in self.output]
 
@@ -168,11 +168,12 @@ def read_log_stream_for_action_run(
     if paasta_cluster is None:
         paasta_cluster = superregion
 
-    paasta_logs = PaaSTALogsIterator(component, paasta_cluster, action_run_id)
+    paasta_logs = PaaSTALogs(component, paasta_cluster, action_run_id)
     stream_name = paasta_logs.stream_name
 
     today = datetime.date.today()
     start_date = min_date.date()
+    end_date: Optional[datetime.date]
 
     # yelp_clog S3LogsReader is a newer reader that is supposed to replace scribe readers eventually.
     if use_s3_reader:
@@ -180,13 +181,13 @@ def read_log_stream_for_action_run(
 
         log.debug("Using S3LogsReader to retrieve logs")
         s3_reader = S3LogsReader(ecosystem).get_log_reader(log_name=stream_name, min_date=start_date, max_date=end_date)
-        paasta_logs.iterate_logs(s3_reader, max_lines)
+        paasta_logs.fetch(s3_reader, max_lines)
     else:
-        end_date = max_date.date() if max_date else None  # type: ignore
+        end_date = max_date.date() if max_date else None
         use_tailer = today in {start_date, end_date}
         use_reader = start_date != today and end_date is not None
 
-        host, port = get_scribereader_host_and_port(ecosystem, superregion, region)  # type: ignore  # the None case is covered by the check above
+        host, port = get_scribereader_host_and_port(ecosystem, superregion, region)
 
         # We'll only use a stream reader for logs from not-today.
         # that said, it's possible that an action spans more than a single day - in this case, we'll first read "historical" data from
@@ -200,7 +201,7 @@ def read_log_stream_for_action_run(
                 reader_host=host,
                 reader_port=port,
             ) as stream:
-                paasta_logs.iterate_logs(stream, max_lines)
+                paasta_logs.fetch(stream, max_lines)
 
         if use_tailer:
             stream = scribereader.get_stream_tailer(
@@ -210,7 +211,7 @@ def read_log_stream_for_action_run(
                 lines=-1,
             )
             try:
-                paasta_logs.iterate_logs(stream, max_lines)
+                paasta_logs.fetch(stream, max_lines)
             except StreamTailerSetupError:
                 return [
                     f"No data in stream {stream_name} - if this is the first time this action has run and you expected "
@@ -225,8 +226,8 @@ def read_log_stream_for_action_run(
                 stream.close()
 
     # for logs that use Kafka topics with multiple partitions underneath or retrieved by S3LogsReader,
-    # data ordering is not guarantied - so we'll sort based on log timestamp set by producer.
-    lines = paasta_logs.sort_log_lines()
+    # data ordering is not guaranteed - so we'll sort based on log timestamp set by producer.
+    lines = paasta_logs.sorted_lines()
     malformed = (
         [f"{paasta_logs.malformed_lines} encountered while retrieving logs"] if paasta_logs.malformed_lines else []
     )
