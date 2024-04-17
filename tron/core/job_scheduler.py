@@ -25,7 +25,7 @@ class JobScheduler(Observer):
         self.watch(job)
 
     def restore_state(self, job_state_data, config_action_runner):
-        """Restore the job state and schedule any JobRuns."""
+        """Load the job state and schedule any JobRuns."""
         job_runs = self.job.get_job_runs_from_state(job_state_data)
         for run in job_runs:
             self.job.watch(run)

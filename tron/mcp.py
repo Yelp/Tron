@@ -72,11 +72,14 @@ class MasterControlProgram:
         # The job schedule factories will be created in the function below
         self._load_config()
         # Jobs will also get scheduled (internally) once the state for action runs are restored in restore_state
+        start_restore_state = time.time()
         self.restore_state(
             actioncommand.create_action_runner_factory_from_config(
                 self.config.load().get_master().action_runner,
             ),
         )
+        duration_restore_state = time.time() - start_restore_state
+        log.info(f"Execution time for restore_state function: {duration_restore_state}")
         # Any job with existing state would have been scheduled already. Jobs
         # without any state will be scheduled here.
         self.jobs.run_queue_schedule()
@@ -162,16 +165,24 @@ class MasterControlProgram:
         return self.config
 
     def restore_state(self, action_runner):
-        """Use the state manager to retrieve to persisted state and apply it
+        """Use the state manager to retrieve the persisted state from dynamodb and apply it
         to the configured Jobs.
         """
         log.info("Restoring from DynamoDB")
+        start_time_restore_dynamodb = time.time()
+        # restores the state of the jobs and their runs from DynamoDB
         states = self.state_watcher.restore(self.jobs.get_names())
+        duration_restore = time.time() - start_time_restore_dynamodb
+        log.info(f"Time takes to state_watcher restore state directly from dynamodb: {duration_restore}")
         MesosClusterRepository.restore_state(states.get("mesos_state", {}))
         log.info(
             f"Tron will start restoring state for the jobs and will start scheduling them! Time elapsed since Tron started {time.time() - self.boot_time}"
         )
+        # loads the runs' state and schedule the next run for each job
+        start_time_load_state = time.time()
         self.jobs.restore_state(states.get("job_state", {}), action_runner)
+        duration_load = time.time() - start_time_load_state
+        log.info(f"Time taken in jobs.restore_state: {duration_load}")
         log.info(
             f"Tron completed restoring state for the jobs. Time elapsed since Tron started {time.time() - self.boot_time}"
         )
