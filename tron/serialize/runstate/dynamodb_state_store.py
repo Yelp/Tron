@@ -1,4 +1,5 @@
 import concurrent.futures
+import copy
 import logging
 import math
 import os
@@ -15,6 +16,7 @@ from tron.metrics import timer
 
 OBJECT_SIZE = 400000
 MAX_SAVE_QUEUE = 500
+MAX_ATTEMPTS = 11
 log = logging.getLogger(__name__)
 
 
@@ -49,33 +51,41 @@ class DynamoDBStateStore:
         return vals
 
     def chunk_keys(self, keys: list) -> list:
-        """Generates the cand keys list to be used to read from DynamoDB"""
+        """Generates a list of chunks of keys to be used to read from DynamoDB"""
         # have a for loop here for all the key chunks we want to go over
         cand_keys_chunks = []
         for i in range(0, len(keys), 100):
-            # chunks of 100 keys will be in this list
+            # chunks of at most 100 keys will be in this list as there could be smaller chunks
             cand_keys_chunks.append(keys[i : min(len(keys), i + 100)])
         return cand_keys_chunks
 
     def _get_items(self, table_keys: list) -> object:
         items = []
-        # precompute the cand_keys and then all we gotta do is submit stuff to the thread pool using the precomputed keys
-        cand_keys_list = self.chunk_keys(table_keys)
-        count = 0
-        while count < len(cand_keys_list):
+        # let's avoid potentially mutating our input :)
+        cand_keys_list = copy.copy(table_keys)
+        attempts_to_retrieve_keys = 0
+        while attempts_to_retrieve_keys < MAX_ATTEMPTS and len(cand_keys_list) != 0:
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                 responses = [
                     executor.submit(
-                        self.client.batch_get_item, RequestItems={self.name: {"Keys": key, "ConsistentRead": True}}
+                        self.client.batch_get_item,
+                        RequestItems={self.name: {"Keys": chunked_keys, "ConsistentRead": True}},
                     )
-                    for key in cand_keys_list
+                    for chunked_keys in self.chunk_keys(cand_keys_list)
                 ]
+                # let's wipe the state so that we can loop back around
+                # if there are any un-processed keys
+                # NOTE: we'll re-chunk when submitting to the threadpool
+                # since it's possible that we've had several chunks fail
+                # enough keys that we'd otherwise send > 100 keys in a
+                # request otherwise
+                cand_keys_list = []
             for resp in concurrent.futures.as_completed(responses):
                 items.extend(resp.result()["Responses"][self.name])
                 # add any potential unprocessed keys to the thread pool
                 if resp.result()["UnprocessedKeys"].get(self.name):
                     cand_keys_list.append(resp.result()["UnprocessedKeys"][self.name]["Keys"])
-            count += 1
+            attempts_to_retrieve_keys += 1
         return items
 
     def _get_first_partitions(self, keys: list):

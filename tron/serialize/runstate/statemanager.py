@@ -1,4 +1,5 @@
 import concurrent.futures
+import copy
 import itertools
 import logging
 import time
@@ -165,6 +166,7 @@ class PersistentStateManager:
             }
             for result in concurrent.futures.as_completed(results):
                 jobs[results[result]]["runs"] = result.result()
+        # TODO: clean the Mesos code below
         frameworks = self._restore_dicts(runstate.MESOS_STATE, ["frameworks"])
 
         state = {
@@ -176,15 +178,17 @@ class PersistentStateManager:
     def _restore_runs_for_job(self, job_name, job_state):
         """Restore the state for the runs of each job"""
         run_nums = job_state["run_nums"]
-        runs = []
-        keys_ids_list = []
         # with self._lock:
-        for run_num in run_nums:
-            key = jobrun.get_job_run_id(job_name, run_num)
-            keys_ids_list.append(key)
-        run_state = list(self._restore_dicts(runstate.JOB_RUN_STATE, keys_ids_list).values())
-        runs.extend(run_state)
-        return runs
+        keys = [jobrun.get_job_run_id(job_name, run_num) for run_num in run_nums]
+
+        job_runs_restored_states = self._restore_dicts(runstate.JOB_RUN_STATE, keys)
+        run_state = copy.copy(job_runs_restored_states)
+        for key, value in run_state.items():
+            if value == {}:
+                log.error(f"Failed to restore {key}, no state found for it!")
+                job_runs_restored_states.pop(key)
+        run_state = list(job_runs_restored_states.values())
+        return run_state
 
     def _restore_metadata(self):
         metadata = self._impl.restore([self.metadata_key])
