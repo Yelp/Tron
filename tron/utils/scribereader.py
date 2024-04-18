@@ -4,7 +4,6 @@ import logging
 import operator
 import socket
 from functools import lru_cache
-from typing import Any
 from typing import Iterator
 from typing import List
 from typing import Optional
@@ -16,18 +15,20 @@ from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
 
 
-S3LogsReader: Optional[Any]
-
 try:
     from scribereader import scribereader  # type: ignore
     from scribereader.clog.readers import StreamTailerSetupError  # type: ignore
+
+    scribereader_available = True
 except ImportError:
-    scribereader = None  # sorry folks, you'll need to add your own way to retrieve logs
+    scribereader_available = False  # sorry folks, you'll need to add your own way to retrieve logs
 
 try:
-    from clog.readers import S3LogsReader  # type: ignore
+    from clog.readers import S3LogsReader  # type: ignore[unused-ignore]
+
+    s3reader_available = True
 except ImportError:
-    S3LogsReader = None
+    s3reader_available = False
 
 
 log = logging.getLogger(__name__)
@@ -143,11 +144,11 @@ def read_log_stream_for_action_run(
 
     use_s3_reader = False
 
-    if S3LogsReader:
+    if s3reader_available:
         config_watcher = get_config_watcher()
         config_watcher.reload_if_changed()
         use_s3_reader = staticconf.read("logging.use_s3_reader", namespace=NAMESPACE, default=False)
-    elif scribereader is None:
+    elif scribereader_available is False:
         return ["Neither scribereader nor yelp_clog (internal Yelp packages) are available - unable to display logs."]
 
     if max_lines == USE_SRV_CONFIGS:

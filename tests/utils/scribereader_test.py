@@ -18,10 +18,8 @@ def static_conf_patch(args={}):
 
 
 def test_read_log_stream_for_action_run_not_available():
-    orig_scribereader = tron.utils.scribereader.scribereader
-    orig_S3LogsReader = tron.utils.scribereader.S3LogsReader
-    tron.utils.scribereader.scribereader = None
-    tron.utils.scribereader.S3LogsReader = None
+    tron.utils.scribereader.scribereader_available = False
+    tron.utils.scribereader.s3reader_available = False
     try:
         output = tron.utils.scribereader.read_log_stream_for_action_run(
             "namespace.job.1234.action",
@@ -31,8 +29,8 @@ def test_read_log_stream_for_action_run_not_available():
             paasta_cluster="fake",
         )
     finally:
-        tron.utils.scribereader.scribereader = orig_scribereader
-        tron.utils.scribereader.S3LogsReader = orig_S3LogsReader
+        tron.utils.scribereader.scribereader_available = True
+        tron.utils.scribereader.s3reader_available = True
     assert "unable to display logs" in output[0]
 
 
