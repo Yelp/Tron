@@ -16,15 +16,15 @@ from tron.config.static_config import NAMESPACE
 
 
 try:
-    from scribereader import scribereader  # type: ignore
-    from scribereader.clog.readers import StreamTailerSetupError  # type: ignore
+    from scribereader import scribereader
+    from scribereader.clog.readers import StreamTailerSetupError
 
     scribereader_available = True
 except ImportError:
     scribereader_available = False  # sorry folks, you'll need to add your own way to retrieve logs
 
 try:
-    from clog.readers import S3LogsReader  # type: ignore[unused-ignore]
+    from clog.readers import S3LogsReader
 
     s3reader_available = True
 except ImportError:
