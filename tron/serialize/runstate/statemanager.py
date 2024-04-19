@@ -16,8 +16,6 @@ from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.yamlstore import YamlStateStore
 from tron.utils import observer
 
-# import threading
-
 log = logging.getLogger(__name__)
 
 
@@ -139,7 +137,6 @@ class PersistentStateManager:
         self.enabled = True
         self._buffer = buffer
         self._impl = persistence_impl
-        # self._lock = threading.Lock()
         self.metadata_key = self._impl.build_key(
             runstate.MCP_STATE,
             StateMetadata.name,
@@ -178,16 +175,17 @@ class PersistentStateManager:
     def _restore_runs_for_job(self, job_name, job_state):
         """Restore the state for the runs of each job"""
         run_nums = job_state["run_nums"]
-        # with self._lock:
         keys = [jobrun.get_job_run_id(job_name, run_num) for run_num in run_nums]
-
         job_runs_restored_states = self._restore_dicts(runstate.JOB_RUN_STATE, keys)
         run_state = copy.copy(job_runs_restored_states)
         for key, value in run_state.items():
             if value == {}:
                 log.error(f"Failed to restore {key}, no state found for it!")
                 job_runs_restored_states.pop(key)
+
         run_state = list(job_runs_restored_states.values())
+        # We need to sort below otherwise the runs will not be in order
+        run_state.sort(key=lambda x: x["run_num"], reverse=True)
         return run_state
 
     def _restore_metadata(self):
