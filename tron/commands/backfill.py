@@ -112,7 +112,7 @@ class BackfillRun:
             match = re.match(r"^Created JobRun:([-.\w]+)$", result)
 
             if match:
-                self.run_name = match.groups(0)[0]
+                self.run_name = match.groups(0)[0]  # type: ignore[assignment] # mypy wrongly identifies self.run_name type as "Union[str, int]"
                 self.run_state = ActionRun.STARTING
                 print(f"Job run '{self.run_name}' for {self.run_time_str} created")
             else:
