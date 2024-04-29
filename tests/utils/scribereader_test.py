@@ -13,14 +13,15 @@ except ImportError:
     pytest.skip("yelp logs readers not available, skipping tests", allow_module_level=True)
 
 
-def static_conf_patch(args={}):
+# used for an explicit patch of staticconf.read return value for an arbitrary namespace
+def static_conf_patch(args):
     return lambda arg, namespace, default=None: args.get(arg)
 
 
 def test_read_log_stream_for_action_run_not_available():
-    tron.utils.scribereader.scribereader_available = False
-    tron.utils.scribereader.s3reader_available = False
-    try:
+    with mock.patch("tron.utils.scribereader.scribereader_available", False), mock.patch(
+        "tron.utils.scribereader.s3reader_available", False
+    ):
         output = tron.utils.scribereader.read_log_stream_for_action_run(
             "namespace.job.1234.action",
             component="stdout",
@@ -28,9 +29,6 @@ def test_read_log_stream_for_action_run_not_available():
             max_date=datetime.datetime.now(),
             paasta_cluster="fake",
         )
-    finally:
-        tron.utils.scribereader.scribereader_available = True
-        tron.utils.scribereader.s3reader_available = True
     assert "unable to display logs" in output[0]
 
 

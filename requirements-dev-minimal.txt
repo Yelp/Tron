@@ -8,5 +8,5 @@ pytest
 pytest-asyncio
 requirements-tools
 types-PyYAML
-types-requests<2.31.0.7
+types-requests<2.31.0.7 # newer types-requests requires urllib3>=2
 types-simplejson
