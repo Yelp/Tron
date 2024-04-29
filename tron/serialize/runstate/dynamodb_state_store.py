@@ -9,6 +9,7 @@ import time
 from collections import defaultdict
 from collections import OrderedDict
 from typing import DefaultDict
+from typing import List
 
 import boto3  # type: ignore
 
@@ -16,7 +17,7 @@ from tron.metrics import timer
 
 OBJECT_SIZE = 400000
 MAX_SAVE_QUEUE = 500
-MAX_ATTEMPTS = 11
+MAX_ATTEMPTS = 10
 log = logging.getLogger(__name__)
 
 
@@ -50,7 +51,7 @@ class DynamoDBStateStore:
         vals = self._merge_items(first_items, remaining_items)
         return vals
 
-    def chunk_keys(self, keys: list) -> list:
+    def chunk_keys(self, keys: List[dict]) -> List[List[dict]]:
         """Generates a list of chunks of keys to be used to read from DynamoDB"""
         # have a for loop here for all the key chunks we want to go over
         cand_keys_chunks = []
@@ -64,7 +65,7 @@ class DynamoDBStateStore:
         # let's avoid potentially mutating our input :)
         cand_keys_list = copy.copy(table_keys)
         attempts_to_retrieve_keys = 0
-        while attempts_to_retrieve_keys < MAX_ATTEMPTS and len(cand_keys_list) != 0:
+        while len(cand_keys_list) != 0:
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                 responses = [
                     executor.submit(
@@ -83,8 +84,14 @@ class DynamoDBStateStore:
             for resp in concurrent.futures.as_completed(responses):
                 items.extend(resp.result()["Responses"][self.name])
                 # add any potential unprocessed keys to the thread pool
-                if resp.result()["UnprocessedKeys"].get(self.name):
+                if resp.result()["UnprocessedKeys"].get(self.name) and attempts_to_retrieve_keys < MAX_ATTEMPTS:
                     cand_keys_list.append(resp.result()["UnprocessedKeys"][self.name]["Keys"])
+                elif attempts_to_retrieve_keys >= MAX_ATTEMPTS:
+                    failed_keys = resp.result()["UnprocessedKeys"][self.name]["Keys"]
+                    error = Exception(
+                        f"tron_dynamodb_restore_failure: failed to retrieve items with keys \n{failed_keys}\n from dynamodb\n{resp.result()}"
+                    )
+                    raise error
             attempts_to_retrieve_keys += 1
         return items
 

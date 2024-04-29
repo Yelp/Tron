@@ -163,12 +163,9 @@ class PersistentStateManager:
             }
             for result in concurrent.futures.as_completed(results):
                 jobs[results[result]]["runs"] = result.result()
-        # TODO: clean the Mesos code below
-        frameworks = self._restore_dicts(runstate.MESOS_STATE, ["frameworks"])
 
         state = {
             runstate.JOB_STATE: jobs,
-            runstate.MESOS_STATE: frameworks,
         }
         return state
 
@@ -177,16 +174,16 @@ class PersistentStateManager:
         run_nums = job_state["run_nums"]
         keys = [jobrun.get_job_run_id(job_name, run_num) for run_num in run_nums]
         job_runs_restored_states = self._restore_dicts(runstate.JOB_RUN_STATE, keys)
-        run_state = copy.copy(job_runs_restored_states)
-        for key, value in run_state.items():
-            if value == {}:
-                log.error(f"Failed to restore {key}, no state found for it!")
-                job_runs_restored_states.pop(key)
+        runs = copy.copy(job_runs_restored_states)
+        for run_id, state in runs.items():
+            if state == {}:
+                log.error(f"Failed to restore {run_id}, no state found for it!")
+                job_runs_restored_states.pop(run_id)
 
-        run_state = list(job_runs_restored_states.values())
+        runs = list(job_runs_restored_states.values())
         # We need to sort below otherwise the runs will not be in order
-        run_state.sort(key=lambda x: x["run_num"], reverse=True)
-        return run_state
+        runs.sort(key=lambda x: x["run_num"], reverse=True)
+        return runs
 
     def _restore_metadata(self):
         metadata = self._impl.restore([self.metadata_key])

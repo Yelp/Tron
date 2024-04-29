@@ -174,7 +174,6 @@ class MasterControlProgram:
         states = self.state_watcher.restore(self.jobs.get_names())
         duration_restore = time.time() - start_time_restore_dynamodb
         log.info(f"Time takes to state_watcher restore state directly from dynamodb: {duration_restore}")
-        MesosClusterRepository.restore_state(states.get("mesos_state", {}))
         log.info(
             f"Tron will start restoring state for the jobs and will start scheduling them! Time elapsed since Tron started {time.time() - self.boot_time}"
         )
