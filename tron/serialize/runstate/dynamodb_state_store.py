@@ -10,6 +10,8 @@ from collections import defaultdict
 from collections import OrderedDict
 from typing import DefaultDict
 from typing import List
+from typing import Sequence
+from typing import TypeVar
 
 import boto3  # type: ignore
 
@@ -19,6 +21,7 @@ OBJECT_SIZE = 400000
 MAX_SAVE_QUEUE = 500
 MAX_ATTEMPTS = 10
 log = logging.getLogger(__name__)
+T = TypeVar("T")
 
 
 class DynamoDBStateStore:
@@ -51,7 +54,7 @@ class DynamoDBStateStore:
         vals = self._merge_items(first_items, remaining_items)
         return vals
 
-    def chunk_keys(self, keys: List[dict]) -> List[List[dict]]:
+    def chunk_keys(self, keys: Sequence[T]) -> List[List[T]]:
         """Generates a list of chunks of keys to be used to read from DynamoDB"""
         # have a for loop here for all the key chunks we want to go over
         cand_keys_chunks = []

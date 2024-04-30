@@ -32,6 +32,8 @@ class JobScheduler(Observer):
         self.job.runs.runs.extend(job_runs)
         log.info(f"{self} restored")
 
+        # Tron will recover any action run that has UNKNOWN status and k
+        # and will start connecting to task_proc
         recovery.launch_recovery_actionruns_for_job_runs(
             job_runs=job_runs,
             master_action_runner=config_action_runner,
