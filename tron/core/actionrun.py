@@ -19,7 +19,7 @@ from tron import node
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
-from tron.bin.action_runner import build_environment  # type: ignore # mypy can't find library stub
+from tron.bin.action_runner import build_environment
 from tron.bin.action_runner import build_labels
 from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
