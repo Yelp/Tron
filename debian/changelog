@@ -1,3 +1,13 @@
+tron (1.30.0) jammy; urgency=medium
+
+  * 1.30.0 tagged with 'make release'
+    Commit: Adding yelp_clog S3LogsReader (#949)  * Upgrade yelp
+    scribereader deps  * Enable S3LogsReader for action run logs  *
+    Upgrade boto requirements  * Upgrade mypy and update type ignores  *
+    Pin more internal requirements
+
+ -- Yaroslav Liakhovskyi <yaro@yelp.com>  Mon, 29 Apr 2024 04:57:37 -0700
+
 tron (1.29.5) jammy; urgency=medium
 
   * 1.29.5 tagged with 'make release'
