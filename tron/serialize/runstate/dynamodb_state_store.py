@@ -54,7 +54,7 @@ class DynamoDBStateStore:
         vals = self._merge_items(first_items, remaining_items)
         return vals
 
-    def chunk_keys(self, keys: Sequence[T]) -> List[List[T]]:
+    def chunk_keys(self, keys: Sequence[T]) -> List[Sequence[T]]:
         """Generates a list of chunks of keys to be used to read from DynamoDB"""
         # have a for loop here for all the key chunks we want to go over
         cand_keys_chunks = []

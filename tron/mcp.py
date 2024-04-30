@@ -180,14 +180,14 @@ class MasterControlProgram:
         to the configured Jobs.
         """
         log.info("Restoring from DynamoDB")
-        with timer(name="restore"):
+        with timer("restore"):
             # restores the state of the jobs and their runs from DynamoDB
             states = self.state_watcher.restore(self.jobs.get_names())
         log.info(
             f"Tron will start restoring state for the jobs and will start scheduling them! Time elapsed since Tron started {time.time() - self.boot_time}"
         )
         # loads the runs' state and schedule the next run for each job
-        with timer(name="self.jobs.restore_state"):
+        with timer("self.jobs.restore_state"):
             self.jobs.restore_state(states.get("job_state", {}), action_runner)
         log.info(
             f"Tron completed restoring state for the jobs. Time elapsed since Tron started {time.time() - self.boot_time}"
