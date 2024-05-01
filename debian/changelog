@@ -1,3 +1,15 @@
+tron (1.31.0) jammy; urgency=medium
+
+  * 1.31.0 tagged with 'make release'
+    Commit: Parallelizing execution of restoring in Tron - TRON-2161
+    (#950)  * Parallelizing execution of restoring in Tron  * Addressing
+    reviews and fixing unit tests  * Adding sorting for runs state
+    otherwise runs will be out of order  * Addressing more reviews and
+    adding exception for exceeding max_attempts  * Address typing stuff
+    and timers  * Fixing the typing error  * fixing incomplete sentence
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Wed, 01 May 2024 12:54:10 -0700
+
 tron (1.30.0) jammy; urgency=medium
 
   * 1.30.0 tagged with 'make release'
