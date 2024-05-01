@@ -1,3 +1,5 @@
+import concurrent.futures
+import copy
 import logging
 import math
 import os
@@ -7,6 +9,9 @@ import time
 from collections import defaultdict
 from collections import OrderedDict
 from typing import DefaultDict
+from typing import List
+from typing import Sequence
+from typing import TypeVar
 
 import boto3  # type: ignore
 
@@ -14,7 +19,9 @@ from tron.metrics import timer
 
 OBJECT_SIZE = 400000
 MAX_SAVE_QUEUE = 500
+MAX_ATTEMPTS = 10
 log = logging.getLogger(__name__)
+T = TypeVar("T")
 
 
 class DynamoDBStateStore:
@@ -47,31 +54,48 @@ class DynamoDBStateStore:
         vals = self._merge_items(first_items, remaining_items)
         return vals
 
-    def _get_items(self, keys: list) -> object:
-        items = []
+    def chunk_keys(self, keys: Sequence[T]) -> List[Sequence[T]]:
+        """Generates a list of chunks of keys to be used to read from DynamoDB"""
+        # have a for loop here for all the key chunks we want to go over
+        cand_keys_chunks = []
         for i in range(0, len(keys), 100):
-            count = 0
-            cand_keys = keys[i : min(len(keys), i + 100)]
-            while True:
-                resp = self.client.batch_get_item(
-                    RequestItems={
-                        self.name: {
-                            "Keys": cand_keys,
-                            "ConsistentRead": True,
-                        },
-                    },
-                )
-                items.extend(resp["Responses"][self.name])
-                if resp["UnprocessedKeys"].get(self.name) and count < 10:
-                    cand_keys = resp["UnprocessedKeys"][self.name]["Keys"]
-                    count += 1
-                elif count >= 10:
+            # chunks of at most 100 keys will be in this list as there could be smaller chunks
+            cand_keys_chunks.append(keys[i : min(len(keys), i + 100)])
+        return cand_keys_chunks
+
+    def _get_items(self, table_keys: list) -> object:
+        items = []
+        # let's avoid potentially mutating our input :)
+        cand_keys_list = copy.copy(table_keys)
+        attempts_to_retrieve_keys = 0
+        while len(cand_keys_list) != 0:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+                responses = [
+                    executor.submit(
+                        self.client.batch_get_item,
+                        RequestItems={self.name: {"Keys": chunked_keys, "ConsistentRead": True}},
+                    )
+                    for chunked_keys in self.chunk_keys(cand_keys_list)
+                ]
+                # let's wipe the state so that we can loop back around
+                # if there are any un-processed keys
+                # NOTE: we'll re-chunk when submitting to the threadpool
+                # since it's possible that we've had several chunks fail
+                # enough keys that we'd otherwise send > 100 keys in a
+                # request otherwise
+                cand_keys_list = []
+            for resp in concurrent.futures.as_completed(responses):
+                items.extend(resp.result()["Responses"][self.name])
+                # add any potential unprocessed keys to the thread pool
+                if resp.result()["UnprocessedKeys"].get(self.name) and attempts_to_retrieve_keys < MAX_ATTEMPTS:
+                    cand_keys_list.append(resp.result()["UnprocessedKeys"][self.name]["Keys"])
+                elif attempts_to_retrieve_keys >= MAX_ATTEMPTS:
+                    failed_keys = resp.result()["UnprocessedKeys"][self.name]["Keys"]
                     error = Exception(
-                        f"tron_dynamodb_restore_failure: failed to retrieve items with keys \n{cand_keys}\n from dynamodb\n{resp}"
+                        f"tron_dynamodb_restore_failure: failed to retrieve items with keys \n{failed_keys}\n from dynamodb\n{resp.result()}"
                     )
                     raise error
-                else:
-                    break
+            attempts_to_retrieve_keys += 1
         return items
 
     def _get_first_partitions(self, keys: list):
@@ -79,6 +103,7 @@ class DynamoDBStateStore:
         return self._get_items(new_keys)
 
     def _get_remaining_partitions(self, items: list):
+        """Get items in the remaining partitions: N = 1 and beyond"""
         keys_for_remaining_items = []
         for item in items:
             remaining_items = [

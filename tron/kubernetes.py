@@ -628,6 +628,7 @@ class KubernetesClusterRepository:
             kubeconfig_path = cls.kubeconfig_path
 
         if kubeconfig_path not in cls.clusters:
+            # will create the task_proc executor
             cluster = KubernetesCluster(
                 kubeconfig_path=kubeconfig_path, enabled=cls.kubernetes_enabled, default_volumes=cls.default_volumes
             )

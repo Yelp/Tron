@@ -122,15 +122,12 @@ class TestPersistentStateManager(TestCase):
                     "one": {"key": "val1"},
                     "two": {"key": "val2"},
                 },
-                # _restore_dicts for MESOS_STATE
-                {"frameworks": "clusters"},
             ]
 
             restored_state = self.manager.restore(job_names)
             mock_restore_metadata.assert_called_once_with()
             assert mock_restore_dicts.call_args_list == [
                 mock.call(runstate.JOB_STATE, job_names),
-                mock.call(runstate.MESOS_STATE, ["frameworks"]),
             ]
             assert len(mock_restore_runs.call_args_list) == 2
             assert restored_state == {
@@ -138,7 +135,6 @@ class TestPersistentStateManager(TestCase):
                     "one": {"key": "val1", "runs": mock_restore_runs.return_value},
                     "two": {"key": "val2", "runs": mock_restore_runs.return_value},
                 },
-                runstate.MESOS_STATE: {"frameworks": "clusters"},
             }
 
     def test_restore_runs_for_job(self):
@@ -148,14 +144,13 @@ class TestPersistentStateManager(TestCase):
             "_restore_dicts",
             autospec=True,
         ) as mock_restore_dicts:
-            mock_restore_dicts.side_effect = [{"job_a.2": "two"}, {"job_a.3": "three"}]
+            mock_restore_dicts.side_effect = [
+                {"job_a.2": {"job_name": "job_a", "run_num": 2}, "job_a.3": {"job_name": "job_a", "run_num": 3}}
+            ]
             runs = self.manager._restore_runs_for_job("job_a", job_state)
 
-            assert mock_restore_dicts.call_args_list == [
-                mock.call(runstate.JOB_RUN_STATE, ["job_a.2"]),
-                mock.call(runstate.JOB_RUN_STATE, ["job_a.3"]),
-            ]
-            assert runs == ["two", "three"]
+            assert mock_restore_dicts.call_args_list == [mock.call(runstate.JOB_RUN_STATE, ["job_a.2", "job_a.3"])]
+            assert runs == [{"job_name": "job_a", "run_num": 3}, {"job_name": "job_a", "run_num": 2}]
 
     def test_restore_runs_for_job_one_missing(self):
         job_state = {"run_nums": [2, 3], "enabled": True}
@@ -164,14 +159,13 @@ class TestPersistentStateManager(TestCase):
             "_restore_dicts",
             autospec=True,
         ) as mock_restore_dicts:
-            mock_restore_dicts.side_effect = [{}, {"job_a.3": "three"}]
+            mock_restore_dicts.side_effect = [{"job_a.3": {"job_name": "job_a", "run_num": 3}, "job_b": {}}]
             runs = self.manager._restore_runs_for_job("job_a", job_state)
 
             assert mock_restore_dicts.call_args_list == [
-                mock.call(runstate.JOB_RUN_STATE, ["job_a.2"]),
-                mock.call(runstate.JOB_RUN_STATE, ["job_a.3"]),
+                mock.call(runstate.JOB_RUN_STATE, ["job_a.2", "job_a.3"]),
             ]
-            assert runs == ["three"]
+            assert runs == [{"job_name": "job_a", "run_num": 3}]
 
     def test_restore_dicts(self):
         names = ["namea", "nameb"]

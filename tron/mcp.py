@@ -1,5 +1,6 @@
 import logging
 import time
+from contextlib import contextmanager
 
 from tron import actioncommand
 from tron import command_context
@@ -16,6 +17,18 @@ from tron.mesos import MesosClusterRepository
 from tron.serialize.runstate import statemanager
 
 log = logging.getLogger(__name__)
+
+
+@contextmanager
+def timer(function_name: str):
+    start = time.time()
+    try:
+        yield
+    except Exception:
+        pass
+    finally:
+        end = time.time()
+        log.info(f"Execution time for function {function_name}: {end-start}")
 
 
 def apply_master_configuration(mapping, master_config):
@@ -72,11 +85,12 @@ class MasterControlProgram:
         # The job schedule factories will be created in the function below
         self._load_config()
         # Jobs will also get scheduled (internally) once the state for action runs are restored in restore_state
-        self.restore_state(
-            actioncommand.create_action_runner_factory_from_config(
-                self.config.load().get_master().action_runner,
-            ),
-        )
+        with timer("self.restore_state"):
+            self.restore_state(
+                actioncommand.create_action_runner_factory_from_config(
+                    self.config.load().get_master().action_runner,
+                ),
+            )
         # Any job with existing state would have been scheduled already. Jobs
         # without any state will be scheduled here.
         self.jobs.run_queue_schedule()
@@ -162,16 +176,19 @@ class MasterControlProgram:
         return self.config
 
     def restore_state(self, action_runner):
-        """Use the state manager to retrieve to persisted state and apply it
+        """Use the state manager to retrieve the persisted state from dynamodb and apply it
         to the configured Jobs.
         """
         log.info("Restoring from DynamoDB")
-        states = self.state_watcher.restore(self.jobs.get_names())
-        MesosClusterRepository.restore_state(states.get("mesos_state", {}))
+        with timer("restore"):
+            # restores the state of the jobs and their runs from DynamoDB
+            states = self.state_watcher.restore(self.jobs.get_names())
         log.info(
             f"Tron will start restoring state for the jobs and will start scheduling them! Time elapsed since Tron started {time.time() - self.boot_time}"
         )
-        self.jobs.restore_state(states.get("job_state", {}), action_runner)
+        # loads the runs' state and schedule the next run for each job
+        with timer("self.jobs.restore_state"):
+            self.jobs.restore_state(states.get("job_state", {}), action_runner)
         log.info(
             f"Tron completed restoring state for the jobs. Time elapsed since Tron started {time.time() - self.boot_time}"
         )
