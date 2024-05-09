@@ -404,7 +404,17 @@ class KubernetesCluster:
             return
 
         if task_id not in self.tasks.keys():
-            log.warning(f"Got event for unknown task ({task_id} not in {self.tasks.keys()}): {event}")
+            # NOTE: we don't log killed events for tasks we don't know about, as we do some slightly
+            # funky things with these events: namely, we'll send our own synthetic killed event to
+            # work around some weird k8s event behavior we've seen in the past where the coalesced
+            # event that we get in the task_processing watch loop either doesn't have the correct state
+            # or is missing entirely. This is a bit of a hack, I'm sorry :(
+            # That said, without this we'd get somewhat annoying logspam in the tron logs whenever our
+            # workaround logic runs but k8s sends the correct event faster than we can send our synthetic
+            # one and the hackiness of this is somewhat removed by the `event.raw` check - that should only
+            # exclude our synthetic event.
+            if not (event.platform_type == "killed" and event.raw is None):
+                log.warning(f"Got event for unknown task ({task_id} not in {self.tasks.keys()}): {event}")
             return
 
         task = self.tasks[task_id]
