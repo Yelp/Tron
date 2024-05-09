@@ -1,3 +1,16 @@
+tron (1.32.0) jammy; urgency=medium
+
+  * 1.32.0 tagged with 'make release'
+    Commit: Update task_proc to better handle killing tasks (#951)
+    We've seen that task_proc/k8s will sometimes not correctly send
+    events for pods that we try to kill ourselves (either because the
+    pods are already gone or because the event is somehow missing data),
+    so this task_proc version will send synthetic events when we call
+    kill() to ensure that tron is in the correct state :)
+    Co-authored-by: Jen Patague <jfong@yelp.com>
+
+ -- Luis Perez <luisp@yelp.com>  Thu, 09 May 2024 09:16:24 -0700
+
 tron (1.31.0) jammy; urgency=medium
 
   * 1.31.0 tagged with 'make release'
