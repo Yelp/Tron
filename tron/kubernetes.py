@@ -413,7 +413,7 @@ class KubernetesCluster:
             # workaround logic runs but k8s sends the correct event faster than we can send our synthetic
             # one and the hackiness of this is somewhat removed by the `event.raw` check - that should only
             # exclude our synthetic event.
-            if not event.platform_type == "killed" and event.raw is None:
+            if not (event.platform_type == "killed" and event.raw is None):
                 log.warning(f"Got event for unknown task ({task_id} not in {self.tasks.keys()}): {event}")
             return
 
