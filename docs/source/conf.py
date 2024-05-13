@@ -58,9 +58,9 @@ copyright = "2011, Yelp, Inc."
 # built documents.
 #
 # The short X.Y version.
-version = "LATEST_VERSION"
+version = tron.__version__
 # The full version, including alpha/beta/rc tags.
-release = "LATEST_RELEASE"
+release = tron.__version__
 
 
 # There are two options for replacing |today|: either, you set today to some
