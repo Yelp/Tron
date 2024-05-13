@@ -1,0 +1,164 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>tronfig &#8212; Tron 1.32.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/nature.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="tronview" href="man_tronview.html" />
+    <link rel="prev" title="trond" href="man_trond.html" />
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="man_tronview.html" title="tronview"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="man_trond.html" title="trond"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Tron 1.32.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="tools.html" accesskey="U">Man Pages</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">tronfig</a></li>
+      </ul>
+    </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+
+  <section id="tronfig">
+<span id="id1"></span><h1>tronfig<a class="headerlink" href="#tronfig" title="Permalink to this heading">¶</a></h1>
+<section id="synopsis">
+<h2>Synopsis<a class="headerlink" href="#synopsis" title="Permalink to this heading">¶</a></h2>
+<p><code class="docutils literal notranslate"><span class="pre">tronfig</span> <span class="pre">[--server</span> <span class="pre">server_name</span> <span class="pre">]</span> <span class="pre">[--verbose</span> <span class="pre">|</span> <span class="pre">-v]</span> <span class="pre">[&lt;namespace&gt;]</span> <span class="pre">[-p]</span> <span class="pre">[-]</span></code></p>
+</section>
+<section id="description">
+<h2>Description<a class="headerlink" href="#description" title="Permalink to this heading">¶</a></h2>
+<p><strong>tronfig</strong> allows live editing of the Tron configuration.  It retrieves
+the configuration file for local editing, verifies the configuration,
+and sends it back to the tron server. The configuration is applied
+immediately.</p>
+</section>
+<section id="options">
+<h2>Options<a class="headerlink" href="#options" title="Permalink to this heading">¶</a></h2>
+<dl class="simple">
+<dt><code class="docutils literal notranslate"><span class="pre">--server</span> <span class="pre">&lt;server_name&gt;</span></code></dt><dd><p>The server the tron instance is running on</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--verbose</span></code></dt><dd><p>Displays status messages along the way</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">--version</span></code></dt><dd><p>Displays version string</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">-p</span></code></dt><dd><p>Print the configuration</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">namespace</span></code></dt><dd><p>The configuration namespace to edit. Defaults to MASTER</p>
+</dd>
+<dt><code class="docutils literal notranslate"><span class="pre">-</span></code></dt><dd><p>Read new config from <code class="docutils literal notranslate"><span class="pre">stdin</span></code>.</p>
+</dd>
+</dl>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this heading">¶</a></h2>
+<p>By default tron will run with a blank configuration file. The config file is
+saved to <code class="docutils literal notranslate"><span class="pre">&lt;working_dir&gt;/config/</span></code> by default. See the full documentation at
+<a class="reference external" href="http://tron.readthedocs.io/en/latest/config.html">http://tron.readthedocs.io/en/latest/config.html</a>.</p>
+</section>
+<section id="bugs">
+<h2>Bugs<a class="headerlink" href="#bugs" title="Permalink to this heading">¶</a></h2>
+<p>Post bugs to <a class="reference external" href="http://www.github.com/yelp/tron/issues">http://www.github.com/yelp/tron/issues</a>.</p>
+</section>
+<section id="see-also">
+<h2>See Also<a class="headerlink" href="#see-also" title="Permalink to this heading">¶</a></h2>
+<p><strong>trond</strong> (8), <strong>tronctl</strong> (1), <strong>tronview</strong> (1),</p>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">tronfig</a><ul>
+<li><a class="reference internal" href="#synopsis">Synopsis</a></li>
+<li><a class="reference internal" href="#description">Description</a></li>
+<li><a class="reference internal" href="#options">Options</a></li>
+<li><a class="reference internal" href="#configuration">Configuration</a></li>
+<li><a class="reference internal" href="#bugs">Bugs</a></li>
+<li><a class="reference internal" href="#see-also">See Also</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="man_trond.html"
+                          title="previous chapter">trond</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="man_tronview.html"
+                          title="next chapter">tronview</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/man_tronfig.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="man_tronview.html" title="tronview"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="man_trond.html" title="trond"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Tron 1.32.0 documentation</a> &#187;</li>
+          <li class="nav-item nav-item-1"><a href="tools.html" >Man Pages</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">tronfig</a></li>
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2011, Yelp, Inc..
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
+    </div>
+  </body>
+</html>
