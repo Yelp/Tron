@@ -1,3 +1,11 @@
+tron (1.32.2) jammy; urgency=medium
+
+  * 1.32.2 tagged with 'make release'
+    Commit: Merge pull request #953 from Yelp/u/emanelsabban/TRON-2183
+    Delete Mesos code from statemanager - TRON-2183
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Mon, 13 May 2024 12:00:06 -0700
+
 tron (1.32.1) jammy; urgency=medium
 
   * 1.32.1 tagged with 'make release'
