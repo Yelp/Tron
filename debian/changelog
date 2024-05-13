@@ -1,3 +1,11 @@
+tron (1.32.1) jammy; urgency=medium
+
+  * 1.32.1 tagged with 'make release'
+    Commit: Merge pull request #952 from Yelp/u/emanelsabban/TRON-2182
+    Deleting Mesos code from the Master Control Program - TRON-2182
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Mon, 13 May 2024 11:43:05 -0700
+
 tron (1.32.0) jammy; urgency=medium
 
   * 1.32.0 tagged with 'make release'
