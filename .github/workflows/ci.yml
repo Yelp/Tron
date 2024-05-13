@@ -51,6 +51,10 @@ jobs:
       # to bring those in
       - run: sudo apt-get install --quiet --assume-yes devscripts
       - run: make itest_${{ matrix.dist }}
+      - uses: actions/upload-artifact@v3
+        with:
+          name: deb-${{ matrix.dist }}
+          path: dist/tron_*.deb
   cut_release:
     runs-on: ubuntu-22.04
     needs: build_debs
