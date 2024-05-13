@@ -1,3 +1,10 @@
+tron (1.32.3) jammy; urgency=medium
+
+  * 1.32.3 tagged with 'make release'
+    Commit: Automate make release in Tron (#960)
+
+ -- Jon Lee <jonlee@yelp.com>  Mon, 13 May 2024 15:36:34 -0700
+
 tron (1.32.2) jammy; urgency=medium
 
   * 1.32.2 tagged with 'make release'
