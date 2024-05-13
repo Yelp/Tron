@@ -21,7 +21,7 @@ from urllib.parse import urljoin
 
 import argcomplete  # type: ignore
 
-from tron import __version_info__
+from tron import __version__
 from tron.commands import client
 from tron.commands import cmd_utils
 from tron.commands.backfill import BackfillRun
@@ -415,7 +415,7 @@ def backfill(args):
 
 
 def tron_version(args):
-    local_version = ".".join(map(str, __version_info__))
+    local_version = __version__
     print(f"Tron client version: {local_version}")
     response = client.request(urljoin(args.server, "/api/status"))
     if response.error:
