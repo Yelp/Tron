@@ -1,6 +1,8 @@
 # Edit this release and run "make release"
 RELEASE=1.32.2
 
+SHELL=/bin/bash
+
 DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw -v $(CURDIR)/.tox-indocker:/work/.tox:rw
 UID:=$(shell id -u)
 GID:=$(shell id -g)
@@ -98,12 +100,12 @@ LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/\x27/"/g')
 release:
 	@if [[ "$$(git status --porcelain --untracked-files=no :^/Makefile)" != '' ]]; then echo "Error: Working directory is not clean; only changes to Makefile are allowed when cutting a release."; exit 1; fi
 	$(eval untracked_files_tmpfile=$(shell mktemp))
-	git status --porcelain --untracked-files=all :^/Makefile > $(untracked_files_tmpfile)
+	git status --porcelain --untracked-files=all :^./Makefile > $(untracked_files_tmpfile)
 	@if [[ "$$(git status --porcelain --untracked-files=normal :/docs/source/generated)" != '' ]]; then echo "Error: Untracked files found in docs/source/generated."; exit 1; fi
 	@if existing_sha=$$(git rev-parse --verify --quiet v$(VERSION)); then echo "Error: tag v$(VERSION) exists and points at $$existing_sha"; exit 1; fi
 	@read upstream_master junk <<<"$$(git ls-remote -h origin master)" && if ! git merge-base --is-ancestor $$upstream_master HEAD; then echo "Error: HEAD is missing commits from origin/master ($$upstream_master)."; exit 1; fi
-	dch -v $(RELEASE) --distribution jammy --changelog debian/changelog $$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)'
-	sed -i -e "s/__version__ = .*/__version__ = \"$(VERSION)\"/" /tron/__init__.py
+	dch -v $(RELEASE) --distribution jammy --changelog ./debian/changelog $$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)'
+	sed -i -e "s/__version__ = .*/__version__ = \"$(VERSION)\"/" ./tron/__init__.py
 	cd .. && make docs || true
 	git add ./Makefile ./debian/changelog ./tron/__init__.py ./docs/source/generated/
 	git commit -m "Released $(RELEASE) via make release"
