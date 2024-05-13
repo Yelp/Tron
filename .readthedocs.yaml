@@ -6,10 +6,9 @@ version: 2
 
 # RTD defaults as of 2023-11-08
 build:
-  # TODO: Bump to jammy+3.8 once master branch updated
-  os: ubuntu-20.04
+  os: ubuntu-22.04
   tools:
-    python: "3.6"
+    python: "3.8"
     # You can also specify other tool versions:
     # nodejs: "20"
     # rust: "1.70"
