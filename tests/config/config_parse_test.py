@@ -328,7 +328,6 @@ def make_tron_config(
     nodes=None,
     node_pools=None,
     jobs=None,
-    mesos_options=None,
     k8s_options=None,
 ):
     return schema.TronConfig(
@@ -341,7 +340,6 @@ def make_tron_config(
         nodes=nodes or make_nodes(),
         node_pools=node_pools or make_node_pools(),
         jobs=jobs or make_master_jobs(),
-        mesos_options=mesos_options or make_mesos_options(),
         k8s_options=k8s_options or make_k8s_options(),
     )
 
@@ -479,7 +477,6 @@ class ConfigTestCase(TestCase):
 
         assert test_config.command_context == expected.command_context
         assert test_config.ssh_options == expected.ssh_options
-        assert test_config.mesos_options == expected.mesos_options
         assert test_config.time_zone == expected.time_zone
         assert test_config.nodes == expected.nodes
         assert test_config.node_pools == expected.node_pools
@@ -1521,31 +1518,6 @@ class TestValidateVolume(TestCase):
         assert_equal(
             schema.ConfigVolume(**config),
             config_parse.valid_volume.validate(config, self.context),
-        )
-
-    def test_mesos_default_volumes(self):
-        mesos_options = {"master_address": "mesos_master"}
-        mesos_options["default_volumes"] = [
-            {
-                "container_path": "/nail/srv",
-                "host_path": "/tmp",
-                "mode": "RO",
-            },
-            {
-                "container_path": "/nail/srv",
-                "host_path": "/tmp",
-                "mode": "invalid",
-            },
-        ]
-
-        with pytest.raises(ConfigError):
-            config_parse.valid_mesos_options.validate(mesos_options, self.context)
-
-        # After we fix the error, expect error to go away.
-        mesos_options["default_volumes"][1]["mode"] = "RW"
-        assert config_parse.valid_mesos_options.validate(
-            mesos_options,
-            self.context,
         )
 
     def test_k8s_default_volumes(self):
