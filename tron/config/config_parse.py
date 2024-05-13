@@ -896,7 +896,6 @@ class ValidateConfig(Validator):
         },
         "node_pools": {},
         "jobs": (),
-        "mesos_options": ConfigMesos(**ValidateMesos.defaults),
         "k8s_options": ConfigKubernetes(**ValidateKubernetes.defaults),
         "eventbus_enabled": None,
     }
@@ -911,7 +910,6 @@ class ValidateConfig(Validator):
         "state_persistence": valid_state_persistence,
         "nodes": nodes,
         "node_pools": node_pools,
-        "mesos_options": valid_mesos_options,
         "k8s_options": valid_kubernetes_options,
         "eventbus_enabled": valid_bool,
     }
