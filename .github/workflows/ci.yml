@@ -1,6 +1,13 @@
 ---
 name: tron-ci
-on: [push, release]
+on:
+  push:
+    branches:
+      - master
+    tags:
+      - v*.*
+  pull_request:
+  release:
 jobs:
   tox:
     runs-on: ubuntu-22.04
@@ -44,3 +51,25 @@ jobs:
       # to bring those in
       - run: sudo apt-get install --quiet --assume-yes devscripts
       - run: make itest_${{ matrix.dist }}
+  cut_release:
+    runs-on: ubuntu-22.04
+    needs: build_debs
+    steps:
+      - uses: actions/checkout@v2
+      - run: mkdir -p dist/
+      - uses: actions/download-artifact@v3
+        with:
+          name: deb-bionic
+          path: dist/
+      - uses: actions/download-artifact@v3
+        with:
+          name: deb-jammy
+          path: dist/
+      - name: Release
+        uses: softprops/action-gh-release@v1
+        if: startsWith(github.ref, 'refs/tags/v')
+        with:
+          generate_release_notes: true
+          files: |
+            dist/tron_*.deb
+          fail_on_unmatched_files: true

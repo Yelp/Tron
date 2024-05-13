@@ -1,0 +1,211 @@
+
+<!DOCTYPE html>
+
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" /><meta name="generator" content="Docutils 0.19: https://docutils.sourceforge.io/" />
+
+    <title>Overview &#8212; Tron 1.32.0 documentation</title>
+    <link rel="stylesheet" type="text/css" href="_static/pygments.css" />
+    <link rel="stylesheet" type="text/css" href="_static/nature.css" />
+    <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+    <script src="_static/doctools.js"></script>
+    <script src="_static/sphinx_highlight.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Configuration" href="config.html" />
+    <link rel="prev" title="Tutorial" href="tutorial.html" />
+  </head><body>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="config.html" title="Configuration"
+             accesskey="N">next</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="Tutorial"
+             accesskey="P">previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Tron 1.32.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Overview</a></li>
+      </ul>
+    </div>
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body" role="main">
+
+  <section id="overview">
+<h1>Overview<a class="headerlink" href="#overview" title="Permalink to this heading">¶</a></h1>
+<p>Batch process scheduling on a single UNIX machines has
+historically been managed by <strong class="command">cron</strong> and its derivatives. But if you
+have many batches, complex dependencies between batches, or many machines,
+maintaining config files across them may be difficult. Tron solves this
+problem by centralizing the configuration and scheduling of jobs to a single daemon.</p>
+<p>The Tron system is split into four commands:</p>
+<dl class="simple">
+<dt><a class="reference internal" href="man_trond.html#trond"><span class="std std-ref">trond</span></a></dt><dd><p>Daemon responsible for scheduling, running, and saving state. Provides an
+HTTP interface to tools.</p>
+</dd>
+<dt><a class="reference internal" href="man_tronview.html#tronview"><span class="std std-ref">tronview</span></a></dt><dd><p>View job state and output.</p>
+</dd>
+<dt><a class="reference internal" href="man_tronctl.html#tronctl"><span class="std std-ref">tronctl</span></a></dt><dd><p>Start, stop, enable, disable, and otherwise control jobs.</p>
+</dd>
+<dt><a class="reference internal" href="man_tronfig.html#tronfig"><span class="std std-ref">tronfig</span></a></dt><dd><p>Change Tron’s configuration while the daemon is still running.</p>
+</dd>
+</dl>
+<p>The config file uses YAML syntax, and is further described in <a class="reference internal" href="config.html"><span class="doc">Configuration</span></a>.</p>
+<section id="nodes-jobs-and-actions">
+<h2>Nodes, Jobs and Actions<a class="headerlink" href="#nodes-jobs-and-actions" title="Permalink to this heading">¶</a></h2>
+<p>Tron’s orders consist of <em>jobs</em>. <a class="reference internal" href="jobs.html"><span class="doc">Jobs</span></a> contain
+<a class="reference internal" href="jobs.html#job-actions"><span class="std std-ref">actions</span></a> which may depend on other actions in the same job
+and run on a schedule.</p>
+<p><strong class="command">trond</strong> is given access (via public key SSH) to one or more <em>nodes</em> on
+which to run jobs.  For example, this configuration has two nodes,
+each of which is responsible for a single job:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">nodes</span><span class="p">:</span>
+    <span class="n">hostname</span><span class="p">:</span> <span class="s1">&#39;localhost&#39;</span>
+  <span class="o">-</span> <span class="n">name</span><span class="p">:</span> <span class="n">node1</span>
+    <span class="n">hostname</span><span class="p">:</span> <span class="s1">&#39;batch1&#39;</span>
+  <span class="o">-</span> <span class="n">name</span><span class="p">:</span> <span class="n">node2</span>
+    <span class="n">hostname</span><span class="p">:</span> <span class="s1">&#39;batch2&#39;</span>
+
+<span class="n">jobs</span><span class="p">:</span>
+  <span class="s2">&quot;job0&quot;</span><span class="p">:</span>
+    <span class="n">node</span><span class="p">:</span> <span class="n">node1</span>
+    <span class="n">schedule</span><span class="p">:</span> <span class="s2">&quot;cron * * * * *&quot;</span>
+    <span class="n">actions</span><span class="p">:</span>
+      <span class="s2">&quot;batch1action&quot;</span><span class="p">:</span>
+        <span class="n">command</span><span class="p">:</span> <span class="s2">&quot;sleep 3; echo asdfasdf&quot;</span>
+  <span class="s2">&quot;job1&quot;</span><span class="p">:</span>
+    <span class="n">node</span><span class="p">:</span> <span class="n">node2</span>
+    <span class="n">schedule</span><span class="p">:</span> <span class="s2">&quot;cron * * * * *&quot;</span>
+    <span class="n">actions</span><span class="p">:</span>
+      <span class="s2">&quot;batch2action&quot;</span><span class="p">:</span>
+        <span class="n">command</span><span class="p">:</span> <span class="s2">&quot;cat big.txt; sleep 10&quot;</span>
+</pre></div>
+</div>
+<p>How the nodes are set up and assigned to jobs is entirely up to you. They may
+have different operating systems, access to different databases, different
+privileges for the Tron user, etc.</p>
+<p>See also:</p>
+<ul class="simple">
+<li><p><a class="reference internal" href="jobs.html"><span class="doc">Jobs</span></a></p></li>
+<li><p><a class="reference internal" href="config.html"><span class="doc">Configuration</span></a></p></li>
+</ul>
+</section>
+<section id="node-pools">
+<span id="overview-pools"></span><h2>Node Pools<a class="headerlink" href="#node-pools" title="Permalink to this heading">¶</a></h2>
+<p>Nodes can be grouped into <em>pools</em>. To continue the previous example:</p>
+<div class="highlight-default notranslate"><div class="highlight"><pre><span></span><span class="n">node_pools</span><span class="p">:</span>
+    <span class="o">-</span> <span class="n">name</span><span class="p">:</span><span class="n">pool</span>
+      <span class="n">nodes</span><span class="p">:</span> <span class="p">[</span><span class="n">node1</span><span class="p">,</span> <span class="n">node2</span><span class="p">]</span>
+
+<span class="n">jobs</span><span class="p">:</span>
+  <span class="c1"># ...</span>
+  <span class="s2">&quot;job2&quot;</span><span class="p">:</span>
+    <span class="n">node</span><span class="p">:</span> <span class="n">pool</span>
+    <span class="n">schedule</span><span class="p">:</span> <span class="s2">&quot;cron * * * * *&quot;</span>
+    <span class="n">actions</span><span class="p">:</span>
+      <span class="s2">&quot;pool_action&quot;</span><span class="p">:</span>
+        <span class="n">command</span><span class="p">:</span> <span class="s2">&quot;ls /; sleep 1&quot;</span>
+    <span class="n">cleanup_action</span><span class="p">:</span>
+      <span class="n">command</span><span class="p">:</span> <span class="s2">&quot;echo &#39;all done&#39;&quot;</span>
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">job2</span></code>’s action will be run on a random node from <code class="docutils literal notranslate"><span class="pre">pool</span></code> every 5 seconds.
+When <code class="docutils literal notranslate"><span class="pre">pool_action</span></code> is complete, <code class="docutils literal notranslate"><span class="pre">cleanup_action</span></code> will run on the same node.</p>
+<p>For more information, see <a class="reference internal" href="jobs.html"><span class="doc">Jobs</span></a>.</p>
+</section>
+<section id="caveats">
+<h2>Caveats<a class="headerlink" href="#caveats" title="Permalink to this heading">¶</a></h2>
+<p>While Tron solves many scheduling-related problems, there are a few things to
+watch out for.</p>
+<p><strong>Tron keeps an SSH connection open for the entire lifespan of a process.</strong>
+This means that to upgrade <strong class="command">trond</strong>, you have to either wait until no
+jobs are running, or accept an inconsistent state. This limitation is being
+worked on, and should be improved in later releases.</p>
+<p><strong>Tron is under active development.</strong> This means that some things will change.
+Whenever possible these changes will be backwards compatible, but in some
+cases there may be non-backwards compatible changes.</p>
+<p><strong>Tron does not support unicode.</strong> Tron is built using <a class="reference external" href="http://twistedmatrix.com/">twisted</a>
+which does not support unicode.</p>
+</section>
+</section>
+
+
+            <div class="clearer"></div>
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar" role="navigation" aria-label="main navigation">
+        <div class="sphinxsidebarwrapper">
+  <div>
+    <h3><a href="index.html">Table of Contents</a></h3>
+    <ul>
+<li><a class="reference internal" href="#">Overview</a><ul>
+<li><a class="reference internal" href="#nodes-jobs-and-actions">Nodes, Jobs and Actions</a></li>
+<li><a class="reference internal" href="#node-pools">Node Pools</a></li>
+<li><a class="reference internal" href="#caveats">Caveats</a></li>
+</ul>
+</li>
+</ul>
+
+  </div>
+  <div>
+    <h4>Previous topic</h4>
+    <p class="topless"><a href="tutorial.html"
+                          title="previous chapter">Tutorial</a></p>
+  </div>
+  <div>
+    <h4>Next topic</h4>
+    <p class="topless"><a href="config.html"
+                          title="next chapter">Configuration</a></p>
+  </div>
+  <div role="note" aria-label="source link">
+    <h3>This Page</h3>
+    <ul class="this-page-menu">
+      <li><a href="_sources/overview.rst.txt"
+            rel="nofollow">Show Source</a></li>
+    </ul>
+   </div>
+<div id="searchbox" style="display: none" role="search">
+  <h3 id="searchlabel">Quick search</h3>
+    <div class="searchformwrapper">
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" aria-labelledby="searchlabel" autocomplete="off" autocorrect="off" autocapitalize="off" spellcheck="false"/>
+      <input type="submit" value="Go" />
+    </form>
+    </div>
+</div>
+<script>document.getElementById('searchbox').style.display = "block"</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related" role="navigation" aria-label="related navigation">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="config.html" title="Configuration"
+             >next</a> |</li>
+        <li class="right" >
+          <a href="tutorial.html" title="Tutorial"
+             >previous</a> |</li>
+        <li class="nav-item nav-item-0"><a href="index.html">Tron 1.32.0 documentation</a> &#187;</li>
+        <li class="nav-item nav-item-this"><a href="">Overview</a></li>
+      </ul>
+    </div>
+    <div class="footer" role="contentinfo">
+        &#169; Copyright 2011, Yelp, Inc..
+      Created using <a href="https://www.sphinx-doc.org/">Sphinx</a> 6.1.3.
+    </div>
+  </body>
+</html>

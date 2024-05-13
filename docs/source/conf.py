@@ -58,9 +58,10 @@ copyright = "2011, Yelp, Inc."
 # built documents.
 #
 # The short X.Y version.
-version = ".".join(str(s) for s in tron.__version_info__[:2])
+version = "LATEST_VERSION"
 # The full version, including alpha/beta/rc tags.
-release = tron.__version__
+release = "LATEST_RELEASE"
+
 
 # There are two options for replacing |today|: either, you set today to some
 # non-false value, then it is used:
