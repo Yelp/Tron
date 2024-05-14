@@ -27,6 +27,14 @@ Table of Contents
     tools.rst
     developing.rst
 
+Generated Docs
+~~~~~~~~~~~~~~
+
+.. toctree::
+   :maxdepth: 1
+
+   generated/modules
+
 Indices and tables
 ==================
 
