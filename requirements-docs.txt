@@ -1,6 +1,6 @@
 Jinja2==3.1.2
 markupsafe==2.1.1
 mock==3.0.5
-Pygments==2.13
+Pygments==2.13.0
 Sphinx==6.1.3
 Sphinx-PyPI-upload==0.2.1
