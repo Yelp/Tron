@@ -117,9 +117,9 @@ docs:
 	tox -r -e docs
 
 man:
-	which $(SPHINXBUILD) >/dev/null && $(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/man || true
+	which $(SPHINXBUILD) >/dev/null && $(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/source/man || true
 	@echo
-	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
+	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/source/man."
 
 clean:
 	rm -rf tronweb/js/cs
