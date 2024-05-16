@@ -873,9 +873,11 @@ class TestJobConfig:
         )
 
         expected_msg = "Unknown keys in CleanupAction : requires: removing them.\n"
-        valid_config(test_config)
+        output_config = valid_config(test_config)
         exception, err = capfd.readouterr()
         assert_equal(expected_msg, str(exception))
+        # assert that "requires" key doesn't exist in the dictionary
+        assert "requires" not in output_config.jobs.get("MASTER.test_job0").cleanup_action
 
     def test_validate_job_no_actions(self):
         job_config = dict(
@@ -915,10 +917,11 @@ class TestValidSecretSource:
             key="no_secret_name",
             extra_key="unknown",
         )
-        config_parse.valid_secret_source(secret_env, NullConfigContext)
+        output_config = config_parse.valid_secret_source(secret_env, NullConfigContext)
         expected_msg = "Unknown keys in SecretSource : extra_key: removing them.\n"
         exception, err = capfd.readouterr()
         assert_equal(expected_msg, str(exception))
+        assert not hasattr(output_config, "extra_key")
 
     def test_valid_job_secret_env_success(self):
         secret_env = dict(
@@ -1032,10 +1035,11 @@ class TestNodeConfig:
 
     def test_invalid_named_update(self, capfd):
         test_config = dict(bozray=None)
-        validate_fragment("foo", test_config)
+        output_config = validate_fragment("foo", test_config)
         expected_msg = "Unknown keys in NamedConfigFragment : bozray: removing them.\n"
         exception, err = capfd.readouterr()
         assert_equal(expected_msg, str(exception))
+        assert not hasattr(output_config, "bozray")
 
 
 class TestValidateJobs(TestCase):
@@ -1566,10 +1570,11 @@ class TestValidSecretVolumeItem:
         ],
     )
     def test_extra_keys(self, config, capfd):
-        config_parse.valid_secret_volume_item(config, NullConfigContext)
+        output_config = config_parse.valid_secret_volume_item(config, NullConfigContext)
         expected_msg = "Unknown keys in SecretVolumeItem : extra_key: removing them.\n"
         exception, err = capfd.readouterr()
         assert_equal(expected_msg, str(exception))
+        assert not hasattr(output_config, "extra_key")
 
     @pytest.mark.parametrize(
         "config",
