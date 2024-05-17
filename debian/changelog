@@ -1,3 +1,11 @@
+tron (2.0.0) jammy; urgency=medium
+
+  * 2.0.0 tagged with 'make release'
+    Commit: Use the latest task_proc (#966)  There"s no real changes
+    here other than dropping all the Mesos-related code from task_proc
+
+ -- Luis Perez <luisp@yelp.com>  Fri, 17 May 2024 13:49:55 -0700
+
 tron (1.32.5) jammy; urgency=medium
 
   * 1.32.5 tagged with 'make release'
