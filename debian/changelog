@@ -1,3 +1,11 @@
+tron (1.32.5) jammy; urgency=medium
+
+  * 1.32.5 tagged with 'make release'
+    Commit: Merge pull request #965 from Yelp/u/emanelsabban/fix-make-
+    release  Remove /docs/source/generated from gitignore file
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Fri, 17 May 2024 09:10:54 -0700
+
 tron (1.32.4) jammy; urgency=medium
 
   * 1.32.4 tagged with 'make release'
