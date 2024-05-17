@@ -1,5 +1,5 @@
 # Edit this release and run "make release"
-RELEASE=1.32.3
+RELEASE=1.32.4
 
 SHELL=/bin/bash
 
@@ -106,8 +106,8 @@ release:
 	@read upstream_master junk <<<"$$(git ls-remote -h origin master)" && if ! git merge-base --is-ancestor $$upstream_master HEAD; then echo "Error: HEAD is missing commits from origin/master ($$upstream_master)."; exit 1; fi
 	dch -v $(RELEASE) --distribution jammy --changelog ./debian/changelog $$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)'
 	sed -i -e "s/__version__ = .*/__version__ = \"$(VERSION)\"/" ./tron/__init__.py
-	cd .. && make docs || true
-	git add ./Makefile ./debian/changelog ./tron/__init__.py ./docs/source/generated/
+	make docs || true
+	git add -f ./Makefile ./debian/changelog ./tron/__init__.py ./docs/source/generated/
 	git commit -m "Released $(RELEASE) via make release"
 	if [[ "$$(git status --porcelain --untracked-files=all)" != "$$(<$(untracked_files_tmpfile))" ]]; then echo "Error: automatic git commit left some files uncommitted. Fix the git commit command in ./Makefile to include any automatically generated files that it is currently missing."; exit 1; fi
 	git tag v$(VERSION)
