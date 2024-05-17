@@ -7,7 +7,6 @@ tron.egg-info
 *.swp
 *.swo
 docs/_build/
-docs/source/generated
 .idea
 .vscode
 tron.iml
