@@ -96,21 +96,6 @@ ConfigState = config_object_factory(
     ],
 )
 
-ConfigMesos = config_object_factory(
-    name="ConfigMesos",
-    optional=[
-        "master_address",
-        "master_port",
-        "secret_file",
-        "principal",
-        "role",
-        "enabled",
-        "default_volumes",
-        "dockercfg_location",
-        "offer_timeout",
-    ],
-)
-
 ConfigKubernetes = config_object_factory(
     name="ConfigKubernetes",
     optional=[
@@ -140,8 +125,6 @@ ConfigJob = config_object_factory(
         "max_runtime",  # datetime.Timedelta
         "time_zone",  # pytz time zone
         "expected_runtime",  # datetime.Timedelta
-        # TODO: cleanup once we're fully off of Mesos and all non-SSH jobs *only* use k8s
-        "use_k8s",  # bool
     ],
 )
 
@@ -162,9 +145,7 @@ ConfigAction = config_object_factory(
         "disk",  # float
         "cap_add",  # List of str
         "cap_drop",  # List of str
-        "constraints",  # List of ConfigConstraint
         "docker_image",  # str
-        "docker_parameters",  # List of ConfigParameter
         "env",  # dict
         "secret_env",  # dict of str, ConfigSecretSource
         "secret_volumes",  # List of ConfigSecretVolume
@@ -201,9 +182,7 @@ ConfigCleanupAction = config_object_factory(
         "disk",  # float
         "cap_add",  # List of str
         "cap_drop",  # List of str
-        "constraints",  # List of ConfigConstraint
         "docker_image",  # str
-        "docker_parameters",  # List of ConfigParameter
         "env",  # dict
         "secret_env",  # dict of str, ConfigSecretSource
         "secret_volumes",  # List of ConfigSecretVolume
@@ -222,15 +201,6 @@ ConfigCleanupAction = config_object_factory(
     ],
 )
 
-ConfigConstraint = config_object_factory(
-    name="ConfigConstraint",
-    required=[
-        "attribute",
-        "operator",
-        "value",
-    ],
-    optional=[],
-)
 
 ConfigVolume = config_object_factory(
     name="ConfigVolume",
@@ -294,21 +264,12 @@ ConfigNodeAffinity = config_object_factory(
     optional=[],
 )
 
-ConfigParameter = config_object_factory(
-    name="ConfigParameter",
-    required=[
-        "key",
-        "value",
-    ],
-    optional=[],
-)
-
 StatePersistenceTypes = Enum(  # type: ignore
     "StatePersistenceTypes",
     dict(shelve="shelve", yaml="yaml", dynamodb="dynamodb"),
 )
 
-ExecutorTypes = Enum("ExecutorTypes", dict(ssh="ssh", mesos="mesos", kubernetes="kubernetes", spark="spark"))  # type: ignore
+ExecutorTypes = Enum("ExecutorTypes", dict(ssh="ssh", kubernetes="kubernetes", spark="spark"))  # type: ignore
 
 ActionRunnerTypes = Enum("ActionRunnerTypes", dict(none="none", subprocess="subprocess"))  # type: ignore
 

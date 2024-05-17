@@ -1444,8 +1444,6 @@ class TestKubernetesActionRun:
         command_config = ActionCommandConfig(
             command="mock_command",
             extra_volumes=set(),
-            constraints=set(),
-            docker_parameters=set(),
             cpus=1,
             mem=50,
             disk=42,
