@@ -302,7 +302,6 @@ class TestJobScheduler:
             assert self.job.runs.runs == collections.deque(mock_runs)
             mock_launch_recovery.assert_called_once_with(
                 job_runs=mock_runs,
-                master_action_runner=mock_action_runner,
             )
             calls = [mock.call(mock_runs[i]) for i in range(0, len(mock_runs))]
             self.job.watch.assert_has_calls(calls)

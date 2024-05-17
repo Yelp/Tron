@@ -27,7 +27,6 @@ from tron.core import action
 from tron.eventbus import EventBus
 from tron.kubernetes import KubernetesClusterRepository
 from tron.kubernetes import KubernetesTask
-from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
 from tron.utils import exitcode
 from tron.utils import maybe_decode
@@ -109,9 +108,7 @@ class ActionRunFactory:
             "on_upstream_rerun": action.on_upstream_rerun,
             "trigger_timeout_timestamp": trigger_timeout.timestamp(),
         }
-        if action.executor == ExecutorTypes.mesos.value:
-            return MesosActionRun(**args)
-        elif action.executor in KUBERNETES_ACTIONRUN_EXECUTORS:
+        if action.executor in KUBERNETES_ACTIONRUN_EXECUTORS:
             return KubernetesActionRun(**args)
         return SSHActionRun(**args)
 
@@ -127,8 +124,6 @@ class ActionRunFactory:
             "action_graph": job_run.action_graph,
         }
 
-        if state_data.get("executor") == ExecutorTypes.mesos.value:
-            return MesosActionRun.from_state(**args)
         if state_data.get("executor") in KUBERNETES_ACTIONRUN_EXECUTORS:
             return KubernetesActionRun.from_state(**args)
         return SSHActionRun.from_state(**args)
@@ -143,7 +138,6 @@ class ActionRunAttempt:
     end_time: Optional[datetime.datetime] = None
     rendered_command: Optional[str] = None
     exit_status: Optional[int] = None
-    mesos_task_id: Optional[str] = None
     kubernetes_task_id: Optional[str] = None
 
     def exit(self, exit_status, end_time=None):
@@ -394,10 +388,6 @@ class ActionRun(Observable):
                     ),
                 )
             if attempts:
-                # only one of these should ever be valid - and we'll want to clean
-                # this up once we're off of mesos such that we only restore the k8s
-                # task id
-                attempts[-1].mesos_task_id = state_data.get("mesos_task_id")
                 attempts[-1].kubernetes_task_id = state_data.get("kubernetes_task_id")
         return attempts
 
@@ -978,150 +968,6 @@ class SSHActionRun(ActionRun, Observer):
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
                 return self.handle_unknown()
-
-            if not action_command.exit_status:
-                return self.success()
-
-            return self._exit_unsuccessful(action_command.exit_status)
-
-    handler = handle_action_command_state_change
-
-
-class MesosActionRun(ActionRun, Observer):
-    """An ActionRun that executes the command on a Mesos cluster."""
-
-    def _create_mesos_task(self, mesos_cluster, serializer, attempt, task_id=None):
-        command_config = attempt.command_config
-        return mesos_cluster.create_task(
-            action_run_id=self.id,
-            command=attempt.rendered_command,
-            cpus=command_config.cpus,
-            mem=command_config.mem,
-            disk=1024.0 if command_config.disk is None else command_config.disk,
-            constraints=[[c.attribute, c.operator, c.value] for c in command_config.constraints],
-            docker_image=command_config.docker_image,
-            docker_parameters=[e._asdict() for e in command_config.docker_parameters],
-            env=build_environment(original_env=command_config.env, run_id=self.id),
-            extra_volumes=[e._asdict() for e in command_config.extra_volumes],
-            serializer=serializer,
-            task_id=task_id,
-        )
-
-    def submit_command(self, attempt):
-        serializer = filehandler.OutputStreamSerializer(self.output_path)
-        mesos_cluster = MesosClusterRepository.get_cluster()
-        task = self._create_mesos_task(mesos_cluster, serializer, attempt)
-        if not task:  # Mesos is disabled
-            self.fail(exitcode.EXIT_MESOS_DISABLED)
-            return
-
-        attempt.mesos_task_id = task.get_mesos_id()
-
-        # Watch before submitting, in case submit causes a transition
-        self.watch(task)
-        mesos_cluster.submit(task)
-        return task
-
-    def recover(self):
-        if not self.machine.check("running"):
-            log.error(
-                f"{self} unable to transition from {self.machine.state}" "to running for recovery",
-            )
-            return
-
-        if not self.attempts or self.attempts[-1].mesos_task_id is None:
-            log.error(f"{self} no task ID, cannot recover")
-            self.fail_unknown()
-            return
-
-        last_attempt = self.attempts[-1]
-
-        log.info(f"{self} recovering Mesos run")
-
-        serializer = filehandler.OutputStreamSerializer(self.output_path)
-        mesos_cluster = MesosClusterRepository.get_cluster()
-        task = self._create_mesos_task(
-            mesos_cluster,
-            serializer,
-            last_attempt,
-            last_attempt.mesos_task_id,
-        )
-        if not task:
-            log.warning(
-                f"{self} cannot recover, Mesos is disabled or " f"invalid task ID {last_attempt.mesos_task_id!r}",
-            )
-            self.fail_unknown()
-            return
-
-        self.watch(task)
-        mesos_cluster.recover(task)
-
-        # Reset status
-        self.clear_end_state()
-        self.transition_and_notify("running")
-
-        return task
-
-    def stop(self):
-        if self.retries_remaining is not None:
-            self.retries_remaining = -1
-
-        if self.cancel_delay():
-            return
-
-        return self._kill_mesos_task()
-
-    def kill(self, final=True):
-        if self.retries_remaining is not None and final:
-            self.retries_remaining = -1
-
-        if self.cancel_delay():
-            return
-
-        return self._kill_mesos_task()
-
-    def _kill_mesos_task(self):
-        msgs = []
-        if not self.is_active:
-            msgs.append(
-                f"Action is {self.state}, not running. Continuing anyway.",
-            )
-
-        mesos_cluster = MesosClusterRepository.get_cluster()
-        last_attempt = self.last_attempt
-        if last_attempt is None or last_attempt.mesos_task_id is None:
-            msgs.append("Error: Can't find task id for the action.")
-        else:
-            msgs.append(f"Sending kill for {last_attempt.mesos_task_id}...")
-            succeeded = mesos_cluster.kill(last_attempt.mesos_task_id)
-            if succeeded:
-                msgs.append(
-                    "Sent! It can take up to docker_stop_timeout (current setting is 2 mins) to stop.",
-                )
-            else:
-                msgs.append(
-                    "Error while sending kill request. Please try again.",
-                )
-
-        return "\n".join(msgs)
-
-    def handle_action_command_state_change(self, action_command, event, event_data=None):
-        """Observe ActionCommand state changes."""
-        log.debug(
-            f"{self} action_command state change: {action_command.state}",
-        )
-
-        if event == ActionCommand.RUNNING:
-            return self.transition_and_notify("started")
-
-        if event == ActionCommand.FAILSTART:
-            return self._exit_unsuccessful(action_command.exit_status)
-
-        if event == ActionCommand.EXITING:
-            if action_command.exit_status is None:
-                # This is different from SSHActionRun
-                # Allows retries to happen, if configured
-                return self._exit_unsuccessful(None)
 
             if not action_command.exit_status:
                 return self.success()

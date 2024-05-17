@@ -26,10 +26,7 @@ class ActionCommandConfig:
     disk: Optional[float] = None
     cap_add: List[str] = field(default_factory=list)
     cap_drop: List[str] = field(default_factory=list)
-    constraints: set = field(default_factory=set)
     docker_image: Optional[str] = None
-    # XXX: we can get rid of docker_parameters once we're off of Mesos
-    docker_parameters: set = field(default_factory=set)
     env: dict = field(default_factory=dict)
     secret_env: dict = field(default_factory=dict)
     secret_volumes: List[ConfigSecretVolume] = field(default_factory=list)
@@ -84,8 +81,6 @@ class Action:
             mem=config.mem,
             disk=(1024.0 if config.disk is None else config.disk),
             docker_image=config.docker_image,
-            constraints=set(config.constraints or []),
-            docker_parameters=set(config.docker_parameters or []),
             extra_volumes=set(config.extra_volumes or []),
             env=config.env or {},
             secret_env=config.secret_env or {},

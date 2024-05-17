@@ -101,20 +101,6 @@ def make_node_pools():
     }
 
 
-def make_mesos_options():
-    return schema.ConfigMesos(
-        master_address=None,
-        master_port=5050,
-        secret_file=None,
-        role="*",
-        principal="tron",
-        enabled=False,
-        default_volumes=(),
-        dockercfg_location=None,
-        offer_timeout=300,
-    )
-
-
 def make_k8s_options():
     return schema.ConfigKubernetes(enabled=False, default_volumes=())
 
@@ -162,7 +148,6 @@ def make_job(**kwargs):
     kwargs.setdefault("allow_overlap", False)
     kwargs.setdefault("time_zone", None)
     kwargs.setdefault("expected_runtime", datetime.timedelta(0, 3600))
-    kwargs.setdefault("use_k8s", False)
     return schema.ConfigJob(**kwargs)
 
 
@@ -240,31 +225,6 @@ def make_master_jobs():
             ),
             all_nodes=True,
             enabled=False,
-            cleanup_action=None,
-            expected_runtime=datetime.timedelta(1),
-        ),
-        "MASTER.test_job_mesos": make_job(
-            name="MASTER.test_job_mesos",
-            node="NodePool",
-            schedule=schedule_parse.ConfigDailyScheduler(
-                original="00:00:00 ",
-                hour=0,
-                minute=0,
-                second=0,
-                days=set(),
-                jitter=None,
-            ),
-            actions={
-                "action_mesos": make_action(
-                    name="action_mesos",
-                    command="test_command_mesos",
-                    executor=schema.ExecutorTypes.mesos.value,
-                    cpus=0.1,
-                    mem=100,
-                    disk=600,
-                    docker_image="container:latest",
-                ),
-            },
             cleanup_action=None,
             expected_runtime=datetime.timedelta(1),
         ),
@@ -409,22 +369,6 @@ class ConfigTestCase(TestCase):
                 actions=[dict(name="action", command="command")],
             ),
             dict(
-                name="test_job_mesos",
-                node="NodePool",
-                schedule="daily",
-                actions=[
-                    dict(
-                        name="action_mesos",
-                        executor="mesos",
-                        command="test_command_mesos",
-                        cpus=0.1,
-                        mem=100,
-                        disk=600,
-                        docker_image="container:latest",
-                    ),
-                ],
-            ),
-            dict(
                 name="test_job_k8s",
                 node="NodePool",
                 schedule="daily",
@@ -481,7 +425,7 @@ class ConfigTestCase(TestCase):
         assert test_config.nodes == expected.nodes
         assert test_config.node_pools == expected.node_pools
         assert test_config.k8s_options == expected.k8s_options
-        for key in ["0", "1", "2", "_actions_dict", "4", "_mesos"]:
+        for key in ["0", "1", "2", "_actions_dict", "4", "_k8s"]:
             job_name = f"MASTER.test_job{key}"
             assert job_name in test_config.jobs, f"{job_name} in test_config.jobs"
             assert job_name in expected.jobs, f"{job_name} in test_config.jobs"
@@ -1058,24 +1002,13 @@ class TestValidateJobs(TestCase):
                             expected_runtime="20m",
                         ),
                         dict(
-                            name="action_mesos",
+                            name="action_k8s",
                             command="command",
-                            executor="mesos",
+                            executor="kubernetes",
                             cpus=4,
                             mem=300,
                             disk=600,
-                            constraints=[
-                                dict(
-                                    attribute="pool",
-                                    operator="LIKE",
-                                    value="default",
-                                ),
-                            ],
                             docker_image="my_container:latest",
-                            docker_parameters=[
-                                dict(key="label", value="labelA"),
-                                dict(key="label", value="labelB"),
-                            ],
                             env=dict(USER="batch"),
                             extra_volumes=[
                                 dict(
@@ -1106,30 +1039,13 @@ class TestValidateJobs(TestCase):
                     "action": make_action(
                         expected_runtime=datetime.timedelta(0, 1200),
                     ),
-                    "action_mesos": make_action(
-                        name="action_mesos",
-                        executor=schema.ExecutorTypes.mesos.value,
+                    "action_k8s": make_action(
+                        name="action_k8s",
+                        executor=schema.ExecutorTypes.kubernetes.value,
                         cpus=4.0,
                         mem=300.0,
                         disk=600.0,
-                        constraints=(
-                            schema.ConfigConstraint(
-                                attribute="pool",
-                                operator="LIKE",
-                                value="default",
-                            ),
-                        ),
                         docker_image="my_container:latest",
-                        docker_parameters=(
-                            schema.ConfigParameter(
-                                key="label",
-                                value="labelA",
-                            ),
-                            schema.ConfigParameter(
-                                key="label",
-                                value="labelB",
-                            ),
-                        ),
                         env={"USER": "batch"},
                         extra_volumes=(
                             schema.ConfigVolume(
@@ -1161,12 +1077,12 @@ class TestValidateJobs(TestCase):
         assert expected_jobs == test_config["jobs"]
 
 
-class TestValidMesosAction(TestCase):
+class TestValidKubernetesAction(TestCase):
     def test_missing_docker_image(self):
         config = dict(
             name="test_missing",
             command="echo hello",
-            executor="mesos",
+            executor="kubernetes",
             cpus=0.2,
             mem=150,
             disk=450,
@@ -1177,7 +1093,7 @@ class TestValidMesosAction(TestCase):
     def test_cleanup_missing_docker_image(self):
         config = dict(
             command="echo hello",
-            executor="mesos",
+            executor="kubernetes",
             cpus=0.2,
             mem=150,
             disk=450,
@@ -1338,7 +1254,6 @@ class TestConfigContainer(TestCase):
             "test_job_actions_dict",
             "test_job2",
             "test_job4",
-            "test_job_mesos",
             "test_job_k8s",
         ]
         assert_equal(set(job_names), set(expected))
@@ -1350,7 +1265,6 @@ class TestConfigContainer(TestCase):
             "test_job_actions_dict",
             "test_job2",
             "test_job4",
-            "test_job_mesos",
             "test_job_k8s",
         ]
         assert_equal(set(expected), set(self.container.get_jobs().keys()))
@@ -1675,40 +1589,6 @@ class TestValidSecretVolume:
     )
     def test_valid(self, config):
         config_parse.valid_secret_volume(config, NullConfigContext)
-
-
-class TestValidMasterAddress:
-    @pytest.fixture
-    def context(self):
-        return config_utils.NullConfigContext
-
-    @pytest.mark.parametrize(
-        "url",
-        [
-            "http://blah.com",
-            "http://blah.com/",
-            "blah.com",
-            "blah.com/",
-        ],
-    )
-    def test_valid(self, url, context):
-        normalized = "http://blah.com"
-        result = config_parse.valid_master_address(url, context)
-        assert result == normalized
-
-    @pytest.mark.parametrize(
-        "url",
-        [
-            "https://blah.com",
-            "http://blah.com/something",
-            "blah.com/other",
-            "http://",
-            "blah.com?a=1",
-        ],
-    )
-    def test_invalid(self, url, context):
-        with pytest.raises(ConfigError):
-            config_parse.valid_master_address(url, context)
 
 
 if __name__ == "__main__":
