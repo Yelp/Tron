@@ -98,6 +98,9 @@ class KubernetesTask(ActionCommand):
         prom_metrics.tron_memory_gauge.inc(self.task_config.memory * multiplier)
         prom_metrics.tron_disk_gauge.inc(self.task_config.disk * multiplier)
 
+        # XXX: these should probably be renamed at some point, but we're also generally
+        # moving to prometheus metrics, so it's also probably fine to leave them as-is
+        # until we just straight-up delete 'em
         metrics.count("tron.mesos.cpus", self.task_config.cpus * multiplier)
         metrics.count("tron.mesos.mem", self.task_config.memory * multiplier)
         metrics.count("tron.mesos.disk", self.task_config.disk * multiplier)
@@ -578,8 +581,6 @@ class KubernetesCluster:
         # Tron know that that Pod is for a task it cares about
         self.tasks[task.get_kubernetes_id()] = task
 
-        # XXX: if spark-on-k8s ends up running through task_processing, we'll need to revist
-        # reimplementing the clusterman resource reporting that MesosCluster::submit() used to do
         if not self.runner.run(task.get_config()):
             log.warning(f"Unable to submit task {task.get_kubernetes_id()} to configured k8s cluster.")
             task.exited(1)

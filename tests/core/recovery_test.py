@@ -44,6 +44,9 @@ class TestRecovery(TestCase):
                 command_config=Mock(),
                 machine=mock_ok_machine,
             ),
+            # yes, the names say "mesos" but they are kubernetes runs
+            # ...i didn't want to change the test data too much
+            # feel free to change it, future yelper :)
             KubernetesActionRun(
                 job_run_id="test.unknown-mesos",
                 name="test.unknown-mesos",
