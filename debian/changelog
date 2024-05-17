@@ -1,3 +1,27 @@
+tron (1.32.5) jammy; urgency=medium
+
+  * 1.32.5 tagged with 'make release'
+    Commit: Merge pull request #965 from Yelp/u/emanelsabban/fix-make-
+    release  Remove /docs/source/generated from gitignore file
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Fri, 17 May 2024 09:10:54 -0700
+
+tron (1.32.4) jammy; urgency=medium
+
+  * 1.32.4 tagged with 'make release'
+    Commit: Delete Mesos related exit codes and docker files - TRON-2187
+    (#959)  * Delete Mesos related exit codes and docker files  * Adding
+    a try/except for validating extra keys  * Testing deleted extra keys
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Fri, 17 May 2024 07:51:23 -0700
+
+tron (1.32.3) jammy; urgency=medium
+
+  * 1.32.3 tagged with 'make release'
+    Commit: Automate make release in Tron (#960)
+
+ -- Jon Lee <jonlee@yelp.com>  Mon, 13 May 2024 15:36:34 -0700
+
 tron (1.32.2) jammy; urgency=medium
 
   * 1.32.2 tagged with 'make release'

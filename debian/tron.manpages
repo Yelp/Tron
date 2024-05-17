@@ -1,4 +1,4 @@
-docs/man/tronctl.1
-docs/man/trond.8
-docs/man/tronview.1
-docs/man/tronfig.1
+docs/source/man/tronctl.1
+docs/source/man/trond.8
+docs/source/man/tronview.1
+docs/source/man/tronfig.1
