@@ -150,11 +150,9 @@ class PersistentStateManager:
         # {'MASTER.k8s': {'run_nums':[0], 'enabled': True}, 'MASTER.cits_test_frequent_1': {'run_nums': [1,0], 'enabled': True}}
         for job_name, job_state in jobs.items():
             job_state["runs"] = self._restore_runs_for_job(job_name, job_state)
-        frameworks = self._restore_dicts(runstate.MESOS_STATE, ["frameworks"])
 
         state = {
             runstate.JOB_STATE: jobs,
-            runstate.MESOS_STATE: frameworks,
         }
         return state
 

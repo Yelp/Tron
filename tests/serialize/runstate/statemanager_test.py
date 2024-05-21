@@ -121,15 +121,12 @@ class TestPersistentStateManager(TestCase):
                     "one": {"key": "val1"},
                     "two": {"key": "val2"},
                 },
-                # _restore_dicts for MESOS_STATE
-                {"frameworks": "clusters"},
             ]
 
             restored_state = self.manager.restore(job_names)
             mock_restore_metadata.assert_called_once_with()
             assert mock_restore_dicts.call_args_list == [
                 mock.call(runstate.JOB_STATE, job_names),
-                mock.call(runstate.MESOS_STATE, ["frameworks"]),
             ]
             assert len(mock_restore_runs.call_args_list) == 2
             assert restored_state == {
@@ -137,7 +134,6 @@ class TestPersistentStateManager(TestCase):
                     "one": {"key": "val1", "runs": mock_restore_runs.return_value},
                     "two": {"key": "val2", "runs": mock_restore_runs.return_value},
                 },
-                runstate.MESOS_STATE: {"frameworks": "clusters"},
             }
 
     def test_restore_runs_for_job(self):
