@@ -69,8 +69,8 @@ class JobCollection:
 
     def restore_state(self, job_state_data, config_action_runner):
         """
-        Loops through the jobs and their runs in order to load their
-        state for each run. As we load the state, we will also schedule the next
+        Loops through the jobs and their runs in order to restore
+        state for each run. As we restore state, we will also schedule the next
         runs for each job
         """
         for name, state in job_state_data.items():

@@ -25,15 +25,13 @@ class JobScheduler(Observer):
         self.watch(job)
 
     def restore_state(self, job_state_data, config_action_runner):
-        """Load the job state and schedule any JobRuns."""
+        """Restore the job state and schedule any JobRuns."""
         job_runs = self.job.get_job_runs_from_state(job_state_data)
         for run in job_runs:
             self.job.watch(run)
         self.job.runs.runs.extend(job_runs)
         log.info(f"{self} restored")
 
-        # Tron will recover any action run that has UNKNOWN status
-        # and will start connecting to task_proc
         recovery.launch_recovery_actionruns_for_job_runs(
             job_runs=job_runs,
         )

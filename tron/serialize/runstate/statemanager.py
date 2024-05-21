@@ -1,5 +1,3 @@
-import concurrent.futures
-import copy
 import itertools
 import logging
 import time
@@ -147,41 +145,29 @@ class PersistentStateManager:
         if not skip_validation:
             self._restore_metadata()
 
-        # First, restore the jobs themselves
         jobs = self._restore_dicts(runstate.JOB_STATE, job_names)
         # jobs should be a dictionary that contains  job name and number of runs
         # {'MASTER.k8s': {'run_nums':[0], 'enabled': True}, 'MASTER.cits_test_frequent_1': {'run_nums': [1,0], 'enabled': True}}
-
-        # second, restore the runs for each of the jobs restored above
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-            # start the threads and mark each future with it's job name
-            # this is useful so that we can index the job name later to add the runs to the jobs dictionary
-            results = {
-                executor.submit(self._restore_runs_for_job, job_name, job_state): job_name
-                for job_name, job_state in jobs.items()
-            }
-            for result in concurrent.futures.as_completed(results):
-                jobs[results[result]]["runs"] = result.result()
+        for job_name, job_state in jobs.items():
+            job_state["runs"] = self._restore_runs_for_job(job_name, job_state)
+        frameworks = self._restore_dicts(runstate.MESOS_STATE, ["frameworks"])
 
         state = {
             runstate.JOB_STATE: jobs,
+            runstate.MESOS_STATE: frameworks,
         }
         return state
 
     def _restore_runs_for_job(self, job_name, job_state):
-        """Restore the state for the runs of each job"""
         run_nums = job_state["run_nums"]
-        keys = [jobrun.get_job_run_id(job_name, run_num) for run_num in run_nums]
-        job_runs_restored_states = self._restore_dicts(runstate.JOB_RUN_STATE, keys)
-        runs = copy.copy(job_runs_restored_states)
-        for run_id, state in runs.items():
-            if state == {}:
-                log.error(f"Failed to restore {run_id}, no state found for it!")
-                job_runs_restored_states.pop(run_id)
-
-        runs = list(job_runs_restored_states.values())
-        # We need to sort below otherwise the runs will not be in order
-        runs.sort(key=lambda x: x["run_num"], reverse=True)
+        runs = []
+        for run_num in run_nums:
+            key = jobrun.get_job_run_id(job_name, run_num)
+            run_state = list(self._restore_dicts(runstate.JOB_RUN_STATE, [key]).values())
+            if not run_state:
+                log.error(f"Failed to restore {key}, no state found for it")
+            else:
+                runs.append(run_state[0])
         return runs
 
     def _restore_metadata(self):
