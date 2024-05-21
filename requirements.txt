@@ -1,3 +1,4 @@
+./task_processing-1.0.0-py2.py3-none-any.whl
 argcomplete==1.9.5
 asttokens==2.2.1
 attrs==19.3.0
@@ -77,7 +78,6 @@ setuptools==65.5.1
 six==1.15.0
 sshpubkeys==3.1.0
 stack-data==0.6.2
-task-processing==1.0.0
 traitlets==5.0.0
 Twisted==22.10.0
 typing-extensions==4.5.0
