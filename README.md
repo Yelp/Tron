@@ -22,7 +22,7 @@ Versions / Roadmap
 
 Tron is changing and under active development.
 
-It is being transformed from an ssh-based execution engine to be comaptible with running on [Kubernetes
+It is being transformed from an ssh-based execution engine to be compatible with running on [Kubernetes
 ](https://kubernetes.io/docs/concepts/overview/).
 
 Tron development is specifically targeting Yelp's needs and not designed to be
