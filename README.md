@@ -1,7 +1,7 @@
 Tron - Batch Scheduling System
 ==============================
 
-[![Build Status](https://travis-ci.org/Yelp/Tron.svg?branch=master)](https://travis-ci.org/Yelp/Tron)
+[![Build Status](https://github.com/Yelp/Tron/actions/workflows/ci.yml/badge.svg?query=branch%3Amaster)](https://github.com/Yelp/Tron/actions/workflows/ci.yml)
 [![Documentation Status](https://readthedocs.org/projects/tron/badge/?version=latest)](http://tron.readthedocs.io/en/latest/?badge=latest)
 
 Tron is a centralized system for managing periodic batch processes
@@ -22,14 +22,12 @@ Versions / Roadmap
 
 Tron is changing and under active development.
 
-It is being transformed from an ssh-based execution engine to a [Mesos
-framework](http://mesos.apache.org/documentation/latest/frameworks/).
+It is being transformed from an ssh-based execution engine to be compatible with running on [Kubernetes
+](https://kubernetes.io/docs/concepts/overview/).
 
 Tron development is specifically targeting Yelp's needs and not designed to be
 a general solution for other companies.
 
-* <= v0.6.2 - Stable version, recommended for non-Yelp installations.
-* >= v1.0.0 - Stable mesos-based version
 
 Contributing
 ------------
