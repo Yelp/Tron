@@ -161,7 +161,11 @@ class PersistentStateManager:
                 for job_name, job_state in jobs.items()
             }
             for result in concurrent.futures.as_completed(results):
-                jobs[results[result]]["runs"] = result.result()
+                try:
+                    jobs[results[result]]["runs"] = result.result()
+                except Exception as e:
+                    log.error(f"Failed to restore runs for {results[result]}: {e}")
+                    raise SystemExit(f"Error: {e}")
 
         state = {
             runstate.JOB_STATE: jobs,

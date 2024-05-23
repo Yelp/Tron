@@ -87,14 +87,18 @@ class DynamoDBStateStore:
             for resp in concurrent.futures.as_completed(responses):
                 items.extend(resp.result()["Responses"][self.name])
                 # add any potential unprocessed keys to the thread pool
-                if resp.result()["UnprocessedKeys"].get(self.name) and attempts_to_retrieve_keys < MAX_ATTEMPTS:
-                    cand_keys_list.append(resp.result()["UnprocessedKeys"][self.name]["Keys"])
-                elif attempts_to_retrieve_keys >= MAX_ATTEMPTS:
-                    failed_keys = resp.result()["UnprocessedKeys"][self.name]["Keys"]
-                    error = Exception(
-                        f"tron_dynamodb_restore_failure: failed to retrieve items with keys \n{failed_keys}\n from dynamodb\n{resp.result()}"
-                    )
-                    raise error
+                try:
+                    if resp.result()["UnprocessedKeys"].get(self.name) and attempts_to_retrieve_keys < MAX_ATTEMPTS:
+                        cand_keys_list.append(resp.result()["UnprocessedKeys"][self.name]["Keys"])
+                    elif attempts_to_retrieve_keys >= MAX_ATTEMPTS:
+                        failed_keys = resp.result()["UnprocessedKeys"][self.name]["Keys"]
+                        error = Exception(
+                            f"tron_dynamodb_restore_failure: failed to retrieve items with keys \n{failed_keys}\n from dynamodb\n{resp.result()}"
+                        )
+                        raise error
+                except Exception as e:
+                    log.error(repr(e))
+                    raise e
             attempts_to_retrieve_keys += 1
         return items
 
