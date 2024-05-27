@@ -2,10 +2,12 @@ import concurrent.futures
 import copy
 import itertools
 import logging
+import sys
 import time
 from contextlib import contextmanager
 from typing import Dict
 
+from tron.commands.cmd_utils import ExitCode
 from tron.config import schema
 from tron.core import job
 from tron.core import jobrun
@@ -164,8 +166,10 @@ class PersistentStateManager:
                 try:
                     jobs[results[result]]["runs"] = result.result()
                 except Exception as e:
-                    log.error(f"Failed to restore runs for {results[result]}: {e}")
-                    raise SystemExit(f"Error: {e}")
+                    log.exception(
+                        f"Unable to restore state for {results[result]} - exiting to avoid corrupting data. Exception: {e}"
+                    )
+                    sys.exit(ExitCode.fail)
 
         state = {
             runstate.JOB_STATE: jobs,

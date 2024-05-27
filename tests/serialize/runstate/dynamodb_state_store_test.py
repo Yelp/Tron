@@ -266,3 +266,19 @@ class TestDynamoDBStateStore:
                 store.restore(keys)
             except Exception:
                 assert_equal(mock_failed_read.call_count, 11)
+
+    def test_result_exception(self, store, small_object):
+        # This test is to check if the result() function raises an exception
+        keys = [store.build_key("thing", i) for i in range(3)]
+        value = pickle.loads(small_object)
+        pairs = zip(keys, (value for i in range(len(keys))))
+        store.save(pairs)
+        store._consume_save_queue()
+
+        mock_future = mock.MagicMock()
+        mock_future.result.side_effect = Exception("mocked exception")
+        with mock.patch("concurrent.futures.Future", return_value=mock_future):
+            with mock.patch("concurrent.futures.as_completed", return_value=[mock_future]):
+                with pytest.raises(Exception) as exec_info:
+                    store.restore(keys)
+                assert str(exec_info.value) == "mocked exception"

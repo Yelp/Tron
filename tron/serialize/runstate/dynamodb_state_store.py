@@ -85,9 +85,9 @@ class DynamoDBStateStore:
                 # request otherwise
                 cand_keys_list = []
             for resp in concurrent.futures.as_completed(responses):
-                items.extend(resp.result()["Responses"][self.name])
-                # add any potential unprocessed keys to the thread pool
                 try:
+                    items.extend(resp.result()["Responses"][self.name])
+                    # add any potential unprocessed keys to the thread pool
                     if resp.result()["UnprocessedKeys"].get(self.name) and attempts_to_retrieve_keys < MAX_ATTEMPTS:
                         cand_keys_list.append(resp.result()["UnprocessedKeys"][self.name]["Keys"])
                     elif attempts_to_retrieve_keys >= MAX_ATTEMPTS:
@@ -97,7 +97,7 @@ class DynamoDBStateStore:
                         )
                         raise error
                 except Exception as e:
-                    log.error(repr(e))
+                    log.exception(f"Error: {e}")
                     raise e
             attempts_to_retrieve_keys += 1
         return items
