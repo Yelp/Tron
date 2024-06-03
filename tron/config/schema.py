@@ -44,6 +44,7 @@ TronConfig = config_object_factory(
         "nodes",  # dict of ConfigNode
         "node_pools",  # dict of ConfigNodePool
         "jobs",  # dict of ConfigJob
+        "mesos_options",  # ConfigMesos
         "k8s_options",  # ConfigKubernetes
         "eventbus_enabled",  # bool or None
     ],
