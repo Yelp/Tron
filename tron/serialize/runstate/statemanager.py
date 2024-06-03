@@ -9,6 +9,7 @@ from typing import Dict
 from tron.config import schema
 from tron.core import job
 from tron.core import jobrun
+from tron.mesos import MesosClusterRepository
 from tron.serialize import runstate
 from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
 from tron.serialize.runstate.shelvestore import ShelveStateStore
@@ -288,7 +289,9 @@ class StateChangeWatcher(observer.Observer):
 
     def handler(self, observable, event, event_data=None):
         """Handle a state change in an observable by saving its state."""
-        if isinstance(observable, job.Job):
+        if observable == MesosClusterRepository:
+            self.save_frameworks(observable)
+        elif isinstance(observable, job.Job):
             if event == job.Job.NOTIFY_NEW_RUN:
                 if event_data is None or not isinstance(event_data, jobrun.JobRun):
                     log.warning(f"Notified of new run, but no run to watch. Got {event_data}")
@@ -311,6 +314,9 @@ class StateChangeWatcher(observer.Observer):
 
     def delete_job_run(self, job_run):
         self.state_manager.delete(runstate.JOB_RUN_STATE, job_run.name)
+
+    def save_frameworks(self, clusters):
+        self._save_object(runstate.MESOS_STATE, clusters)
 
     def save_metadata(self):
         self._save_object(runstate.MCP_STATE, StateMetadata())
