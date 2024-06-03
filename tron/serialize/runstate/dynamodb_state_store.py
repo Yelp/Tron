@@ -97,7 +97,7 @@ class DynamoDBStateStore:
                         )
                         raise error
                 except Exception as e:
-                    log.exception(f"Error: {e}")
+                    log.exception("Encountered issues retrieving data from DynamoDB")
                     raise e
             attempts_to_retrieve_keys += 1
         return items

@@ -165,10 +165,8 @@ class PersistentStateManager:
             for result in concurrent.futures.as_completed(results):
                 try:
                     jobs[results[result]]["runs"] = result.result()
-                except Exception as e:
-                    log.exception(
-                        f"Unable to restore state for {results[result]} - exiting to avoid corrupting data. Exception: {e}"
-                    )
+                except Exception:
+                    log.exception(f"Unable to restore state for {results[result]} - exiting to avoid corrupting data.")
                     sys.exit(ExitCode.fail)
 
         state = {
