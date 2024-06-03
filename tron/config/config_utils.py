@@ -310,11 +310,7 @@ class Validator:
         config_context = self.build_context(in_dict, config_context)
         in_dict = self.cast(in_dict, config_context)
         self.validate_required_keys(in_dict)
-        try:
-            self.validate_extra_keys(in_dict)
-        except ConfigError as e:
-            print(f"{e}: removing them.")
-            in_dict = {k: v for k, v in in_dict.items() if k in self.all_keys}
+        self.validate_extra_keys(in_dict)
         return self.build_config(in_dict, config_context)
 
     def __call__(self, in_dict, config_context=NullConfigContext):

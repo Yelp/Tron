@@ -636,7 +636,7 @@ class TestNamedConfig(TestCase):
         assert_in(expected_message, str(exception))
 
 
-class TestJobConfig:
+class TestJobConfig(TestCase):
     def test_no_actions(self):
         test_config = dict(
             jobs=[
@@ -856,7 +856,7 @@ class TestJobConfig:
         )
         assert_in(expected_msg, str(exception))
 
-    def test_config_cleanup_requires(self, capfd):
+    def test_config_cleanup_requires(self):
         test_config = dict(
             jobs=[
                 dict(
@@ -872,12 +872,13 @@ class TestJobConfig:
             **BASE_CONFIG,
         )
 
-        expected_msg = "Unknown keys in CleanupAction : requires: removing them.\n"
-        output_config = valid_config(test_config)
-        exception, err = capfd.readouterr()
+        expected_msg = "Unknown keys in CleanupAction : requires"
+        exception = assert_raises(
+            ConfigError,
+            valid_config,
+            test_config,
+        )
         assert_equal(expected_msg, str(exception))
-        # assert that "requires" key doesn't exist in the dictionary
-        assert "requires" not in output_config.jobs.get("MASTER.test_job0").cleanup_action
 
     def test_validate_job_no_actions(self):
         job_config = dict(
@@ -902,7 +903,7 @@ class TestJobConfig:
         assert_in(expected_msg, str(exception))
 
 
-class TestValidSecretSource:
+class TestValidSecretSource(TestCase):
     def test_missing_secret_name(self):
         secret_env = dict(key="no_secret_name")
 
@@ -911,17 +912,16 @@ class TestValidSecretSource:
 
         assert "missing options: secret" in str(missing_exc.value)
 
-    def test_validate_job_extra_secret_env(self, capfd):
+    def test_validate_job_extra_secret_env(self):
         secret_env = dict(
             secret_name="tron-secret-k8s-name-no--secret--name",
             key="no_secret_name",
             extra_key="unknown",
         )
-        output_config = config_parse.valid_secret_source(secret_env, NullConfigContext)
-        expected_msg = "Unknown keys in SecretSource : extra_key: removing them.\n"
-        exception, err = capfd.readouterr()
-        assert_equal(expected_msg, str(exception))
-        assert not hasattr(output_config, "extra_key")
+        with pytest.raises(ConfigError) as missing_exc:
+            config_parse.valid_secret_source(secret_env, NullConfigContext)
+
+        assert "Unknown keys in SecretSource : extra_key" in str(missing_exc.value)
 
     def test_valid_job_secret_env_success(self):
         secret_env = dict(
@@ -935,7 +935,7 @@ class TestValidSecretSource:
         assert built_env == expected_env
 
 
-class TestNodeConfig:
+class TestNodeConfig(TestCase):
     def test_validate_node_pool(self):
         config_node_pool = valid_node_pool(
             dict(name="theName", nodes=["node1", "node2"]),
@@ -1033,13 +1033,16 @@ class TestNodeConfig:
         )
         assert_in(expected_msg, str(exception))
 
-    def test_invalid_named_update(self, capfd):
+    def test_invalid_named_update(self):
         test_config = dict(bozray=None)
-        output_config = validate_fragment("foo", test_config)
-        expected_msg = "Unknown keys in NamedConfigFragment : bozray: removing them.\n"
-        exception, err = capfd.readouterr()
-        assert_equal(expected_msg, str(exception))
-        assert not hasattr(output_config, "bozray")
+        expected_message = "Unknown keys in NamedConfigFragment : bozray"
+        exception = assert_raises(
+            ConfigError,
+            validate_fragment,
+            "foo",
+            test_config,
+        )
+        assert_in(expected_message, str(exception))
 
 
 class TestValidateJobs(TestCase):
@@ -1562,31 +1565,19 @@ class TestValidSecretVolumeItem:
     @pytest.mark.parametrize(
         "config",
         [
+            {"path": "abc"},
+            {
+                "key": "abc",
+            },
             {
                 "key": "abc",
                 "path": "abc",
                 "extra_key": None,
             },
-        ],
-    )
-    def test_extra_keys(self, config, capfd):
-        output_config = config_parse.valid_secret_volume_item(config, NullConfigContext)
-        expected_msg = "Unknown keys in SecretVolumeItem : extra_key: removing them.\n"
-        exception, err = capfd.readouterr()
-        assert_equal(expected_msg, str(exception))
-        assert not hasattr(output_config, "extra_key")
-
-    @pytest.mark.parametrize(
-        "config",
-        [
-            {"path": "abc"},
             {"key": "abc", "path": "abc", "mode": "a"},
-            {
-                "key": "abc",
-            },
         ],
     )
-    def test_invalid_missing_required(self, config):
+    def test_invalid(self, config):
         with pytest.raises(ConfigError):
             config_parse.valid_secret_volume_item(config, NullConfigContext)
 

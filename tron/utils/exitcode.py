@@ -3,6 +3,7 @@ EXIT_INVALID_COMMAND = -1
 EXIT_NODE_ERROR = -2
 EXIT_STOP_KILL = -3
 EXIT_TRIGGER_TIMEOUT = -4
+EXIT_MESOS_DISABLED = -5
 EXIT_KUBERNETES_DISABLED = -6
 EXIT_KUBERNETES_NOT_CONFIGURED = -7
 EXIT_KUBERNETES_TASK_INVALID = -8
@@ -15,6 +16,7 @@ EXIT_REASONS = {
     EXIT_NODE_ERROR: "Node error",
     EXIT_STOP_KILL: "Stopped or killed",
     EXIT_TRIGGER_TIMEOUT: "Timed out waiting for trigger",
+    EXIT_MESOS_DISABLED: "Mesos disabled",
     EXIT_KUBERNETES_DISABLED: "Kubernetes disabled",
     EXIT_KUBERNETES_NOT_CONFIGURED: "Kubernetes enabled, but not configured",
     EXIT_KUBERNETES_TASK_INVALID: "Kubernetes task was not valid",

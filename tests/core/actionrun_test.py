@@ -1598,6 +1598,23 @@ class TestMesosActionRun:
 
     @mock.patch("tron.core.actionrun.filehandler", autospec=True)
     @mock.patch("tron.core.actionrun.MesosClusterRepository", autospec=True)
+    def test_submit_command_task_none(
+        self,
+        mock_cluster_repo,
+        mock_filehandler,
+    ):
+        # Task is None if Mesos is disabled
+        mock_get_cluster = mock_cluster_repo.get_cluster
+        mock_get_cluster.return_value.create_task.return_value = None
+        new_attempt = self.action_run.create_attempt()
+        self.action_run.submit_command(new_attempt)
+
+        mock_get_cluster.assert_called_once_with()
+        assert mock_get_cluster.return_value.submit.call_count == 0
+        assert self.action_run.is_failed
+
+    @mock.patch("tron.core.actionrun.filehandler", autospec=True)
+    @mock.patch("tron.core.actionrun.MesosClusterRepository", autospec=True)
     def test_recover(self, mock_cluster_repo, mock_filehandler):
         self.action_run.machine.state = ActionRun.UNKNOWN
         self.action_run.end_time = 1000
