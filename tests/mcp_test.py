@@ -76,8 +76,9 @@ class TestMasterControlProgram:
         ],
     )
     @mock.patch("tron.mcp.KubernetesClusterRepository", autospec=True)
+    @mock.patch("tron.mcp.MesosClusterRepository", autospec=True)
     @mock.patch("tron.mcp.node.NodePoolRepository", autospec=True)
-    def test_apply_config(self, mock_repo, mock_k8s_cluster_repo, reconfigure, namespace):
+    def test_apply_config(self, mock_repo, mock_cluster_repo, mock_k8s_cluster_repo, reconfigure, namespace):
         config_container = mock.create_autospec(config_parse.ConfigContainer)
         master_config = config_container.get_master.return_value
         autospec_method(self.mcp.jobs.update_from_config)
@@ -92,6 +93,9 @@ class TestMasterControlProgram:
             master_config.nodes,
             master_config.node_pools,
             master_config.ssh_options,
+        )
+        mock_cluster_repo.configure.assert_called_with(
+            master_config.mesos_options,
         )
         mock_k8s_cluster_repo.configure.assert_called_with(
             master_config.k8s_options,

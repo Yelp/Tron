@@ -12,6 +12,7 @@ from tests.testingutils import autospec_method
 from tron.config import schema
 from tron.core.job import Job
 from tron.core.jobrun import JobRun
+from tron.mesos import MesosClusterRepository
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.statemanager import PersistenceManagerFactory
@@ -305,6 +306,17 @@ class TestStateChangeWatcher(TestCase):
         jobs = mock.Mock()
         self.watcher.restore(jobs)
         self.watcher.state_manager.restore.assert_called_with(jobs)
+
+    def test_handler_mesos_change(self):
+        self.watcher.handler(
+            observable=MesosClusterRepository,
+            event=None,
+        )
+        self.watcher.state_manager.save.assert_called_with(
+            runstate.MESOS_STATE,
+            MesosClusterRepository.name,
+            MesosClusterRepository.state_data,
+        )
 
     def test_handler_job_state_change(self):
         mock_job = mock.Mock(spec_set=Job)

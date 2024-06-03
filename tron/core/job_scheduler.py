@@ -36,6 +36,7 @@ class JobScheduler(Observer):
         # and will start connecting to task_proc
         recovery.launch_recovery_actionruns_for_job_runs(
             job_runs=job_runs,
+            master_action_runner=config_action_runner,
         )
 
         scheduled = self.job.runs.get_scheduled()
