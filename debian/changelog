@@ -1,3 +1,24 @@
+tron (2.1.0) jammy; urgency=medium
+
+  * 2.1.0 tagged with 'make release'
+    Commit: Revert the Mesos code deletions (#970)  This turned out to
+    be unsafe to to our use of pickles as a serialization format.  *
+    Revert "Use the latest task_proc (#966)"  This reverts commit
+    01003a980854bc25ed2764c880e1fb69db296fb1.  * Revert "Delete
+    remaining Mesos code (#961)"  This reverts commit
+    1f71d0fa406e530ac943f1fcaf312224015f392c.  * Revert "Delete Mesos
+    related exit codes and docker files - TRON-2187 (#959)"  This
+    reverts commit 33ad2a1657aeea61f899380dada42825e137083b.  * Revert
+    "Delete Mesos logging config (#962)"  This reverts commit
+    640362424f1b1b6bb1c959a04b0843ca1e846c10.  * Revert "Merge pull
+    request #953 from Yelp/u/emanelsabban/TRON-2183"  This reverts
+    commit 10353457221d11f2a587c665bae05b16f3cba447, reversing changes
+    made to e4114088fefaf6a3d3f5be27e5caf41d7c1c9973.  * Revert
+    "Deleting Mesos code from the Master Control Program"  This reverts
+    commit 18f48ee1db23e1e7f91e0e9e7846eb345d171534.
+
+ -- Luis Perez <luisp@yelp.com>  Mon, 03 Jun 2024 13:33:05 -0700
+
 tron (2.0.0) jammy; urgency=medium
 
   * 2.0.0 tagged with 'make release'

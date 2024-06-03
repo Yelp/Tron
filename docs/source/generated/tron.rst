@@ -26,6 +26,7 @@ Submodules
    tron.kubernetes
    tron.manhole
    tron.mcp
+   tron.mesos
    tron.metrics
    tron.node
    tron.prom_metrics
