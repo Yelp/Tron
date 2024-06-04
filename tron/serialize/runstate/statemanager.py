@@ -2,6 +2,7 @@ import concurrent.futures
 import copy
 import itertools
 import logging
+import sys
 import time
 from contextlib import contextmanager
 from typing import Dict
@@ -162,7 +163,11 @@ class PersistentStateManager:
                 for job_name, job_state in jobs.items()
             }
             for result in concurrent.futures.as_completed(results):
-                jobs[results[result]]["runs"] = result.result()
+                try:
+                    jobs[results[result]]["runs"] = result.result()
+                except Exception:
+                    log.exception(f"Unable to restore state for {results[result]} - exiting to avoid corrupting data.")
+                    sys.exit(1)
 
         state = {
             runstate.JOB_STATE: jobs,

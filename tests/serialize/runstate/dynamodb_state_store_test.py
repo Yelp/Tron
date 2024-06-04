@@ -266,3 +266,15 @@ class TestDynamoDBStateStore:
                 store.restore(keys)
             except Exception:
                 assert_equal(mock_failed_read.call_count, 11)
+
+    def test_restore_exception_propagation(self, store, small_object):
+        # This test is to ensure that restore propagates exceptions upwards: see DAR-2328
+        keys = [store.build_key("thing", i) for i in range(3)]
+
+        mock_future = mock.MagicMock()
+        mock_future.result.side_effect = Exception("mocked exception")
+        with mock.patch("concurrent.futures.Future", return_value=mock_future, autospec=True):
+            with mock.patch("concurrent.futures.as_completed", return_value=[mock_future], autospec=True):
+                with pytest.raises(Exception) as exec_info:
+                    store.restore(keys)
+                assert str(exec_info.value) == "mocked exception"
