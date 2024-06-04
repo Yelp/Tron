@@ -1,3 +1,13 @@
+tron (2.1.1) jammy; urgency=medium
+
+  * 2.1.1 tagged with 'make release'
+    Commit: Handling exceptions thrown from threads span by
+    ThreadPoolExecutor - TRON-2202 (#969)  * Handling exceptions thrown
+    from threads span by ThreadPoolExecutor  * Addressing reviews  *
+    Addressing more reviews  * Removed Exit code
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Tue, 04 Jun 2024 11:24:00 -0700
+
 tron (2.1.0) jammy; urgency=medium
 
   * 2.1.0 tagged with 'make release'
