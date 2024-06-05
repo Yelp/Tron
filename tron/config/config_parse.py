@@ -1,6 +1,9 @@
 """
 Parse a dictionary structure and return an immutable structure that
 contain a validated configuration.
+
+
+WARNING: it is *NOT* safe to delete classes that are being validated (or their attributes) if there are any references to them in DynamoDB! (See DAR-2328)
 """
 import datetime
 import getpass

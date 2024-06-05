@@ -1,5 +1,6 @@
 """
  Immutable config schema objects.
+ WARNING: it is *NOT* safe to delete these classes (or their attributes) if there are any references to them in DynamoDB! (See DAR-2328)
 """
 from collections import namedtuple
 from enum import Enum
@@ -316,3 +317,5 @@ ActionRunnerTypes = Enum("ActionRunnerTypes", dict(none="none", subprocess="subp
 VolumeModes = Enum("VolumeModes", dict(RO="RO", RW="RW"))  # type: ignore
 
 ActionOnRerun = Enum("ActionOnRerun", dict(rerun="rerun"))  # type: ignore
+
+# WARNING: it is *NOT* safe to delete these classes (or their attributes) if there are any references to them in DynamoDB! (See DAR-2328)
