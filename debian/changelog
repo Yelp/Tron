@@ -1,3 +1,10 @@
+tron (2.1.2) jammy; urgency=medium
+
+  * 2.1.2 tagged with 'make release'
+    Commit: Use S3LogsReader with superregion and UTC timezone (#972)
+
+ -- Yaroslav Liakhovskyi <yaro@yelp.com>  Wed, 05 Jun 2024 02:17:04 -0700
+
 tron (2.1.1) jammy; urgency=medium
 
   * 2.1.1 tagged with 'make release'
