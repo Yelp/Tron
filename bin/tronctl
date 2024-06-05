@@ -36,6 +36,7 @@ from tron.commands.client import RequestError
 from tron.commands.cmd_utils import ExitCode
 from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
+from tron.commands.cmd_utils import warning_output
 from tron.commands.retry import parse_deps_timeout
 from tron.commands.retry import print_retries_table
 from tron.commands.retry import retry_actions
@@ -64,7 +65,11 @@ COMMAND_HELP = (
         "job name",
         "Start job runs for a particular date range",
     ),
-    ("disable", "job name", "Disable selected job and cancel any outstanding runs"),
+    (
+        "disable",
+        "job name",
+        "Disable selected job and cancel any outstanding runs. WARNING: you *must* disable the job in yelpsoa-configs to guarantee it will not be re-enabled.",
+    ),
     ("enable", "job name", "Enable the selected job and schedule the next run"),
     (
         "fail",
@@ -332,6 +337,13 @@ def control_objects(args: argparse.Namespace):
             if args.command == "start" and args.run_date:
                 data["run_time"] = str(args.run_date)
             yield request(urljoin(args.server, tron_id.url), data)
+            # NOTE: ideally we'd add this message in the JobController handle_command() function, but having the API return terminal escape codes
+            # sounds like a bad idea, so we're doing it here instead
+            print(
+                warning_output(
+                    "WARNING: jobs disabled with tronctl disable are *NOT* guaranteed to stay disabled. You must disable the job in yelpsoa-configs to guarantee it will not be re-enabled."
+                )
+            )
 
 
 def retry(args):

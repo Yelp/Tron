@@ -40,6 +40,9 @@ DEFAULT_CONFIG = {
 
 TAB_COMPLETE_FILE = "/var/cache/tron_tab_completions"
 
+COLOR_RED = "\033[31m"
+COLOR_DEFAULT = "\033[0m"
+
 opener = open
 
 
@@ -213,3 +216,8 @@ def suggest_possibilities(word, possibilities, max_suggestions=6):
         return f"\nDid you mean one of: {', '.join(suggestions)}?"
     else:
         return ""
+
+
+def warning_output(text: str) -> str:
+    """Return the passed-in string colored in red. Suitable for warning messages."""
+    return f"{COLOR_RED}{text}{COLOR_DEFAULT}"
