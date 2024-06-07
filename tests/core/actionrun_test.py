@@ -1861,9 +1861,10 @@ class TestKubernetesActionRun:
         )
         assert mock_k8s_action_run.is_failed
 
+    @mock.patch("tron.core.actionrun.get_projected_sa_volumes", autospec=True)
     @mock.patch("tron.core.actionrun.filehandler", autospec=True)
     @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
-    def test_recover(self, mock_cluster_repo, mock_filehandler, mock_k8s_action_run):
+    def test_recover(self, mock_cluster_repo, mock_filehandler, mock_get_projected_sa_volumes, mock_k8s_action_run):
         mock_k8s_action_run.machine.state = ActionRun.UNKNOWN
         mock_k8s_action_run.end_time = 1000
         mock_k8s_action_run.exit_status = 0
@@ -1894,6 +1895,7 @@ class TestKubernetesActionRun:
                 serializer=serializer,
                 volumes=mock_k8s_action_run.command_config.extra_volumes,
                 secret_volumes=mock_k8s_action_run.command_config.secret_volumes,
+                projected_sa_volumes=mock_get_projected_sa_volumes.return_value,
                 cap_add=mock_k8s_action_run.command_config.cap_add,
                 cap_drop=mock_k8s_action_run.command_config.cap_drop,
                 task_id=last_attempt.kubernetes_task_id,
@@ -1916,6 +1918,7 @@ class TestKubernetesActionRun:
         mock_filehandler.OutputStreamSerializer.assert_called_with(
             mock_k8s_action_run.output_path,
         )
+        mock_get_projected_sa_volumes.assert_called_once_with("mock_namespace")
 
     @mock.patch("tron.core.actionrun.filehandler", autospec=True)
     @mock.patch("tron.core.actionrun.MesosClusterRepository", autospec=True)
@@ -1950,9 +1953,12 @@ class TestKubernetesActionRun:
         assert mock_k8s_action_run.is_unknown
         assert mock_k8s_action_run.end_time is not None
 
+    @mock.patch("tron.core.actionrun.get_projected_sa_volumes", autospec=True)
     @mock.patch("tron.core.actionrun.filehandler", autospec=True)
     @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
-    def test_recover_task_none(self, mock_cluster_repo, mock_filehandler, mock_k8s_action_run):
+    def test_recover_task_none(
+        self, mock_cluster_repo, mock_filehandler, mock_get_projected_sa_volumes, mock_k8s_action_run
+    ):
         mock_k8s_action_run.machine.state = ActionRun.UNKNOWN
         last_attempt = mock_k8s_action_run.create_attempt()
         last_attempt.kubernetes_task_id = "test-kubernetes-task-id"
@@ -1965,6 +1971,7 @@ class TestKubernetesActionRun:
         assert mock_k8s_action_run.is_unknown
         assert mock_get_cluster.return_value.recover.call_count == 0
         assert mock_k8s_action_run.end_time is not None
+        mock_get_projected_sa_volumes.assert_called_once_with("mock_namespace")
 
     @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
     def test_kill_task_k8s(self, mock_cluster_repo, mock_k8s_action_run):
