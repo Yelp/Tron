@@ -33,7 +33,6 @@ from tron.utils import exitcode
 from tron.utils import maybe_decode
 from tron.utils import proxy
 from tron.utils import timeutils
-from tron.utils.authentication import get_projected_sa_volumes
 from tron.utils.observer import Observable
 from tron.utils.observer import Observer
 from tron.utils.state import Machine
@@ -347,10 +346,6 @@ class ActionRun(Observable):
     @property
     def name(self):
         return self.action_name
-
-    @property
-    def service_name(self):
-        return self.job_run_id.split(".", 1)[0]
 
     @property
     def last_attempt(self):
@@ -1169,7 +1164,7 @@ class KubernetesActionRun(ActionRun, Observer):
                 env=build_environment(original_env=attempt.command_config.env, run_id=self.id),
                 secret_env=attempt.command_config.secret_env,
                 secret_volumes=attempt.command_config.secret_volumes,
-                projected_sa_volumes=get_projected_sa_volumes(self.service_name),
+                projected_sa_volumes=attempt.command_config.projected_sa_volumes,
                 field_selector_env=attempt.command_config.field_selector_env,
                 serializer=filehandler.OutputStreamSerializer(self.output_path),
                 volumes=attempt.command_config.extra_volumes,
@@ -1245,7 +1240,7 @@ class KubernetesActionRun(ActionRun, Observer):
             field_selector_env=last_attempt.command_config.field_selector_env,
             serializer=filehandler.OutputStreamSerializer(self.output_path),
             secret_volumes=last_attempt.command_config.secret_volumes,
-            projected_sa_volumes=get_projected_sa_volumes(self.service_name),
+            projected_sa_volumes=last_attempt.command_config.projected_sa_volumes,
             volumes=last_attempt.command_config.extra_volumes,
             cap_add=last_attempt.command_config.cap_add,
             cap_drop=last_attempt.command_config.cap_drop,

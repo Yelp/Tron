@@ -9,7 +9,6 @@ from typing import TYPE_CHECKING
 
 from task_processing.interfaces.event import Event
 from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig
-from task_processing.plugins.kubernetes.types import ProjectedSAVolume
 from task_processing.runners.subscription import Subscription
 from task_processing.task_processor import TaskProcessor
 from twisted.internet.defer import Deferred
@@ -22,6 +21,7 @@ from tron.actioncommand import ActionCommand
 from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigKubernetes
 from tron.config.schema import ConfigNodeAffinity
+from tron.config.schema import ConfigProjectedSAVolume
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSecretVolume
 from tron.config.schema import ConfigVolume
@@ -478,7 +478,7 @@ class KubernetesCluster:
         env: Dict[str, str],
         secret_env: Dict[str, ConfigSecretSource],
         secret_volumes: Collection[ConfigSecretVolume],
-        projected_sa_volumes: List[ProjectedSAVolume],
+        projected_sa_volumes: Collection[ConfigProjectedSAVolume],
         field_selector_env: Dict[str, ConfigFieldSelectorSource],
         volumes: Collection[ConfigVolume],
         cap_add: Collection[str],
@@ -514,7 +514,7 @@ class KubernetesCluster:
                 environment=env,
                 secret_environment={k: v._asdict() for k, v in secret_env.items()},
                 secret_volumes=[volume._asdict() for volume in secret_volumes],
-                projected_sa_volumes=projected_sa_volumes,
+                projected_sa_volumes=[volume._asdict() for volume in projected_sa_volumes],
                 field_selector_environment={k: v._asdict() for k, v in field_selector_env.items()},
                 cap_add=cap_add,
                 cap_drop=cap_drop,

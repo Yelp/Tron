@@ -7,6 +7,7 @@ from task_processing.interfaces.event import Event
 from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig
 
 from tron.config.schema import ConfigFieldSelectorSource
+from tron.config.schema import ConfigProjectedSAVolume
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSecretVolume
 from tron.config.schema import ConfigSecretVolumeItem
@@ -594,7 +595,7 @@ def test_create_task_with_config(mock_kubernetes_cluster):
     ]
     config_secrets = {"TEST_SECRET": ConfigSecretSource(secret_name="tron-secret-test-secret--A", key="secret_A")}
     config_field_selector = {"POD_IP": ConfigFieldSelectorSource(field_path="status.podIP")}
-    arg_sa_volumes = [{"audience": "for.bar.com", "container_path": "/var/run/secrets/whatever"}]
+    config_sa_volumes = [ConfigProjectedSAVolume(audience="for.bar.com", container_path="/var/run/secrets/whatever")]
 
     expected_args = {
         "name": mock.ANY,
@@ -606,7 +607,7 @@ def test_create_task_with_config(mock_kubernetes_cluster):
         "environment": {"TEST_ENV": "foo"},
         "secret_environment": {k: v._asdict() for k, v in config_secrets.items()},
         "secret_volumes": [v._asdict() for v in config_secret_volumes],
-        "projected_sa_volumes": arg_sa_volumes,
+        "projected_sa_volumes": [v._asdict() for v in config_sa_volumes],
         "field_selector_environment": {k: v._asdict() for k, v in config_field_selector.items()},
         "volumes": [v._asdict() for v in default_volumes + config_volumes],
         "cap_add": ["KILL"],
@@ -631,7 +632,7 @@ def test_create_task_with_config(mock_kubernetes_cluster):
         env=expected_args["environment"],
         secret_env=config_secrets,
         secret_volumes=config_secret_volumes,
-        projected_sa_volumes=arg_sa_volumes,
+        projected_sa_volumes=config_sa_volumes,
         field_selector_env=config_field_selector,
         volumes=config_volumes,
         cap_add=["KILL"],
