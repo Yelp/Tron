@@ -302,6 +302,13 @@ def make_master_jobs():
                             items=(schema.ConfigSecretVolumeItem(key="secret1", path="abcd", mode="777"),),
                         ),
                     ),
+                    projected_sa_volumes=(
+                        schema.ConfigProjectedSAVolume(
+                            container_path="/var/secrets/whatever",
+                            audience="foo.bar",
+                            expiration_seconds=1800,
+                        ),
+                    ),
                     node_selectors={"yelp.com/pool": "default"},
                     node_affinities=(
                         ConfigNodeAffinity(
@@ -449,6 +456,13 @@ class ConfigTestCase(TestCase):
                                 items=[
                                     dict(key="secret1", path="abcd", mode="777"),
                                 ],
+                            ),
+                        ],
+                        projected_sa_volumes=[
+                            dict(
+                                container_path="/var/secrets/whatever",
+                                audience="foo.bar",
+                                expiration_seconds=1800,
                             ),
                         ],
                         cap_add=["KILL"],

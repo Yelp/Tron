@@ -51,6 +51,7 @@ from tron.config.schema import ConfigKubernetes
 from tron.config.schema import ConfigMesos
 from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigParameter
+from tron.config.schema import ConfigProjectedSAVolume
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSecretVolume
 from tron.config.schema import ConfigSecretVolumeItem
@@ -345,6 +346,22 @@ class ValidateSecretVolume(Validator):
 valid_secret_volume = ValidateSecretVolume()
 
 
+class ValidateProjectedSAVolume(Validator):
+    config_class = ConfigProjectedSAVolume
+    optional = True
+    defaults = {
+        "expiration_seconds": 1800,
+    }
+    validators = {
+        "container_path": valid_string,
+        "audience": valid_string,
+        "expiration_seconds": valid_int,
+    }
+
+
+valid_projected_sa_volume = ValidateProjectedSAVolume()
+
+
 class ValidateFieldSelectorSource(Validator):
     config_class = ConfigFieldSelectorSource
     validators = {
@@ -536,6 +553,7 @@ class ValidateAction(Validator):
         "env": None,
         "secret_env": None,
         "secret_volumes": None,
+        "projected_sa_volumes": None,
         "field_selector_env": None,
         "extra_volumes": None,
         "trigger_downstreams": None,
@@ -576,6 +594,7 @@ class ValidateAction(Validator):
         "env": valid_dict,
         "secret_env": build_dict_value_validator(valid_secret_source),
         "secret_volumes": build_list_of_type_validator(valid_secret_volume, allow_empty=True),
+        "projected_sa_volumes": build_list_of_type_validator(valid_projected_sa_volume, allow_empty=True),
         "field_selector_env": build_dict_value_validator(valid_field_selector_source),
         "extra_volumes": build_list_of_type_validator(valid_volume, allow_empty=True),
         "trigger_downstreams": valid_trigger_downstreams,
@@ -625,6 +644,7 @@ class ValidateCleanupAction(Validator):
         "env": None,
         "secret_env": None,
         "secret_volumes": None,
+        "projected_sa_volumes": None,
         "field_selector_env": None,
         "extra_volumes": None,
         "trigger_downstreams": None,
@@ -660,6 +680,7 @@ class ValidateCleanupAction(Validator):
         "env": valid_dict,
         "secret_env": build_dict_value_validator(valid_secret_source),
         "secret_volumes": build_list_of_type_validator(valid_secret_volume, allow_empty=True),
+        "projected_sa_volumes": build_list_of_type_validator(valid_projected_sa_volume, allow_empty=True),
         "field_selector_env": build_dict_value_validator(valid_field_selector_source),
         "extra_volumes": build_list_of_type_validator(valid_volume, allow_empty=True),
         "trigger_downstreams": valid_trigger_downstreams,
