@@ -89,7 +89,7 @@ class DynamoDBStateStore:
                     items.extend(resp.result()["Responses"][self.name])
                     # add any potential unprocessed keys to the thread pool
                     if resp.result()["UnprocessedKeys"].get(self.name) and attempts_to_retrieve_keys < MAX_ATTEMPTS:
-                        cand_keys_list.append(resp.result()["UnprocessedKeys"][self.name]["Keys"])
+                        cand_keys_list.extend(resp.result()["UnprocessedKeys"][self.name]["Keys"])
                     elif attempts_to_retrieve_keys >= MAX_ATTEMPTS:
                         failed_keys = resp.result()["UnprocessedKeys"][self.name]["Keys"]
                         error = Exception(
