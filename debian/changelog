@@ -1,3 +1,11 @@
+tron (2.2.2) jammy; urgency=medium
+
+  * 2.2.2 tagged with 'make release'
+    Commit: Merge pull request #977 from Yelp/u/jfong/tron_quick_fix
+    Fix UnprocessedKeys bug when restoring from dynamodb
+
+ -- Jen Patague <jfong@yelp.com>  Mon, 17 Jun 2024 17:50:59 -0700
+
 tron (2.2.1) jammy; urgency=medium
 
   * 2.2.1 tagged with 'make release'
