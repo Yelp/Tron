@@ -175,18 +175,18 @@ def read_log_stream_for_action_run(
 
     # yelp_clog S3LogsReader is a newer reader that is supposed to replace scribe readers eventually.
     if use_s3_reader:
-        # S3 reader uses UTC as a standard timezone
+        # S3 reader accepts datetime objects and respects timezone information
         # if min_date and max_date timezone is missing, astimezone() will assume local timezone and convert it to UTC
-        start_date = min_date.astimezone(datetime.timezone.utc).date()
-        end_date = (
-            max_date.astimezone(datetime.timezone.utc).date()
+        start_datetime = min_date.astimezone(datetime.timezone.utc)
+        end_datetime = (
+            max_date.astimezone(datetime.timezone.utc)
             if max_date
-            else datetime.datetime.now().astimezone(datetime.timezone.utc).date()
+            else datetime.datetime.now().astimezone(datetime.timezone.utc)
         )
 
         log.debug("Using S3LogsReader to retrieve logs")
-        s3_reader = S3LogsReader(ecosystem, superregion).get_log_reader(
-            log_name=stream_name, min_date=start_date, max_date=end_date
+        s3_reader = S3LogsReader(superregion).get_log_reader(
+            log_name=stream_name, start_datetime=start_datetime, end_datetime=end_datetime
         )
         paasta_logs.fetch(s3_reader, max_lines)
     else:

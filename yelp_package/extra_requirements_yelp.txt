@@ -9,6 +9,6 @@ srv-configs==1.3.4  # required by monk
 tenacity==8.2.3 # required by yelp-logging
 thriftpy2==0.4.20   # required by monk
 yelp-cgeom==1.3.1   # required by geogrid
-yelp-clog==7.1.2  # scribereader dependency
+yelp-clog==7.1.4  # scribereader dependency
 yelp-logging==4.17.0  # scribereader dependency
 yelp-meteorite==2.1.1  # used by task-processing to emit metrics, clusterman-metrics dependency
