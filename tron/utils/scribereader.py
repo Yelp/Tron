@@ -171,27 +171,19 @@ def read_log_stream_for_action_run(
 
     paasta_logs = PaaSTALogs(component, paasta_cluster, action_run_id)
     stream_name = paasta_logs.stream_name
+
+    today = datetime.date.today()
+    start_date = min_date.date()
     end_date: Optional[datetime.date]
 
     # yelp_clog S3LogsReader is a newer reader that is supposed to replace scribe readers eventually.
     if use_s3_reader:
-        # S3 reader uses UTC as a standard timezone
-        # if min_date and max_date timezone is missing, astimezone() will assume local timezone and convert it to UTC
-        start_date = min_date.astimezone(datetime.timezone.utc).date()
-        end_date = (
-            max_date.astimezone(datetime.timezone.utc).date()
-            if max_date
-            else datetime.datetime.now().astimezone(datetime.timezone.utc).date()
-        )
+        end_date = max_date.date() if max_date else today
 
         log.debug("Using S3LogsReader to retrieve logs")
-        s3_reader = S3LogsReader(ecosystem, superregion).get_log_reader(
-            log_name=stream_name, min_date=start_date, max_date=end_date
-        )
+        s3_reader = S3LogsReader(ecosystem).get_log_reader(log_name=stream_name, min_date=start_date, max_date=end_date)
         paasta_logs.fetch(s3_reader, max_lines)
     else:
-        today = datetime.date.today()
-        start_date = min_date.date()
         end_date = max_date.date() if max_date else None
         use_tailer = today in {start_date, end_date}
         use_reader = start_date != today and end_date is not None

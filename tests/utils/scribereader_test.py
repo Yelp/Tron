@@ -41,10 +41,6 @@ def test_read_log_stream_for_action_run_yelp_clog():
         "tron.config.static_config.load_yaml_file",
         autospec=True,
     ), mock.patch(
-        "tron.utils.scribereader.get_ecosystem", autospec=True, return_value="fake"
-    ), mock.patch(
-        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake"
-    ), mock.patch(
         "tron.utils.scribereader.S3LogsReader", autospec=True
     ) as mock_s3_reader:
 
@@ -82,47 +78,6 @@ def test_read_log_stream_for_action_run_yelp_clog():
             paasta_cluster="fake",
         )
     assert output == ["line 1", "line 2"]
-
-
-@pytest.mark.parametrize(
-    "local_datetime, expected_date",
-    [
-        (
-            datetime.datetime(2024, 2, 29, 23, 59, 59, tzinfo=datetime.timezone(datetime.timedelta(hours=+3))),
-            datetime.date(2024, 2, 29),
-        ),
-        (
-            datetime.datetime(2024, 2, 29, 23, 59, 59, tzinfo=datetime.timezone(datetime.timedelta(hours=-3))),
-            datetime.date(2024, 3, 1),
-        ),
-    ],
-)
-def test_read_log_stream_for_action_run_yelp_clog_tz(local_datetime, expected_date):
-    with mock.patch(
-        "staticconf.read",
-        autospec=True,
-        side_effect=static_conf_patch({"logging.use_s3_reader": True, "logging.max_lines_to_display": 1000}),
-    ), mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True,), mock.patch(
-        "tron.config.static_config.load_yaml_file",
-        autospec=True,
-    ), mock.patch(
-        "tron.utils.scribereader.get_ecosystem", autospec=True, return_value="fake"
-    ), mock.patch(
-        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake"
-    ), mock.patch(
-        "tron.utils.scribereader.S3LogsReader", autospec=True
-    ) as mock_s3_log_reader:
-
-        read_log_stream_for_action_run(
-            "namespace.job.1234.action",
-            component="stdout",
-            min_date=local_datetime,
-            max_date=local_datetime,
-            paasta_cluster="fake",
-        )
-    mock_s3_log_reader.return_value.get_log_reader.assert_called_once_with(
-        log_name=mock.ANY, min_date=expected_date, max_date=expected_date
-    )
 
 
 def test_read_log_stream_for_action_run_min_date_and_max_date_today():
