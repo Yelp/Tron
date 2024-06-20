@@ -170,7 +170,6 @@ ConfigAction = config_object_factory(
         "env",  # dict
         "secret_env",  # dict of str, ConfigSecretSource
         "secret_volumes",  # List of ConfigSecretVolume
-        "projected_sa_volumes",  # List of ConfigProjectedSAVolume
         "field_selector_env",  # dict of str, ConfigFieldSelectorSource
         "extra_volumes",  # List of ConfigVolume
         "expected_runtime",  # datetime.Timedelta
@@ -210,7 +209,6 @@ ConfigCleanupAction = config_object_factory(
         "env",  # dict
         "secret_env",  # dict of str, ConfigSecretSource
         "secret_volumes",  # List of ConfigSecretVolume
-        "projected_sa_volumes",  # List of ConfigProjectedSAVolume
         "field_selector_env",  # dict of str, ConfigFieldSelectorSource
         "extra_volumes",  # List of ConfigVolume
         "trigger_downstreams",  # None, bool or dict
@@ -255,6 +253,7 @@ ConfigSecretVolumeItem = config_object_factory(
     optional=["mode"],
 )
 
+
 _ConfigSecretVolume = config_object_factory(
     name="ConfigSecretVolume",
     required=["secret_volume_name", "secret_name", "container_path"],
@@ -283,12 +282,6 @@ ConfigSecretSource = config_object_factory(
     name="ConfigSecretSource",
     required=["secret_name", "key"],
     optional=[],
-)
-
-ConfigProjectedSAVolume = config_object_factory(
-    name="ConfigProjectedSAVolume",
-    required=["container_path", "audience"],
-    optional=["expiration_seconds"],
 )
 
 ConfigFieldSelectorSource = config_object_factory(
