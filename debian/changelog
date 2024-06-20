@@ -1,3 +1,18 @@
+tron (2.2.3) jammy; urgency=medium
+
+  * 2.2.3 tagged with 'make release'
+    Commit: Reverts all changes back through 2.1.1 and retains urgent
+    unprocessedkeys fix (#980)  * Revert "pass around projected SA
+    configs properly"  This reverts commit
+    12b1bf27e7b9e9f3fd0963f9d073d2552a58115f.  * Revert "Merge remote-
+    tracking branch "origin/u/mpiano/SEC-18955""  This reverts commit
+    ea6376d72ffdd269e11cb9338d4f0c656bcd6f66, reversing changes made to
+    4038f1e173aeff932b6e060fc2690f7aa502a85d.  * Revert "Use
+    S3LogsReader with superregion and UTC timezone (#972)"  This reverts
+    commit af73799363549a082eea11f0f98d5c7f4810abe4.
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Thu, 20 Jun 2024 10:07:42 -0700
+
 tron (2.2.2) jammy; urgency=medium
 
   * 2.2.2 tagged with 'make release'
