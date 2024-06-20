@@ -11,6 +11,7 @@ from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigNodeAffinity
+from tron.config.schema import ConfigProjectedSAVolume
 from tron.config.schema import ConfigSecretVolume
 
 log = logging.getLogger(__name__)
@@ -33,6 +34,7 @@ class ActionCommandConfig:
     env: dict = field(default_factory=dict)
     secret_env: dict = field(default_factory=dict)
     secret_volumes: List[ConfigSecretVolume] = field(default_factory=list)
+    projected_sa_volumes: List[ConfigProjectedSAVolume] = field(default_factory=list)
     field_selector_env: dict = field(default_factory=dict)
     extra_volumes: set = field(default_factory=set)
     node_selectors: dict = field(default_factory=dict)
@@ -90,6 +92,7 @@ class Action:
             env=config.env or {},
             secret_env=config.secret_env or {},
             secret_volumes=config.secret_volumes or [],
+            projected_sa_volumes=config.projected_sa_volumes or [],
             field_selector_env=config.field_selector_env or {},
             cap_add=config.cap_add or [],
             cap_drop=config.cap_drop or [],
