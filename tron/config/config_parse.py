@@ -3,7 +3,8 @@ Parse a dictionary structure and return an immutable structure that
 contain a validated configuration.
 
 
-WARNING: it is *NOT* safe to delete classes that are being validated (or their attributes) if there are any references to them in DynamoDB! (See DAR-2328)
+WARNING: it is *NOT* safe to delete classes that are being validated (or their attributes) if there are any references to them in DynamoDB until TRON-2200 is complete! (See DAR-2328)
+NOTE: this means that reverting a change that adds a new attribute is not safe :)
 """
 import datetime
 import getpass
