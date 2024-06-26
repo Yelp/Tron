@@ -28,7 +28,7 @@ google-auth==1.23.0
 http-parser==0.9.0
 humanize==0.5.1
 hyperlink==19.0.0
-idna==2.8
+idna==3.7
 incremental==22.10.0
 ipdb==0.13.2
 ipython==8.10.0
