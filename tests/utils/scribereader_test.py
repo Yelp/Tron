@@ -85,19 +85,19 @@ def test_read_log_stream_for_action_run_yelp_clog():
 
 
 @pytest.mark.parametrize(
-    "local_datetime, expected_date",
+    "local_datetime, expected_datetime",
     [
         (
             datetime.datetime(2024, 2, 29, 23, 59, 59, tzinfo=datetime.timezone(datetime.timedelta(hours=+3))),
-            datetime.date(2024, 2, 29),
+            datetime.datetime(2024, 2, 29, 20, 59, 59, tzinfo=datetime.timezone.utc),
         ),
         (
             datetime.datetime(2024, 2, 29, 23, 59, 59, tzinfo=datetime.timezone(datetime.timedelta(hours=-3))),
-            datetime.date(2024, 3, 1),
+            datetime.datetime(2024, 3, 1, 2, 59, 59, tzinfo=datetime.timezone.utc),
         ),
     ],
 )
-def test_read_log_stream_for_action_run_yelp_clog_tz(local_datetime, expected_date):
+def test_read_log_stream_for_action_run_yelp_clog_tz(local_datetime, expected_datetime):
     with mock.patch(
         "staticconf.read",
         autospec=True,
@@ -121,7 +121,7 @@ def test_read_log_stream_for_action_run_yelp_clog_tz(local_datetime, expected_da
             paasta_cluster="fake",
         )
     mock_s3_log_reader.return_value.get_log_reader.assert_called_once_with(
-        log_name=mock.ANY, min_date=expected_date, max_date=expected_date
+        log_name=mock.ANY, start_datetime=expected_datetime, end_datetime=expected_datetime
     )
 
 
