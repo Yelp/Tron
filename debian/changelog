@@ -1,3 +1,10 @@
+tron (2.2.6) jammy; urgency=medium
+
+  * 2.2.6 tagged with 'make release'
+    Commit: Update scribereader tests (#983)
+
+ -- Yaroslav Liakhovskyi <yaro@yelp.com>  Fri, 28 Jun 2024 01:41:29 -0700
+
 tron (2.2.5) jammy; urgency=medium
 
   * 2.2.5 tagged with 'make release'
