@@ -21,7 +21,7 @@ pytimeparse
 pytz
 PyYAML>=5.1
 requests
-task_processing[mesos_executor,k8s]>=1.1.0
+task_processing[mesos_executor,k8s]>=1.2.0
 Twisted>=19.7.0
 urllib3>=1.24.2
 Werkzeug>=0.15.3
