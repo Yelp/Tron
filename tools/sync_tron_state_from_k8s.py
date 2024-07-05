@@ -7,6 +7,8 @@ Update tron state from k8s api if tron has not yet updated correctly
 This will search for completed pods in the cluster specified in the kubeconfig in the `tron` namespace and use tronctl to transition any whose states do not match.
 """
 import argparse
+import base64
+import hashlib
 import logging
 import subprocess
 import sys
@@ -35,6 +37,23 @@ TRON_MODIFIABLE_STATES = [
 ]
 
 log = logging.getLogger("sync_tron_from_k8s")
+
+
+# NOTE: Copied from paasta_tools.kubernetes_tools, if it changes there it must be updated here
+def limit_size_with_hash(name: str, limit: int = 63, suffix: int = 4) -> str:
+    """Returns `name` unchanged if it's length does not exceed the `limit`.
+    Otherwise, returns truncated `name` with it's hash of size `suffix`
+    appended.
+
+    base32 encoding is chosen as it satisfies the common requirement in
+    various k8s names to be alphanumeric.
+    """
+    if len(name) > limit:
+        digest = hashlib.md5(name.encode()).digest()
+        hash = base64.b32encode(digest).decode().replace("=", "").lower()
+        return f"{name[:(limit-suffix-1)]}-{hash[:suffix]}"
+    else:
+        return name
 
 
 def parse_args():
@@ -103,7 +122,7 @@ def get_tron_state_from_api(tron_server: str, num_runs: int = 100) -> List[Dict[
     )
 
     for job in jobs:
-        # What am I doing wrong here, why do I have to append /api
+        # Update job URL to be used with API instead of web
         url = f'/api{job["url"]}'
         log.debug(f'Fetching job {job["name"]} at {url}')
         job_runs = client.job(
@@ -120,16 +139,15 @@ def get_matching_pod(action_run: Dict[str, Any], pods: Dict[str, V1Pod]) -> Opti
     action_name = action_run["action_name"]
     job_name = action_run["job_name"]
     run_num = action_run["run_num"]
-
     service, job = job_name.split(".")
-    # TODO:  how to fetch k8s shortened instance name to match labels?
     instance_name = f"{job}.{action_name}"
+    sanitized_instance_name = limit_size_with_hash(instance_name)
     matching_pods = sorted(
         [
             pod
             for pod in pods.values()
             if pod.metadata.labels["paasta.yelp.com/service"] == service
-            and pod.metadata.labels["paasta.yelp.com/instance"] == instance_name
+            and pod.metadata.labels["paasta.yelp.com/instance"] == sanitized_instance_name
             and pod.metadata.labels["tron.yelp.com/run_num"] == run_num
         ],
         # If action has retries, there will be multiple pods w/ same job_run; we only want the latest

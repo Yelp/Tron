@@ -20,7 +20,6 @@ def create_mock_pod(name: str, phase: str, labels: Dict[str, str], creation_time
 class TestSyncTronStateFromK8s:
     @pytest.fixture(autouse=True)
     def setup_test_data(self):
-        # oops why did I make this a dict
         self.pods = {
             p.metadata.name: p
             for p in [
@@ -84,12 +83,25 @@ class TestSyncTronStateFromK8s:
                     },
                     "2024-01-01T01:05:00",
                 ),
+                create_mock_pod(
+                    # Technically this pod name would not actually exist
+                    "service.job_with_an_extremely_extremely_extremely_extremely_extremely_long_name.10.action",
+                    "Succeeded",
+                    {
+                        "paasta.yelp.com/service": "service",
+                        # If PaaSTA's setup_tron_namespace changes how we create these labels, this test will need updating
+                        "paasta.yelp.com/instance": "job_with_an_extremely_extremely_extremely_extremely_extrem-26i4",
+                        "tron.yelp.com/run_num": "10",
+                    },
+                    "2024-01-01T01:05:00",
+                ),
             ]
         }
 
     # 1 matching pod by labels
     # 2 matching pod by labels
     # no matching pod
+    # test matching by hashed instance name
     @pytest.mark.parametrize(
         "job_name,run_num,expected_pod_name",
         [
@@ -97,6 +109,11 @@ class TestSyncTronStateFromK8s:
             ("service.job", "4", "service.job.4.action-nomatch-retry2"),
             ("service.job2", "10", None),
             ("service2.job", "1", None),
+            (
+                "service.job_with_an_extremely_extremely_extremely_extremely_extremely_long_name",
+                "10",
+                "service.job_with_an_extremely_extremely_extremely_extremely_extremely_long_name.10.action",
+            ),
         ],
     )
     def test_get_matching_pod(self, job_name, run_num, expected_pod_name):
