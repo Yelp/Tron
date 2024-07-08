@@ -68,6 +68,8 @@ class KubernetesTask(ActionCommand):
 
         self.log.info(f"Kubernetes task {self.get_kubernetes_id()} created with config {self.get_config()}")
 
+        self.is_lost_task = False
+
     def get_event_logger(self) -> Logger:
         """
         Get or create a logger for a the action run associated with this task.
@@ -252,6 +254,7 @@ class KubernetesTask(ActionCommand):
                 self.log.warning(f"    tronctl skip {self.id}")
                 self.log.warning("If you want Tron to NOT run it and consider it as a failure, fail it with:")
                 self.log.warning(f"    tronctl fail {self.id}")
+                self.is_lost_task = True
                 self.exited(None)
             else:
                 self.log.info(
@@ -280,10 +283,12 @@ class KubernetesCluster:
         enabled: bool = True,
         default_volumes: Optional[List[ConfigVolume]] = None,
         pod_launch_timeout: Optional[int] = None,
+        disable_retries_on_lost: bool = False,
     ):
         # general k8s config
         self.kubeconfig_path = kubeconfig_path
         self.enabled = enabled
+        self.disable_retries_on_lost = disable_retries_on_lost
         self.default_volumes: Optional[List[ConfigVolume]] = default_volumes or []
         self.pod_launch_timeout = pod_launch_timeout or DEFAULT_POD_LAUNCH_TIMEOUT_S
         # creating a task_proc executor has a couple steps:
@@ -618,6 +623,7 @@ class KubernetesCluster:
 class KubernetesClusterRepository:
     # Kubernetes config
     kubernetes_enabled: bool = False
+    kubernetes_disable_retries_on_lost: bool = False
     kubeconfig_path: Optional[str] = None
     pod_launch_timeout: Optional[int] = None
     default_volumes: Optional[List[ConfigVolume]] = None
@@ -658,6 +664,7 @@ class KubernetesClusterRepository:
     def configure(cls, kubernetes_options: ConfigKubernetes) -> None:
         cls.kubeconfig_path = kubernetes_options.kubeconfig_path
         cls.kubernetes_enabled = kubernetes_options.enabled
+        cls.kubernetes_disable_retries_on_lost = kubernetes_options.disable_retries_on_lost
         cls.default_volumes = kubernetes_options.default_volumes
 
         for cluster in cls.clusters.values():

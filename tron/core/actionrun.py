@@ -1314,8 +1314,38 @@ class KubernetesActionRun(ActionRun, Observer):
 
         return "\n".join(msgs)
 
+    def _exit_unsuccessful(
+        self, exit_status=None, retry_original_command=True, is_lost_task=False
+    ) -> Optional[Union[bool, ActionCommand]]:
+
+        k8s_cluster = KubernetesClusterRepository.get_cluster()
+        disable_retries_on_lost = False if not k8s_cluster else k8s_cluster.disable_retries_on_lost
+
+        if self.is_done:
+            log.info(
+                f"{self} got exit code {exit_status} but already in terminal " f'state "{self.state}", not retrying',
+            )
+            return None
+        if self.last_attempt is not None:
+            self.last_attempt.exit(exit_status)
+        if self.retries_remaining is not None:
+            if disable_retries_on_lost and is_lost_task:
+                log.info(f"{self} skipping auto-retries due to disable_retries_on_lost being enabled.")
+            else:
+                if self.retries_remaining > 0:
+                    self.retries_remaining -= 1
+                    return self.restart(original_command=retry_original_command)
+                else:
+                    log.info(
+                        f"Reached maximum number of retries: {len(self.attempts)}",
+                    )
+        if exit_status is None:
+            return self._done("fail_unknown", exit_status)
+        else:
+            return self._done("fail", exit_status)
+
     def handle_action_command_state_change(
-        self, action_command: ActionCommand, event: str, event_data=None
+        self, action_command: KubernetesTask, event: str, event_data=None
     ) -> Optional[Union[bool, ActionCommand]]:
         """
         Observe ActionCommand state changes and transition the ActionCommand state machine to a new state.
@@ -1331,7 +1361,7 @@ class KubernetesActionRun(ActionRun, Observer):
         if event == ActionCommand.EXITING:
             if action_command.exit_status is None:
                 # This is different from SSHActionRun - allows retries to happen, if configured
-                return self._exit_unsuccessful(None)
+                return self._exit_unsuccessful(None, is_lost_task=action_command.is_lost_task)
 
             if not action_command.exit_status:
                 return self.success()
