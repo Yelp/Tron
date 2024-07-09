@@ -280,14 +280,14 @@ class KubernetesCluster:
         enabled: bool = True,
         default_volumes: Optional[List[ConfigVolume]] = None,
         pod_launch_timeout: Optional[int] = None,
-        old_kubeconfig_paths: Optional[List[str]] = None,
+        watcher_kubeconfig_paths: Optional[List[str]] = None,
     ):
         # general k8s config
         self.kubeconfig_path = kubeconfig_path
         self.enabled = enabled
         self.default_volumes: Optional[List[ConfigVolume]] = default_volumes or []
         self.pod_launch_timeout = pod_launch_timeout or DEFAULT_POD_LAUNCH_TIMEOUT_S
-        self.old_kubeconfig_paths = old_kubeconfig_paths or ()
+        self.watcher_kubeconfig_paths = watcher_kubeconfig_paths or ()
         # creating a task_proc executor has a couple steps:
         # * create a TaskProcessor
         # * load the desired plugin (in this case, the k8s one)
@@ -342,7 +342,7 @@ class KubernetesCluster:
                     "namespace": "tron",
                     "version": __version__,
                     "kubeconfig_path": self.kubeconfig_path,
-                    "old_kubeconfig_paths": self.old_kubeconfig_paths,
+                    "watcher_kubeconfig_paths": self.watcher_kubeconfig_paths,
                     "task_configs": [task.get_config() for task in self.tasks.values()],
                 },
             )
@@ -624,7 +624,7 @@ class KubernetesClusterRepository:
     kubeconfig_path: Optional[str] = None
     pod_launch_timeout: Optional[int] = None
     default_volumes: Optional[List[ConfigVolume]] = None
-    old_kubeconfig_paths: Optional[Collection[str]] = ()
+    watcher_kubeconfig_paths: Optional[Collection[str]] = ()
 
     # metadata config
     clusters: Dict[str, KubernetesCluster] = {}
@@ -650,7 +650,7 @@ class KubernetesClusterRepository:
                 kubeconfig_path=kubeconfig_path,
                 enabled=cls.kubernetes_enabled,
                 default_volumes=cls.default_volumes,
-                old_kubeconfig_paths=cls.old_kubeconfig_paths,
+                watcher_kubeconfig_paths=cls.watcher_kubeconfig_paths,
             )
             cls.clusters[kubeconfig_path] = cluster
 
@@ -666,7 +666,7 @@ class KubernetesClusterRepository:
         cls.kubeconfig_path = kubernetes_options.kubeconfig_path
         cls.kubernetes_enabled = kubernetes_options.enabled
         cls.default_volumes = kubernetes_options.default_volumes
-        cls.old_kubeconfig_paths = kubernetes_options.old_kubeconfig_paths
+        cls.watcher_kubeconfig_paths = kubernetes_options.watcher_kubeconfig_paths
 
         for cluster in cls.clusters.values():
             cluster.set_enabled(cls.kubernetes_enabled)
