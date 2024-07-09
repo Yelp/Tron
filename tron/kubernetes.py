@@ -68,8 +68,6 @@ class KubernetesTask(ActionCommand):
 
         self.log.info(f"Kubernetes task {self.get_kubernetes_id()} created with config {self.get_config()}")
 
-        self.is_lost_task = False
-
     def get_event_logger(self) -> Logger:
         """
         Get or create a logger for a the action run associated with this task.
@@ -254,8 +252,7 @@ class KubernetesTask(ActionCommand):
                 self.log.warning(f"    tronctl skip {self.id}")
                 self.log.warning("If you want Tron to NOT run it and consider it as a failure, fail it with:")
                 self.log.warning(f"    tronctl fail {self.id}")
-                self.is_lost_task = True
-                self.exited(None)
+                self.exited(exitcode.EXIT_KUBERNETES_TASK_LOST)
             else:
                 self.log.info(
                     f"Did not handle unknown kubernetes event type: {event}",
