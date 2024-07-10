@@ -165,7 +165,7 @@ def get_desired_state_from_pod(pod: V1Pod) -> str:
 
 
 def update_tron_from_pods(
-    jobs: List[Dict[str, Any]], pods: Dict[str, V1Pod], tronctl_wrapper: str = "tronctl", do_work: bool = True
+    jobs: List[Dict[str, Any]], pods: Dict[str, V1Pod], tronctl_wrapper: str = "tronctl", do_work: bool = False
 ):
     updated = []
     error = []
