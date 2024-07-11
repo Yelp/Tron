@@ -624,7 +624,7 @@ class KubernetesClusterRepository:
     kubeconfig_path: Optional[str] = None
     pod_launch_timeout: Optional[int] = None
     default_volumes: Optional[List[ConfigVolume]] = None
-    watcher_kubeconfig_paths: Optional[Collection[str]] = ()
+    watcher_kubeconfig_paths: Optional[List[str]] = None
 
     # metadata config
     clusters: Dict[str, KubernetesCluster] = {}
