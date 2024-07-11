@@ -1,3 +1,11 @@
+tron (2.3.0) jammy; urgency=medium
+
+  * 2.3.0 tagged with 'make release'
+    Commit: Merge pull request #989 from Yelp/jfong/TRON-2195-old-
+    kubeconfig-paths  TRON-2195: Support watcher_kubeconfig_paths
+
+ -- Jen Patague <jfong@yelp.com>  Thu, 11 Jul 2024 14:25:42 -0700
+
 tron (2.2.7) jammy; urgency=medium
 
   * 2.2.7 tagged with 'make release'
