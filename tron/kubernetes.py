@@ -287,7 +287,7 @@ class KubernetesCluster:
         self.enabled = enabled
         self.default_volumes: Optional[List[ConfigVolume]] = default_volumes or []
         self.pod_launch_timeout = pod_launch_timeout or DEFAULT_POD_LAUNCH_TIMEOUT_S
-        self.watcher_kubeconfig_paths = watcher_kubeconfig_paths or ()
+        self.watcher_kubeconfig_paths = watcher_kubeconfig_paths or []
         # creating a task_proc executor has a couple steps:
         # * create a TaskProcessor
         # * load the desired plugin (in this case, the k8s one)
