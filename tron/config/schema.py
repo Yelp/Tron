@@ -120,6 +120,7 @@ ConfigKubernetes = config_object_factory(
         "kubeconfig_path",
         "enabled",
         "default_volumes",
+        "watcher_kubeconfig_paths",
     ],
 )
 
