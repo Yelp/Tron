@@ -58,7 +58,12 @@ def limit_size_with_hash(name: str, limit: int = 63, suffix: int = 4) -> str:
 
 def parse_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--kubeconfig-path", dest="kubeconfig_path", help="KUBECONFIG path")
+    parser.add_argument(
+        "--kubeconfig-path",
+        dest="kubeconfig_path",
+        help="KUBECONFIG path; multiple can be specified to find pods in multiple clusters",
+        nargs="+",
+    )
     parser.add_argument(
         "--do-work",
         dest="do_work",
@@ -214,7 +219,9 @@ if __name__ == "__main__":
     jobs = get_tron_state_from_api(args.tron_url, args.num_runs)
     log.debug(f"Found {len(jobs)} jobs.")
 
-    pods = fetch_pods(args.kubeconfig_path)
+    pods = {}
+    for kubeconfig in args.kubeconfig_path:
+        pods.update(fetch_pods(kubeconfig))
     log.debug(f"Found {len(pods.keys())} pods.")
 
     update_tron_from_pods(jobs, pods, args.tronctl_wrapper, args.do_work)
