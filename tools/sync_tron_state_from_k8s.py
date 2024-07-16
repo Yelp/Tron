@@ -91,7 +91,7 @@ def parse_args():
 
     # We can only have multiple kubeconfigs, or multiple contexts with a single config
     if len(args.kubeconfig_path) > 1 and args.kubecontext:
-        parser.error("You can only specify a single --kubeconfig-path if specifying multiple --kubecontext arguments.")
+        parser.error("You can only specify a single --kubeconfig-path if specifying --kubecontext arguments.")
 
     # tron's base level is critical, not info, adjust accoringly
     if args.verbose:
