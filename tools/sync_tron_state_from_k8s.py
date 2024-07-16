@@ -10,6 +10,7 @@ import argparse
 import base64
 import hashlib
 import logging
+import os
 import subprocess
 import sys
 from typing import Any
@@ -65,6 +66,12 @@ def parse_args():
         nargs="+",
     )
     parser.add_argument(
+        "--kubecontext",
+        dest="kubecontext",
+        help="kubecontext to use from specified kubeconfig. multiple can be specified to find pods in multiple clusters, ONLY if a single kubeconfig-path is provided",
+        nargs="*",
+    )
+    parser.add_argument(
         "--do-work",
         dest="do_work",
         action="store_true",
@@ -81,6 +88,10 @@ def parse_args():
     parser.add_argument("-n", "--num-runs", dest="num_runs", default=100, help="Maximum number of job runs to retrieve")
     parser.add_argument("-v", "--verbose", dest="verbose", action="store_true", default=False, help="Verbose logging")
     args = parser.parse_args()
+
+    # We can only have multiple kubeconfigs, or multiple contexts with a single config
+    if len(args.kubeconfig_path) > 1 and args.kubecontext:
+        parser.error("You can only specify a single --kubeconfig-path if specifying multiple --kubecontext arguments.")
 
     # tron's base level is critical, not info, adjust accoringly
     if args.verbose:
@@ -102,7 +113,10 @@ def parse_args():
     return args
 
 
-def fetch_pods(kubeconfig_path: str) -> Dict[str, V1Pod]:
+def fetch_pods(kubeconfig_path: str, kubecontext: Optional[str]) -> Dict[str, V1Pod]:
+    if kubecontext:
+        # KubeClient only uses the environment variable
+        os.environ["KUBECONTEXT"] = kubecontext
     kube_client = KubeClient(kubeconfig_path=kubeconfig_path, user_agent="sync_tron_state_from_k8s")
 
     # Bit of a hack, no helper to fetch pods so reach into core api
@@ -220,8 +234,15 @@ if __name__ == "__main__":
     log.debug(f"Found {len(jobs)} jobs.")
 
     pods = {}
-    for kubeconfig in args.kubeconfig_path:
-        pods.update(fetch_pods(kubeconfig))
+    kube_client_args = (
+        [(args.kubeconfig_path[0], kubecontext) for kubecontext in args.kubecontext]
+        if args.kubecontext
+        else [(kubeconfig_path, None) for kubeconfig_path in args.kubeconfig_path]
+    )
+
+    for kubeconfig_path, kubecontext in kube_client_args:
+        pods.update(fetch_pods(kubeconfig_path, kubecontext))
+
     log.debug(f"Found {len(pods.keys())} pods.")
 
     update_tron_from_pods(jobs, pods, args.tronctl_wrapper, args.do_work)
