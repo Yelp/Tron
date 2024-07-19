@@ -395,6 +395,13 @@ AM).
 
 Cleanup Actions
 ---------------
+There are two possible approaches for cleanup that will depend on when you'd
+like the cleanup to occur. You can either:
+* Configure your code to cleanup on recieving a SIGTERM (NOTE: we have a
+  hardcoded limit of 30s before we send a SIGKILL and force-kill the action)
+  to handle cleanup whenever Tron or a human decides to tronctl kill a run
+* OR, use a cleanup action as detailed below to handle cleanup after a job run
+  has completed.
 
 Cleanup actions run after the job succeeds or fails. They are specified just
 like regular actions except that there is only one per job and it has no name
