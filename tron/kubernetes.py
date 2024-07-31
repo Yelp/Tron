@@ -5,6 +5,7 @@ from typing import Collection
 from typing import Dict
 from typing import List
 from typing import Optional
+from typing import Set
 from typing import TYPE_CHECKING
 
 from task_processing.interfaces.event import Event
@@ -280,12 +281,12 @@ class KubernetesCluster:
         enabled: bool = True,
         default_volumes: Optional[List[ConfigVolume]] = None,
         pod_launch_timeout: Optional[int] = None,
-        disable_retries_on_lost: bool = False,
+        non_retryable_exit_codes: Optional[Set[int]] = (),
     ):
         # general k8s config
         self.kubeconfig_path = kubeconfig_path
         self.enabled = enabled
-        self.disable_retries_on_lost = disable_retries_on_lost
+        self.non_retryable_exit_codes = non_retryable_exit_codes
         self.default_volumes: Optional[List[ConfigVolume]] = default_volumes or []
         self.pod_launch_timeout = pod_launch_timeout or DEFAULT_POD_LAUNCH_TIMEOUT_S
         # creating a task_proc executor has a couple steps:
@@ -620,7 +621,7 @@ class KubernetesCluster:
 class KubernetesClusterRepository:
     # Kubernetes config
     kubernetes_enabled: bool = False
-    kubernetes_disable_retries_on_lost: bool = False
+    kubernetes_non_retryable_exit_codes: Set[int] = ()
     kubeconfig_path: Optional[str] = None
     pod_launch_timeout: Optional[int] = None
     default_volumes: Optional[List[ConfigVolume]] = None
@@ -661,7 +662,7 @@ class KubernetesClusterRepository:
     def configure(cls, kubernetes_options: ConfigKubernetes) -> None:
         cls.kubeconfig_path = kubernetes_options.kubeconfig_path
         cls.kubernetes_enabled = kubernetes_options.enabled
-        cls.kubernetes_disable_retries_on_lost = kubernetes_options.disable_retries_on_lost
+        cls.kubernetes_non_retryable_exit_codes = kubernetes_options.non_retryable_exit_codes
         cls.default_volumes = kubernetes_options.default_volumes
 
         for cluster in cls.clusters.values():

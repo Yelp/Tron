@@ -116,7 +116,7 @@ def make_mesos_options():
 
 
 def make_k8s_options():
-    return schema.ConfigKubernetes(enabled=False, default_volumes=())
+    return schema.ConfigKubernetes(enabled=False, non_retryable_exit_codes=(), default_volumes=())
 
 
 def make_action(**kwargs):

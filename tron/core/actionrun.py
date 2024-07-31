@@ -590,7 +590,9 @@ class ActionRun(Observable):
 
         return self._done("fail", exit_status)
 
-    def _exit_unsuccessful(self, exit_status=None, retry_original_command=True) -> Optional[Union[bool, ActionCommand]]:
+    def _exit_unsuccessful(
+        self, exit_status=None, retry_original_command=True, non_retryable_exit_codes=[]
+    ) -> Optional[Union[bool, ActionCommand]]:
         if self.is_done:
             log.info(
                 f"{self} got exit code {exit_status} but already in terminal " f'state "{self.state}", not retrying',
@@ -599,13 +601,16 @@ class ActionRun(Observable):
         if self.last_attempt is not None:
             self.last_attempt.exit(exit_status)
         if self.retries_remaining is not None:
-            if self.retries_remaining > 0:
-                self.retries_remaining -= 1
-                return self.restart(original_command=retry_original_command)
+            if exit_status in non_retryable_exit_codes:
+                log.info(f"{self} skipping auto-retries due to non-retryable exit code was recieved.")
             else:
-                log.info(
-                    f"Reached maximum number of retries: {len(self.attempts)}",
-                )
+                if self.retries_remaining > 0:
+                    self.retries_remaining -= 1
+                    return self.restart(original_command=retry_original_command)
+                else:
+                    log.info(
+                        f"Reached maximum number of retries: {len(self.attempts)}",
+                    )
         if exit_status is None:
             return self._done("fail_unknown", exit_status)
         else:
@@ -1314,33 +1319,16 @@ class KubernetesActionRun(ActionRun, Observer):
 
         return "\n".join(msgs)
 
-    def _exit_unsuccessful(self, exit_status=None, retry_original_command=True) -> Optional[Union[bool, ActionCommand]]:
+    def _exit_unsuccessful(
+        self, exit_status=None, retry_original_command=True, non_retryable_exit_codes=[]
+    ) -> Optional[Union[bool, ActionCommand]]:
 
         k8s_cluster = KubernetesClusterRepository.get_cluster()
-        disable_retries_on_lost = False if not k8s_cluster else k8s_cluster.disable_retries_on_lost
+        non_retryable_exit_codes = () if not k8s_cluster else k8s_cluster.non_retryable_exit_codes
 
-        if self.is_done:
-            log.info(
-                f"{self} got exit code {exit_status} but already in terminal " f'state "{self.state}", not retrying',
-            )
-            return None
-        if self.last_attempt is not None:
-            self.last_attempt.exit(exit_status)
-        if self.retries_remaining is not None:
-            if disable_retries_on_lost and exit_status == exitcode.EXIT_KUBERNETES_TASK_LOST:
-                log.info(f"{self} skipping auto-retries due to disable_retries_on_lost being enabled.")
-            else:
-                if self.retries_remaining > 0:
-                    self.retries_remaining -= 1
-                    return self.restart(original_command=retry_original_command)
-                else:
-                    log.info(
-                        f"Reached maximum number of retries: {len(self.attempts)}",
-                    )
-        if exit_status is None:
-            return self._done("fail_unknown", exit_status)
-        else:
-            return self._done("fail", exit_status)
+        return super()._exit_unsuccessful(
+            exit_status=None, retry_original_command=True, non_retryable_exit_codes=non_retryable_exit_codes
+        )
 
     def handle_action_command_state_change(
         self, action_command: ActionCommand, event: str, event_data=None

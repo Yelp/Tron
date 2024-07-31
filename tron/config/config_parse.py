@@ -867,14 +867,14 @@ class ValidateKubernetes(Validator):
     defaults = {
         "kubeconfig_path": None,
         "enabled": False,
-        "disable_retries_on_lost": False,
+        "non_retryable_exit_codes": (),
         "default_volumes": (),
     }
 
     validators = {
         "kubeconfig_path": valid_string,
         "enabled": valid_bool,
-        "disable_retries_on_lost": valid_bool,
+        "non_retryable_exit_codes": build_list_of_type_validator(valid_int, allow_empty=True),
         "default_volumes": build_list_of_type_validator(valid_volume, allow_empty=True),
     }
 

@@ -119,7 +119,7 @@ ConfigKubernetes = config_object_factory(
     optional=[
         "kubeconfig_path",
         "enabled",
-        "disable_retries_on_lost",
+        "non_retryable_exit_codes",
         "default_volumes",
     ],
 )
