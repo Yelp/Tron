@@ -1744,5 +1744,40 @@ class TestValidMasterAddress:
             config_parse.valid_master_address(url, context)
 
 
+class TestValidKubeconfigPaths:
+    @setup
+    def setup_context(self):
+        self.context = config_utils.NullConfigContext
+
+    @pytest.mark.parametrize(
+        "kubeconfig_path,watcher_kubeconfig_paths",
+        [("/some/kubeconfig.conf", []), ("/another/kube/config", ["a_watcher_kubeconfig"])],
+    )
+    def test_valid(self, kubeconfig_path, watcher_kubeconfig_paths):
+        k8s_options = {
+            "enabled": True,
+            "kubeconfig_path": kubeconfig_path,
+            "watcher_kubeconfig_paths": watcher_kubeconfig_paths,
+        }
+        assert config_parse.valid_kubernetes_options.validate(k8s_options, self.context)
+
+    @pytest.mark.parametrize(
+        "kubeconfig_path,watcher_kubeconfig_paths",
+        [
+            (["/a/kubeconfig/in/a/list"], ["/a/valid/kubeconfig"]),
+            (None, []),
+            ("/some/kubeconfig.conf", "/not/a/list/kubeconfig"),
+        ],
+    )
+    def test_invalid(self, kubeconfig_path, watcher_kubeconfig_paths):
+        k8s_options = {
+            "enabled": True,
+            "kubeconfig_path": kubeconfig_path,
+            "watcher_kubeconfig_paths": watcher_kubeconfig_paths,
+        }
+        with pytest.raises(ConfigError):
+            config_parse.valid_kubernetes_options.validate(k8s_options, self.context)
+
+
 if __name__ == "__main__":
     run()

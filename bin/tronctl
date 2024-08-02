@@ -339,11 +339,12 @@ def control_objects(args: argparse.Namespace):
             yield request(urljoin(args.server, tron_id.url), data)
             # NOTE: ideally we'd add this message in the JobController handle_command() function, but having the API return terminal escape codes
             # sounds like a bad idea, so we're doing it here instead
-            print(
-                warning_output(
-                    "WARNING: jobs disabled with tronctl disable are *NOT* guaranteed to stay disabled. You must disable the job in yelpsoa-configs to guarantee it will not be re-enabled."
+            if args.command == "disable":
+                print(
+                    warning_output(
+                        "WARNING: jobs disabled with tronctl disable are *NOT* guaranteed to stay disabled. You must disable the job in yelpsoa-configs to guarantee it will not be re-enabled."
+                    )
                 )
-            )
 
 
 def retry(args):

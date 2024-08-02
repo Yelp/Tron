@@ -1,3 +1,22 @@
+tron (2.3.0) jammy; urgency=medium
+
+  * 2.3.0 tagged with 'make release'
+    Commit: Merge pull request #989 from Yelp/jfong/TRON-2195-old-
+    kubeconfig-paths  TRON-2195: Support watcher_kubeconfig_paths
+
+ -- Jen Patague <jfong@yelp.com>  Thu, 11 Jul 2024 14:25:42 -0700
+
+tron (2.2.7) jammy; urgency=medium
+
+  * 2.2.7 tagged with 'make release'
+    Commit: Only show disable warning on tronctl disable (#990)  I"m not
+    sure I was thinking here since this ended up unconditionally
+    printing the disable warning - but we can chalk this up to an
+    intentional PR campaign to warn folks and only show the warnings on
+    tronctl disable from now on :p
+
+ -- Luis Perez <luisp@yelp.com>  Thu, 11 Jul 2024 11:49:18 -0700
+
 tron (2.2.6) jammy; urgency=medium
 
   * 2.2.6 tagged with 'make release'

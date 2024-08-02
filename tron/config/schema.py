@@ -121,6 +121,7 @@ ConfigKubernetes = config_object_factory(
         "enabled",
         "non_retryable_exit_codes",
         "default_volumes",
+        "watcher_kubeconfig_paths",
     ],
 )
 
