@@ -591,7 +591,7 @@ class ActionRun(Observable):
         return self._done("fail", exit_status)
 
     def _exit_unsuccessful(
-        self, exit_status=None, retry_original_command=True, non_retryable_exit_codes=[]
+        self, exit_status=None, retry_original_command=True, non_retryable_exit_codes=()
     ) -> Optional[Union[bool, ActionCommand]]:
         if self.is_done:
             log.info(
@@ -1320,14 +1320,16 @@ class KubernetesActionRun(ActionRun, Observer):
         return "\n".join(msgs)
 
     def _exit_unsuccessful(
-        self, exit_status=None, retry_original_command=True, non_retryable_exit_codes=[]
+        self, exit_status=None, retry_original_command=True, non_retryable_exit_codes=()
     ) -> Optional[Union[bool, ActionCommand]]:
 
         k8s_cluster = KubernetesClusterRepository.get_cluster()
         non_retryable_exit_codes = () if not k8s_cluster else k8s_cluster.non_retryable_exit_codes
 
         return super()._exit_unsuccessful(
-            exit_status=None, retry_original_command=True, non_retryable_exit_codes=non_retryable_exit_codes
+            exit_status=exit_status,
+            retry_original_command=retry_original_command,
+            non_retryable_exit_codes=non_retryable_exit_codes,
         )
 
     def handle_action_command_state_change(
