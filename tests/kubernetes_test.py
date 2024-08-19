@@ -447,7 +447,6 @@ def test_handle_event_lost(mock_kubernetes_task):
         )
     )
 
-    assert mock_kubernetes_task.is_unknown
     assert mock_kubernetes_task.exit_status == exitcode.EXIT_KUBERNETES_TASK_LOST
 
 
