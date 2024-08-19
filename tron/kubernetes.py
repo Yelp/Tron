@@ -5,7 +5,6 @@ from typing import Collection
 from typing import Dict
 from typing import List
 from typing import Optional
-from typing import Tuple
 from typing import TYPE_CHECKING
 
 from task_processing.interfaces.event import Event
@@ -282,7 +281,7 @@ class KubernetesCluster:
         default_volumes: Optional[List[ConfigVolume]] = None,
         pod_launch_timeout: Optional[int] = None,
         watcher_kubeconfig_paths: Optional[List[str]] = None,
-        non_retryable_exit_codes: Optional[Tuple[int, ...]] = (),
+        non_retryable_exit_codes: Optional[List[int, ...]] = [],
     ):
         # general k8s config
         self.kubeconfig_path = kubeconfig_path
@@ -624,7 +623,7 @@ class KubernetesCluster:
 class KubernetesClusterRepository:
     # Kubernetes config
     kubernetes_enabled: bool = False
-    kubernetes_non_retryable_exit_codes: Tuple[int, ...] = ()
+    kubernetes_non_retryable_exit_codes: Optional[List[int, ...]] = []
     kubeconfig_path: Optional[str] = None
     pod_launch_timeout: Optional[int] = None
     default_volumes: Optional[List[ConfigVolume]] = None
