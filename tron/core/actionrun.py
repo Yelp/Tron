@@ -602,6 +602,7 @@ class ActionRun(Observable):
             self.last_attempt.exit(exit_status)
         if self.retries_remaining is not None:
             if exit_status in non_retryable_exit_codes:
+                self.retries_remaining = 0
                 log.info(f"{self} skipping auto-retries, received non-retryable exit code ({exit_status}).")
             else:
                 if self.retries_remaining > 0:
