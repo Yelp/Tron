@@ -1,4 +1,5 @@
 asynctest
+debugpy
 flake8
 mock
 mypy

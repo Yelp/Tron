@@ -1,6 +1,7 @@
 astroid==2.13.3
 asynctest==0.12.0
 cfgv==2.0.1
+debugpy==1.8.1
 dill==0.3.6
 distlib==0.3.6
 filelock==3.4.1

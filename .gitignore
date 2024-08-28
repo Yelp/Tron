@@ -9,6 +9,7 @@ tron.egg-info
 docs/_build/
 .idea
 .vscode
+.fleet
 tron.iml
 docs/images/
 *.dot

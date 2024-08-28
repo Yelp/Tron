@@ -252,7 +252,7 @@ class KubernetesTask(ActionCommand):
                 self.log.warning(f"    tronctl skip {self.id}")
                 self.log.warning("If you want Tron to NOT run it and consider it as a failure, fail it with:")
                 self.log.warning(f"    tronctl fail {self.id}")
-                self.exited(None)
+                self.exited(exitcode.EXIT_KUBERNETES_TASK_LOST)
             else:
                 self.log.info(
                     f"Did not handle unknown kubernetes event type: {event}",
@@ -281,10 +281,12 @@ class KubernetesCluster:
         default_volumes: Optional[List[ConfigVolume]] = None,
         pod_launch_timeout: Optional[int] = None,
         watcher_kubeconfig_paths: Optional[List[str]] = None,
+        non_retryable_exit_codes: Optional[List[int]] = [],
     ):
         # general k8s config
         self.kubeconfig_path = kubeconfig_path
         self.enabled = enabled
+        self.non_retryable_exit_codes = non_retryable_exit_codes
         self.default_volumes: Optional[List[ConfigVolume]] = default_volumes or []
         self.pod_launch_timeout = pod_launch_timeout or DEFAULT_POD_LAUNCH_TIMEOUT_S
         self.watcher_kubeconfig_paths = watcher_kubeconfig_paths or []
@@ -621,6 +623,7 @@ class KubernetesCluster:
 class KubernetesClusterRepository:
     # Kubernetes config
     kubernetes_enabled: bool = False
+    kubernetes_non_retryable_exit_codes: Optional[List[int]] = []
     kubeconfig_path: Optional[str] = None
     pod_launch_timeout: Optional[int] = None
     default_volumes: Optional[List[ConfigVolume]] = None
@@ -665,6 +668,7 @@ class KubernetesClusterRepository:
     def configure(cls, kubernetes_options: ConfigKubernetes) -> None:
         cls.kubeconfig_path = kubernetes_options.kubeconfig_path
         cls.kubernetes_enabled = kubernetes_options.enabled
+        cls.kubernetes_non_retryable_exit_codes = kubernetes_options.non_retryable_exit_codes
         cls.default_volumes = kubernetes_options.default_volumes
         cls.watcher_kubeconfig_paths = kubernetes_options.watcher_kubeconfig_paths
 
