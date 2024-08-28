@@ -1,3 +1,18 @@
+tron (2.4.0) jammy; urgency=medium
+
+  * 2.4.0 tagged with 'make release'
+    Commit: TRON-2208: Add toggle in tron config to disable retries on
+    LOST k8s jobs (#988)  Given that "LOST" means Tron has lost track of
+    a pod it already thought it had started for a job, attempting to
+    retry/start a replacement can be dangerous for non-idempotent jobs.
+    In the current state, these will consume retries, but with some of
+    our EKS migration methods, LOST tasks are more likely. Therefore, we
+    should have a way to temporarily pause retries on these.  ## Related
+    Issues - TRON-2208: Add toggle in Tron config to disable retries on
+    LOST k8s jobs
+
+ -- Luis Perez <luisp@yelp.com>  Wed, 28 Aug 2024 09:19:14 -0700
+
 tron (2.3.0) jammy; urgency=medium
 
   * 2.3.0 tagged with 'make release'
