@@ -1,3 +1,11 @@
+tron (2.4.1) jammy; urgency=medium
+
+  * 2.4.1 tagged with 'make release'
+    Commit: Merge pull request #994 from Yelp/StefanoChiodino-patch-1
+    Update tronweb.less
+
+ -- Luis Perez <luisp@yelp.com>  Tue, 03 Sep 2024 11:24:45 -0700
+
 tron (2.4.0) jammy; urgency=medium
 
   * 2.4.0 tagged with 'make release'
