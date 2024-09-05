@@ -80,7 +80,7 @@ def valid_number(type_func, value, config_context):
         name = type_func.__name__
         raise ConfigError(f"Value at {path} is not an {name}: {value}")
 
-    if value < 0:
+    if value < 0 and path != "MASTER.Tron.k8s_options.Kubernetes.non_retryable_exit_codes":
         raise ConfigError("%s must be a positive int." % path)
 
     return value
