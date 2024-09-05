@@ -34,6 +34,7 @@ from tron.config.config_utils import PartialConfigContext
 from tron.config.config_utils import StringFormatter
 from tron.config.config_utils import valid_bool
 from tron.config.config_utils import valid_dict
+from tron.config.config_utils import valid_exit_code
 from tron.config.config_utils import valid_float
 from tron.config.config_utils import valid_identifier
 from tron.config.config_utils import valid_int
@@ -874,7 +875,7 @@ class ValidateKubernetes(Validator):
     validators = {
         "kubeconfig_path": valid_string,
         "enabled": valid_bool,
-        "non_retryable_exit_codes": build_list_of_type_validator(valid_int, allow_empty=True),
+        "non_retryable_exit_codes": build_list_of_type_validator(valid_exit_code, allow_empty=True),
         "default_volumes": build_list_of_type_validator(valid_volume, allow_empty=True),
         "watcher_kubeconfig_paths": build_list_of_type_validator(valid_string, allow_empty=True),
     }
