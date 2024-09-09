@@ -72,7 +72,7 @@ def build_type_validator(validator, error_fmt):
     return f
 
 
-def valid_number(type_func, value, config_context):
+def valid_number(type_func, value, config_context, allow_negative=False):
     path = config_context.path
     try:
         value = type_func(value)
@@ -80,12 +80,13 @@ def valid_number(type_func, value, config_context):
         name = type_func.__name__
         raise ConfigError(f"Value at {path} is not an {name}: {value}")
 
-    if value < 0:
+    if value < 0 and not allow_negative:
         raise ConfigError("%s must be a positive int." % path)
 
     return value
 
 
+valid_exit_code = functools.partial(valid_number, int, allow_negative=True)
 valid_int = functools.partial(valid_number, int)
 valid_float = functools.partial(valid_number, float)
 
