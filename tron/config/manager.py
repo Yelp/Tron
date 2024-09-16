@@ -35,7 +35,7 @@ def write_raw(path, content):
         fh.write(maybe_decode(content))
 
 
-def read_raw(path):
+def read_raw(path) -> str:
     with open(path) as fh:
         return fh.read()
 
@@ -98,7 +98,7 @@ class ConfigManager:
         name = name.replace(".", "_").replace(os.path.sep, "_")
         return os.path.join(self.config_path, "%s.yaml" % name)
 
-    def read_raw_config(self, name=schema.MASTER_NAMESPACE):
+    def read_raw_config(self, name=schema.MASTER_NAMESPACE) -> str:
         """Read the config file without converting to yaml."""
         filename = self.manifest.get_file_name(name)
         return read_raw(filename)
@@ -157,7 +157,7 @@ class ConfigManager:
         name_mapping = self.get_config_name_mapping()
         return config_parse.ConfigContainer.create(name_mapping)
 
-    def get_hash(self, name):
+    def get_hash(self, name) -> str:
         """Return a hash of the configuration contents for name."""
         if name not in self:
             return self.DEFAULT_HASH
@@ -166,7 +166,7 @@ class ConfigManager:
     def __contains__(self, name):
         return name in self.manifest
 
-    def get_namespaces(self):
+    def get_namespaces(self) -> str:
         return self.manifest.get_file_mapping().keys()
 
 

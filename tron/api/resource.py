@@ -385,12 +385,9 @@ class ConfigResource(resource.Resource):
     def render_GET(self, request):
         config_name = requestargs.get_string(request, "name")
         if not config_name:
-            return respond(
-                request=request,
-                response={"error": "'name' for config is required."},
-                code=http.BAD_REQUEST,
-            )
-        response = self.controller.read_config(config_name)
+            response = self.controller.read_all_configs()
+        else:
+            response = self.controller.read_config(config_name)
         return respond(request=request, response=response)
 
     @AsyncResource.exclusive

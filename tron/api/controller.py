@@ -2,8 +2,11 @@
 Web Controllers for the API.
 """
 import logging
+from typing import Dict
+from typing import TypedDict
 
 from tron import yaml
+from tron.config.manager import ConfigManager
 from tron.eventbus import EventBus
 
 log = logging.getLogger(__name__)
@@ -175,6 +178,11 @@ class JobController:
             )
 
 
+class ConfigResponse(TypedDict):
+    config: str
+    hash: str
+
+
 class ConfigController:
     """Control config. Return config contents and accept updated configuration
     from the API.
@@ -184,17 +192,29 @@ class ConfigController:
 
     def __init__(self, mcp):
         self.mcp = mcp
-        self.config_manager = mcp.get_config_manager()
+        self.config_manager: ConfigManager = mcp.get_config_manager()
 
-    def _get_config_content(self, name):
+    def _get_config_content(self, name) -> str:
         if name not in self.config_manager:
             return self.DEFAULT_NAMED_CONFIG
         return self.config_manager.read_raw_config(name)
 
-    def read_config(self, name):
+    def read_config(self, name) -> ConfigResponse:
         config_content = self._get_config_content(name)
         config_hash = self.config_manager.get_hash(name)
-        return dict(config=config_content, hash=config_hash)
+        return {"config": config_content, "hash": config_hash}
+
+    def read_all_configs(self) -> Dict[str, ConfigResponse]:
+        configs = {}
+
+        for service in self.config_manager.get_namespaces():
+            config: ConfigResponse = {
+                "config": self._get_config_content(service),
+                "hash": self.config_manager.get_hash(service),
+            }
+            configs[service] = config
+
+        return configs
 
     def check_config(self, name, content, config_hash):
         """Update a configuration fragment and reload the MCP."""
