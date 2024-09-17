@@ -1,7 +1,6 @@
 import datetime
 import json
 import logging
-from collections import namedtuple
 from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
@@ -58,7 +57,7 @@ class ActionCommandConfig(Persistable):
         """Serialize the ActionCommandConfig instance to a JSON string."""
 
         def serialize_namedtuple(obj):
-            if isinstance(obj, namedtuple):
+            if isinstance(obj, tuple) and hasattr(obj, "_fields"):
                 return obj._asdict()
             return obj
 
