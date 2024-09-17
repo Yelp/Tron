@@ -77,7 +77,7 @@ class Job(Observable, Observer, Persistable):
 
     def __init__(
         self,
-        name: str,  # TODO TYPE for self.name: <class 'str'> QUESTION: might be bytes instead of string???
+        name: str,  # TODO TYPE for self.name: <class 'str'> QUESTION: might be bytes instead of string??? Py2 -- tag for removal in unahack or something
         scheduler: GeneralScheduler,
         queueing: bool = True,
         all_nodes: bool = False,
@@ -119,9 +119,6 @@ class Job(Observable, Observer, Persistable):
         self.context = command_context.build_context(self, parent_context)
         self.run_limit = run_limit
         log.info(f"{self} created")
-
-        log.info(f"TYPE for max_runtime: {type(max_runtime)}")
-        log.info(f"TYPE for time_zone: {type(time_zone)}")
 
     @staticmethod
     def to_json(state_data: dict) -> str:

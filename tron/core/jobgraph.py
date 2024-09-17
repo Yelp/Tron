@@ -1,4 +1,3 @@
-import logging
 from collections import defaultdict
 from collections import namedtuple
 from typing import Optional
@@ -7,9 +6,6 @@ from tron.config.config_parse import ConfigContainer
 from tron.core.action import Action
 from tron.core.actiongraph import ActionGraph
 from tron.utils import maybe_decode
-
-log = logging.getLogger(__name__)
-
 
 AdjListEntry = namedtuple("AdjListEntry", ["action_name", "is_trigger"])
 

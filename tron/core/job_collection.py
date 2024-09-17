@@ -7,7 +7,6 @@ from tron.utils import proxy
 log = logging.getLogger(__name__)
 
 
-# QUESTION: is JobCollection a combo of Job and JobRun?
 class JobCollection:
     """A collection of jobs."""
 
