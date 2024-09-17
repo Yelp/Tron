@@ -28,10 +28,7 @@ endif
 
 -usage:
 	@echo "make test - Run tests"
-	@echo "make deb_bionic - Generate bionic deb package"
-	@echo "make itest_bionic - Run tests and integration checks"
-	@echo "make _itest_bionic - Run only integration checks"
-	@echo "make deb_jammy - Generate bionic deb package"
+	@echo "make deb_jammy - Generate jammy deb package"
 	@echo "make itest_jammy - Run tests and integration checks"
 	@echo "make _itest_jammy - Run only integration checks"
 	@echo "make release - Prepare debian info for new release"

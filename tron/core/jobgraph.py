@@ -1,9 +1,15 @@
+import logging
 from collections import defaultdict
 from collections import namedtuple
+from typing import Optional
 
+from tron.config.config_parse import ConfigContainer
 from tron.core.action import Action
 from tron.core.actiongraph import ActionGraph
 from tron.utils import maybe_decode
+
+log = logging.getLogger(__name__)
+
 
 AdjListEntry = namedtuple("AdjListEntry", ["action_name", "is_trigger"])
 
@@ -13,7 +19,7 @@ class JobGraph:
     cross-job dependencies (aka triggers)
     """
 
-    def __init__(self, config_container, should_validate_missing_dependency=False):
+    def __init__(self, config_container: ConfigContainer, should_validate_missing_dependency: Optional[bool] = False):
         """Build an adjacency list and a reverse adjacency list for the graph,
         and store all the actions as well as which actions belong to which job
         """

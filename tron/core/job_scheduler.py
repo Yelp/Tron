@@ -20,10 +20,11 @@ class JobScheduler(Observer):
     x seconds into the future.
     """
 
-    def __init__(self, job):
+    def __init__(self, job: Job):
         self.job = job
         self.watch(job)
 
+    # KKASP: Called from job_collection during second restore workflow
     def restore_state(self, job_state_data, config_action_runner):
         """Load the job state and schedule any JobRuns."""
         job_runs = self.job.get_job_runs_from_state(job_state_data)
@@ -250,6 +251,7 @@ class JobSchedulerFactory:
         self.action_runner = action_runner
         self.job_graph = job_graph
 
+    # TODO: takes dict[] returns JobScheduler
     def build(self, job_config):
         log.debug(f"Building new job scheduler {job_config.name}")
         output_path = filehandler.OutputPath(self.output_stream_dir)

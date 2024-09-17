@@ -7,6 +7,7 @@ from tron.utils import proxy
 log = logging.getLogger(__name__)
 
 
+# QUESTION: is JobCollection a combo of Job and JobRun?
 class JobCollection:
     """A collection of jobs."""
 
@@ -40,7 +41,9 @@ class JobCollection:
             else:
                 return config.namespace == namespace_to_reconfigure
 
-        # NOTE: as this is a generator expression, we will only go through job configs and build a scheduler for them once something iterates over us (i.e, once `self.state_watcher.watch_all()` is called)
+        # NOTE: as this is a generator expression, we will only go through job configs
+        # and build a scheduler for them once something iterates over us (i.e, once
+        # `self.state_watcher.watch_all()` is called)
         seq = (factory.build(config) for config in job_configs.values() if reconfigure_filter(config))
         return map_to_job_and_schedule(filter(self.add, seq))
 
@@ -67,6 +70,7 @@ class JobCollection:
         job_scheduler.schedule_reconfigured()
         return True
 
+    # TODO: Types?, job_state_data is a weird dict[str, dict[Any?, Any?]], I think config_action_runner is actioncommand.SubprocessActionRunnerFactory OR actioncommand.NoActionRunnerFactory
     def restore_state(self, job_state_data, config_action_runner):
         """
         Loops through the jobs and their runs in order to load their
@@ -74,7 +78,13 @@ class JobCollection:
         runs for each job
         """
         for name, state in job_state_data.items():
-            self.jobs[name].restore_state(state, config_action_runner)
+            log.info(f"kkasp logging bonanza - job_collection name: {name}")
+            # name: compute-infra-test-service.test_load_foo1
+            log.info(f"kkasp logging bonanza - job_collection state: {state}")
+            # state: {'run_nums': [4, 3, 2, 1, 0], 'enabled': True, runs: [{}, {}]}
+            self.jobs[name].restore_state(
+                state, config_action_runner
+            )  # KKASP: call restore_state on JobScheduler, pass in jobrun state_data
         log.info(f"Loaded state for {len(job_state_data)} jobs")
 
     def get_by_name(self, name):
