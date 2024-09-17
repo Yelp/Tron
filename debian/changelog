@@ -1,3 +1,20 @@
+tron (2.5.0) jammy; urgency=medium
+
+  * 2.5.0 tagged with 'make release'
+    Commit: Attempt to batch config loading for deployments (#996)
+    Right now we make at most 2N calls to the Tron API during config
+    deployments: N to get the current configs and at most N if all
+    services have changes.  To start, I"d like to reduce this to N by
+    allowing GET /api/config to return all the configs so that the only
+    requests needed are POSTs for changed configs.  Depending on how
+    this goes, we can look into batching up the POSTs so that we can
+    also do that in a single request.  In terms of speed, it looks like
+    loading all the configs from pnw-prod (on my devbox) with this new
+    behavior takes ~3s - which isn"t great, but there"s a decent bit of
+    file IO going on here :(
+
+ -- Luis Perez <luisp@yelp.com>  Tue, 17 Sep 2024 08:25:15 -0700
+
 tron (2.4.2) jammy; urgency=medium
 
   * 2.4.2 tagged with 'make release'
