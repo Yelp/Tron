@@ -1,5 +1,7 @@
 import datetime
+import json
 import logging
+from collections import namedtuple
 from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
@@ -14,12 +16,13 @@ from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigProjectedSAVolume
 from tron.config.schema import ConfigSecretVolume
 from tron.config.schema import ConfigTopologySpreadConstraints
+from tron.utils.persistable import Persistable
 
 log = logging.getLogger(__name__)
 
 
 @dataclass
-class ActionCommandConfig:
+class ActionCommandConfig(Persistable):
     """A configurable data object for one try of an Action."""
 
     command: str
@@ -30,7 +33,6 @@ class ActionCommandConfig:
     cap_drop: List[str] = field(default_factory=list)
     constraints: set = field(default_factory=set)
     docker_image: Optional[str] = None
-    # XXX: we can get rid of docker_parameters once we're off of Mesos
     docker_parameters: set = field(default_factory=set)
     env: dict = field(default_factory=dict)
     secret_env: dict = field(default_factory=dict)
@@ -52,6 +54,41 @@ class ActionCommandConfig:
 
     def copy(self):
         return ActionCommandConfig(**self.state_data)
+
+    @staticmethod
+    def to_json(state_data: dict) -> str:
+        """Serialize the ActionCommandConfig instance to a JSON string."""
+
+        def serialize_namedtuple(obj):
+            if isinstance(obj, namedtuple):
+                return obj._asdict()
+            return obj
+
+        return json.dumps(
+            {
+                "command": state_data["command"],
+                "cpus": state_data["cpus"],
+                "mem": state_data["mem"],
+                "disk": state_data["disk"],
+                "cap_add": list(state_data["cap_add"]),
+                "cap_drop": list(state_data["cap_drop"]),
+                "constraints": list(state_data["constraints"]),
+                "docker_image": state_data["docker_image"],
+                "docker_parameters": list(state_data["docker_parameters"]),
+                "env": state_data["env"],
+                "secret_env": state_data["secret_env"],
+                "secret_volumes": [serialize_namedtuple(volume) for volume in state_data["secret_volumes"]],
+                "projected_sa_volumes": [serialize_namedtuple(volume) for volume in state_data["projected_sa_volumes"]],
+                "field_selector_env": state_data["field_selector_env"],
+                "extra_volumes": list(state_data["extra_volumes"]),
+                "node_selectors": state_data["node_selectors"],
+                "node_affinities": [serialize_namedtuple(affinity) for affinity in state_data["node_affinities"]],
+                "labels": state_data["labels"],
+                "annotations": state_data["annotations"],
+                "service_account_name": state_data["service_account_name"],
+                "ports": state_data["ports"],
+            }
+        )
 
 
 @dataclass

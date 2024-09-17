@@ -61,6 +61,7 @@ fi
 kill -SIGTERM $TRON_PID
 wait $TRON_PID || true
 
+# TODO: Remove this staetmetadata crap as it'll likely fail
 /opt/venvs/tron/bin/python - <<EOF
 import os
 from tron.serialize.runstate.shelvestore import ShelveStateStore, ShelveKey

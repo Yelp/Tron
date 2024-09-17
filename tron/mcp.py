@@ -85,6 +85,7 @@ class MasterControlProgram:
         # The job schedule factories will be created in the function below
         self._load_config()
         # Jobs will also get scheduled (internally) once the state for action runs are restored in restore_state
+        # KKASP: Restore really kicks off here
         with timer("self.restore_state"):
             self.restore_state(
                 actioncommand.create_action_runner_factory_from_config(
@@ -182,17 +183,23 @@ class MasterControlProgram:
         log.info("Restoring from DynamoDB")
         with timer("restore"):
             # restores the state of the jobs and their runs from DynamoDB
-            states = self.state_watcher.restore(self.jobs.get_names())
+            # KKASP: The first restore grabs all the data from DynamoDB
+            states = self.state_watcher.restore(  # TODO: what is "states"
+                self.jobs.get_names()
+            )  # KKASP: _load_config loads the names into self.jobs
+            # KKASP: states is a weird hodgepodge of job_state and job_run_state
         log.info(
             f"Tron will start restoring state for the jobs and will start scheduling them! Time elapsed since Tron started {time.time() - self.boot_time}"
         )
         # loads the runs' state and schedule the next run for each job
         with timer("self.jobs.restore_state"):
-            self.jobs.restore_state(states.get("job_state", {}), action_runner)
+            self.jobs.restore_state(
+                states.get("job_state", {}), action_runner
+            )  # QUESTION: why is job_state here holding both job and job run state?
         log.info(
             f"Tron completed restoring state for the jobs. Time elapsed since Tron started {time.time() - self.boot_time}"
         )
-        self.state_watcher.save_metadata()
+        # self.state_watcher.save_metadata()
 
     def __str__(self):
         return "MCP"
