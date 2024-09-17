@@ -61,12 +61,11 @@ fi
 kill -SIGTERM $TRON_PID
 wait $TRON_PID || true
 
-# TODO: Remove this staetmetadata crap as it'll likely fail
 /opt/venvs/tron/bin/python - <<EOF
 import os
 from tron.serialize.runstate.shelvestore import ShelveStateStore, ShelveKey
 db = ShelveStateStore('$TRON_WORKDIR/tron_state')
-key = ShelveKey('mcp_state', 'StateMetadata')
+key = ShelveKey('job_state', 'test_data')
 res = db.restore([key])
 ts = res[key][u'create_time']
 print("assert db time {} > start time {}".format(ts, int(os.environ['TRON_START_TIME'])))
