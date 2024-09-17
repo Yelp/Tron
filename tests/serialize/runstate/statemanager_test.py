@@ -40,24 +40,6 @@ class TestPersistenceManagerFactory(TestCase):
             shutil.rmtree(tmpdir)
 
 
-# class TestStateMetadata(TestCase):
-#     def test_validate_metadata(self):
-#         metadata = {"version": (0, 5, 2)}
-#         StateMetadata.validate_metadata(metadata)
-
-#     def test_validate_metadata_no_state_data(self):
-#         metadata = None
-#         StateMetadata.validate_metadata(metadata)
-
-#     def test_validate_metadata_mismatch(self):
-#         metadata = {"version": (200, 1, 1)}
-#         assert_raises(
-#             VersionMismatchError,
-#             StateMetadata.validate_metadata,
-#             metadata,
-#         )
-
-
 class TestStateSaveBuffer(TestCase):
     @setup
     def setup_buffer(self):
