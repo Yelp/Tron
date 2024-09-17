@@ -4,6 +4,7 @@ import logging
 log = logging.getLogger(__name__)
 
 
+# TODO: wtf is this, even?
 class MappingCollection(dict):
     """Dictionary like object for managing collections of items. Item is
     expected to support the following interface, and should be hashable.
