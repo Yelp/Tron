@@ -170,14 +170,6 @@ class ActionRunAttempt(Persistable):
                 state_data[field.name] = getattr(self, field.name)
         return state_data
 
-    #       "command_config": {}
-    #       "end_time": "2024-01-26T12:25:42.813846",
-    #       "exit_status": 0,
-    #       "kubernetes_task_id": "compute-infra-test-service.test--load--foo19.7850.foo.ia3xrm",
-    #       "mesos_task_id": null,
-    #       "rendered_command": "date; sleep 300; date",
-    #       "start_time": "2024-01-26T12:20:04.141850"
-
     @staticmethod
     def to_json(state_data: dict) -> str:
         """Serialize the ActionRunAttempt instance to a JSON string."""
@@ -307,8 +299,8 @@ class ActionRun(Observable, Persistable):
     # TODO: create a class for ActionRunId, JobRunId, Etc
     def __init__(
         self,
-        job_run_id: str,  # TODO: maybe string??? When would these NOT be string?
-        name: str,  # TODO: maybe string??? When would these NOT be string?
+        job_run_id: str,  # TODO: maybe string??? When would these NOT be string? Py2 -- tag for removal in unahack or something
+        name: str,  # TODO: maybe string??? When would these NOT be string? Py2 -- tag for removal in unahack or something
         node: node.Node,
         command_config: action.ActionCommandConfig,
         parent_context: Optional[CommandContext] = None,
@@ -733,29 +725,6 @@ class ActionRun(Observable, Persistable):
     @staticmethod
     def to_json(state_data: dict) -> str:
         """Serialize the ActionRun instance to a JSON string."""
-        # {
-        #     "action_name": "foo",
-        #     "action_runner": {
-        #         "exec_path": "/opt/venvs/tron/bin",
-        #         "status_path": "/tmp/tron"
-        #     },
-        #     "attempts": [],
-        #     "end_time": "2024-01-26T12:25:42.813846",
-        #     "executor": "kubernetes",
-        #     "exit_status": 0,
-        #     "job_run_id": "compute-infra-test-service.test_load_foo19.7850",
-        #     "node_name": "paasta",
-        #     "on_upstream_rerun": null,
-        #     "original_command": "date; sleep 300; date",
-        #     "retries_delay": null,
-        #     "retries_remaining": null,
-        #     "start_time": "2024-01-26T12:20:04.141850",
-        #     "state": "succeeded",
-        #     "trigger_downstreams": null,
-        #     "trigger_timeout_timestamp": 1706386800.0,
-        #     "triggered_by": null
-        # }
-
         action_runner = state_data.get("action_runner")
         if action_runner is None:
             action_runner_json = NoActionRunnerFactory.to_json()

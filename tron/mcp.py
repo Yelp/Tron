@@ -199,7 +199,6 @@ class MasterControlProgram:
         log.info(
             f"Tron completed restoring state for the jobs. Time elapsed since Tron started {time.time() - self.boot_time}"
         )
-        # self.state_watcher.save_metadata()
 
     def __str__(self):
         return "MCP"

@@ -86,10 +86,8 @@ class JobRun(Observable, Observer, Persistable):
                 "run_num": state_data["run_num"],
                 "run_time": state_data["run_time"].isoformat() if state_data["run_time"] else None,
                 "node_name": state_data["node_name"],
-                "runs": [ActionRun.to_json(run) for run in state_data["runs"]],  # QUESTION: ActionRun vs. Action
-                "cleanup_run": ActionRun.to_json(state_data["cleanup_run"])
-                if state_data["cleanup_run"]
-                else None,  # QUESTION: ActionRun vs. Action
+                "runs": [ActionRun.to_json(run) for run in state_data["runs"]],
+                "cleanup_run": ActionRun.to_json(state_data["cleanup_run"]) if state_data["cleanup_run"] else None,
                 "manual": state_data["manual"],
             }
         )
