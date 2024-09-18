@@ -52,8 +52,12 @@ class ShelveKey:
     __slots__ = ["type", "iden"]
 
     def __init__(self, type, iden):
-        self.type = maybe_decode(type)
-        self.iden = maybe_decode(iden)
+        self.type = maybe_decode(
+            type
+        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
+        self.iden = maybe_decode(
+            iden
+        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
 
     @property
     def key(self):
