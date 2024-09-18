@@ -24,7 +24,6 @@ class JobScheduler(Observer):
         self.job = job
         self.watch(job)
 
-    # KKASP: Called from job_collection during second restore workflow
     def restore_state(self, job_state_data, config_action_runner):
         """Load the job state and schedule any JobRuns."""
         job_runs = self.job.get_job_runs_from_state(job_state_data)

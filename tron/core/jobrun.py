@@ -61,7 +61,9 @@ class JobRun(Observable, Observer, Persistable):
         manual: Optional[bool] = None,  # TODO: what are you for?
     ):
         super().__init__()
-        self.job_name = maybe_decode(job_name)
+        self.job_name = maybe_decode(
+            job_name
+        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
         self.run_num = run_num
         self.run_time = run_time
         self.node = node
