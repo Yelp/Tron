@@ -70,7 +70,7 @@ class DynamoDBStateStore:
         """
         first_items = self._get_first_partitions(keys)
         remaining_items = self._get_remaining_partitions(first_items)
-        vals = self._merge_items(first_items, remaining_items)  # KKASP: pickle loading happens in here
+        vals = self._merge_items(first_items, remaining_items)
         return vals
 
     def chunk_keys(self, keys: Sequence[T]) -> List[Sequence[T]]:
@@ -230,18 +230,18 @@ class DynamoDBStateStore:
                 log.error("too many dynamodb errors in a row, crashing")
                 os.exit(1)
 
-    # json_val is the non-pickled version of val
-    def __setitem__(self, key: str, val: bytes, json_val: str) -> None:
+    def __setitem__(self, key: str, pickled_val: bytes, json_val: str) -> None:
         """
         Partition the item and write up to 10 partitions atomically.
         Retry up to 3 times on failure
 
-        Examine the size of `val`, and splice it into
-        different parts under 400KB with different sort keys,
-        and save them under the same partition key built.
+        Examine the size of `pickled_val` and `json_val`, and
+        splice them into different parts based on `OBJECT_SIZE`
+        with different sort keys, and save them under the same
+        partition key built.
         """
         start = time.time()
-        num_partitions = math.ceil(len(val) / OBJECT_SIZE)
+        num_partitions = math.ceil(len(pickled_val) / OBJECT_SIZE)
         num_json_val_partitions = math.ceil(len(json_val) / OBJECT_SIZE)
 
         log.debug(
@@ -264,15 +264,17 @@ class DynamoDBStateStore:
                             "N": str(index),
                         },
                         "val": {
-                            "B": val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],
+                            "B": pickled_val[
+                                index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(pickled_val))
+                            ],
                         },
                         "num_partitions": {
                             "N": str(num_partitions),
                         },
-                        "raw_val": {
+                        "json_val": {
                             "S": json_val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(json_val))]
                         },
-                        "num_raw_val_partitions": {
+                        "num_json_val_partitions": {
                             "N": str(num_json_val_partitions),
                         },
                     },
@@ -304,7 +306,7 @@ class DynamoDBStateStore:
             delta=time.time() - start,
         )
 
-    # TODO: Is this ok with we use the max number of partitions?
+    # TODO: Is this ok if we just use the max number of partitions?
     def _delete_item(self, key: str) -> None:
         start = time.time()
         try:

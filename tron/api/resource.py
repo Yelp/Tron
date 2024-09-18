@@ -183,7 +183,9 @@ class JobRunResource(resource.Resource):
         if not action_name:
             return self
 
-        action_name = maybe_decode(action_name)
+        action_name = maybe_decode(
+            action_name
+        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
         if action_name in self.job_run.action_runs:
             action_run = self.job_run.action_runs[action_name]
             return ActionRunResource(action_run, self.job_run)
@@ -231,7 +233,9 @@ class JobResource(resource.Resource):
         if not run_id:
             return self
 
-        run_id = maybe_decode(run_id)
+        run_id = maybe_decode(
+            run_id
+        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
         run = self.get_run_from_identifier(run_id)
         if run:
             return JobRunResource(run, self.job_scheduler)
@@ -297,7 +301,7 @@ class JobCollectionResource(resource.Resource):
         if not name:
             return self
 
-        name = maybe_decode(name)
+        name = maybe_decode(name)  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
         return resource_from_collection(self.job_collection, name, JobResource)
 
     def get_data(

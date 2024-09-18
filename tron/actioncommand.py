@@ -146,7 +146,6 @@ class StringBufferStore:
         self.buffers.clear()
 
 
-# QUESTION: What is the use case?
 class NoActionRunnerFactory(Persistable):
     """Action runner factory that does not wrap the action run command."""
 

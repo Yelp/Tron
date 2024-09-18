@@ -142,9 +142,7 @@ class PersistentStateManager:
         runs = copy.copy(job_runs_restored_states)
         for run_id, state in runs.items():
             if state == {}:
-                log.error(
-                    f"Failed to restore {run_id}, no state found for it!"
-                )  # KKASP: job name exists, but no state?
+                log.error(f"Failed to restore {run_id}, no state found for it!")
                 job_runs_restored_states.pop(run_id)
 
         runs = list(job_runs_restored_states.values())
@@ -160,7 +158,7 @@ class PersistentStateManager:
     def _restore_dicts(self, item_type: str, items: List[str]) -> Dict[str, dict]:
         """Return a dict mapping of the items name to its state data."""
         key_to_item_map = self._keys_for_items(item_type, items)
-        key_to_state_map = self._impl.restore(key_to_item_map.keys())  # KKASP: dynamodb_state_store.py
+        key_to_state_map = self._impl.restore(key_to_item_map.keys())
         return {key_to_item_map[key]: state_data for key, state_data in key_to_state_map.items()}
 
     def delete(self, type_enum, name):

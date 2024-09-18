@@ -77,13 +77,7 @@ class JobCollection:
         runs for each job
         """
         for name, state in job_state_data.items():
-            log.info(f"kkasp logging bonanza - job_collection name: {name}")
-            # name: compute-infra-test-service.test_load_foo1
-            log.info(f"kkasp logging bonanza - job_collection state: {state}")
-            # state: {'run_nums': [4, 3, 2, 1, 0], 'enabled': True, runs: [{}, {}]}
-            self.jobs[name].restore_state(
-                state, config_action_runner
-            )  # KKASP: call restore_state on JobScheduler, pass in jobrun state_data
+            self.jobs[name].restore_state(state, config_action_runner)
         log.info(f"Loaded state for {len(job_state_data)} jobs")
 
     def get_by_name(self, name):

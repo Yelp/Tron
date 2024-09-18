@@ -77,7 +77,7 @@ class Job(Observable, Observer, Persistable):
 
     def __init__(
         self,
-        name: str,  # TODO TYPE for self.name: <class 'str'> QUESTION: might be bytes instead of string??? Py2 -- tag for removal in unahack or something
+        name: str,
         scheduler: GeneralScheduler,
         queueing: bool = True,
         all_nodes: bool = False,
@@ -96,7 +96,9 @@ class Job(Observable, Observer, Persistable):
         run_limit: Optional[int] = None,
     ):
         super().__init__()
-        self.name = maybe_decode(name)
+        self.name = maybe_decode(
+            name
+        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
         self.monitoring = monitoring
         self.action_graph = action_graph
         self.scheduler = scheduler
@@ -222,7 +224,6 @@ class Job(Observable, Observer, Persistable):
             "enabled": self.enabled,
         }
 
-    # KKASP: called from job_scheduler.py during second restore workflow
     def get_job_runs_from_state(self, state_data):
         """Apply a previous state to this Job."""
         self.enabled = state_data["enabled"]
