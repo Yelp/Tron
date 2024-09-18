@@ -121,7 +121,7 @@ def large_object():
         "runs": [],
         "cleanup_run": None,
         "manual": False,
-        "large_data": [i for i in range(10_000)],  # TODO: is this enough to get partitioned?
+        "large_data": [i for i in range(1_000_000)],
     }
 
 
@@ -154,8 +154,8 @@ class TestDynamoDBStateStore:
         for key in keys:
             item = store.table.get_item(Key={"key": key, "index": 0})
             assert "Item" in item
-            assert "raw_val" in item["Item"]
-            assert_equal(json.loads(item["Item"]["raw_val"]), small_object)
+            assert "json_val" in item["Item"]
+            assert_equal(json.loads(item["Item"]["json_val"]), small_object)
 
     def test_delete_if_val_is_none(self, store, small_object, large_object):
         key_value_pairs = [

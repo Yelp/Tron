@@ -167,10 +167,10 @@ class DynamoDBStateStore:
                         self.save_queue[key] = (val, None)
                     else:
                         state_type = self.get_type_from_key(key)
-                        serialized_val = self._serialize_item(state_type, val)
+                        json_val = self._serialize_item(state_type, val)
                         self.save_queue[key] = (
                             val,
-                            serialized_val,
+                            json_val,
                         )
                 break
 
@@ -181,20 +181,20 @@ class DynamoDBStateStore:
         for _ in range(qlen):
             try:
                 with self.save_lock:
-                    key, (original_val, serialized_val) = self.save_queue.popitem(last=False)
-                log.debug(f"Processing save for {key} with a value of {original_val}")
+                    key, (pickled_val, json_val) = self.save_queue.popitem(last=False)
+                log.debug(f"Processing save for {key} with a value of {pickled_val}")
                 # Remove all previous data with the same partition key
                 # TODO: only remove excess partitions if new data has fewer
                 self._delete_item(key)
-                if original_val is not None:
-                    self.__setitem__(key, pickle.dumps(original_val), serialized_val)
+                if pickled_val is not None:
+                    self.__setitem__(key, pickle.dumps(pickled_val), json_val)
                 # reset errors count if we can successfully save
                 saved += 1
             except Exception as e:
                 error = "tron_dynamodb_save_failure: failed to save key " f'"{key}" to dynamodb:\n{repr(e)}'
                 log.error(error)
                 with self.save_lock:
-                    self.save_queue[key] = (original_val, serialized_val)
+                    self.save_queue[key] = (pickled_val, json_val)
         duration = time.time() - start
         log.info(f"saved {saved} items in {duration}s")
 
