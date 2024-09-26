@@ -628,6 +628,7 @@ class KubernetesClusterRepository:
     pod_launch_timeout: Optional[int] = None
     default_volumes: Optional[List[ConfigVolume]] = None
     watcher_kubeconfig_paths: Optional[List[str]] = None
+    non_retryable_exit_codes: Optional[List[int]] = None
 
     # metadata config
     clusters: Dict[str, KubernetesCluster] = {}
@@ -654,6 +655,7 @@ class KubernetesClusterRepository:
                 enabled=cls.kubernetes_enabled,
                 default_volumes=cls.default_volumes,
                 watcher_kubeconfig_paths=cls.watcher_kubeconfig_paths,
+                non_retryable_exit_codes=cls.non_retryable_exit_codes,
             )
             cls.clusters[kubeconfig_path] = cluster
 
@@ -671,6 +673,7 @@ class KubernetesClusterRepository:
         cls.kubernetes_non_retryable_exit_codes = kubernetes_options.non_retryable_exit_codes
         cls.default_volumes = kubernetes_options.default_volumes
         cls.watcher_kubeconfig_paths = kubernetes_options.watcher_kubeconfig_paths
+        cls.non_retryable_exit_codes = kubernetes_options.non_retryable_exit_codes
 
         for cluster in cls.clusters.values():
             cluster.set_enabled(cls.kubernetes_enabled)

@@ -7,6 +7,7 @@ from task_processing.interfaces.event import Event
 from task_processing.plugins.kubernetes.task_config import KubernetesTaskConfig
 
 from tron.config.schema import ConfigFieldSelectorSource
+from tron.config.schema import ConfigKubernetes
 from tron.config.schema import ConfigProjectedSAVolume
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSecretVolume
@@ -14,6 +15,7 @@ from tron.config.schema import ConfigSecretVolumeItem
 from tron.config.schema import ConfigVolume
 from tron.kubernetes import DEFAULT_DISK_LIMIT
 from tron.kubernetes import KubernetesCluster
+from tron.kubernetes import KubernetesClusterRepository
 from tron.kubernetes import KubernetesTask
 from tron.utils import exitcode
 
@@ -776,3 +778,28 @@ def test_recover(mock_kubernetes_cluster, mock_kubernetes_task):
     assert mock_kubernetes_task.get_kubernetes_id() in mock_kubernetes_cluster.tasks
     mock_kubernetes_cluster.runner.reconcile.assert_called_once_with(mock_kubernetes_task.get_config())
     assert mock_started.call_count == 1
+
+
+def test_kuberntes_cluster_repository():
+    # Check we are passing k8s_options from mcp/KubernetesClusterRepository.configure to KubernetesCluster calls
+
+    mock_k8s_options = {
+        "enabled": True,
+        "kubeconfig_path": "/tmp/kubeconfig.conf",
+        "watcher_kubeconfig_paths": ["/tmp/kubeconfig_old.conf"],
+        "non_retryable_exit_codes": [13],
+        "default_volumes": [
+            ConfigVolume(
+                container_path="/tmp",
+                host_path="/host/tmp",
+                mode="RO",
+            )
+        ],
+    }
+    mock_k8s_options_obj = ConfigKubernetes(**mock_k8s_options)
+
+    with mock.patch("tron.kubernetes.KubernetesCluster", autospec=True) as mock_cluster:
+        KubernetesClusterRepository.configure(mock_k8s_options_obj)
+        KubernetesClusterRepository.get_cluster()
+
+    mock_cluster.assert_called_once_with(**mock_k8s_options)

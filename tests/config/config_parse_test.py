@@ -1778,6 +1778,20 @@ class TestValidKubeconfigPaths:
         with pytest.raises(ConfigError):
             config_parse.valid_kubernetes_options.validate(k8s_options, self.context)
 
+    def test_nonretry(self):
+        k8s_options = {
+            "enabled": True,
+            "kubeconfig_path": "/some/valid/path",
+            "watcher_kubeconfig_paths": [],
+            "non_retryable_exit_codes": 1,
+        }
+        with pytest.raises(ConfigError):
+            config_parse.valid_kubernetes_options.validate(k8s_options, self.context)
+
+        k8s_options["non_retryable_exit_codes"] = [-12, 1]
+
+        assert config_parse.valid_kubernetes_options.validate(k8s_options, self.context)
+
 
 if __name__ == "__main__":
     run()
