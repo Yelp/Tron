@@ -1,3 +1,12 @@
+tron (2.5.1) jammy; urgency=medium
+
+  * 2.5.1 tagged with 'make release'
+    Commit: Merge pull request #998 from Yelp/jfong/TRON-2277-fix-
+    nonretryable-exit-codes  TRON-2277: Pass along
+    non_retryable_exit_codes to KubernetesCluster objects
+
+ -- Jen Patague <jfong@yelp.com>  Thu, 26 Sep 2024 10:21:53 -0700
+
 tron (2.5.0) jammy; urgency=medium
 
   * 2.5.0 tagged with 'make release'
