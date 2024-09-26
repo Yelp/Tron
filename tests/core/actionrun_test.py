@@ -2000,3 +2000,34 @@ class TestKubernetesActionRun:
         mock_k8s_action_run.create_attempt()
         error_message = mock_k8s_action_run.stop()
         assert error_message == "Error: Can't find task id for the action."
+
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
+    def test_non_retryable_exit(self, mock_cluster_repo, mock_k8s_action_run):
+
+        mock_cluster = mock.Mock()
+        mock_cluster.non_retryable_exit_codes = [13]
+
+        mock_cluster_repo.get_cluster.return_value = mock_cluster
+
+        mock_k8s_action_run.retries_remaining = 5
+        mock_k8s_action_run.start = mock.Mock()
+
+        mock_k8s_action_run._exit_unsuccessful(13)
+
+        assert mock_k8s_action_run.retries_remaining == 0
+        assert not mock_k8s_action_run.is_unknown
+
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
+    def test_retryable_exit(self, mock_cluster_repo, mock_k8s_action_run):
+
+        mock_cluster = mock.Mock()
+        mock_cluster.non_retryable_exit_codes = [-12]
+
+        mock_cluster_repo.get_cluster.return_value = mock_cluster
+
+        mock_k8s_action_run.retries_remaining = 5
+        mock_k8s_action_run.start = mock.Mock()
+
+        mock_k8s_action_run._exit_unsuccessful(13)
+
+        assert mock_k8s_action_run.retries_remaining == 4
