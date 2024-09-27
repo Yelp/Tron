@@ -612,7 +612,7 @@ class ActionRun(Observable):
                     log.info(
                         f"Reached maximum number of retries: {len(self.attempts)}",
                     )
-        if exit_status is None:
+        if exit_status is None or exit_status in non_retryable_exit_codes:
             return self._done("fail_unknown", exit_status)
         else:
             return self._done("fail", exit_status)
