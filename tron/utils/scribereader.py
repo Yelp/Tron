@@ -240,17 +240,25 @@ def read_log_stream_for_action_run(
     malformed = (
         [f"{paasta_logs.malformed_lines} encountered while retrieving logs"] if paasta_logs.malformed_lines else []
     )
-    try:
-        location_selector = f"-s {paasta_cluster}" if "prod" in paasta_cluster else f'-e {paasta_cluster.split("-")[1]}'
-    except IndexError:
-        location_selector = f"-s {paasta_cluster}"
+
+    if use_s3_reader:
+        location_selector = f"-s {get_superregion()}"
+    else:
+        try:
+            location_selector = (
+                f"-s {paasta_cluster}" if "prod" in paasta_cluster else f'-e {paasta_cluster.split("-")[1]}'
+            )
+        except IndexError:
+            location_selector = f"-s {paasta_cluster}"
+
+    command_name = "vector-reader" if use_s3_reader else "scribereader"
     truncation_message = (
         [
-            f"This output is truncated. Use this command to view all lines: scribereader {location_selector} {stream_name} --min-date {min_date.date()} --max-date {max_date.date()} | jq --raw-output 'select(.tron_run_number=={int(paasta_logs.run_num)} and .component == \"{component}\") | .message'"
+            f"This output is truncated. Use this command to view all lines: {command_name} {location_selector} {stream_name} --min-date {min_date.date()} --max-date {max_date.date()} | jq --raw-output 'select(.tron_run_number=={int(paasta_logs.run_num)} and .component == \"{component}\") | .message'"
         ]
         if max_date
         else [
-            f"This output is truncated. Use this command to view all lines: scribereader {location_selector} {stream_name} --min-date {min_date.date()} | jq --raw-output 'select(.tron_run_number=={int(paasta_logs.run_num)} and .component == \"{component}\") | .message'"
+            f"This output is truncated. Use this command to view all lines: {command_name} {location_selector} {stream_name} --min-date {min_date.date()} | jq --raw-output 'select(.tron_run_number=={int(paasta_logs.run_num)} and .component == \"{component}\") | .message'"
         ]
     )
     truncated = truncation_message if paasta_logs.truncated_output else []
