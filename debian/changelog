@@ -1,3 +1,12 @@
+tron (2.5.3) jammy; urgency=medium
+
+  * 2.5.3 tagged with 'make release'
+    Commit: Merge pull request #1000 from Yelp/jfong/TRON-2208-
+    nonretryable-to-unknown  TRON-2208: Update non_retryable_exit_code
+    behavior to treat as UNKNOWN
+
+ -- Jen Patague <jfong@yelp.com>  Mon, 30 Sep 2024 14:12:37 -0700
+
 tron (2.5.2) jammy; urgency=medium
 
   * 2.5.2 tagged with 'make release'
