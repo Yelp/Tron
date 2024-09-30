@@ -1,3 +1,13 @@
+tron (2.5.2) jammy; urgency=medium
+
+  * 2.5.2 tagged with 'make release'
+    Commit: Use vector-reader cli if new logging pipeline is enabled
+    (#999)  Thankfully, this was a pretty easy change - we really only
+    needed to parametrize the command name being used and the location
+    selector is now a lot simpler as it"ll always be the superregion
+
+ -- Luis Perez <luisp@yelp.com>  Mon, 30 Sep 2024 09:32:22 -0700
+
 tron (2.5.1) jammy; urgency=medium
 
   * 2.5.1 tagged with 'make release'
