@@ -19,9 +19,7 @@ from tron.serialize.runstate.statemanager import PersistenceManagerFactory
 from tron.serialize.runstate.statemanager import PersistenceStoreError
 from tron.serialize.runstate.statemanager import PersistentStateManager
 from tron.serialize.runstate.statemanager import StateChangeWatcher
-from tron.serialize.runstate.statemanager import StateMetadata
 from tron.serialize.runstate.statemanager import StateSaveBuffer
-from tron.serialize.runstate.statemanager import VersionMismatchError
 
 
 class TestPersistenceManagerFactory(TestCase):
@@ -40,24 +38,6 @@ class TestPersistenceManagerFactory(TestCase):
             assert isinstance(store, ShelveStateStore)
         finally:
             shutil.rmtree(tmpdir)
-
-
-class TestStateMetadata(TestCase):
-    def test_validate_metadata(self):
-        metadata = {"version": (0, 5, 2)}
-        StateMetadata.validate_metadata(metadata)
-
-    def test_validate_metadata_no_state_data(self):
-        metadata = None
-        StateMetadata.validate_metadata(metadata)
-
-    def test_validate_metadata_mismatch(self):
-        metadata = {"version": (200, 1, 1)}
-        assert_raises(
-            VersionMismatchError,
-            StateMetadata.validate_metadata,
-            metadata,
-        )
 
 
 class TestStateSaveBuffer(TestCase):
@@ -103,15 +83,7 @@ class TestPersistentStateManager(TestCase):
 
     def test_restore(self):
         job_names = ["one", "two"]
-        with mock.patch.object(
-            self.manager,
-            "_restore_metadata",
-            autospec=True,
-        ) as mock_restore_metadata, mock.patch.object(
-            self.manager,
-            "_restore_dicts",
-            autospec=True,
-        ) as mock_restore_dicts, mock.patch.object(
+        with mock.patch.object(self.manager, "_restore_dicts", autospec=True,) as mock_restore_dicts, mock.patch.object(
             self.manager,
             "_restore_runs_for_job",
             autospect=True,
@@ -125,7 +97,6 @@ class TestPersistentStateManager(TestCase):
             ]
 
             restored_state = self.manager.restore(job_names)
-            mock_restore_metadata.assert_called_once_with()
             assert mock_restore_dicts.call_args_list == [
                 mock.call(runstate.JOB_STATE, job_names),
             ]
@@ -278,19 +249,6 @@ class TestStateChangeWatcher(TestCase):
             runstate.JOB_STATE,
             mock_job.name,
             mock_job.state_data,
-        )
-
-    @mock.patch(
-        "tron.serialize.runstate.statemanager.StateMetadata",
-        autospec=None,
-    )
-    def test_save_metadata(self, mock_state_metadata):
-        self.watcher.save_metadata()
-        meta_data = mock_state_metadata.return_value
-        self.watcher.state_manager.save.assert_called_with(
-            runstate.MCP_STATE,
-            meta_data.name,
-            meta_data.state_data,
         )
 
     def test_shutdown(self):

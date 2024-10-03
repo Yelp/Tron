@@ -1,6 +1,8 @@
 from collections import defaultdict
 from collections import namedtuple
+from typing import Optional
 
+from tron.config.config_parse import ConfigContainer
 from tron.core.action import Action
 from tron.core.actiongraph import ActionGraph
 from tron.utils import maybe_decode
@@ -13,7 +15,7 @@ class JobGraph:
     cross-job dependencies (aka triggers)
     """
 
-    def __init__(self, config_container, should_validate_missing_dependency=False):
+    def __init__(self, config_container: ConfigContainer, should_validate_missing_dependency: Optional[bool] = False):
         """Build an adjacency list and a reverse adjacency list for the graph,
         and store all the actions as well as which actions belong to which job
         """
@@ -93,7 +95,9 @@ class JobGraph:
         return ActionGraph(job_action_map, required_actions, required_triggers)
 
     def _save_action(self, action_name, job_name, config):
-        action_name = maybe_decode(action_name)
+        action_name = maybe_decode(
+            action_name
+        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
         full_name = f"{job_name}.{action_name}"
         self.action_map[full_name] = Action.from_config(config)
         self._actions_for_job[job_name].append(full_name)
