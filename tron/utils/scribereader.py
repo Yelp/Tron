@@ -9,7 +9,7 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
-import staticconf
+import staticconf  # type: ignore
 import yaml
 
 from tron.config.static_config import get_config_watcher
