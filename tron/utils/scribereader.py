@@ -10,7 +10,7 @@ from typing import Optional
 from typing import Tuple
 
 import staticconf
-import yaml  # type: ignore
+import yaml
 
 from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
@@ -88,7 +88,9 @@ def get_log_namespace(action_run_id: str, paasta_cluster: str) -> str:
         try:
             with open(f"/nail/etc/services/{namespace}/tron-{paasta_cluster}.{ext}") as f:
                 config = yaml.safe_load(f)
-                service = config.get(job_name, {}).get("actions", {}).get(action, {}).get("service", None)
+                service: Optional[str] = (
+                    config.get(job_name, {}).get("actions", {}).get(action, {}).get("service", None)
+                )
                 if service:
                     return service
         except FileNotFoundError:
