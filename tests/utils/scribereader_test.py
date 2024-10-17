@@ -2,8 +2,10 @@ import datetime
 from unittest import mock
 
 import pytest
+import yaml
 
 import tron.utils.scribereader
+from tron.utils.scribereader import get_log_namespace
 from tron.utils.scribereader import read_log_stream_for_action_run
 
 try:
@@ -420,3 +422,63 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
     # The expected output should be max_lines plus the
     # extra line for 'This output is truncated.' message
     assert len(output) == max_lines + 1
+
+
+def test_get_log_namespace_yml_file_found():
+    action_run_id = "namespace.job.1234.action"
+    paasta_cluster = "fake_cluster"
+    config_content = """
+    job:
+        actions:
+            action:
+                service: test_service
+    """
+    with mock.patch("builtins.open", mock.mock_open(read_data=config_content)), mock.patch(
+        "yaml.safe_load", return_value=yaml.safe_load(config_content)
+    ):
+        result = get_log_namespace(action_run_id, paasta_cluster)
+        assert result == "test_service"
+
+
+def test_get_log_namespace_file_not_found():
+    action_run_id = "namespace.job.1234.action"
+    paasta_cluster = "fake_cluster"
+    with mock.patch("builtins.open", side_effect=FileNotFoundError):
+        result = get_log_namespace(action_run_id, paasta_cluster)
+        assert result == "namespace"
+
+
+def test_get_log_namespace_yaml_error():
+    action_run_id = "namespace.job.1234.action"
+    paasta_cluster = "fake_cluster"
+    with mock.patch("builtins.open", mock.mock_open(read_data="invalid_yaml")), mock.patch(
+        "yaml.safe_load", side_effect=yaml.YAMLError
+    ):
+        result = get_log_namespace(action_run_id, paasta_cluster)
+        assert result == "namespace"
+
+
+def test_get_log_namespace_generic_error():
+    action_run_id = "namespace.job.1234.action"
+    paasta_cluster = "fake_cluster"
+    with mock.patch("builtins.open", mock.mock_open(read_data="some_data")), mock.patch(
+        "yaml.safe_load", side_effect=Exception
+    ):
+        result = get_log_namespace(action_run_id, paasta_cluster)
+        assert result == "namespace"
+
+
+def test_get_log_namespace_service_not_found():
+    action_run_id = "namespace.job.1234.action"
+    paasta_cluster = "fake_cluster"
+    config_content = """
+    job:
+        actions:
+            action:
+                command: "sleep 10"
+    """
+    with mock.patch("builtins.open", mock.mock_open(read_data=config_content)), mock.patch(
+        "yaml.safe_load", return_value=yaml.safe_load(config_content)
+    ):
+        result = get_log_namespace(action_run_id, paasta_cluster)
+        assert result == "namespace"
