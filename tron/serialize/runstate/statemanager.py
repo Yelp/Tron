@@ -6,6 +6,7 @@ import sys
 import time
 from contextlib import contextmanager
 from typing import Dict
+from typing import List
 
 from tron.config import schema
 from tron.core import job
@@ -51,42 +52,6 @@ class PersistenceManagerFactory:
 
         buffer = StateSaveBuffer(buffer_size)
         return PersistentStateManager(store, buffer)
-
-
-class StateMetadata:
-    """A data object for saving state metadata. Conforms to the same
-    RunState interface as Jobs and Services.
-    """
-
-    name = "StateMetadata"
-
-    # State schema version, only first component counts,
-    # for backwards compatibility
-    version = (0, 7, 0, 0)
-
-    def __init__(self):
-        self.state_data = {
-            "version": self.version,
-            "create_time": time.time(),
-        }
-
-    @classmethod
-    def validate_metadata(cls, metadata):
-        """Raises an exception if the metadata version is newer then
-        StateMetadata.version
-        """
-        if not metadata:
-            return
-
-        if metadata["version"][0] > cls.version[0]:
-            msg = "State version %s, expected <= %s"
-            raise VersionMismatchError(
-                msg
-                % (
-                    metadata["version"],
-                    cls.version,
-                ),
-            )
 
 
 class StateSaveBuffer:
@@ -138,23 +103,17 @@ class PersistentStateManager:
         self.enabled = True
         self._buffer = buffer
         self._impl = persistence_impl
-        self.metadata_key = self._impl.build_key(
-            runstate.MCP_STATE,
-            StateMetadata.name,
-        )
 
-    def restore(self, job_names, skip_validation=False):
+    def restore(self, job_names):
         """Return the most recent serialized state."""
         log.debug("Restoring state.")
-        if not skip_validation:
-            self._restore_metadata()
 
         # First, restore the jobs themselves
         jobs = self._restore_dicts(runstate.JOB_STATE, job_names)
         # jobs should be a dictionary that contains  job name and number of runs
         # {'MASTER.k8s': {'run_nums':[0], 'enabled': True}, 'MASTER.cits_test_frequent_1': {'run_nums': [1,0], 'enabled': True}}
 
-        # second, restore the runs for each of the jobs restored above
+        # Second, restore the runs for each of the jobs restored above
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             # start the threads and mark each future with it's job name
             # this is useful so that we can index the job name later to add the runs to the jobs dictionary
@@ -190,16 +149,12 @@ class PersistentStateManager:
         runs.sort(key=lambda x: x["run_num"], reverse=True)
         return runs
 
-    def _restore_metadata(self):
-        metadata = self._impl.restore([self.metadata_key])
-        StateMetadata.validate_metadata(metadata.get(self.metadata_key))
-
     def _keys_for_items(self, item_type, names):
         """Returns a dict of item to the key for that item."""
         keys = (self._impl.build_key(item_type, name) for name in names)
         return dict(zip(keys, names))
 
-    def _restore_dicts(self, item_type, items) -> Dict[str, dict]:
+    def _restore_dicts(self, item_type: str, items: List[str]) -> Dict[str, dict]:
         """Return a dict mapping of the items name to its state data."""
         key_to_item_map = self._keys_for_items(item_type, items)
         key_to_state_map = self._impl.restore(key_to_item_map.keys())
@@ -322,9 +277,6 @@ class StateChangeWatcher(observer.Observer):
 
     def save_frameworks(self, clusters):
         self._save_object(runstate.MESOS_STATE, clusters)
-
-    def save_metadata(self):
-        self._save_object(runstate.MCP_STATE, StateMetadata())
 
     def _save_object(self, state_type, obj):
         self.state_manager.save(state_type, obj.name, obj.state_data)

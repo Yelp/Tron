@@ -20,7 +20,7 @@ class JobScheduler(Observer):
     x seconds into the future.
     """
 
-    def __init__(self, job):
+    def __init__(self, job: Job):
         self.job = job
         self.watch(job)
 
@@ -250,6 +250,7 @@ class JobSchedulerFactory:
         self.action_runner = action_runner
         self.job_graph = job_graph
 
+    # TODO: takes dict[] returns JobScheduler
     def build(self, job_config):
         log.debug(f"Building new job scheduler {job_config.name}")
         output_path = filehandler.OutputPath(self.output_stream_dir)
