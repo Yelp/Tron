@@ -103,7 +103,6 @@ def convert_state(opts):
 
     job_states = source_manager.restore(
         job_names,
-        skip_validation=True,
     )
     source_manager.cleanup()
 
