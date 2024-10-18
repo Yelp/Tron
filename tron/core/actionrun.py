@@ -1293,6 +1293,16 @@ class KubernetesActionRun(ActionRun, Observer):
 
         last_attempt = self.attempts[-1]
 
+        if last_attempt.rendered_command is None:
+            log.error(f"{self} rendered_command is None, cannot recover")
+            self.fail(exitcode.EXIT_INVALID_COMMAND)
+            return None
+
+        if last_attempt.command_config.docker_image is None:
+            log.error(f"{self} docker_image is None, cannot recover")
+            self.fail(exitcode.EXIT_KUBERNETES_TASK_INVALID)
+            return None
+
         log.info(f"{self} recovering Kubernetes run")
 
         task = k8s_cluster.create_task(
