@@ -13,6 +13,7 @@ from tron import command_context
 from tron import node
 from tron.core.actiongraph import ActionGraph
 from tron.core.actionrun import ActionRun
+from tron.core.actionrun import ActionRunCollection
 from tron.core.actionrun import ActionRunFactory
 from tron.serialize import filehandler
 from tron.utils import maybe_decode
@@ -56,14 +57,14 @@ class JobRun(Observable, Observer, Persistable):
         node: node.Node,
         output_path: Optional[filehandler.OutputPath] = None,
         base_context: Optional[command_context.CommandContext] = None,
-        action_runs=None,  # TODO: list of action runs?
+        action_runs: Optional[ActionRunCollection] = None,
         action_graph: Optional[ActionGraph] = None,
-        manual: Optional[bool] = None,  # TODO: what are you for?
+        manual: Optional[bool] = None,
     ):
         super().__init__()
         self.job_name = maybe_decode(
             job_name
-        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
+        )  # TODO: TRON-2293 - maybe_decode is a relic of Python2->Python3 migration. Remove it.
         self.run_num = run_num
         self.run_time = run_time
         self.node = node
@@ -124,7 +125,7 @@ class JobRun(Observable, Observer, Persistable):
         return run
 
     @classmethod
-    def from_state(  # TODO: types
+    def from_state(
         cls,
         state_data,
         action_graph,
