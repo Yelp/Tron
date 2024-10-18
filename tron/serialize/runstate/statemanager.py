@@ -104,8 +104,7 @@ class PersistentStateManager:
         self._buffer = buffer
         self._impl = persistence_impl
 
-    # TODO: Make sure nobody is calling this with skip_validation passed in, then remove it
-    def restore(self, job_names, skip_validation=False):
+    def restore(self, job_names):
         """Return the most recent serialized state."""
         log.debug("Restoring state.")
 
