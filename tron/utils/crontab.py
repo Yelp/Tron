@@ -48,7 +48,7 @@ class FieldParser:
     def get_groups(self, source: str) -> List[str]:
         return source.split(",")
 
-    def parse(self, source: str) -> Optional[Union[List[int], List[str]]]:
+    def parse(self, source: str) -> Optional[Union[List[int], List[Union[int, str]]]]:
         if source == "*":
             return None
 
@@ -58,14 +58,14 @@ class FieldParser:
         has_last = "LAST" in groups
         if has_last:
             groups.remove("LAST")
-        sorted_groups = sorted(groups, key=lambda x: (isinstance(x, str), x))
+        sorted_groups: List[Union[int, str]] = sorted(groups, key=lambda x: (isinstance(x, str), x))
         if has_last:
             sorted_groups.append("LAST")
         if not sorted_groups:
             return None
         if all(isinstance(x, int) for x in sorted_groups):
-            return sorted_groups  # type: ignore
-        return sorted_groups  # type: ignore
+            return sorted_groups
+        return sorted_groups
 
     def get_match_groups(self, source: str) -> dict:
         match = self.range_pattern.match(source)
