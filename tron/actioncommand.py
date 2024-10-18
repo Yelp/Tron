@@ -146,6 +146,7 @@ class StringBufferStore:
         self.buffers.clear()
 
 
+# TODO: TRON-2304 - Cleanup NoActionRunnerFactory
 class NoActionRunnerFactory(Persistable):
     """Action runner factory that does not wrap the action run command."""
 

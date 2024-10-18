@@ -313,7 +313,7 @@ class ActionRun(Observable, Persistable):
         end_time: Optional[datetime.datetime] = None,
         run_state: str = SCHEDULED,
         exit_status: Optional[int] = None,
-        attempts: Optional[list] = None,  # TODO: list of...ActionCommandConfig?
+        attempts: Optional[List[ActionRunAttempt]] = None,
         action_runner: Optional[Union[NoActionRunnerFactory, SubprocessActionRunnerFactory]] = None,
         retries_remaining: Optional[int] = None,
         retries_delay: Optional[datetime.timedelta] = None,
