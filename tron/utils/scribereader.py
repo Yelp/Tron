@@ -87,7 +87,7 @@ def get_log_namespace(action_run_id: str, paasta_cluster: str) -> str:
     for ext in ["yaml", "yml"]:
         try:
             with open(f"/nail/etc/services/{namespace}/tron-{paasta_cluster}.{ext}") as f:
-                config = yaml.safe_load(f)
+                config = yaml.load(f, Loader=yaml.CSafeLoader)
                 service: Optional[str] = (
                     config.get(job_name, {}).get("actions", {}).get(action, {}).get("service", None)
                 )
