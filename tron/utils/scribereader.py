@@ -251,7 +251,7 @@ def read_log_stream_for_action_run(
         except IndexError:
             location_selector = f"-s {paasta_cluster}"
 
-    command_name = "vector-reader" if use_s3_reader else "scribereader"
+    command_name = "logreader" if use_s3_reader else "scribereader"
     truncation_message = (
         [
             f"This output is truncated. Use this command to view all lines: {command_name} {location_selector} {stream_name} --min-date {min_date.date()} --max-date {max_date.date()} | jq --raw-output 'select(.tron_run_number=={int(paasta_logs.run_num)} and .component == \"{component}\") | .message'"
