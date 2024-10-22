@@ -82,8 +82,8 @@ def get_scribereader_host_and_port(ecosystem: str, superregion: str, region: str
     return host, port
 
 
-def get_log_namespace(action_run_id: str, paasta_cluster: str) -> str:
-    namespace, job_name, _, action = action_run_id.split(".")
+def decompose_action_id(action_run_id: str, paasta_cluster: str) -> Tuple[str, str, str, str]:
+    namespace, job_name, run_num, action = action_run_id.split(".")
     for ext in ["yaml", "yml"]:
         try:
             with open(f"/nail/etc/services/{namespace}/tron-{paasta_cluster}.{ext}") as f:
@@ -92,15 +92,17 @@ def get_log_namespace(action_run_id: str, paasta_cluster: str) -> str:
                     config.get(job_name, {}).get("actions", {}).get(action, {}).get("service", None)
                 )
                 if service:
-                    return service
+                    return service, job_name, run_num, action
         except FileNotFoundError:
-            log.warning(f"yelp-soaconfig file tron-{paasta_cluster}.{ext} not found.")
+            log.warning(f"yelp-soaconfig file tron-{paasta_cluster}.{ext} not found for action_run_id {action_run_id}.")
         except yaml.YAMLError as e:
-            log.error(f"Error parsing YAML file tron-{paasta_cluster}.{ext}: {e}")
+            log.error(f"Error parsing YAML file tron-{paasta_cluster}.{ext} for action_run_id {action_run_id}: {e}")
         except Exception as e:
-            log.error(f"Error reading service for {action} from file tron-{paasta_cluster}.{ext}: {e}")
+            log.error(
+                f"Error reading service for action_run_id {action_run_id} from file tron-{paasta_cluster}.{ext}: {e}"
+            )
 
-    return namespace
+    return namespace, job_name, run_num, action
 
 
 class PaaSTALogs:
@@ -108,8 +110,7 @@ class PaaSTALogs:
         self.component = component
         self.paasta_cluster = paasta_cluster
         self.action_run_id = action_run_id
-        _, job_name, run_num, action = action_run_id.split(".")
-        namespace = get_log_namespace(action_run_id, paasta_cluster)
+        namespace, job_name, run_num, action = decompose_action_id(action_run_id, paasta_cluster)
         # in our logging infra, things are logged to per-instance streams - but
         # since Tron PaaSTA instances are of the form `job_name.action`, we need
         # to escape the period since some parts of our infra will reject streams

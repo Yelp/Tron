@@ -5,7 +5,7 @@ import pytest
 import yaml
 
 import tron.utils.scribereader
-from tron.utils.scribereader import get_log_namespace
+from tron.utils.scribereader import decompose_action_id
 from tron.utils.scribereader import read_log_stream_for_action_run
 
 try:
@@ -424,7 +424,7 @@ def test_read_log_stream_for_action_run_min_date_and_max_date_for_long_output():
     assert len(output) == max_lines + 1
 
 
-def test_get_log_namespace_yml_file_found():
+def test_decompose_action_id_yml_file_found():
     action_run_id = "namespace.job.1234.action"
     paasta_cluster = "fake_cluster"
     config_content = """
@@ -436,39 +436,51 @@ def test_get_log_namespace_yml_file_found():
     with mock.patch("builtins.open", mock.mock_open(read_data=config_content)), mock.patch(
         "yaml.safe_load", return_value=yaml.safe_load(config_content)
     ):
-        result = get_log_namespace(action_run_id, paasta_cluster)
-        assert result == "test_service"
+        namespace, job_name, run_num, action = decompose_action_id(action_run_id, paasta_cluster)
+        assert namespace == "test_service"
+        assert job_name == "job"
+        assert run_num == "1234"
+        assert action == "action"
 
 
-def test_get_log_namespace_file_not_found():
+def test_decompose_action_id_file_not_found():
     action_run_id = "namespace.job.1234.action"
     paasta_cluster = "fake_cluster"
     with mock.patch("builtins.open", side_effect=FileNotFoundError):
-        result = get_log_namespace(action_run_id, paasta_cluster)
-        assert result == "namespace"
+        namespace, job_name, run_num, action = decompose_action_id(action_run_id, paasta_cluster)
+        assert namespace == "namespace"
+        assert job_name == "job"
+        assert run_num == "1234"
+        assert action == "action"
 
 
-def test_get_log_namespace_yaml_error():
+def test_decompose_action_id_yaml_error():
     action_run_id = "namespace.job.1234.action"
     paasta_cluster = "fake_cluster"
     with mock.patch("builtins.open", mock.mock_open(read_data="invalid_yaml")), mock.patch(
         "yaml.safe_load", side_effect=yaml.YAMLError
     ):
-        result = get_log_namespace(action_run_id, paasta_cluster)
-        assert result == "namespace"
+        namespace, job_name, run_num, action = decompose_action_id(action_run_id, paasta_cluster)
+        assert namespace == "namespace"
+        assert job_name == "job"
+        assert run_num == "1234"
+        assert action == "action"
 
 
-def test_get_log_namespace_generic_error():
+def test_decompose_action_id_generic_error():
     action_run_id = "namespace.job.1234.action"
     paasta_cluster = "fake_cluster"
     with mock.patch("builtins.open", mock.mock_open(read_data="some_data")), mock.patch(
         "yaml.safe_load", side_effect=Exception
     ):
-        result = get_log_namespace(action_run_id, paasta_cluster)
-        assert result == "namespace"
+        namespace, job_name, run_num, action = decompose_action_id(action_run_id, paasta_cluster)
+        assert namespace == "namespace"
+        assert job_name == "job"
+        assert run_num == "1234"
+        assert action == "action"
 
 
-def test_get_log_namespace_service_not_found():
+def test_decompose_action_id_service_not_found():
     action_run_id = "namespace.job.1234.action"
     paasta_cluster = "fake_cluster"
     config_content = """
@@ -480,5 +492,8 @@ def test_get_log_namespace_service_not_found():
     with mock.patch("builtins.open", mock.mock_open(read_data=config_content)), mock.patch(
         "yaml.safe_load", return_value=yaml.safe_load(config_content)
     ):
-        result = get_log_namespace(action_run_id, paasta_cluster)
-        assert result == "namespace"
+        namespace, job_name, run_num, action = decompose_action_id(action_run_id, paasta_cluster)
+        assert namespace == "namespace"
+        assert job_name == "job"
+        assert run_num == "1234"
+        assert action == "action"
