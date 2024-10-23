@@ -69,7 +69,6 @@ class JobCollection:
         job_scheduler.schedule_reconfigured()
         return True
 
-    # TODO: Types?, job_state_data is a weird dict[str, dict[Any?, Any?]], I think config_action_runner is actioncommand.SubprocessActionRunnerFactory OR actioncommand.NoActionRunnerFactory
     def restore_state(self, job_state_data, config_action_runner):
         """
         Loops through the jobs and their runs in order to load their

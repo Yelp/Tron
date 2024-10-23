@@ -24,22 +24,16 @@ from tron.core.jobrun import JobRun
 from tron.metrics import timer
 from tron.serialize import runstate
 
-# Restore
-# TODO: Get the correct number of partitions
-# TODO: Merge items
-# TODO: Restore items
-
-
 # Max DynamoDB object size is 400KB. Since we save two copies of the object (pickled and JSON),
 # we need to consider this max size applies to the entire item, so we use a max size of 200KB
 # for each version.
 #
 # In testing I could get away with 201_000 for both partitions so this should be enough overhead
-# to contain the object name and other data.
-OBJECT_SIZE = 200_000  # TODO: config this to avoid rolling out new version when we swap back to 400_000?
+# to contain other attributes like object name and number of partitions.
+OBJECT_SIZE = 200_000  # TODO: TRON-2240 - consider swapping back to 400_000 now that we've removed pickles
 MAX_SAVE_QUEUE = 500
 MAX_ATTEMPTS = 10
-MAX_TRANSACT_WRITE_ITEMS = 100  # Max number of items to write in a single transaction
+MAX_TRANSACT_WRITE_ITEMS = 100
 log = logging.getLogger(__name__)
 T = TypeVar("T")
 
@@ -163,7 +157,7 @@ class DynamoDBStateStore:
                     time.sleep(5)
                     continue
                 with self.save_lock:
-                    if val is None:  # QUESTION: is this a real option?
+                    if val is None:
                         self.save_queue[key] = (val, None)
                     else:
                         state_type = self.get_type_from_key(key)
@@ -304,7 +298,7 @@ class DynamoDBStateStore:
             delta=time.time() - start,
         )
 
-    # TODO: Is this ok if we just use the max number of partitions?
+    # TODO: TRON-2238 - Is this ok if we just use the max number of partitions?
     def _delete_item(self, key: str) -> None:
         start = time.time()
         try:
@@ -322,10 +316,10 @@ class DynamoDBStateStore:
                 delta=time.time() - start,
             )
 
-    # TODO: Get max partitions between pickle and json
+    # TODO: TRON-2238 - Get max partitions between pickle and json
     def _get_num_of_partitions(self, key: str) -> int:
         """
-        Return how many parts is the item partitioned into
+        Return the number of partitions an item is divided into.
         """
         try:
             partition = self.table.get_item(
