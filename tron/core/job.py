@@ -1,10 +1,12 @@
+import datetime
 import json
 import logging
-from datetime import timedelta
 from typing import Any
 from typing import Dict
 from typing import Optional
 from typing import TypeVar
+
+import pytz
 
 from tron import command_context
 from tron import node
@@ -90,9 +92,9 @@ class Job(Observable, Observer, Persistable):
         output_path: Optional[filehandler.OutputPath] = None,
         allow_overlap: Optional[bool] = None,
         action_runner: Optional[SubprocessActionRunnerFactory] = None,
-        max_runtime: Optional[Any] = None,  # TODO TYPE for self.max_runtime: <class 'NoneType'>
-        time_zone: Optional[Any] = None,  # TODO TYPE for self.time_zone: <class 'NoneType'>
-        expected_runtime: Optional[timedelta] = None,
+        max_runtime: Optional[datetime.timedelta] = None,
+        time_zone: Optional[pytz.timezone] = None,
+        expected_runtime: Optional[datetime.timedelta] = None,
         run_limit: Optional[int] = None,
     ):
         super().__init__()

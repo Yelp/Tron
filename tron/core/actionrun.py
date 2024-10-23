@@ -24,6 +24,7 @@ from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.bin.action_runner import build_environment
 from tron.bin.action_runner import build_labels
 from tron.command_context import CommandContext
+from tron.config import schema
 from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
@@ -317,11 +318,11 @@ class ActionRun(Observable, Persistable):
         action_runner: Optional[Union[NoActionRunnerFactory, SubprocessActionRunnerFactory]] = None,
         retries_remaining: Optional[int] = None,
         retries_delay: Optional[datetime.timedelta] = None,
-        machine=None,  # TODO str?
+        machine: Optional[Machine] = None,
         executor: Optional[str] = None,
-        trigger_downstreams=None,  # TODO: confirm with test job
-        triggered_by: Optional[set] = None,  # TODO: confirm with test job
-        on_upstream_rerun: Optional[str] = None,  # TODO: confirm with test job
+        trigger_downstreams: Optional[Union[bool, dict]] = None,
+        triggered_by: Optional[List[str]] = None,
+        on_upstream_rerun: Optional[schema.ActionOnRerun] = None,
         trigger_timeout_timestamp: Optional[float] = None,
         original_command: Optional[str] = None,
     ):
@@ -700,7 +701,7 @@ class ActionRun(Observable, Persistable):
             return True
 
     @property
-    def state_data(self):  # TODO: all these state_data funcs return dict
+    def state_data(self):
         """This data is used to serialize the state of this action run."""
 
         if isinstance(self.action_runner, NoActionRunnerFactory):
