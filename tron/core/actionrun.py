@@ -655,8 +655,6 @@ class ActionRun(Observable, Persistable):
             templates = ["shortdate.{shortdate}"]
         elif isinstance(self.trigger_downstreams, dict):
             templates = [f"{k}.{v}" for k, v in self.trigger_downstreams.items()]
-        else:
-            log.error(f"{self} trigger_downstreams must be true or dict")
 
         return [self.render_template(trig) for trig in templates]
 

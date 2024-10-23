@@ -6,8 +6,6 @@ from typing import Dict
 from typing import Optional
 from typing import TypeVar
 
-import pytz
-
 from tron import command_context
 from tron import node
 from tron.actioncommand import SubprocessActionRunnerFactory
@@ -93,7 +91,7 @@ class Job(Observable, Observer, Persistable):
         allow_overlap: Optional[bool] = None,
         action_runner: Optional[SubprocessActionRunnerFactory] = None,
         max_runtime: Optional[datetime.timedelta] = None,
-        time_zone: Optional[pytz.timezone] = None,
+        time_zone: Optional[datetime.tzinfo] = None,
         expected_runtime: Optional[datetime.timedelta] = None,
         run_limit: Optional[int] = None,
     ):
