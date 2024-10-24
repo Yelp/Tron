@@ -13,6 +13,7 @@ from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigProjectedSAVolume
 from tron.config.schema import ConfigSecretVolume
+from tron.config.schema import ConfigTopologySpreadConstraints
 
 log = logging.getLogger(__name__)
 
@@ -39,6 +40,7 @@ class ActionCommandConfig:
     extra_volumes: set = field(default_factory=set)
     node_selectors: dict = field(default_factory=dict)
     node_affinities: List[ConfigNodeAffinity] = field(default_factory=list)
+    topology_spread_constraints: List[ConfigTopologySpreadConstraints] = field(default_factory=list)
     labels: dict = field(default_factory=dict)
     annotations: dict = field(default_factory=dict)
     service_account_name: Optional[str] = None
@@ -98,6 +100,7 @@ class Action:
             cap_drop=config.cap_drop or [],
             node_selectors=config.node_selectors or {},
             node_affinities=config.node_affinities or [],
+            topology_spread_constraints=config.topology_spread_constraints or [],
             labels=config.labels or {},
             annotations=config.annotations or {},
             service_account_name=config.service_account_name or None,

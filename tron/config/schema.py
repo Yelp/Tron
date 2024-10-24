@@ -183,6 +183,7 @@ ConfigAction = config_object_factory(
         "trigger_timeout",  # datetime.deltatime or None
         "node_selectors",  # Dict of str, str
         "node_affinities",  # List of ConfigNodeAffinity
+        "topology_spread_constraints",  # List of ConfigTopologySpreadConstraints
         "labels",  # Dict of str, str
         "annotations",  # Dict of str, str
         "service_account_name",  # str
@@ -222,6 +223,7 @@ ConfigCleanupAction = config_object_factory(
         "trigger_timeout",  # datetime.deltatime or None
         "node_selectors",  # Dict of str, str
         "node_affinities",  # List of ConfigNodeAffinity
+        "topology_spread_constraints",  # List of ConfigTopologySpreadConstraints
         "labels",  # Dict of str, str
         "annotations",  # Dict of str, str
         "service_account_name",  # str
@@ -303,6 +305,12 @@ ConfigFieldSelectorSource = config_object_factory(
 ConfigNodeAffinity = config_object_factory(
     name="ConfigNodeAffinity",
     required=["key", "operator", "value"],
+    optional=[],
+)
+
+ConfigTopologySpreadConstraints = config_object_factory(
+    name="ConfigTopologySpreadConstraints",
+    required=["max_skew", "label_selector", "topology_key", "when_unsatisfiable"],
     optional=[],
 )
 
