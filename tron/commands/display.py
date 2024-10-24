@@ -443,6 +443,8 @@ def view_with_less(content, color=True):
         cmd.append("-r")
 
     less_proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    less_proc.stdin.write(maybe_encode(content))
+    less_proc.stdin.write(
+        maybe_encode(content)
+    )  # TODO: TRON-2293 maybe_encode is a relic of Python2->Python3 migration. Remove it.
     less_proc.stdin.close()
     less_proc.wait()

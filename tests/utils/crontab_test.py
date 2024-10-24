@@ -43,6 +43,30 @@ class TestParseCrontab(TestCase):
         assert_equal(actual["months"], mock_month.return_value)
         assert_equal(actual["weekdays"], mock_dow.return_value)
 
+    def test_full_crontab_line(self):
+        line = "*/15 0 1,15 * 1-5"
+        expected = {
+            "minutes": [0, 15, 30, 45],
+            "hours": [0],
+            "monthdays": [1, 15],
+            "months": None,
+            "weekdays": [1, 2, 3, 4, 5],
+            "ordinals": None,
+        }
+        assert_equal(crontab.parse_crontab(line), expected)
+
+    def test_full_crontab_line_with_last(self):
+        line = "0 0 L * *"
+        expected = {
+            "minutes": [0],
+            "hours": [0],
+            "monthdays": ["LAST"],
+            "months": None,
+            "weekdays": None,
+            "ordinals": None,
+        }
+        assert_equal(crontab.parse_crontab(line), expected)
+
 
 class TestMinuteFieldParser(TestCase):
     @setup
@@ -106,6 +130,36 @@ class TestMonthdayFieldParser(TestCase):
     def test_parse_last(self):
         expected = [5, 6, "LAST"]
         assert_equal(self.parser.parse("5, 6, L"), expected)
+
+
+class TestComplexExpressions(TestCase):
+    @setup
+    def setup_parser(self):
+        self.parser = crontab.MinuteFieldParser()
+
+    def test_complex_expression(self):
+        expected = [0, 10, 20, 30, 40, 50, 55]
+        assert_equal(self.parser.parse("*/10,55"), expected)
+
+
+class TestInvalidInputs(TestCase):
+    @setup
+    def setup_parser(self):
+        self.parser = crontab.MinuteFieldParser()
+
+    def test_invalid_expression(self):
+        with assert_raises(ValueError):
+            self.parser.parse("61")
+
+
+class TestBoundaryValues(TestCase):
+    @setup
+    def setup_parser(self):
+        self.parser = crontab.MinuteFieldParser()
+
+    def test_boundary_values(self):
+        assert_equal(self.parser.parse("0"), [0])
+        assert_equal(self.parser.parse("59"), [59])
 
 
 if __name__ == "__main__":

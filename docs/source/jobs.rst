@@ -209,7 +209,7 @@ Optional Fields
     after this duration.
 
 **trigger_downstreams** (bool or dict)
-    Upon successfull completion of an action, will emit a trigger for every
+    Upon successful completion of an action, will emit a trigger for every
     item in the dictionary. When set to ``true``, a default dict of
     ``{shortdate: "{shortdate}"}`` is assumed. Emitted triggers will be in form:
     ``<namespace>.<job>.<action>.<dict key>.<rendered value>``. See
@@ -220,7 +220,7 @@ Optional Fields
     have been emitted by upstream actions. Unlike with ``requires`` attribute,
     dependent actions don't have to belong to the same job. ``triggered_by``
     template may contain any pattern allowed in ``command`` attribute.
-    See :ref:`shortdate` for an explantion of shortdate
+    See :ref:`shortdate` for an explanation of shortdate
 
     Example:
 

@@ -1,4 +1,4 @@
-import pickle
+import json
 from unittest import mock
 
 import boto3
@@ -100,12 +100,29 @@ def store():
 
 @pytest.fixture
 def small_object():
-    yield pickle.dumps({"this": "data"})
+    yield {
+        "job_name": "example_job",
+        "run_num": 1,
+        "run_time": None,
+        "node_name": "example_node",
+        "runs": [],
+        "cleanup_run": None,
+        "manual": False,
+    }
 
 
 @pytest.fixture
 def large_object():
-    yield pickle.dumps([i for i in range(1000000)])
+    yield {
+        "job_name": "example_job",
+        "run_num": 1,
+        "run_time": None,
+        "node_name": "example_node",
+        "runs": [],
+        "cleanup_run": None,
+        "manual": False,
+        "large_data": [i for i in range(1_000_000)],
+    }
 
 
 @pytest.mark.usefixtures("store", "small_object", "large_object")
@@ -113,11 +130,11 @@ class TestDynamoDBStateStore:
     def test_save(self, store, small_object, large_object):
         key_value_pairs = [
             (
-                store.build_key("DynamoDBTest", "two"),
+                store.build_key("job_state", "two"),
                 small_object,
             ),
             (
-                store.build_key("DynamoDBTest2", "four"),
+                store.build_key("job_run_state", "four"),
                 small_object,
             ),
         ]
@@ -126,21 +143,27 @@ class TestDynamoDBStateStore:
 
         assert store.save_errors == 0
         keys = [
-            store.build_key("DynamoDBTest", "two"),
-            store.build_key("DynamoDBTest2", "four"),
+            store.build_key("job_state", "two"),
+            store.build_key("job_run_state", "four"),
         ]
         vals = store.restore(keys)
         for key, value in key_value_pairs:
             assert_equal(vals[key], value)
 
+        for key in keys:
+            item = store.table.get_item(Key={"key": key, "index": 0})
+            assert "Item" in item
+            assert "json_val" in item["Item"]
+            assert_equal(json.loads(item["Item"]["json_val"]), small_object)
+
     def test_delete_if_val_is_none(self, store, small_object, large_object):
         key_value_pairs = [
             (
-                store.build_key("DynamoDBTest", "two"),
+                store.build_key("job_state", "two"),
                 small_object,
             ),
             (
-                store.build_key("DynamoDBTest2", "four"),
+                store.build_key("job_run_state", "four"),
                 small_object,
             ),
         ]
@@ -149,7 +172,7 @@ class TestDynamoDBStateStore:
 
         delete = [
             (
-                store.build_key("DynamoDBTest", "two"),
+                store.build_key("job_state", "two"),
                 None,
             ),
         ]
@@ -159,8 +182,8 @@ class TestDynamoDBStateStore:
         assert store.save_errors == 0
         # Try to restore both, we should just get one back
         keys = [
-            store.build_key("DynamoDBTest", "two"),
-            store.build_key("DynamoDBTest2", "four"),
+            store.build_key("job_state", "two"),
+            store.build_key("job_run_state", "four"),
         ]
         vals = store.restore(keys)
         assert vals == {keys[1]: small_object}
@@ -168,7 +191,7 @@ class TestDynamoDBStateStore:
     def test_save_more_than_4KB(self, store, small_object, large_object):
         key_value_pairs = [
             (
-                store.build_key("DynamoDBTest", "two"),
+                store.build_key("job_state", "two"),
                 large_object,
             ),
         ]
@@ -176,14 +199,14 @@ class TestDynamoDBStateStore:
         store._consume_save_queue()
 
         assert store.save_errors == 0
-        keys = [store.build_key("DynamoDBTest", "two")]
+        keys = [store.build_key("job_state", "two")]
         vals = store.restore(keys)
         for key, value in key_value_pairs:
             assert_equal(vals[key], value)
 
     def test_restore_more_than_4KB(self, store, small_object, large_object):
-        keys = [store.build_key("thing", i) for i in range(3)]
-        value = pickle.loads(large_object)
+        keys = [store.build_key("job_state", i) for i in range(3)]
+        value = large_object
         pairs = zip(keys, (value for i in range(len(keys))))
         store.save(pairs)
         store._consume_save_queue()
@@ -191,11 +214,11 @@ class TestDynamoDBStateStore:
         assert store.save_errors == 0
         vals = store.restore(keys)
         for key in keys:
-            assert_equal(pickle.dumps(vals[key]), large_object)
+            assert_equal(vals[key], large_object)
 
     def test_restore(self, store, small_object, large_object):
-        keys = [store.build_key("thing", i) for i in range(3)]
-        value = pickle.loads(small_object)
+        keys = [store.build_key("job_state", i) for i in range(3)]
+        value = small_object
         pairs = zip(keys, (value for i in range(len(keys))))
         store.save(pairs)
         store._consume_save_queue()
@@ -203,11 +226,11 @@ class TestDynamoDBStateStore:
         assert store.save_errors == 0
         vals = store.restore(keys)
         for key in keys:
-            assert_equal(pickle.dumps(vals[key]), small_object)
+            assert_equal(vals[key], small_object)
 
     def test_delete_item(self, store, small_object, large_object):
-        keys = [store.build_key("thing", i) for i in range(3)]
-        value = pickle.loads(large_object)
+        keys = [store.build_key("job_state", i) for i in range(3)]
+        value = large_object
         pairs = list(zip(keys, (value for i in range(len(keys)))))
         store.save(pairs)
 
@@ -222,8 +245,8 @@ class TestDynamoDBStateStore:
             "moto.dynamodb2.responses.DynamoHandler.transact_write_items",
             side_effect=KeyError("foo"),
         ) as mock_failed_write:
-            keys = [store.build_key("thing", i) for i in range(1)]
-            value = pickle.loads(small_object)
+            keys = [store.build_key("job_state", i) for i in range(1)]
+            value = small_object
             pairs = zip(keys, (value for i in range(len(keys))))
             try:
                 store.save(pairs)
@@ -236,7 +259,7 @@ class TestDynamoDBStateStore:
                 store.name: [
                     {
                         "index": {"N": "0"},
-                        "key": {"S": "thing 0"},
+                        "key": {"S": "job_state 0"},
                     },
                 ],
             },
@@ -246,15 +269,15 @@ class TestDynamoDBStateStore:
                     "Keys": [
                         {
                             "index": {"N": "0"},
-                            "key": {"S": "thing 0"},
+                            "key": {"S": "job_state 0"},
                         }
                     ],
                 },
             },
             "ResponseMetadata": {},
         }
-        keys = [store.build_key("thing", i) for i in range(1)]
-        value = pickle.loads(small_object)
+        keys = [store.build_key("job_state", i) for i in range(1)]
+        value = small_object
         pairs = zip(keys, (value for i in range(len(keys))))
         store.save(pairs)
         with mock.patch.object(
@@ -269,7 +292,7 @@ class TestDynamoDBStateStore:
 
     def test_restore_exception_propagation(self, store, small_object):
         # This test is to ensure that restore propagates exceptions upwards: see DAR-2328
-        keys = [store.build_key("thing", i) for i in range(3)]
+        keys = [store.build_key("job_state", i) for i in range(3)]
 
         mock_future = mock.MagicMock()
         mock_future.result.side_effect = Exception("mocked exception")
