@@ -1,3 +1,11 @@
+tron (2.6.0) jammy; urgency=medium
+
+  * 2.6.0 tagged with 'make release'
+    Commit: Use logreader rathern than vector-reader (#1002)  This CLI
+    is being renamed, so let"s account for that
+
+ -- Luis Perez <luisp@yelp.com>  Thu, 24 Oct 2024 09:34:05 -0700
+
 tron (2.5.3) jammy; urgency=medium
 
   * 2.5.3 tagged with 'make release'
