@@ -24,6 +24,7 @@ from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigProjectedSAVolume
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSecretVolume
+from tron.config.schema import ConfigTopologySpreadConstraints
 from tron.config.schema import ConfigVolume
 from tron.serialize.filehandler import OutputStreamSerializer
 from tron.utils import exitcode
@@ -490,6 +491,7 @@ class KubernetesCluster:
         cap_drop: Collection[str],
         node_selectors: Dict[str, str],
         node_affinities: List[ConfigNodeAffinity],
+        topology_spread_constraints: List[ConfigTopologySpreadConstraints],
         pod_labels: Dict[str, str],
         pod_annotations: Dict[str, str],
         service_account_name: Optional[str],
@@ -529,6 +531,7 @@ class KubernetesCluster:
                 ],
                 node_selectors=node_selectors,
                 node_affinities=[affinity._asdict() for affinity in node_affinities],
+                topology_spread_constraints=[tsc._asdict() for tsc in topology_spread_constraints],
                 labels=pod_labels,
                 annotations=pod_annotations,
                 service_account_name=service_account_name,

@@ -59,6 +59,7 @@ from tron.config.schema import ConfigSecretVolume
 from tron.config.schema import ConfigSecretVolumeItem
 from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigState
+from tron.config.schema import ConfigTopologySpreadConstraints
 from tron.config.schema import ConfigVolume
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
@@ -394,6 +395,41 @@ class ValidateNodeAffinity(Validator):
 valid_node_affinity = ValidateNodeAffinity()
 
 
+def _valid_when_unsatisfiable(value: str, config_context: ConfigContext) -> str:
+    valid_values = {"DoNotSchedule", "ScheduleAnyway"}
+    if value not in valid_values:
+        raise ConfigError(f"Got {value} as a when_unsatisfiable value, expected one of {valid_values}")
+
+    return value
+
+
+def _valid_topology_spread_label_selector(value: Dict[str, str], config_context: ConfigContext) -> Dict[str, str]:
+    if not value:
+        raise ConfigError("TopologySpreadConstraints must have a label_selector")
+
+    # XXX: we probably also want to enforce k8s limits for label lengths and whatnot
+    if not all(isinstance(k, str) for k in value.keys()):
+        raise ConfigError("TopologySpreadConstraints label_selector keys must be strings")
+
+    if not all(isinstance(s, str) for s in value.values()):
+        raise ConfigError("TopologySpreadConstraints label_selector values must be strings")
+
+    return value
+
+
+class ValidateTopologySpreadConstraints(Validator):
+    config_class = ConfigTopologySpreadConstraints
+    validators = {
+        "max_skew": valid_int,
+        "when_unsatisfiable": _valid_when_unsatisfiable,
+        "topology_key": valid_string,
+        "label_selector": _valid_topology_spread_label_selector,
+    }
+
+
+valid_topology_spread_constraints = ValidateTopologySpreadConstraints()
+
+
 class ValidateSSHOptions(Validator):
     """Validate SSH options."""
 
@@ -564,6 +600,7 @@ class ValidateAction(Validator):
         "trigger_timeout": None,
         "node_selectors": None,
         "node_affinities": None,
+        "topology_spread_constraints": None,
         "labels": None,
         "annotations": None,
         "service_account_name": None,
@@ -605,6 +642,9 @@ class ValidateAction(Validator):
         "trigger_timeout": config_utils.valid_time_delta,
         "node_selectors:": valid_dict,
         "node_affinities": build_list_of_type_validator(valid_node_affinity, allow_empty=True),
+        "topology_spread_constraints": build_list_of_type_validator(
+            valid_topology_spread_constraints, allow_empty=True
+        ),
         "labels:": valid_dict,
         "annotations": valid_dict,
         "service_account_name": valid_string,
@@ -655,6 +695,7 @@ class ValidateCleanupAction(Validator):
         "trigger_timeout": None,
         "node_selectors": None,
         "node_affinities": None,
+        "topology_spread_constraints": None,
         "labels": None,
         "annotations": None,
         "service_account_name": None,
@@ -691,6 +732,9 @@ class ValidateCleanupAction(Validator):
         "trigger_timeout": config_utils.valid_time_delta,
         "node_selectors:": valid_dict,
         "node_affinities": build_list_of_type_validator(valid_node_affinity, allow_empty=True),
+        "topology_spread_constraints": build_list_of_type_validator(
+            valid_topology_spread_constraints, allow_empty=True
+        ),
         "labels": valid_dict,
         "annotations": valid_dict,
         "service_account_name": valid_string,
