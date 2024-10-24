@@ -81,19 +81,26 @@ class JobRun(Observable, Observer, Persistable):
         self.context = command_context.build_context(self, base_context)
 
     @staticmethod
-    def to_json(state_data: dict) -> str:
+    def to_json(state_data: dict) -> Optional[str]:
         """Serialize the JobRun instance to a JSON string."""
-        return json.dumps(
-            {
-                "job_name": state_data["job_name"],
-                "run_num": state_data["run_num"],
-                "run_time": state_data["run_time"].isoformat() if state_data["run_time"] else None,
-                "node_name": state_data["node_name"],
-                "runs": [ActionRun.to_json(run) for run in state_data["runs"]],
-                "cleanup_run": ActionRun.to_json(state_data["cleanup_run"]) if state_data["cleanup_run"] else None,
-                "manual": state_data["manual"],
-            }
-        )
+        try:
+            return json.dumps(
+                {
+                    "job_name": state_data["job_name"],
+                    "run_num": state_data["run_num"],
+                    "run_time": state_data["run_time"].isoformat() if state_data["run_time"] else None,
+                    "node_name": state_data["node_name"],
+                    "runs": [ActionRun.to_json(run) for run in state_data["runs"]],
+                    "cleanup_run": ActionRun.to_json(state_data["cleanup_run"]) if state_data["cleanup_run"] else None,
+                    "manual": state_data["manual"],
+                }
+            )
+        except KeyError as e:
+            log.error(f"Missing key in state_data: {e}")
+            return None
+        except Exception as e:
+            log.error(f"Error serializing JobRun to JSON: {e}")
+            return None
 
     @property
     def id(self):

@@ -13,6 +13,7 @@ from typing import DefaultDict
 from typing import Dict
 from typing import List
 from typing import Literal
+from typing import Optional
 from typing import Sequence
 from typing import Tuple
 from typing import TypeVar
@@ -161,11 +162,12 @@ class DynamoDBStateStore:
                         self.save_queue[key] = (val, None)
                     else:
                         state_type = self.get_type_from_key(key)
-                        json_val = self._serialize_item(state_type, val)
-                        self.save_queue[key] = (
-                            val,
-                            json_val,
-                        )
+                        try:
+                            json_val = self._serialize_item(state_type, val)
+                        except Exception as e:
+                            log.error(f"Failed to serialize JSON for key {key}: {e}")
+                            json_val = None  # Proceed without JSON if serialization fails
+                        self.save_queue[key] = (val, json_val)
                 break
 
     def _consume_save_queue(self):
@@ -201,7 +203,7 @@ class DynamoDBStateStore:
         return key.split()[0]
 
     # TODO: TRON-2305 - In an ideal world, we wouldn't be passing around state/state_data dicts. It would be a lot nicer to have regular objects here
-    def _serialize_item(self, key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE], state: Dict[str, Any]) -> str:  # type: ignore
+    def _serialize_item(self, key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE], state: Dict[str, Any]) -> Optional[str]:  # type: ignore
         if key == runstate.JOB_STATE:
             return Job.to_json(state)
         elif key == runstate.JOB_RUN_STATE:
@@ -239,11 +241,9 @@ class DynamoDBStateStore:
 
         pickled_val, json_val = value
         num_partitions = math.ceil(len(pickled_val) / OBJECT_SIZE)
-        num_json_val_partitions = math.ceil(len(json_val) / OBJECT_SIZE)
+        num_json_val_partitions = math.ceil(len(json_val) / OBJECT_SIZE) if json_val else 0
         items = []
 
-        # Use the maximum number of partitions (JSON can be larger
-        # than pickled value so this makes sure we save the entire item)
         max_partitions = max(num_partitions, num_json_val_partitions)
         for index in range(max_partitions):
             item = {
@@ -263,16 +263,18 @@ class DynamoDBStateStore:
                         "num_partitions": {
                             "N": str(num_partitions),
                         },
-                        "json_val": {
-                            "S": json_val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(json_val))]
-                        },
-                        "num_json_val_partitions": {
-                            "N": str(num_json_val_partitions),
-                        },
                     },
                     "TableName": self.name,
                 },
             }
+
+            if json_val:
+                item["Put"]["Item"]["json_val"] = {
+                    "S": json_val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(json_val))]
+                }
+                item["Put"]["Item"]["num_json_val_partitions"] = {
+                    "N": str(num_json_val_partitions),
+                }
 
             count = 0
             items.append(item)

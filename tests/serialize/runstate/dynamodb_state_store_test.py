@@ -125,7 +125,6 @@ def large_object():
     }
 
 
-# TODO: Add better test for to_json?
 @pytest.mark.usefixtures("store", "small_object", "large_object")
 class TestDynamoDBStateStore:
     def test_save(self, store, small_object, large_object):

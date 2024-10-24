@@ -123,9 +123,13 @@ class Job(Observable, Observer, Persistable):
         log.info(f"{self} created")
 
     @staticmethod
-    def to_json(state_data: dict) -> str:
+    def to_json(state_data: dict) -> Optional[str]:
         """Serialize the Job instance to a JSON string."""
-        return json.dumps(state_data)
+        try:
+            return json.dumps(state_data)
+        except Exception as e:
+            log.error(f"Error serializing Job to JSON: {e}")
+            return None
 
     @classmethod
     def from_config(
