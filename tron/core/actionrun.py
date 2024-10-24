@@ -175,19 +175,26 @@ class ActionRunAttempt(Persistable):
         return state_data
 
     @staticmethod
-    def to_json(state_data: dict) -> str:
+    def to_json(state_data: dict) -> Optional[str]:
         """Serialize the ActionRunAttempt instance to a JSON string."""
-        return json.dumps(
-            {
-                "command_config": ActionCommandConfig.to_json(state_data["command_config"]),
-                "start_time": state_data["start_time"].isoformat() if state_data["start_time"] else None,
-                "end_time": state_data["end_time"].isoformat() if state_data["end_time"] else None,
-                "rendered_command": state_data["rendered_command"],
-                "exit_status": state_data["exit_status"],
-                "mesos_task_id": state_data["mesos_task_id"],
-                "kubernetes_task_id": state_data["kubernetes_task_id"],
-            }
-        )
+        try:
+            return json.dumps(
+                {
+                    "command_config": ActionCommandConfig.to_json(state_data["command_config"]),
+                    "start_time": state_data["start_time"].isoformat() if state_data["start_time"] else None,
+                    "end_time": state_data["end_time"].isoformat() if state_data["end_time"] else None,
+                    "rendered_command": state_data["rendered_command"],
+                    "exit_status": state_data["exit_status"],
+                    "mesos_task_id": state_data["mesos_task_id"],
+                    "kubernetes_task_id": state_data["kubernetes_task_id"],
+                }
+            )
+        except KeyError as e:
+            log.error(f"Missing key in state_data: {e}")
+            return None
+        except Exception as e:
+            log.error(f"Error serializing ActionRunAttempt to JSON: {e}")
+            return None
 
     @classmethod
     def from_state(cls, state_data):
@@ -731,7 +738,7 @@ class ActionRun(Observable, Persistable):
         }
 
     @staticmethod
-    def to_json(state_data: dict) -> str:
+    def to_json(state_data: dict) -> Optional[str]:
         """Serialize the ActionRun instance to a JSON string."""
         action_runner = state_data.get("action_runner")
         if action_runner is None:
@@ -739,27 +746,34 @@ class ActionRun(Observable, Persistable):
         else:
             action_runner_json = SubprocessActionRunnerFactory.to_json(action_runner)
 
-        return json.dumps(
-            {
-                "job_run_id": state_data["job_run_id"],
-                "action_name": state_data["action_name"],
-                "state": state_data["state"],
-                "original_command": state_data["original_command"],
-                "start_time": state_data["start_time"].isoformat() if state_data["start_time"] else None,
-                "end_time": state_data["end_time"].isoformat() if state_data["end_time"] else None,
-                "node_name": state_data["node_name"],
-                "exit_status": state_data["exit_status"],
-                "attempts": [ActionRunAttempt.to_json(attempt) for attempt in state_data["attempts"]],
-                "retries_remaining": state_data["retries_remaining"],
-                "retries_delay": state_data["retries_delay"],
-                "action_runner": action_runner_json,
-                "executor": state_data["executor"],
-                "trigger_downstreams": state_data["trigger_downstreams"],
-                "triggered_by": state_data["triggered_by"],
-                "on_upstream_rerun": state_data["on_upstream_rerun"],
-                "trigger_timeout_timestamp": state_data["trigger_timeout_timestamp"],
-            }
-        )
+        try:
+            return json.dumps(
+                {
+                    "job_run_id": state_data["job_run_id"],
+                    "action_name": state_data["action_name"],
+                    "state": state_data["state"],
+                    "original_command": state_data["original_command"],
+                    "start_time": state_data["start_time"].isoformat() if state_data["start_time"] else None,
+                    "end_time": state_data["end_time"].isoformat() if state_data["end_time"] else None,
+                    "node_name": state_data["node_name"],
+                    "exit_status": state_data["exit_status"],
+                    "attempts": [ActionRunAttempt.to_json(attempt) for attempt in state_data["attempts"]],
+                    "retries_remaining": state_data["retries_remaining"],
+                    "retries_delay": state_data["retries_delay"],
+                    "action_runner": action_runner_json,
+                    "executor": state_data["executor"],
+                    "trigger_downstreams": state_data["trigger_downstreams"],
+                    "triggered_by": state_data["triggered_by"],
+                    "on_upstream_rerun": state_data["on_upstream_rerun"],
+                    "trigger_timeout_timestamp": state_data["trigger_timeout_timestamp"],
+                }
+            )
+        except KeyError as e:
+            log.error(f"Missing key in state_data: {e}")
+            return None
+        except Exception as e:
+            log.error(f"Error serializing ActionRun to JSON: {e}")
+            return None
 
     def render_template(self, template):
         """Render our configured command using the command context."""

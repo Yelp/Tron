@@ -3,6 +3,7 @@ import logging
 import os
 from io import StringIO
 from shlex import quote
+from typing import Optional
 
 from tron.config import schema
 from tron.serialize import filehandler
@@ -203,13 +204,20 @@ class SubprocessActionRunnerFactory(Persistable):
         return not self == other
 
     @staticmethod
-    def to_json(state_data: dict) -> str:
-        return json.dumps(
-            {
-                "status_path": state_data["status_path"],
-                "exec_path": state_data["exec_path"],
-            }
-        )
+    def to_json(state_data: dict) -> Optional[str]:
+        try:
+            return json.dumps(
+                {
+                    "status_path": state_data["status_path"],
+                    "exec_path": state_data["exec_path"],
+                }
+            )
+        except KeyError as e:
+            log.error(f"Missing key in state_data: {e}")
+            return None
+        except Exception as e:
+            log.error(f"Error serializing SubprocessActionRunnerFactory to JSON: {e}")
+            return None
 
 
 def create_action_runner_factory_from_config(config):

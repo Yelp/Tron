@@ -55,7 +55,7 @@ class ActionCommandConfig(Persistable):
         return ActionCommandConfig(**self.state_data)
 
     @staticmethod
-    def to_json(state_data: dict) -> str:
+    def to_json(state_data: dict) -> Optional[str]:
         """Serialize the ActionCommandConfig instance to a JSON string."""
 
         def serialize_namedtuple(obj):
@@ -63,31 +63,40 @@ class ActionCommandConfig(Persistable):
                 return obj._asdict()
             return obj
 
-        return json.dumps(
-            {
-                "command": state_data["command"],
-                "cpus": state_data["cpus"],
-                "mem": state_data["mem"],
-                "disk": state_data["disk"],
-                "cap_add": state_data["cap_add"],
-                "cap_drop": state_data["cap_drop"],
-                "constraints": list(state_data["constraints"]),
-                "docker_image": state_data["docker_image"],
-                "docker_parameters": list(state_data["docker_parameters"]),
-                "env": state_data["env"],
-                "secret_env": state_data["secret_env"],
-                "secret_volumes": [serialize_namedtuple(volume) for volume in state_data["secret_volumes"]],
-                "projected_sa_volumes": [serialize_namedtuple(volume) for volume in state_data["projected_sa_volumes"]],
-                "field_selector_env": state_data["field_selector_env"],
-                "extra_volumes": list(state_data["extra_volumes"]),
-                "node_selectors": state_data["node_selectors"],
-                "node_affinities": [serialize_namedtuple(affinity) for affinity in state_data["node_affinities"]],
-                "labels": state_data["labels"],
-                "annotations": state_data["annotations"],
-                "service_account_name": state_data["service_account_name"],
-                "ports": state_data["ports"],
-            }
-        )
+        try:
+            return json.dumps(
+                {
+                    "command": state_data["command"],
+                    "cpus": state_data["cpus"],
+                    "mem": state_data["mem"],
+                    "disk": state_data["disk"],
+                    "cap_add": state_data["cap_add"],
+                    "cap_drop": state_data["cap_drop"],
+                    "constraints": list(state_data["constraints"]),
+                    "docker_image": state_data["docker_image"],
+                    "docker_parameters": list(state_data["docker_parameters"]),
+                    "env": state_data["env"],
+                    "secret_env": state_data["secret_env"],
+                    "secret_volumes": [serialize_namedtuple(volume) for volume in state_data["secret_volumes"]],
+                    "projected_sa_volumes": [
+                        serialize_namedtuple(volume) for volume in state_data["projected_sa_volumes"]
+                    ],
+                    "field_selector_env": state_data["field_selector_env"],
+                    "extra_volumes": list(state_data["extra_volumes"]),
+                    "node_selectors": state_data["node_selectors"],
+                    "node_affinities": [serialize_namedtuple(affinity) for affinity in state_data["node_affinities"]],
+                    "labels": state_data["labels"],
+                    "annotations": state_data["annotations"],
+                    "service_account_name": state_data["service_account_name"],
+                    "ports": state_data["ports"],
+                }
+            )
+        except KeyError as e:
+            log.error(f"Missing key in state_data: {e}")
+            return None
+        except Exception as e:
+            log.error(f"Error serializing ActionCommandConfig to JSON: {e}")
+            return None
 
 
 @dataclass
