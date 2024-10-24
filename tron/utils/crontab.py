@@ -28,6 +28,7 @@ def convert_predefined(line: str) -> str:
     return PREDEFINED_SCHEDULE[line]
 
 
+# TODO: TRON-1761 - Fix cron validation. The pattern is not working as expected.
 class FieldParser:
     """Parse and validate a field in a crontab entry."""
 
@@ -61,10 +62,7 @@ class FieldParser:
         sorted_groups: List[Union[int, str]] = sorted(groups, key=lambda x: (isinstance(x, str), x))
         if has_last:
             sorted_groups.append("LAST")
-        if not sorted_groups:
-            return None
-        if all(isinstance(x, int) for x in sorted_groups):
-            return sorted_groups
+
         return sorted_groups
 
     def get_match_groups(self, source: str) -> dict:
