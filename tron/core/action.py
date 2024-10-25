@@ -91,11 +91,11 @@ class ActionCommandConfig(Persistable):
                     "ports": state_data["ports"],
                 }
             )
-        except KeyError as e:
-            log.error(f"Missing key in state_data: {e}")
+        except KeyError:
+            log.exception("Missing key in state_data:")
             return None
-        except Exception as e:
-            log.error(f"Error serializing ActionCommandConfig to JSON: {e}")
+        except Exception:
+            log.exception("Error serializing ActionCommandConfig to JSON:")
             return None
 
 

@@ -189,11 +189,11 @@ class ActionRunAttempt(Persistable):
                     "kubernetes_task_id": state_data["kubernetes_task_id"],
                 }
             )
-        except KeyError as e:
-            log.error(f"Missing key in state_data: {e}")
+        except KeyError:
+            log.exception("Missing key in state_data:")
             return None
-        except Exception as e:
-            log.error(f"Error serializing ActionRunAttempt to JSON: {e}")
+        except Exception:
+            log.exception("Error serializing ActionRunAttempt to JSON:")
             return None
 
     @classmethod
@@ -768,11 +768,11 @@ class ActionRun(Observable, Persistable):
                     "trigger_timeout_timestamp": state_data["trigger_timeout_timestamp"],
                 }
             )
-        except KeyError as e:
-            log.error(f"Missing key in state_data: {e}")
+        except KeyError:
+            log.exception("Missing key in state_data:")
             return None
-        except Exception as e:
-            log.error(f"Error serializing ActionRun to JSON: {e}")
+        except Exception:
+            log.exception("Error serializing ActionRun to JSON:")
             return None
 
     def render_template(self, template):

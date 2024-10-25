@@ -127,8 +127,8 @@ class Job(Observable, Observer, Persistable):
         """Serialize the Job instance to a JSON string."""
         try:
             return json.dumps(state_data)
-        except Exception as e:
-            log.error(f"Error serializing Job to JSON: {e}")
+        except Exception:
+            log.exception("Error serializing Job to JSON:")
             return None
 
     @classmethod

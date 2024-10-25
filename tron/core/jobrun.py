@@ -95,11 +95,11 @@ class JobRun(Observable, Observer, Persistable):
                     "manual": state_data["manual"],
                 }
             )
-        except KeyError as e:
-            log.error(f"Missing key in state_data: {e}")
+        except KeyError:
+            log.exception("Missing key in state_data:")
             return None
-        except Exception as e:
-            log.error(f"Error serializing JobRun to JSON: {e}")
+        except Exception:
+            log.exception("Error serializing JobRun to JSON:")
             return None
 
     @property
