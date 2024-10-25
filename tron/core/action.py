@@ -93,10 +93,10 @@ class ActionCommandConfig(Persistable):
             )
         except KeyError:
             log.exception("Missing key in state_data:")
-            return None
+            raise
         except Exception:
             log.exception("Error serializing ActionCommandConfig to JSON:")
-            return None
+            raise
 
 
 @dataclass

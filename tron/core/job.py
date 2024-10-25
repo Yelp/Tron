@@ -129,7 +129,7 @@ class Job(Observable, Observer, Persistable):
             return json.dumps(state_data)
         except Exception:
             log.exception("Error serializing Job to JSON:")
-            return None
+            raise
 
     @classmethod
     def from_config(

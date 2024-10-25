@@ -214,10 +214,10 @@ class SubprocessActionRunnerFactory(Persistable):
             )
         except KeyError:
             log.exception("Missing key in state_data:")
-            return None
+            raise
         except Exception:
             log.exception("Error serializing SubprocessActionRunnerFactory to JSON:")
-            return None
+            raise
 
 
 def create_action_runner_factory_from_config(config):

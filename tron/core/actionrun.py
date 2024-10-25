@@ -191,10 +191,10 @@ class ActionRunAttempt(Persistable):
             )
         except KeyError:
             log.exception("Missing key in state_data:")
-            return None
+            raise
         except Exception:
             log.exception("Error serializing ActionRunAttempt to JSON:")
-            return None
+            raise
 
     @classmethod
     def from_state(cls, state_data):
@@ -770,10 +770,10 @@ class ActionRun(Observable, Persistable):
             )
         except KeyError:
             log.exception("Missing key in state_data:")
-            return None
+            raise
         except Exception:
             log.exception("Error serializing ActionRun to JSON:")
-            return None
+            raise
 
     def render_template(self, template):
         """Render our configured command using the command context."""

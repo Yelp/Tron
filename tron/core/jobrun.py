@@ -97,10 +97,10 @@ class JobRun(Observable, Observer, Persistable):
             )
         except KeyError:
             log.exception("Missing key in state_data:")
-            return None
+            raise
         except Exception:
             log.exception("Error serializing JobRun to JSON:")
-            return None
+            raise
 
     @property
     def id(self):
