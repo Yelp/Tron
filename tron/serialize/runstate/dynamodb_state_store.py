@@ -20,6 +20,7 @@ from typing import TypeVar
 
 import boto3  # type: ignore
 
+import tron.prom_metrics as prom_metrics
 from tron.core.job import Job
 from tron.core.jobrun import JobRun
 from tron.metrics import timer
@@ -162,11 +163,7 @@ class DynamoDBStateStore:
                         self.save_queue[key] = (val, None)
                     else:
                         state_type = self.get_type_from_key(key)
-                        try:
-                            json_val = self._serialize_item(state_type, val)
-                        except Exception as e:
-                            log.error(f"Failed to serialize JSON for key {key}: {e}")
-                            json_val = None  # Proceed without JSON if serialization fails
+                        json_val = self._serialize_item(state_type, val)
                         self.save_queue[key] = (val, json_val)
                 break
 
@@ -205,12 +202,17 @@ class DynamoDBStateStore:
 
     # TODO: TRON-2305 - In an ideal world, we wouldn't be passing around state/state_data dicts. It would be a lot nicer to have regular objects here
     def _serialize_item(self, key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE], state: Dict[str, Any]) -> Optional[str]:  # type: ignore
-        if key == runstate.JOB_STATE:
-            return Job.to_json(state)
-        elif key == runstate.JOB_RUN_STATE:
-            return JobRun.to_json(state)
-        else:
-            raise ValueError(f"Unknown type: key {key}")
+        try:
+            if key == runstate.JOB_STATE:
+                return Job.to_json(state)
+            elif key == runstate.JOB_RUN_STATE:
+                return JobRun.to_json(state)
+            else:
+                raise ValueError(f"Unknown type: key {key}")
+        except Exception:
+            log.exception(f"Serialization error for key {key}")
+            prom_metrics.json_serialization_errors_counter.inc()
+            return None
 
     def _save_loop(self):
         while True:
