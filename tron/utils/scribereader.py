@@ -10,6 +10,7 @@ from typing import Optional
 from typing import Tuple
 
 import staticconf  # type: ignore
+import yaml
 
 from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
@@ -81,12 +82,37 @@ def get_scribereader_host_and_port(ecosystem: str, superregion: str, region: str
     return host, port
 
 
+def decompose_action_id(action_run_id: str, paasta_cluster: str) -> Tuple[str, str, str, str]:
+    namespace, job_name, run_num, action = action_run_id.split(".")
+    for ext in ["yaml", "yml"]:
+        try:
+            with open(f"/nail/etc/services/{namespace}/tron-{paasta_cluster}.{ext}") as f:
+                config = yaml.load(f, Loader=yaml.CSafeLoader)
+                service: Optional[str] = (
+                    config.get(job_name, {}).get("actions", {}).get(action, {}).get("service", None)
+                )
+                if service:
+                    return service, job_name, run_num, action
+        except FileNotFoundError:
+            log.warning(f"yelp-soaconfig file tron-{paasta_cluster}.{ext} not found for action_run_id {action_run_id}.")
+        except yaml.YAMLError:
+            log.exception(
+                f"Error parsing YAML file tron-{paasta_cluster}.yaml for {action_run_id} - will default to using current namespace:"
+            )
+        except Exception:
+            log.exception(
+                f"Error reading service for {action_run_id} from file tron-{paasta_cluster}.yaml - will default to using current namespace:"
+            )
+
+    return namespace, job_name, run_num, action
+
+
 class PaaSTALogs:
     def __init__(self, component: str, paasta_cluster: str, action_run_id: str) -> None:
         self.component = component
         self.paasta_cluster = paasta_cluster
         self.action_run_id = action_run_id
-        namespace, job_name, run_num, action = action_run_id.split(".")
+        namespace, job_name, run_num, action = decompose_action_id(action_run_id, paasta_cluster)
         # in our logging infra, things are logged to per-instance streams - but
         # since Tron PaaSTA instances are of the form `job_name.action`, we need
         # to escape the period since some parts of our infra will reject streams
