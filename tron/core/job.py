@@ -1,13 +1,25 @@
+import datetime
+import json
 import logging
+from typing import Any
+from typing import Dict
+from typing import Optional
+from typing import TypeVar
 
 from tron import command_context
 from tron import node
+from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.core import jobrun
+from tron.core.actiongraph import ActionGraph
 from tron.core.actionrun import ActionRun
+from tron.core.jobrun import JobRunCollection
+from tron.node import NodePool
+from tron.scheduler import GeneralScheduler
 from tron.serialize import filehandler
 from tron.utils import maybe_decode
 from tron.utils.observer import Observable
 from tron.utils.observer import Observer
+from tron.utils.persistable import Persistable
 
 
 class Error(Exception):
@@ -24,8 +36,10 @@ class InvalidStartStateError(Error):
 
 log = logging.getLogger(__name__)
 
+T = TypeVar("T", bound="Job")
 
-class Job(Observable, Observer):
+
+class Job(Observable, Observer, Persistable):
     """A configurable data object.
 
     Job uses JobRunCollection to manage its runs, and ActionGraph to manage its
@@ -61,29 +75,30 @@ class Job(Observable, Observer):
         "run_limit",
     ]
 
-    # TODO: use config object
     def __init__(
         self,
-        name,
-        scheduler,
-        queueing=True,
-        all_nodes=False,
-        monitoring=None,
-        node_pool=None,
-        enabled=True,
-        action_graph=None,
-        run_collection=None,
-        parent_context=None,
-        output_path=None,
-        allow_overlap=None,
-        action_runner=None,
-        max_runtime=None,
-        time_zone=None,
-        expected_runtime=None,
-        run_limit=None,
+        name: str,
+        scheduler: GeneralScheduler,
+        queueing: bool = True,
+        all_nodes: bool = False,
+        monitoring: Optional[Dict[str, Any]] = None,
+        node_pool: Optional[NodePool] = None,
+        enabled: bool = True,
+        action_graph: Optional[ActionGraph] = None,
+        run_collection: Optional[JobRunCollection] = None,
+        parent_context: Optional[command_context.CommandContext] = None,
+        output_path: Optional[filehandler.OutputPath] = None,
+        allow_overlap: Optional[bool] = None,
+        action_runner: Optional[SubprocessActionRunnerFactory] = None,
+        max_runtime: Optional[datetime.timedelta] = None,
+        time_zone: Optional[datetime.tzinfo] = None,
+        expected_runtime: Optional[datetime.timedelta] = None,
+        run_limit: Optional[int] = None,
     ):
         super().__init__()
-        self.name = maybe_decode(name)
+        self.name = maybe_decode(
+            name
+        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
         self.monitoring = monitoring
         self.action_graph = action_graph
         self.scheduler = scheduler
@@ -106,6 +121,15 @@ class Job(Observable, Observer):
         self.context = command_context.build_context(self, parent_context)
         self.run_limit = run_limit
         log.info(f"{self} created")
+
+    @staticmethod
+    def to_json(state_data: dict) -> Optional[str]:
+        """Serialize the Job instance to a JSON string."""
+        try:
+            return json.dumps(state_data)
+        except Exception:
+            log.exception("Error serializing Job to JSON:")
+            raise
 
     @classmethod
     def from_config(

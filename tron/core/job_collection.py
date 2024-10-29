@@ -40,7 +40,9 @@ class JobCollection:
             else:
                 return config.namespace == namespace_to_reconfigure
 
-        # NOTE: as this is a generator expression, we will only go through job configs and build a scheduler for them once something iterates over us (i.e, once `self.state_watcher.watch_all()` is called)
+        # NOTE: as this is a generator expression, we will only go through job configs
+        # and build a scheduler for them once something iterates over us (i.e, once
+        # `self.state_watcher.watch_all()` is called)
         seq = (factory.build(config) for config in job_configs.values() if reconfigure_filter(config))
         return map_to_job_and_schedule(filter(self.add, seq))
 

@@ -69,7 +69,9 @@ class FileHandleWrapper:
                         return
 
                 self.last_accessed = time.time()
-                self._fh.write(maybe_encode(content))
+                self._fh.write(
+                    maybe_encode(content)
+                )  # TODO: TRON-2293 maybe_encode is a relic of Python2->Python3 migration. Remove it.
                 self.manager.update(self)
 
     def __enter__(self):

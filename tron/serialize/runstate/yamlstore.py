@@ -15,7 +15,6 @@ YamlKey = namedtuple("YamlKey", ["type", "iden"])
 
 TYPE_MAPPING = {
     runstate.JOB_STATE: "jobs",
-    runstate.MCP_STATE: runstate.MCP_STATE,
 }
 
 

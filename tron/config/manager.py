@@ -32,7 +32,9 @@ def read(path):
 
 def write_raw(path, content):
     with open(path, "w") as fh:
-        fh.write(maybe_decode(content))
+        fh.write(
+            maybe_decode(content)
+        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
 
 
 def read_raw(path) -> str:
@@ -41,7 +43,9 @@ def read_raw(path) -> str:
 
 
 def hash_digest(content):
-    return hashlib.sha1(maybe_encode(content)).hexdigest()
+    return hashlib.sha1(
+        maybe_encode(content)
+    ).hexdigest()  # TODO: TRON-2293 maybe_encode is a relic of Python2->Python3 migration. Remove it.
 
 
 class ManifestFile:

@@ -1,12 +1,15 @@
+import json
 import logging
 import os
 from io import StringIO
 from shlex import quote
+from typing import Optional
 
 from tron.config import schema
 from tron.serialize import filehandler
 from tron.utils import timeutils
 from tron.utils.observer import Observable
+from tron.utils.persistable import Persistable
 from tron.utils.state import Machine
 
 log = logging.getLogger(__name__)
@@ -144,7 +147,8 @@ class StringBufferStore:
         self.buffers.clear()
 
 
-class NoActionRunnerFactory:
+# TODO: TRON-2304 - Cleanup NoActionRunnerFactory
+class NoActionRunnerFactory(Persistable):
     """Action runner factory that does not wrap the action run command."""
 
     @classmethod
@@ -156,8 +160,12 @@ class NoActionRunnerFactory:
         """It is not possible to stop action commands without a runner."""
         raise NotImplementedError("An action_runner is required to stop.")
 
+    @staticmethod
+    def to_json():
+        return None
 
-class SubprocessActionRunnerFactory:
+
+class SubprocessActionRunnerFactory(Persistable):
     """Run actions by wrapping them in `action_runner.py`."""
 
     runner_exec_name = "action_runner.py"
@@ -194,6 +202,22 @@ class SubprocessActionRunnerFactory:
 
     def __ne__(self, other):
         return not self == other
+
+    @staticmethod
+    def to_json(state_data: dict) -> Optional[str]:
+        try:
+            return json.dumps(
+                {
+                    "status_path": state_data["status_path"],
+                    "exec_path": state_data["exec_path"],
+                }
+            )
+        except KeyError:
+            log.exception("Missing key in state_data:")
+            raise
+        except Exception:
+            log.exception("Error serializing SubprocessActionRunnerFactory to JSON:")
+            raise
 
 
 def create_action_runner_factory_from_config(config):

@@ -2,6 +2,7 @@
  tron.core.actionrun
 """
 import datetime
+import json
 import logging
 import os
 from dataclasses import dataclass
@@ -13,6 +14,7 @@ from typing import Set
 from typing import Union
 
 from twisted.internet import reactor
+from twisted.internet.base import DelayedCall
 
 from tron import command_context
 from tron import node
@@ -21,9 +23,12 @@ from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.bin.action_runner import build_environment
 from tron.bin.action_runner import build_labels
+from tron.command_context import CommandContext
+from tron.config import schema
 from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
+from tron.core.action import ActionCommandConfig
 from tron.eventbus import EventBus
 from tron.kubernetes import KubernetesClusterRepository
 from tron.kubernetes import KubernetesTask
@@ -35,6 +40,7 @@ from tron.utils import proxy
 from tron.utils import timeutils
 from tron.utils.observer import Observable
 from tron.utils.observer import Observer
+from tron.utils.persistable import Persistable
 from tron.utils.state import Machine
 
 
@@ -53,7 +59,9 @@ class ActionRunFactory:
     def build_action_run_collection(cls, job_run, action_runner):
         """Create an ActionRunCollection from an ActionGraph and JobRun."""
         action_run_map = {
-            maybe_decode(name): cls.build_run_for_action(
+            maybe_decode(
+                name
+            ): cls.build_run_for_action(  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
                 job_run,
                 action_inst,
                 action_runner,
@@ -79,6 +87,7 @@ class ActionRunFactory:
                 ),
             )
 
+        # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
         action_run_map = {maybe_decode(action_run.action_name): action_run for action_run in action_runs}
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
@@ -135,7 +144,7 @@ class ActionRunFactory:
 
 
 @dataclass
-class ActionRunAttempt:
+class ActionRunAttempt(Persistable):
     """Stores state about one try of an action run."""
 
     command_config: action.ActionCommandConfig
@@ -165,6 +174,28 @@ class ActionRunAttempt:
                 state_data[field.name] = getattr(self, field.name)
         return state_data
 
+    @staticmethod
+    def to_json(state_data: dict) -> Optional[str]:
+        """Serialize the ActionRunAttempt instance to a JSON string."""
+        try:
+            return json.dumps(
+                {
+                    "command_config": ActionCommandConfig.to_json(state_data["command_config"]),
+                    "start_time": state_data["start_time"].isoformat() if state_data["start_time"] else None,
+                    "end_time": state_data["end_time"].isoformat() if state_data["end_time"] else None,
+                    "rendered_command": state_data["rendered_command"],
+                    "exit_status": state_data["exit_status"],
+                    "mesos_task_id": state_data["mesos_task_id"],
+                    "kubernetes_task_id": state_data["kubernetes_task_id"],
+                }
+            )
+        except KeyError:
+            log.exception("Missing key in state_data:")
+            raise
+        except Exception:
+            log.exception("Error serializing ActionRunAttempt to JSON:")
+            raise
+
     @classmethod
     def from_state(cls, state_data):
         # it's possible that we've rolled back to an older Tron version that doesn't support data that we've persisted
@@ -182,7 +213,7 @@ class ActionRunAttempt:
         return cls(**valid_actionrun_attempt_entries_from_state)
 
 
-class ActionRun(Observable):
+class ActionRun(Observable, Persistable):
     """Base class for tracking the state of a single run of an Action.
 
     ActionRun's state machine is observed by a parent JobRun.
@@ -279,32 +310,36 @@ class ActionRun(Observable):
     # TODO: create a class for ActionRunId, JobRunId, Etc
     def __init__(
         self,
-        job_run_id,
-        name,
-        node,
-        command_config,
-        parent_context=None,
-        output_path=None,
-        cleanup=False,
-        start_time=None,
-        end_time=None,
-        run_state=SCHEDULED,
-        exit_status=None,
-        attempts=None,
-        action_runner=None,
-        retries_remaining=None,
-        retries_delay=None,
-        machine=None,
-        executor=None,
-        trigger_downstreams=None,
-        triggered_by=None,
-        on_upstream_rerun=None,
-        trigger_timeout_timestamp=None,
-        original_command=None,
+        job_run_id: str,
+        name: str,
+        node: node.Node,
+        command_config: action.ActionCommandConfig,
+        parent_context: Optional[CommandContext] = None,
+        output_path: Optional[filehandler.OutputPath] = None,
+        cleanup: bool = False,
+        start_time: Optional[datetime.datetime] = None,
+        end_time: Optional[datetime.datetime] = None,
+        run_state: str = SCHEDULED,
+        exit_status: Optional[int] = None,
+        attempts: Optional[List[ActionRunAttempt]] = None,
+        action_runner: Optional[Union[NoActionRunnerFactory, SubprocessActionRunnerFactory]] = None,
+        retries_remaining: Optional[int] = None,
+        retries_delay: Optional[datetime.timedelta] = None,
+        machine: Optional[Machine] = None,
+        executor: Optional[str] = None,
+        trigger_downstreams: Optional[Union[bool, dict]] = None,
+        triggered_by: Optional[List[str]] = None,
+        on_upstream_rerun: Optional[schema.ActionOnRerun] = None,
+        trigger_timeout_timestamp: Optional[float] = None,
+        original_command: Optional[str] = None,
     ):
         super().__init__()
-        self.job_run_id = maybe_decode(job_run_id)
-        self.action_name = maybe_decode(name)
+        self.job_run_id = maybe_decode(
+            job_run_id
+        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
+        self.action_name = maybe_decode(
+            name
+        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
         self.node = node
         self.start_time = start_time
         self.end_time = end_time
@@ -333,7 +368,7 @@ class ActionRun(Observable):
         self.trigger_timeout_call = None
 
         self.action_command = None
-        self.in_delay = None
+        self.in_delay = None  # type: Optional[DelayedCall]
 
     @property
     def state(self):
@@ -378,7 +413,9 @@ class ActionRun(Observable):
         if "attempts" in state_data:
             attempts = [ActionRunAttempt.from_state(a) for a in state_data["attempts"]]
         else:
-            rendered_command = maybe_decode(state_data.get("rendered_command"))
+            rendered_command = maybe_decode(
+                state_data.get("rendered_command")
+            )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
             exit_statuses = state_data.get("exit_statuses", [])
             # If the action has started, add an attempt for the final try
             if state_data.get("start_time"):
@@ -625,8 +662,6 @@ class ActionRun(Observable):
             templates = ["shortdate.{shortdate}"]
         elif isinstance(self.trigger_downstreams, dict):
             templates = [f"{k}.{v}" for k, v in self.trigger_downstreams.items()]
-        else:
-            log.error(f"{self} trigger_downstreams must be true or dict")
 
         return [self.render_template(trig) for trig in templates]
 
@@ -701,6 +736,44 @@ class ActionRun(Observable):
             "on_upstream_rerun": self.on_upstream_rerun,
             "trigger_timeout_timestamp": self.trigger_timeout_timestamp,
         }
+
+    @staticmethod
+    def to_json(state_data: dict) -> Optional[str]:
+        """Serialize the ActionRun instance to a JSON string."""
+        action_runner = state_data.get("action_runner")
+        if action_runner is None:
+            action_runner_json = NoActionRunnerFactory.to_json()
+        else:
+            action_runner_json = SubprocessActionRunnerFactory.to_json(action_runner)
+
+        try:
+            return json.dumps(
+                {
+                    "job_run_id": state_data["job_run_id"],
+                    "action_name": state_data["action_name"],
+                    "state": state_data["state"],
+                    "original_command": state_data["original_command"],
+                    "start_time": state_data["start_time"].isoformat() if state_data["start_time"] else None,
+                    "end_time": state_data["end_time"].isoformat() if state_data["end_time"] else None,
+                    "node_name": state_data["node_name"],
+                    "exit_status": state_data["exit_status"],
+                    "attempts": [ActionRunAttempt.to_json(attempt) for attempt in state_data["attempts"]],
+                    "retries_remaining": state_data["retries_remaining"],
+                    "retries_delay": state_data["retries_delay"],
+                    "action_runner": action_runner_json,
+                    "executor": state_data["executor"],
+                    "trigger_downstreams": state_data["trigger_downstreams"],
+                    "triggered_by": state_data["triggered_by"],
+                    "on_upstream_rerun": state_data["on_upstream_rerun"],
+                    "trigger_timeout_timestamp": state_data["trigger_timeout_timestamp"],
+                }
+            )
+        except KeyError:
+            log.exception("Missing key in state_data:")
+            raise
+        except Exception:
+            log.exception("Error serializing ActionRun to JSON:")
+            raise
 
     def render_template(self, template):
         """Render our configured command using the command context."""
@@ -1232,6 +1305,16 @@ class KubernetesActionRun(ActionRun, Observer):
             return None
 
         last_attempt = self.attempts[-1]
+
+        if last_attempt.rendered_command is None:
+            log.error(f"{self} rendered_command is None, cannot recover")
+            self.fail(exitcode.EXIT_INVALID_COMMAND)
+            return None
+
+        if last_attempt.command_config.docker_image is None:
+            log.error(f"{self} docker_image is None, cannot recover")
+            self.fail(exitcode.EXIT_KUBERNETES_TASK_INVALID)
+            return None
 
         log.info(f"{self} recovering Kubernetes run")
 

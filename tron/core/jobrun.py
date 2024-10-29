@@ -1,6 +1,7 @@
 """
  Classes to manage job runs.
 """
+import datetime
 import json
 import logging
 import time
@@ -12,6 +13,7 @@ from tron import command_context
 from tron import node
 from tron.core.actiongraph import ActionGraph
 from tron.core.actionrun import ActionRun
+from tron.core.actionrun import ActionRunCollection
 from tron.core.actionrun import ActionRunFactory
 from tron.serialize import filehandler
 from tron.utils import maybe_decode
@@ -20,6 +22,7 @@ from tron.utils import proxy
 from tron.utils import timeutils
 from tron.utils.observer import Observable
 from tron.utils.observer import Observer
+from tron.utils.persistable import Persistable
 
 log = logging.getLogger(__name__)
 state_logger = logging.getLogger(f"{__name__}.state_changes")
@@ -29,11 +32,11 @@ class Error(Exception):
     pass
 
 
-def get_job_run_id(job_name, run_num):
+def get_job_run_id(job_name: str, run_num: int) -> str:
     return f"{job_name}.{run_num}"
 
 
-class JobRun(Observable, Observer):
+class JobRun(Observable, Observer, Persistable):
     """A JobRun is an execution of a Job.  It has a list of ActionRuns and is
     responsible for starting ActionRuns in the correct order and managing their
     dependencies.
@@ -48,18 +51,20 @@ class JobRun(Observable, Observer):
     # TODO: use config object
     def __init__(
         self,
-        job_name,
-        run_num,
-        run_time,
-        node,
-        output_path=None,
-        base_context=None,
-        action_runs=None,
+        job_name: str,
+        run_num: int,
+        run_time: datetime.datetime,
+        node: node.Node,
+        output_path: Optional[filehandler.OutputPath] = None,
+        base_context: Optional[command_context.CommandContext] = None,
+        action_runs: Optional[ActionRunCollection] = None,
         action_graph: Optional[ActionGraph] = None,
-        manual=None,
+        manual: Optional[bool] = None,
     ):
         super().__init__()
-        self.job_name = maybe_decode(job_name)
+        self.job_name = maybe_decode(
+            job_name
+        )  # TODO: TRON-2293 - maybe_decode is a relic of Python2->Python3 migration. Remove it.
         self.run_num = run_num
         self.run_time = run_time
         self.node = node
@@ -74,6 +79,28 @@ class JobRun(Observable, Observer):
             self.action_runs = action_runs
 
         self.context = command_context.build_context(self, base_context)
+
+    @staticmethod
+    def to_json(state_data: dict) -> Optional[str]:
+        """Serialize the JobRun instance to a JSON string."""
+        try:
+            return json.dumps(
+                {
+                    "job_name": state_data["job_name"],
+                    "run_num": state_data["run_num"],
+                    "run_time": state_data["run_time"].isoformat() if state_data["run_time"] else None,
+                    "node_name": state_data["node_name"],
+                    "runs": [ActionRun.to_json(run) for run in state_data["runs"]],
+                    "cleanup_run": ActionRun.to_json(state_data["cleanup_run"]) if state_data["cleanup_run"] else None,
+                    "manual": state_data["manual"],
+                }
+            )
+        except KeyError:
+            log.exception("Missing key in state_data:")
+            raise
+        except Exception:
+            log.exception("Error serializing JobRun to JSON:")
+            raise
 
     @property
     def id(self):

@@ -7,12 +7,14 @@ import signal
 log = logging.getLogger(__name__)
 
 
+# TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
 def maybe_decode(maybe_string):
     if type(maybe_string) is bytes:
         return maybe_string.decode()
     return maybe_string
 
 
+# TODO: TRON-2293 maybe_encode is a relic of Python2->Python3 migration. Remove it.
 def maybe_encode(maybe_bytes):
     if type(maybe_bytes) is not bytes:
         return maybe_bytes.encode()

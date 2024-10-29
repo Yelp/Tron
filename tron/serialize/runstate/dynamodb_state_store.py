@@ -8,18 +8,34 @@ import threading
 import time
 from collections import defaultdict
 from collections import OrderedDict
+from typing import Any
 from typing import DefaultDict
+from typing import Dict
 from typing import List
+from typing import Literal
+from typing import Optional
 from typing import Sequence
+from typing import Tuple
 from typing import TypeVar
 
 import boto3  # type: ignore
 
+import tron.prom_metrics as prom_metrics
+from tron.core.job import Job
+from tron.core.jobrun import JobRun
 from tron.metrics import timer
+from tron.serialize import runstate
 
-OBJECT_SIZE = 400000
+# Max DynamoDB object size is 400KB. Since we save two copies of the object (pickled and JSON),
+# we need to consider this max size applies to the entire item, so we use a max size of 200KB
+# for each version.
+#
+# In testing I could get away with 201_000 for both partitions so this should be enough overhead
+# to contain other attributes like object name and number of partitions.
+OBJECT_SIZE = 200_000  # TODO: TRON-2240 - consider swapping back to 400_000 now that we've removed pickles
 MAX_SAVE_QUEUE = 500
 MAX_ATTEMPTS = 10
+MAX_TRANSACT_WRITE_ITEMS = 100
 log = logging.getLogger(__name__)
 T = TypeVar("T")
 
@@ -46,7 +62,7 @@ class DynamoDBStateStore:
 
     def restore(self, keys) -> dict:
         """
-        Fetch all under the same parition key(keys).
+        Fetch all under the same parition key(s).
         ret: <dict of key to states>
         """
         first_items = self._get_first_partitions(keys)
@@ -106,6 +122,7 @@ class DynamoDBStateStore:
         new_keys = [{"key": {"S": key}, "index": {"N": "0"}} for key in keys]
         return self._get_items(new_keys)
 
+    # TODO: Check max partitions as JSON is larger
     def _get_remaining_partitions(self, items: list):
         """Get items in the remaining partitions: N = 1 and beyond"""
         keys_for_remaining_items = []
@@ -142,7 +159,12 @@ class DynamoDBStateStore:
                     time.sleep(5)
                     continue
                 with self.save_lock:
-                    self.save_queue[key] = val
+                    if val is None:
+                        self.save_queue[key] = (val, None)
+                    else:
+                        state_type = self.get_type_from_key(key)
+                        json_val = self._serialize_item(state_type, val)
+                        self.save_queue[key] = (val, json_val)
                 break
 
     def _consume_save_queue(self):
@@ -152,19 +174,21 @@ class DynamoDBStateStore:
         for _ in range(qlen):
             try:
                 with self.save_lock:
-                    key, val = self.save_queue.popitem(last=False)
+                    key, (val, json_val) = self.save_queue.popitem(last=False)
                 # Remove all previous data with the same partition key
                 # TODO: only remove excess partitions if new data has fewer
                 self._delete_item(key)
                 if val is not None:
-                    self[key] = pickle.dumps(val)
+                    self[key] = (pickle.dumps(val), json_val)
                 # reset errors count if we can successfully save
                 saved += 1
             except Exception as e:
-                error = "tron_dynamodb_save_failure: failed to save key" f'"{key}" to dynamodb:\n{repr(e)}'
+                error = "tron_dynamodb_save_failure: failed to save key " f'"{key}" to dynamodb:\n{repr(e)}'
                 log.error(error)
+                # Add items back to the queue if we failed to save. While we roll out and test TRON-2237 we will only re-add the Pickle.
+                # TODO: TRON-2239 - Pass JSON back to the save queue
                 with self.save_lock:
-                    self.save_queue[key] = val
+                    self.save_queue[key] = (val, None)
         duration = time.time() - start
         log.info(f"saved {saved} items in {duration}s")
 
@@ -172,6 +196,23 @@ class DynamoDBStateStore:
             self.save_errors += 1
         else:
             self.save_errors = 0
+
+    def get_type_from_key(self, key: str) -> str:
+        return key.split()[0]
+
+    # TODO: TRON-2305 - In an ideal world, we wouldn't be passing around state/state_data dicts. It would be a lot nicer to have regular objects here
+    def _serialize_item(self, key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE], state: Dict[str, Any]) -> Optional[str]:  # type: ignore
+        try:
+            if key == runstate.JOB_STATE:
+                return Job.to_json(state)
+            elif key == runstate.JOB_RUN_STATE:
+                return JobRun.to_json(state)
+            else:
+                raise ValueError(f"Unknown type: key {key}")
+        except Exception:
+            log.exception(f"Serialization error for key {key}")
+            prom_metrics.json_serialization_errors_counter.inc()
+            return None
 
     def _save_loop(self):
         while True:
@@ -189,19 +230,25 @@ class DynamoDBStateStore:
                 log.error("too many dynamodb errors in a row, crashing")
                 os.exit(1)
 
-    def __setitem__(self, key: str, val: bytes) -> None:
+    def __setitem__(self, key: str, value: Tuple[bytes, str]) -> None:
         """
-        Partition the item and write up to 10 partitions atomically.
-        Retry up to 3 times on failure
+        Partition the item and write up to MAX_TRANSACT_WRITE_ITEMS
+        partitions atomically. Retry up to 3 times on failure.
 
-        Examine the size of `val`, and splice it into
-        different parts under 400KB with different sort keys,
-        and save them under the same partition key built.
+        Examine the size of `pickled_val` and `json_val`, and
+        splice them into different parts based on `OBJECT_SIZE`
+        with different sort keys, and save them under the same
+        partition key built.
         """
         start = time.time()
-        num_partitions = math.ceil(len(val) / OBJECT_SIZE)
+
+        pickled_val, json_val = value
+        num_partitions = math.ceil(len(pickled_val) / OBJECT_SIZE)
+        num_json_val_partitions = math.ceil(len(json_val) / OBJECT_SIZE) if json_val else 0
         items = []
-        for index in range(num_partitions):
+
+        max_partitions = max(num_partitions, num_json_val_partitions)
+        for index in range(max_partitions):
             item = {
                 "Put": {
                     "Item": {
@@ -212,7 +259,9 @@ class DynamoDBStateStore:
                             "N": str(index),
                         },
                         "val": {
-                            "B": val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(val))],
+                            "B": pickled_val[
+                                index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(pickled_val))
+                            ],
                         },
                         "num_partitions": {
                             "N": str(num_partitions),
@@ -221,10 +270,19 @@ class DynamoDBStateStore:
                     "TableName": self.name,
                 },
             }
+
+            if json_val:
+                item["Put"]["Item"]["json_val"] = {
+                    "S": json_val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(json_val))]
+                }
+                item["Put"]["Item"]["num_json_val_partitions"] = {
+                    "N": str(num_json_val_partitions),
+                }
+
             count = 0
             items.append(item)
-            # Only up to 10 items are allowed per transactions
-            while len(items) == 10 or index == num_partitions - 1:
+
+            while len(items) == MAX_TRANSACT_WRITE_ITEMS or index == max_partitions - 1:
                 try:
                     self.client.transact_write_items(TransactItems=items)
                     items = []
@@ -236,6 +294,7 @@ class DynamoDBStateStore:
                             name="tron.dynamodb.setitem",
                             delta=time.time() - start,
                         )
+                        log.error(f"Failed to save partition for key: {key}, error: {repr(e)}")
                         raise e
                     else:
                         log.warning(f"Got error while saving {key}, trying again: {repr(e)}")
@@ -244,6 +303,7 @@ class DynamoDBStateStore:
             delta=time.time() - start,
         )
 
+    # TODO: TRON-2238 - Is this ok if we just use the max number of partitions?
     def _delete_item(self, key: str) -> None:
         start = time.time()
         try:
@@ -261,9 +321,10 @@ class DynamoDBStateStore:
                 delta=time.time() - start,
             )
 
+    # TODO: TRON-2238 - Get max partitions between pickle and json
     def _get_num_of_partitions(self, key: str) -> int:
         """
-        Return how many parts is the item partitioned into
+        Return the number of partitions an item is divided into.
         """
         try:
             partition = self.table.get_item(
