@@ -1,3 +1,12 @@
+tron (2.7.0) jammy; urgency=medium
+
+  * 2.7.0 tagged with 'make release'
+    Commit: Merge pull request #1001 from
+    Yelp/u/cuza/getting_namespace_logs_from_yelpsoa  Fixing Tron logs
+    for jobs using other services images
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Tue, 29 Oct 2024 13:31:16 -0700
+
 tron (2.6.0) jammy; urgency=medium
 
   * 2.6.0 tagged with 'make release'

@@ -1,5 +1,5 @@
 # Edit this release and run "make release"
-RELEASE=2.6.0
+RELEASE=2.7.0
 
 SHELL=/bin/bash
 
