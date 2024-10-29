@@ -96,7 +96,9 @@ def decompose_action_id(action_run_id: str, paasta_cluster: str) -> Tuple[str, s
         except FileNotFoundError:
             log.warning(f"yelp-soaconfig file tron-{paasta_cluster}.{ext} not found for action_run_id {action_run_id}.")
         except yaml.YAMLError:
-            log.exception(f"Error parsing YAML file tron-{paasta_cluster}.yaml for {action_run_id} - will default to using current namespace:")
+            log.exception(
+                f"Error parsing YAML file tron-{paasta_cluster}.yaml for {action_run_id} - will default to using current namespace:"
+            )
         except Exception:
             log.exception(
                 f"Error reading service for {action_run_id} from file tron-{paasta_cluster}.yaml - will default to using current namespace:"
