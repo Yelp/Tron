@@ -1900,6 +1900,7 @@ class TestKubernetesActionRun:
                 task_id=last_attempt.kubernetes_task_id,
                 node_selectors=mock_k8s_action_run.command_config.node_selectors,
                 node_affinities=mock_k8s_action_run.command_config.node_affinities,
+                topology_spread_constraints=mock_k8s_action_run.command_config.topology_spread_constraints,
                 pod_labels=mock_k8s_action_run.command_config.labels,
                 pod_annotations=mock_k8s_action_run.command_config.annotations,
                 service_account_name=mock_k8s_action_run.command_config.service_account_name,
