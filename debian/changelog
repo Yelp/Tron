@@ -1,3 +1,11 @@
+tron (2.8.0) jammy; urgency=medium
+
+  * 2.8.0 tagged with 'make release'
+    Commit: Merge pull request #997 from Yelp/u/kkasp/TRON-2237-write-
+    json-state  Write JSON state
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Tue, 29 Oct 2024 14:14:38 -0700
+
 tron (2.7.0) jammy; urgency=medium
 
   * 2.7.0 tagged with 'make release'

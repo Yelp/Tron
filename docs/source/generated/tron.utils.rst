@@ -11,6 +11,7 @@ Submodules
    tron.utils.crontab
    tron.utils.exitcode
    tron.utils.observer
+   tron.utils.persistable
    tron.utils.proxy
    tron.utils.queue
    tron.utils.scribereader
