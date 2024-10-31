@@ -204,8 +204,10 @@ class DynamoDBStateStore:
     def _serialize_item(self, key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE], state: Dict[str, Any]) -> Optional[str]:  # type: ignore
         try:
             if key == runstate.JOB_STATE:
+                log.info(f"Serializing Job: {state.get('job_name')}")
                 return Job.to_json(state)
             elif key == runstate.JOB_RUN_STATE:
+                log.info(f"Serializing JobRun: {state.get('job_name')}.{state.get('run_num')}")
                 return JobRun.to_json(state)
             else:
                 raise ValueError(f"Unknown type: key {key}")
