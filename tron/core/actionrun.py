@@ -761,7 +761,7 @@ class ActionRun(Observable, Persistable):
                     "attempts": [ActionRunAttempt.to_json(attempt) for attempt in state_data["attempts"]],
                     "retries_remaining": state_data["retries_remaining"],
                     "retries_delay": state_data["retries_delay"].total_seconds()
-                    if state_data["retries_delay"]
+                    if state_data["retries_delay"] is not None
                     else None,
                     "action_runner": action_runner_json,
                     "executor": state_data["executor"],
