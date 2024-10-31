@@ -740,6 +740,7 @@ class ActionRun(Observable, Persistable):
     @staticmethod
     def to_json(state_data: dict) -> Optional[str]:
         """Serialize the ActionRun instance to a JSON string."""
+
         action_runner = state_data.get("action_runner")
         if action_runner is None:
             action_runner_json = NoActionRunnerFactory.to_json()
@@ -759,7 +760,9 @@ class ActionRun(Observable, Persistable):
                     "exit_status": state_data["exit_status"],
                     "attempts": [ActionRunAttempt.to_json(attempt) for attempt in state_data["attempts"]],
                     "retries_remaining": state_data["retries_remaining"],
-                    "retries_delay": state_data["retries_delay"],
+                    "retries_delay": state_data["retries_delay"].total_seconds()
+                    if state_data["retries_delay"]
+                    else None,
                     "action_runner": action_runner_json,
                     "executor": state_data["executor"],
                     "trigger_downstreams": state_data["trigger_downstreams"],
