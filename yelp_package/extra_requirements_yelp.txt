@@ -2,7 +2,10 @@ clusterman-metrics==2.2.1  # used by tron for pre-scaling for Spark runs
 dateglob==1.1.1 # required by yelp-logging
 geogrid==2.1.0  # required by yelp-logging
 monk==3.0.4     # required by yelp-clog
+okta-auth==1.0.1  # used for API auth
 ply==3.11   # required by thriftpy2
+pyjwt==2.9.0  # required by okta-auth
+saml-helper==2.3.3  # required by okta-auth
 scribereader==1.1.1  # used by tron to get tronjob logs
 simplejson==3.19.2  # required by yelp-logging
 srv-configs==1.3.4  # required by monk
