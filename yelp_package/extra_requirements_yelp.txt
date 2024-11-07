@@ -1,4 +1,7 @@
 clusterman-metrics==2.2.1  # used by tron for pre-scaling for Spark runs
 logreader==1.2.0        # used by tron logreader
+okta-auth==1.0.2        # used for API auth
+pyjwt==2.9.0            # required by okta-auth
+saml-helper==2.5.3      # required by okta-auth
 simplejson==3.19.2      # required by tron CLI
 yelp-meteorite==2.1.1   # used by task-processing to emit metrics, clusterman-metrics dependency

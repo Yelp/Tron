@@ -37,9 +37,22 @@ default_headers = {
 }
 
 
+def get_sso_auth_token() -> str:
+    """Generate an authentication token for the calling user from the Single Sign On provider, if configured"""
+    from okta_auth import get_and_cache_jwt_default  # type: ignore
+    from tron.commands.cmd_utils import get_client_config
+
+    client_id = get_client_config().get("auth_sso_oidc_client_id")
+    return get_and_cache_jwt_default(client_id) if client_id else ""  # type: ignore
+
+
 def build_url_request(uri, data, headers=None, method=None):
     headers = headers or default_headers
     enc_data = urllib.parse.urlencode(data).encode() if data else None
+    if os.getenv("TRONCTL_API_AUTH") and (data or method.upper() == "POST"):
+        token = get_sso_auth_token()
+        if token:
+            headers["Authorization"] = f"Bearer {token}"
     return urllib.request.Request(uri, enc_data, headers=headers, method=method)
 
 

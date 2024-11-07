@@ -26,6 +26,7 @@ from tron import __version__
 from tron.api import adapter, controller
 from tron.api import requestargs
 from tron.api.async_resource import AsyncResource
+from tron.api.auth import AuthorizationFilter
 from tron.metrics import view_all_metrics
 from tron.metrics import meter
 from tron.utils import maybe_decode
@@ -513,6 +514,18 @@ class ApiRootResource(resource.Resource):
             "namespaces": self.children[b"config"].get_config_index(),
         }
         return respond(request=request, response=response)
+
+    def render(self, request):
+        """Overriding base `render` method to support auth"""
+        auth_outcome = AuthorizationFilter.get_from_env().is_request_authorized(request)
+        if not auth_outcome.authorized:
+            return respond(
+                request=request,
+                response={"reason": auth_outcome.reason},
+                code=http.FORBIDDEN,
+                headers={"X-Auth-Failure-Reason": auth_outcome.reason},
+            )
+        return super().render(request)
 
 
 class RootResource(resource.Resource):
