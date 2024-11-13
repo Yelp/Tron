@@ -10,3 +10,8 @@ class Persistable(ABC):
     @abstractmethod
     def to_json(state_data: Dict[Any, Any]) -> Optional[str]:
         pass
+
+    @staticmethod
+    @abstractmethod
+    def from_json(state_data: str) -> Dict[Any, Any]:
+        pass

@@ -10,3 +10,8 @@ json_serialization_errors_counter = Counter(
     "json_serialization_errors_total",
     "Total number of errors encountered while serializing state_data as JSON. These errors occur before writing to DynamoDB.",
 )
+
+json_deserialization_errors_counter = Counter(
+    "json_deserialization_errors_total",
+    "Total number of errors encountered while deserializing state_data from JSON. These errors occur after reading from DynamoDB.",
+)

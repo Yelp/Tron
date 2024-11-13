@@ -196,6 +196,21 @@ class ActionRunAttempt(Persistable):
             log.exception("Error serializing ActionRunAttempt to JSON:")
             raise
 
+    @staticmethod
+    def from_json(state_data: str):
+        """Deserialize the ActionRunAttempt instance from a JSON string."""
+        try:
+            json_data = json.loads(state_data)  # here we will need json.loads because "attempts" is a string
+            for k in json_data:
+                if k == "start_time" or k == "end_time":
+                    json_data[k] = datetime.datetime.fromisoformat(json_data[k]) if json_data[k] else None
+                elif k == "command_config":
+                    json_data[k] = ActionCommandConfig.from_json(json_data[k])
+        except Exception:
+            log.exception("Error deserializing ActionRunAttempt from JSON")
+            raise
+        return json_data
+
     @classmethod
     def from_state(cls, state_data):
         # it's possible that we've rolled back to an older Tron version that doesn't support data that we've persisted
@@ -736,6 +751,29 @@ class ActionRun(Observable, Persistable):
             "on_upstream_rerun": self.on_upstream_rerun,
             "trigger_timeout_timestamp": self.trigger_timeout_timestamp,
         }
+
+    @staticmethod
+    def from_json(state_data: Union[str, dict]):
+        """Handle special cases in the JSON dictionary."""
+        # we dont need to load the json again here cause "runs" is a dictionary
+        if isinstance(state_data, str):
+            state_data = json.loads(state_data)
+            assert isinstance(state_data, dict)  # Inform the type checker that state_data is a dict
+
+        for k in state_data:
+            if k == "action_runner":
+                state_data[k] = (
+                    SubprocessActionRunnerFactory.from_json(state_data[k])
+                    if state_data[k]
+                    else NoActionRunnerFactory.from_json()
+                )
+            elif k == "start_time" or k == "end_time":
+                state_data[k] = datetime.datetime.fromisoformat(state_data[k]) if state_data[k] else None
+            elif k == "attempts":
+                state_data[k] = [ActionRunAttempt.from_json(a) for a in state_data[k]]
+            elif k == "retries_delay":
+                state_data[k] = datetime.timedelta(seconds=state_data[k]) if state_data[k] else None
+        return state_data
 
     @staticmethod
     def to_json(state_data: dict) -> Optional[str]:

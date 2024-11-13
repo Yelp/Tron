@@ -102,6 +102,25 @@ class JobRun(Observable, Observer, Persistable):
             log.exception("Error serializing JobRun to JSON:")
             raise
 
+    @staticmethod
+    def from_json(state_data: str):
+        """Deserialize the JobRun instance to a JSON string."""
+        try:
+            json_data = json.loads(state_data)
+            for k in json_data:
+                if k == "run_time":
+                    json_data[k] = datetime.datetime.fromisoformat(json_data[k]) if json_data["run_time"] else None
+                elif k == "cleanup_run":
+                    json_data["cleanup_run"] = (
+                        ActionRun.from_json(json_data["cleanup_run"]) if json_data["cleanup_run"] else None
+                    )
+                elif k == "runs":
+                    json_data["runs"] = [ActionRun.from_json(run) for run in json_data["runs"]]
+        except Exception:
+            log.exception("Error deserializing JobRun from JSON")
+            raise
+        return json_data
+
     @property
     def id(self):
         return get_job_run_id(self.job_name, self.run_num)

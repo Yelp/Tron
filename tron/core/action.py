@@ -55,11 +55,35 @@ class ActionCommandConfig(Persistable):
         return ActionCommandConfig(**self.state_data)
 
     @staticmethod
-    def to_json(state_data: dict) -> Optional[str]:
+    def from_json(state_data: str):
+        """Deserialize a JSON string to an ActionCommandConfig instance."""
+        # Here we will also need to load the json for "command_config" since it's a string
+        try:
+            json_data = json.loads(state_data)
+            for k in json_data:
+                if k == "constraints" or k == "docker_parameters" or k == "extra_volumes":
+                    json_data[k] = {tuple(inner_list) for inner_list in json_data[k]}
+                elif k == "secret_volumes":
+                    json_data[k] = [ConfigSecretVolume(**val) for val in json_data[k]]
+                elif k == "projected_sa_volumes":
+                    json_data[k] = [ConfigProjectedSAVolume(**val) for val in json_data[k]]
+                elif k == "node_affinities":
+                    json_data[k] = [ConfigNodeAffinity(**val) for val in json_data[k]]
+                elif k == "topology_spread_constraints":
+                    json_data[k] = [ConfigTopologySpreadConstraints(**val) for val in json_data[k]]
+        except Exception:
+            log.exception("Error deserializing ActionCommandConfig from JSON")
+            raise
+
+        return json_data
+
+    @staticmethod
+    def to_json(state_data: dict) -> str:
         """Serialize the ActionCommandConfig instance to a JSON string."""
 
         def serialize_namedtuple(obj):
             if isinstance(obj, tuple) and hasattr(obj, "_fields"):
+                # checks if obj is a tuple and convert it to a dict
                 return obj._asdict()
             return obj
 
@@ -89,6 +113,9 @@ class ActionCommandConfig(Persistable):
                     "annotations": state_data["annotations"],
                     "service_account_name": state_data["service_account_name"],
                     "ports": state_data["ports"],
+                    "topology_spread_constraints": [
+                        serialize_namedtuple(constraint) for constraint in state_data["topology_spread_constraints"]
+                    ],
                 }
             )
         except KeyError:

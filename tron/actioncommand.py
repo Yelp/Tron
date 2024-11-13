@@ -161,6 +161,10 @@ class NoActionRunnerFactory(Persistable):
         raise NotImplementedError("An action_runner is required to stop.")
 
     @staticmethod
+    def from_json():
+        return None
+
+    @staticmethod
     def to_json():
         return None
 
@@ -202,6 +206,14 @@ class SubprocessActionRunnerFactory(Persistable):
 
     def __ne__(self, other):
         return not self == other
+
+    @staticmethod
+    def from_json(state_data: str):
+        try:
+            return json.loads(state_data)
+        except Exception:
+            log.exception("Error deserializing SubprocessActionRunnerFactory from JSON")
+            raise
 
     @staticmethod
     def to_json(state_data: dict) -> Optional[str]:

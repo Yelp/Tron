@@ -3,6 +3,7 @@ from unittest import mock
 
 import boto3
 import pytest
+import staticconf.testing
 from moto import mock_dynamodb2
 from moto.dynamodb2.responses import dynamo_json_dump
 
@@ -127,7 +128,8 @@ def large_object():
 
 @pytest.mark.usefixtures("store", "small_object", "large_object")
 class TestDynamoDBStateStore:
-    def test_save(self, store, small_object, large_object):
+    @pytest.mark.parametrize("read_json", [False, True])
+    def test_save(self, store, small_object, large_object, read_json):
         key_value_pairs = [
             (
                 store.build_key("job_state", "two"),
@@ -146,7 +148,10 @@ class TestDynamoDBStateStore:
             store.build_key("job_state", "two"),
             store.build_key("job_run_state", "four"),
         ]
-        vals = store.restore(keys)
+        mock_config = {"read_json.enable": read_json}
+        mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
+        with mock_configuration:
+            vals = store.restore(keys)
         for key, value in key_value_pairs:
             assert_equal(vals[key], value)
 
@@ -200,11 +205,13 @@ class TestDynamoDBStateStore:
 
         assert store.save_errors == 0
         keys = [store.build_key("job_state", "two")]
+
         vals = store.restore(keys)
         for key, value in key_value_pairs:
             assert_equal(vals[key], value)
 
-    def test_restore_more_than_4KB(self, store, small_object, large_object):
+    @pytest.mark.parametrize("read_json", [False, True])
+    def test_restore_more_than_4KB(self, store, small_object, large_object, read_json):
         keys = [store.build_key("job_state", i) for i in range(3)]
         value = large_object
         pairs = zip(keys, (value for i in range(len(keys))))
@@ -212,11 +219,16 @@ class TestDynamoDBStateStore:
         store._consume_save_queue()
 
         assert store.save_errors == 0
-        vals = store.restore(keys)
+
+        mock_config = {"read_json.enable": read_json}
+        mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
+        with mock_configuration:
+            vals = store.restore(keys)
         for key in keys:
             assert_equal(vals[key], large_object)
 
-    def test_restore(self, store, small_object, large_object):
+    @pytest.mark.parametrize("read_json", [False, True])
+    def test_restore(self, store, small_object, large_object, read_json):
         keys = [store.build_key("job_state", i) for i in range(3)]
         value = small_object
         pairs = zip(keys, (value for i in range(len(keys))))
@@ -224,7 +236,10 @@ class TestDynamoDBStateStore:
         store._consume_save_queue()
 
         assert store.save_errors == 0
-        vals = store.restore(keys)
+        mock_config = {"read_json.enable": read_json}
+        mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
+        with mock_configuration:
+            vals = store.restore(keys)
         for key in keys:
             assert_equal(vals[key], small_object)
 

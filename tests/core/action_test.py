@@ -1,13 +1,19 @@
+import json
+
 import pytest
 
 from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigConstraint
+from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigParameter
+from tron.config.schema import ConfigProjectedSAVolume
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSecretVolume
 from tron.config.schema import ConfigSecretVolumeItem
+from tron.config.schema import ConfigTopologySpreadConstraints
 from tron.config.schema import ConfigVolume
 from tron.core.action import Action
+from tron.core.action import ActionCommandConfig
 
 
 class TestAction:
@@ -96,3 +102,100 @@ class TestAction:
         assert command_config.secret_env == {}
         assert command_config.secret_volumes == []
         assert command_config.extra_volumes == set()
+
+    def action_command_config_json(self):
+        return json.dumps(
+            {
+                "command": "echo 'Hello, World!'",
+                "cpus": 1.0,
+                "mem": 512.0,
+                "disk": 1024.0,
+                "cap_add": ["NET_ADMIN"],
+                "cap_drop": ["MKNOD"],
+                "constraints": [["pool", "LIKE", "default"]],
+                "docker_image": "fake-docker.com:400/image",
+                "docker_parameters": [["test", 123]],
+                "env": {"TESTING": "true"},
+                "secret_env": {"TEST_SECRET": "secret_value"},
+                "secret_volumes": [
+                    {
+                        "secret_volume_name": "secretvolumename",
+                        "secret_name": "secret",
+                        "container_path": "/b",
+                        "default_mode": "0644",
+                        "items": [{"key": "key", "path": "path", "mode": "0755"}],
+                    }
+                ],
+                "projected_sa_volumes": [
+                    {
+                        "container_path": "/var/run/secrets/whatever",
+                        "audience": "for.bar.com",
+                        "expiration_seconds": 3600,
+                    }
+                ],
+                "extra_volumes": [["/tmp", "/nail/tmp", "RO"]],
+                "node_affinities": [
+                    {"key": "topology.kubernetes.io/zone", "operator": "In", "value": ["us-west-1a", "us-west-1c"]}
+                ],
+                "topology_spread_constraints": [
+                    {
+                        "topology_key": "zone",
+                        "max_skew": 1,
+                        "when_unsatisfiable": "DoNotSchedule",
+                        "label_selector": {"match_labels": {"app": "myapp"}},
+                    }
+                ],
+                "labels": {"app": "myapp"},
+                "annotations": {"annotation_key": "annotation_value"},
+                "service_account_name": "default",
+                "ports": [8080, 9090],
+            }
+        )
+
+    def test_action_command_config_from_json(self):
+        data = self.action_command_config_json()
+        result = ActionCommandConfig.from_json(data)
+
+        assert result["command"] == "echo 'Hello, World!'"
+        assert result["cpus"] == 1.0
+        assert result["mem"] == 512.0
+        assert result["disk"] == 1024.0
+        assert result["cap_add"] == ["NET_ADMIN"]
+        assert result["cap_drop"] == ["MKNOD"]
+        assert result["constraints"] == {("pool", "LIKE", "default")}
+        assert result["docker_image"] == "fake-docker.com:400/image"
+        assert result["docker_parameters"] == {("test", 123)}
+        assert result["env"] == {"TESTING": "true"}
+        assert result["secret_env"] == {"TEST_SECRET": "secret_value"}
+        assert result["secret_volumes"] == [
+            ConfigSecretVolume(
+                secret_volume_name="secretvolumename",
+                secret_name="secret",
+                container_path="/b",
+                default_mode="0644",
+                items=[{"key": "key", "path": "path", "mode": "0755"}],
+            )
+        ]
+        assert result["projected_sa_volumes"] == [
+            ConfigProjectedSAVolume(
+                container_path="/var/run/secrets/whatever",
+                audience="for.bar.com",
+                expiration_seconds=3600,
+            )
+        ]
+        assert result["extra_volumes"] == {("/tmp", "/nail/tmp", "RO")}
+        assert result["node_affinities"] == [
+            ConfigNodeAffinity(key="topology.kubernetes.io/zone", operator="In", value=["us-west-1a", "us-west-1c"])
+        ]
+        assert result["topology_spread_constraints"] == [
+            ConfigTopologySpreadConstraints(
+                topology_key="zone",
+                max_skew=1,
+                when_unsatisfiable="DoNotSchedule",
+                label_selector={"match_labels": {"app": "myapp"}},
+            )
+        ]
+        assert result["labels"] == {"app": "myapp"}
+        assert result["annotations"] == {"annotation_key": "annotation_value"}
+        assert result["service_account_name"] == "default"
+        assert result["ports"] == [8080, 9090]
