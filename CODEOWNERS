@@ -1,0 +1,5 @@
+# NOTE: "we" in this file will refer to the Compute Infrastructure team at Yelp
+* @Yelp/paasta
+#
+# prevent cheeky modifications :)
+CODEOWNERS @Yelp/paasta
