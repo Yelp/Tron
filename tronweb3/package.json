@@ -1,0 +1,9 @@
+{
+  "name": "tronweb3",
+  "version": "0.0.1",
+  "description": "tronweb3: The Re-Tron of the King",
+  "main": "index.js",
+  "repository": "https://github.com/Yelp/Tron",
+  "author": "ptsang@yelp.com",
+  "license": "MIT"
+}
