@@ -8,7 +8,6 @@ RUN apt-get update -yq && \
 
 RUN apt-get -q update && \
     DEBIAN_FRONTEND=noninteractive apt-get -q install -y --no-install-recommends \
-        coffeescript \
         debhelper \
         devscripts \
         dh-virtualenv \
@@ -31,8 +30,6 @@ RUN apt-get -q update && \
         tox \
         wget \
         g++ \
-        #  12.22, good enough
-        nodejs \
     && apt-get -q clean
 
 ARG PIP_INDEX_URL
@@ -40,11 +37,13 @@ ARG NPM_CONFIG_REGISTRY
 ENV PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.python.org/simple}
 ENV NPM_CONFIG_REGISTRY=${NPM_CONFIG_REGISTRY:-https://npm.yelpcorp.com}
 
-# Get yarn
-# I'd use ubuntu yarn (yarnpkg) but https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=1019291
-RUN wget --quiet -O - https://dl.yarnpkg.com/debian/pubkey.gpg | apt-key add -
-RUN echo "deb http://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list.d/yarn.list
-RUN apt-get -q update && apt-get -q install -y --no-install-recommends yarn
+# Get yarn, node and coffeescript
+RUN wget -q -O - https://deb.nodesource.com/gpgkey/nodesource.gpg.key | gpg --dearmor | tee /usr/share/keyrings/nodesource.gpg >/dev/null && \
+    echo "deb [signed-by=/usr/share/keyrings/nodesource.gpg] https://deb.nodesource.com/node_16.x $(lsb_release -c -s) main" > /etc/apt/sources.list.d/nodesource.list && \
+    wget -q -O - https://dl.yarnpkg.com/debian/pubkey.gpg | gpg --dearmor | tee /usr/share/keyrings/yarnkey.gpg >/dev/null && \
+    echo 'deb [signed-by=/usr/share/keyrings/yarnkey.gpg] https://dl.yarnpkg.com/debian stable main' > /etc/apt/sources.list.d/yarn.list && \
+    apt-get update && \
+    apt-get -q update && apt-get -q install -y --no-install-recommends yarn nodejs coffeescript
 
 RUN pip3 install --trusted-host 169.254.255.254 --index-url ${PIP_INDEX_URL} virtualenv==16.7.5
 WORKDIR /work
