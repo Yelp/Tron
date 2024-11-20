@@ -1,4 +1,4 @@
-d me tTron - Batch Scheduling System
+Tron - Batch Scheduling System
 ==============================
 
 [![Build Status](https://github.com/Yelp/Tron/actions/workflows/ci.yml/badge.svg?query=branch%3Amaster)](https://github.com/Yelp/Tron/actions/workflows/ci.yml)
