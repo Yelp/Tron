@@ -245,7 +245,6 @@ class TimeSpecification:
 
     def get_match(self, start):
         """Returns the next datetime match after start."""
-        log.info(f"time passed to to_timezone: {start}")
         start_date = to_timezone(start, self.timezone).replace(tzinfo=None)
 
         def get_first_day(month, year):

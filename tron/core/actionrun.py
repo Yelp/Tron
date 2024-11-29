@@ -787,7 +787,6 @@ class ActionRun(Observable, Persistable):
         else:
             action_runner_json = SubprocessActionRunnerFactory.to_json(action_runner)
 
-        # TODO: I think we need to add here expected_runtime as well, same with trigger_timeout
         try:
             return json.dumps(
                 {

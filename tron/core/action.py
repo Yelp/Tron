@@ -108,7 +108,6 @@ class ActionCommandConfig(Persistable):
                 return obj._asdict()
             return obj
 
-        # TODO: should we also add expected_runtime here or in actionrun.py?
         try:
             return json.dumps(
                 {
