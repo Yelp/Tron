@@ -128,7 +128,14 @@ def large_object():
     }
 
 
-@pytest.mark.usefixtures("store", "small_object", "large_object")
+@pytest.fixture(autouse=True)
+def mock_config_functions():
+    with mock.patch("tron.config.static_config.get_config_watcher") as mock_get_config_watcher:
+        mock_get_config_watcher.return_value = mock.Mock()
+        yield
+
+
+@pytest.mark.usefixtures("store", "small_object", "large_object", "mock_config_functions")
 class TestDynamoDBStateStore:
     @pytest.mark.parametrize("read_json", [False, True])
     def test_save(self, store, small_object, large_object, read_json):
