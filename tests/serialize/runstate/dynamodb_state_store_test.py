@@ -128,14 +128,7 @@ def large_object():
     }
 
 
-@pytest.fixture(autouse=True)
-def mock_config_functions():
-    with mock.patch("tron.config.static_config.get_config_watcher") as mock_get_config_watcher:
-        mock_get_config_watcher.return_value = mock.Mock()
-        yield
-
-
-@pytest.mark.usefixtures("store", "small_object", "large_object", "mock_config_functions")
+@pytest.mark.usefixtures("store", "small_object", "large_object")
 class TestDynamoDBStateStore:
     @pytest.mark.parametrize("read_json", [False, True])
     def test_save(self, store, small_object, large_object, read_json):
@@ -159,7 +152,9 @@ class TestDynamoDBStateStore:
         ]
         mock_config = {"read_json.enable": read_json}
         mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
-        with mock_configuration:
+        with mock_configuration, mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
             vals = store.restore(keys)
         for key, value in key_value_pairs:
             assert_equal(vals[key], value)
@@ -199,7 +194,10 @@ class TestDynamoDBStateStore:
             store.build_key("job_state", "two"),
             store.build_key("job_run_state", "four"),
         ]
-        vals = store.restore(keys)
+        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore(keys)
         assert vals == {keys[1]: small_object}
 
     def test_save_more_than_4KB(self, store, small_object, large_object):
@@ -215,7 +213,10 @@ class TestDynamoDBStateStore:
         assert store.save_errors == 0
         keys = [store.build_key("job_state", "two")]
 
-        vals = store.restore(keys)
+        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore(keys)
         for key, value in key_value_pairs:
             assert_equal(vals[key], value)
 
@@ -231,7 +232,9 @@ class TestDynamoDBStateStore:
 
         mock_config = {"read_json.enable": read_json}
         mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
-        with mock_configuration:
+        with mock_configuration, mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
             vals = store.restore(keys)
         for key in keys:
             assert_equal(vals[key], large_object)
@@ -247,7 +250,9 @@ class TestDynamoDBStateStore:
         assert store.save_errors == 0
         mock_config = {"read_json.enable": read_json}
         mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
-        with mock_configuration:
+        with mock_configuration, mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
             vals = store.restore(keys)
         for key in keys:
             assert_equal(vals[key], small_object)
@@ -310,7 +315,10 @@ class TestDynamoDBStateStore:
             return_value=unprocessed_value,
         ) as mock_failed_read:
             try:
-                store.restore(keys)
+                with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+                    "tron.config.static_config.build_configuration_watcher", autospec=True
+                ):
+                    store.restore(keys)
             except Exception:
                 assert_equal(mock_failed_read.call_count, 11)
 
@@ -322,6 +330,8 @@ class TestDynamoDBStateStore:
         mock_future.result.side_effect = Exception("mocked exception")
         with mock.patch("concurrent.futures.Future", return_value=mock_future, autospec=True):
             with mock.patch("concurrent.futures.as_completed", return_value=[mock_future], autospec=True):
-                with pytest.raises(Exception) as exec_info:
+                with pytest.raises(Exception) as exec_info, mock.patch(
+                    "tron.config.static_config.load_yaml_file", autospec=True
+                ), mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True):
                     store.restore(keys)
                 assert str(exec_info.value) == "mocked exception"
