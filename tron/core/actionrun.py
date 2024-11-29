@@ -180,7 +180,9 @@ class ActionRunAttempt(Persistable):
         try:
             return json.dumps(
                 {
-                    "command_config": ActionCommandConfig.to_json(state_data["command_config"]),
+                    "command_config": ActionCommandConfig.to_json(
+                        state_data["command_config"]
+                    ),  # maybe here we pass it to configAction()
                     "start_time": state_data["start_time"].isoformat() if state_data["start_time"] else None,
                     "end_time": state_data["end_time"].isoformat() if state_data["end_time"] else None,
                     "rendered_command": state_data["rendered_command"],
@@ -785,6 +787,7 @@ class ActionRun(Observable, Persistable):
         else:
             action_runner_json = SubprocessActionRunnerFactory.to_json(action_runner)
 
+        # TODO: I think we need to add here expected_runtime as well, same with trigger_timeout
         try:
             return json.dumps(
                 {
@@ -1344,7 +1347,8 @@ class KubernetesActionRun(ActionRun, Observer):
             log.error(f"{self} no task ID, cannot recover")
             self.fail_unknown()
             return None
-
+        # when we get attempts here, the field_selector_env = {'PAASTA_POD_IP': ['status.podIP']} which is in a diff format than
+        # the field_selector_env in submit_command function.
         last_attempt = self.attempts[-1]
 
         if last_attempt.rendered_command is None:
@@ -1358,32 +1362,37 @@ class KubernetesActionRun(ActionRun, Observer):
             return None
 
         log.info(f"{self} recovering Kubernetes run")
-
-        task = k8s_cluster.create_task(
-            action_run_id=self.id,
-            command=last_attempt.rendered_command,
-            cpus=last_attempt.command_config.cpus,
-            mem=last_attempt.command_config.mem,
-            disk=last_attempt.command_config.disk,
-            docker_image=last_attempt.command_config.docker_image,
-            env=build_environment(original_env=last_attempt.command_config.env, run_id=self.id),
-            secret_env=last_attempt.command_config.secret_env,
-            field_selector_env=last_attempt.command_config.field_selector_env,
-            serializer=filehandler.OutputStreamSerializer(self.output_path),
-            secret_volumes=last_attempt.command_config.secret_volumes,
-            projected_sa_volumes=last_attempt.command_config.projected_sa_volumes,
-            volumes=last_attempt.command_config.extra_volumes,
-            cap_add=last_attempt.command_config.cap_add,
-            cap_drop=last_attempt.command_config.cap_drop,
-            task_id=last_attempt.kubernetes_task_id,
-            node_selectors=last_attempt.command_config.node_selectors,
-            node_affinities=last_attempt.command_config.node_affinities,
-            topology_spread_constraints=last_attempt.command_config.topology_spread_constraints,
-            pod_labels=build_labels(run_id=self.id, original_labels=last_attempt.command_config.labels),
-            pod_annotations=last_attempt.command_config.annotations,
-            service_account_name=last_attempt.command_config.service_account_name,
-            ports=last_attempt.command_config.ports,
-        )
+        # try/except block here is necessary cause if this fails, jobs will get resetted to 0 and we dont want that to happen
+        try:
+            task = k8s_cluster.create_task(
+                action_run_id=self.id,
+                command=last_attempt.rendered_command,
+                cpus=last_attempt.command_config.cpus,
+                mem=last_attempt.command_config.mem,
+                disk=last_attempt.command_config.disk,
+                docker_image=last_attempt.command_config.docker_image,
+                env=build_environment(original_env=last_attempt.command_config.env, run_id=self.id),
+                secret_env=last_attempt.command_config.secret_env,
+                field_selector_env=last_attempt.command_config.field_selector_env,
+                serializer=filehandler.OutputStreamSerializer(self.output_path),
+                secret_volumes=last_attempt.command_config.secret_volumes,
+                projected_sa_volumes=last_attempt.command_config.projected_sa_volumes,
+                volumes=last_attempt.command_config.extra_volumes,
+                cap_add=last_attempt.command_config.cap_add,
+                cap_drop=last_attempt.command_config.cap_drop,
+                task_id=last_attempt.kubernetes_task_id,
+                node_selectors=last_attempt.command_config.node_selectors,
+                node_affinities=last_attempt.command_config.node_affinities,
+                topology_spread_constraints=last_attempt.command_config.topology_spread_constraints,
+                pod_labels=build_labels(run_id=self.id, original_labels=last_attempt.command_config.labels),
+                pod_annotations=last_attempt.command_config.annotations,
+                service_account_name=last_attempt.command_config.service_account_name,
+                ports=last_attempt.command_config.ports,
+            )
+        except Exception:
+            log.exception(f"Unable to create task for ActionRun {self.id}")
+            self.fail(exitcode.EXIT_KUBERNETES_TASK_INVALID)
+            return None
         if not task:
             log.warning(
                 f"{self} cannot recover, Kubernetes is disabled or "

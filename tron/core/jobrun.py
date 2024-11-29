@@ -8,6 +8,8 @@ import time
 from collections import deque
 from typing import Optional
 
+import pytz
+
 import tron.metrics as metrics
 from tron import command_context
 from tron import node
@@ -89,6 +91,9 @@ class JobRun(Observable, Observer, Persistable):
                     "job_name": state_data["job_name"],
                     "run_num": state_data["run_num"],
                     "run_time": state_data["run_time"].isoformat() if state_data["run_time"] else None,
+                    "time_zone": state_data["run_time"].tzinfo.zone
+                    if state_data["run_time"] and state_data["run_time"].tzinfo
+                    else None,
                     "node_name": state_data["node_name"],
                     "runs": [ActionRun.to_json(run) for run in state_data["runs"]],
                     "cleanup_run": ActionRun.to_json(state_data["cleanup_run"]) if state_data["cleanup_run"] else None,
@@ -109,7 +114,13 @@ class JobRun(Observable, Observer, Persistable):
             json_data = json.loads(state_data)
             for k in json_data:
                 if k == "run_time":
-                    json_data[k] = datetime.datetime.fromisoformat(json_data[k]) if json_data["run_time"] else None
+                    if json_data["run_time"]:
+                        run_time = datetime.datetime.fromisoformat(json_data[k])
+                        if json_data["time_zone"]:
+                            run_time = run_time.replace(tzinfo=pytz.timezone(json_data["time_zone"]))
+                        json_data["run_time"] = run_time
+                    else:
+                        json_data["run_time"] = None
                 elif k == "cleanup_run":
                     json_data["cleanup_run"] = (
                         ActionRun.from_json(json_data["cleanup_run"]) if json_data["cleanup_run"] else None

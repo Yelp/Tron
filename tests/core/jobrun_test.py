@@ -201,11 +201,13 @@ class TestJobRun(TestCase):
         assert_equal(started_runs, startable_runs[1:])
 
     def jobrun_json(self):
+        # field_selector_env  = {"PAASTA_POD_IP": ["status.podIP"]}
         data_string = json.dumps(
             {
                 "job_name": "example_job",
                 "run_num": 1,
                 "run_time": "2023-10-01T12:00:00",
+                "time_zone": None,
                 "node_name": "example_node",
                 "runs": [
                     {
@@ -217,9 +219,7 @@ class TestJobRun(TestCase):
                         "end_time": "2023-10-01T12:30:00",
                         "node_name": "paasta",
                         "exit_status": 0,
-                        "attempts": [
-                            '{"command_config": "{\\"command\\": \\"date; sleep 150; date\\", \\"cpus\\": 0.1, \\"mem\\": 33.0, \\"disk\\": 5.0, \\"cap_add\\": [], \\"cap_drop\\": [\\"SETPCAP\\", \\"MKNOD\\", \\"AUDIT_WRITE\\", \\"CHOWN\\", \\"NET_RAW\\", \\"DAC_OVERRIDE\\", \\"FOWNER\\", \\"FSETID\\", \\"KILL\\", \\"SETGID\\", \\"SETUID\\", \\"NET_BIND_SERVICE\\", \\"SYS_CHROOT\\", \\"SETFCAP\\"], \\"constraints\\": [], \\"docker_image\\": \\"docker-paasta.yelpcorp.com:443/services-compute-infra-test-service:paasta-a9b56979859d7aa0264b6dd79d24b6dd544c4b62-20241112T121623\\", \\"docker_parameters\\": [], \\"env\\": {\\"ENABLE_PER_INSTANCE_LOGSPOUT\\": \\"1\\", \\"PAASTA_CLUSTER\\": \\"infrastage\\", \\"PAASTA_DEPLOY_GROUP\\": \\"k8s.everything\\", \\"PAASTA_DOCKER_IMAGE\\": \\"services-compute-infra-test-service:paasta-a9b56979859d7aa0264b6dd79d24b6dd544c4b62-20241112T121623\\", \\"PAASTA_GIT_SHA\\": \\"a9b56979\\", \\"PAASTA_IMAGE_VERSION\\": \\"20241112T121623\\", \\"PAASTA_INSTANCE\\": \\"test_load_foo1.foo\\", \\"PAASTA_INSTANCE_TYPE\\": \\"tron\\", \\"PAASTA_MONITORING_TEAM\\": \\"compute_infra\\", \\"PAASTA_RESOURCE_CPUS\\": \\"0.1\\", \\"PAASTA_RESOURCE_DISK\\": \\"5\\", \\"PAASTA_RESOURCE_MEM\\": \\"33\\", \\"PAASTA_SERVICE\\": \\"compute-infra-test-service\\"}, \\"secret_env\\": {}, \\"secret_volumes\\": [], \\"projected_sa_volumes\\": [], \\"field_selector_env\\": {\\"PAASTA_POD_IP\\": [\\"status.podIP\\"]}, \\"extra_volumes\\": [[\\"/nail/etc/ecosystem\\", \\"/nail/etc/ecosystem\\", \\"RO\\"], [\\"/nail/etc/kafka_discovery/\\", \\"/nail/etc/kafka_discovery/\\", \\"RO\\"], [\\"/nail/opt/data_pipeline_schemas\\", \\"/nail/opt/data_pipeline_schemas\\", \\"RO\\"], [\\"/nail/etc/superregion\\", \\"/nail/etc/superregion\\", \\"RO\\"], [\\"/nail/etc/runtimeenv\\", \\"/nail/etc/runtimeenv\\", \\"RO\\"], [\\"/nail/etc/mrjob\\", \\"/nail/etc/mrjob\\", \\"RO\\"], [\\"/nail/etc/zookeeper_discovery/\\", \\"/nail/etc/zookeeper_discovery/\\", \\"RO\\"], [\\"/var/run/synapse/services/\\", \\"/var/run/synapse/services/\\", \\"RO\\"], [\\"/nail/etc/region\\", \\"/nail/etc/region\\", \\"RO\\"], [\\"/nail/srv\\", \\"/nail/srv\\", \\"RO\\"], [\\"/etc/boto_cfg\\", \\"/etc/boto_cfg\\", \\"RO\\"], [\\"/nail/etc/habitat\\", \\"/nail/etc/habitat\\", \\"RO\\"], [\\"/nail/etc/datacenter\\", \\"/nail/etc/datacenter\\", \\"RO\\"], [\\"/nail/etc/srv-configs\\", \\"/nail/etc/srv-configs\\", \\"RO\\"], [\\"/nail/etc/services\\", \\"/nail/etc/services\\", \\"RO\\"]], \\"node_selectors\\": {\\"yelp.com/pool\\": \\"default\\"}, \\"node_affinities\\": [{\\"key\\": \\"topology.kubernetes.io/zone\\", \\"operator\\": \\"In\\", \\"value\\": [\\"us-west-1a\\", \\"us-west-1c\\"]}], \\"labels\\": {\\"app.kubernetes.io/managed-by\\": \\"tron\\", \\"paasta.yelp.com/cluster\\": \\"infrastage\\", \\"paasta.yelp.com/instance\\": \\"test_load_foo1.foo\\", \\"paasta.yelp.com/pool\\": \\"default\\", \\"paasta.yelp.com/service\\": \\"compute-infra-test-service\\", \\"yelp.com/owner\\": \\"compute_infra_platform_experience\\"}, \\"annotations\\": {\\"paasta.yelp.com/instance\\": \\"test_load_foo1.foo\\", \\"paasta.yelp.com/routable_ip\\": \\"false\\", \\"paasta.yelp.com/service\\": \\"compute-infra-test-service\\"}, \\"service_account_name\\": null, \\"ports\\": []}", "start_time": "2024-11-13T03:35:00.180085", "end_time": "2024-11-13T03:37:34.456189", "rendered_command": "date; sleep 150; date", "exit_status": 0, "mesos_task_id": null, "kubernetes_task_id": "compute-infra-test-service.test--load--foo1.5910.foo.or0pi2"}'
-                        ],
+                        "attempts": [],
                         "retries_remaining": 2,
                         "retries_delay": 60,
                         "action_runner": '{"status_path": "/tmp/tron", "exec_path": "/opt/venvs/tron/bin"}',

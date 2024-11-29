@@ -165,6 +165,7 @@ class DynamoDBStateStore:
                 json_items[key] = json_val["json_val"]["S"]
         if read_json:
             try:
+                log.info("read_json is enabled. Deserializing JSON items to restore them instead of pickled data.")
                 deserialized_items = {k: self._deserialize_item(k, val) for k, val in json_items.items()}
             except Exception as e:
                 # test this out
@@ -173,6 +174,7 @@ class DynamoDBStateStore:
                 read_json = False
 
         if not read_json:
+            log.info("read_json is disabled. Deserializing pickled items to restore them.")
             deserialized_items = {k: pickle.loads(v) for k, v in raw_items.items()}
         return deserialized_items
 

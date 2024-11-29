@@ -11,10 +11,15 @@ from typing import Union
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigAction
+from tron.config.schema import ConfigConstraint
+from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigNodeAffinity
+from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigProjectedSAVolume
+from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSecretVolume
 from tron.config.schema import ConfigTopologySpreadConstraints
+from tron.config.schema import ConfigVolume
 from tron.utils.persistable import Persistable
 
 log = logging.getLogger(__name__)
@@ -61,16 +66,32 @@ class ActionCommandConfig(Persistable):
         try:
             json_data = json.loads(state_data)
             for k in json_data:
-                if k == "constraints" or k == "docker_parameters" or k == "extra_volumes":
-                    json_data[k] = {tuple(inner_list) for inner_list in json_data[k]}
+                if k == "constraints":
+                    # convert back the list of dictionaries to a list of ConfigConstraint
+                    json_data[k] = [ConfigConstraint(**val) for val in json_data[k]]
+                elif k == "docker_parameters":
+                    # convert back the list of dictionaries to a list of ConfigParameter
+                    json_data[k] = [ConfigParameter(**val) for val in json_data[k]]
+                elif k == "extra_volumes":
+                    # tested locally & infrastage
+                    json_data[k] = [ConfigVolume(**val) for val in json_data[k]]
                 elif k == "secret_volumes":
+                    # tested locally & infrastage
                     json_data[k] = [ConfigSecretVolume(**val) for val in json_data[k]]
                 elif k == "projected_sa_volumes":
                     json_data[k] = [ConfigProjectedSAVolume(**val) for val in json_data[k]]
                 elif k == "node_affinities":
+                    # tested infrastage
                     json_data[k] = [ConfigNodeAffinity(**val) for val in json_data[k]]
                 elif k == "topology_spread_constraints":
+                    # tested infrastage
                     json_data[k] = [ConfigTopologySpreadConstraints(**val) for val in json_data[k]]
+                elif k == "secret_env":
+                    # tested on infrastage
+                    json_data[k] = {key: ConfigSecretSource(**val) for key, val in json_data[k].items()}
+                elif k == "field_selector_env":
+                    # tested locally & infrastage
+                    json_data[k] = {key: ConfigFieldSelectorSource(**val) for key, val in json_data[k].items()}
         except Exception:
             log.exception("Error deserializing ActionCommandConfig from JSON")
             raise
@@ -87,6 +108,7 @@ class ActionCommandConfig(Persistable):
                 return obj._asdict()
             return obj
 
+        # TODO: should we also add expected_runtime here or in actionrun.py?
         try:
             return json.dumps(
                 {
@@ -96,17 +118,19 @@ class ActionCommandConfig(Persistable):
                     "disk": state_data["disk"],
                     "cap_add": state_data["cap_add"],
                     "cap_drop": state_data["cap_drop"],
-                    "constraints": list(state_data["constraints"]),
+                    "constraints": [
+                        constraint._asdict() for constraint in state_data["constraints"]
+                    ],  # convert each ConfigConstraint to dictionary, so it would be a list of dicts
                     "docker_image": state_data["docker_image"],
-                    "docker_parameters": list(state_data["docker_parameters"]),
+                    "docker_parameters": [parameter._asdict() for parameter in state_data["docker_parameters"]],
                     "env": state_data["env"],
-                    "secret_env": state_data["secret_env"],
+                    "secret_env": {key: val._asdict() for key, val in state_data["secret_env"].items()},
                     "secret_volumes": [serialize_namedtuple(volume) for volume in state_data["secret_volumes"]],
                     "projected_sa_volumes": [
                         serialize_namedtuple(volume) for volume in state_data["projected_sa_volumes"]
                     ],
-                    "field_selector_env": state_data["field_selector_env"],
-                    "extra_volumes": list(state_data["extra_volumes"]),
+                    "field_selector_env": {key: val._asdict() for key, val in state_data["field_selector_env"].items()},
+                    "extra_volumes": [serialize_namedtuple(volume) for volume in state_data["extra_volumes"]],
                     "node_selectors": state_data["node_selectors"],
                     "node_affinities": [serialize_namedtuple(affinity) for affinity in state_data["node_affinities"]],
                     "labels": state_data["labels"],
