@@ -74,7 +74,7 @@ class DynamoDBStateStore:
         config_watcher = get_config_watcher()
         config_watcher.reload_if_changed()
         read_json = staticconf.read(
-            "read_json.enable", namespace=NAMESPACE, default=True
+            "read_json.enable", namespace=NAMESPACE, default=False
         )  # TODO: dont forget to change default to False after finishing testing
         first_items = self._get_first_partitions(keys)
         remaining_items = self._get_remaining_partitions(first_items)
