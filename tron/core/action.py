@@ -73,24 +73,18 @@ class ActionCommandConfig(Persistable):
                     # convert back the list of dictionaries to a list of ConfigParameter
                     json_data[k] = [ConfigParameter(**val) for val in json_data[k]]
                 elif k == "extra_volumes":
-                    # tested locally & infrastage
                     json_data[k] = [ConfigVolume(**val) for val in json_data[k]]
                 elif k == "secret_volumes":
-                    # tested locally & infrastage
                     json_data[k] = [ConfigSecretVolume(**val) for val in json_data[k]]
                 elif k == "projected_sa_volumes":
                     json_data[k] = [ConfigProjectedSAVolume(**val) for val in json_data[k]]
                 elif k == "node_affinities":
-                    # tested infrastage
                     json_data[k] = [ConfigNodeAffinity(**val) for val in json_data[k]]
                 elif k == "topology_spread_constraints":
-                    # tested infrastage
                     json_data[k] = [ConfigTopologySpreadConstraints(**val) for val in json_data[k]]
                 elif k == "secret_env":
-                    # tested on infrastage
                     json_data[k] = {key: ConfigSecretSource(**val) for key, val in json_data[k].items()}
                 elif k == "field_selector_env":
-                    # tested locally & infrastage
                     json_data[k] = {key: ConfigFieldSelectorSource(**val) for key, val in json_data[k].items()}
         except Exception:
             log.exception("Error deserializing ActionCommandConfig from JSON")

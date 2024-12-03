@@ -73,9 +73,7 @@ class DynamoDBStateStore:
         # job_state job_run_name --> high level info about the job run
         config_watcher = get_config_watcher()
         config_watcher.reload_if_changed()
-        read_json = staticconf.read(
-            "read_json.enable", namespace=NAMESPACE, default=False
-        )  # TODO: dont forget to change default to False after finishing testing
+        read_json = staticconf.read("read_json.enable", namespace=NAMESPACE, default=False)
         first_items = self._get_first_partitions(keys)
         remaining_items = self._get_remaining_partitions(first_items)
         vals = self._merge_items(first_items, remaining_items, read_json)
@@ -145,7 +143,7 @@ class DynamoDBStateStore:
             keys_for_remaining_items.extend(remaining_items)
         return self._get_items(keys_for_remaining_items)
 
-    # TODO: should be a flag set in srv-configs to read json data or not, otherwise will read pickled data
+    # read_json is a flag set in srv-configs to read json data or not, otherwise will read pickled data
     def _merge_items(self, first_items, remaining_items, read_json=False) -> dict:
         items = defaultdict(list)
         raw_items: DefaultDict[str, bytearray] = defaultdict(bytearray)
@@ -168,7 +166,6 @@ class DynamoDBStateStore:
                 log.info("read_json is enabled. Deserializing JSON items to restore them instead of pickled data.")
                 deserialized_items = {k: self._deserialize_item(k, val) for k, val in json_items.items()}
             except Exception as e:
-                # test this out
                 log.exception(f"Error deserializing JSON items: {repr(e)}")
                 # if reading from json failed we want to try reading the pickled data instead
                 read_json = False

@@ -180,9 +180,7 @@ class ActionRunAttempt(Persistable):
         try:
             return json.dumps(
                 {
-                    "command_config": ActionCommandConfig.to_json(
-                        state_data["command_config"]
-                    ),  # maybe here we pass it to configAction()
+                    "command_config": ActionCommandConfig.to_json(state_data["command_config"]),
                     "start_time": state_data["start_time"].isoformat() if state_data["start_time"] else None,
                     "end_time": state_data["end_time"].isoformat() if state_data["end_time"] else None,
                     "rendered_command": state_data["rendered_command"],

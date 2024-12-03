@@ -201,7 +201,6 @@ class TestJobRun(TestCase):
         assert_equal(started_runs, startable_runs[1:])
 
     def jobrun_json(self):
-        # field_selector_env  = {"PAASTA_POD_IP": ["status.podIP"]}
         data_string = json.dumps(
             {
                 "job_name": "example_job",

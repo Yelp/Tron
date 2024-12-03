@@ -12,11 +12,8 @@
 """A complete time specification based on the Google App Engine GROC spec."""
 import calendar
 import datetime
-import logging
 
 import pytz
-
-log = logging.getLogger(__name__)
 
 
 def get_timezone(timezone_string):
