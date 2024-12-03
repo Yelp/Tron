@@ -11,10 +11,15 @@ from typing import Union
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigAction
+from tron.config.schema import ConfigConstraint
+from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigNodeAffinity
+from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigProjectedSAVolume
+from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSecretVolume
 from tron.config.schema import ConfigTopologySpreadConstraints
+from tron.config.schema import ConfigVolume
 from tron.utils.persistable import Persistable
 
 log = logging.getLogger(__name__)
@@ -55,11 +60,45 @@ class ActionCommandConfig(Persistable):
         return ActionCommandConfig(**self.state_data)
 
     @staticmethod
-    def to_json(state_data: dict) -> Optional[str]:
+    def from_json(state_data: str):
+        """Deserialize a JSON string to an ActionCommandConfig instance."""
+        # Here we will also need to load the json for "command_config" since it's a string
+        try:
+            json_data = json.loads(state_data)
+            for k in json_data:
+                if k == "constraints":
+                    # convert back the list of dictionaries to a list of ConfigConstraint
+                    json_data[k] = [ConfigConstraint(**val) for val in json_data[k]]
+                elif k == "docker_parameters":
+                    # convert back the list of dictionaries to a list of ConfigParameter
+                    json_data[k] = [ConfigParameter(**val) for val in json_data[k]]
+                elif k == "extra_volumes":
+                    json_data[k] = [ConfigVolume(**val) for val in json_data[k]]
+                elif k == "secret_volumes":
+                    json_data[k] = [ConfigSecretVolume(**val) for val in json_data[k]]
+                elif k == "projected_sa_volumes":
+                    json_data[k] = [ConfigProjectedSAVolume(**val) for val in json_data[k]]
+                elif k == "node_affinities":
+                    json_data[k] = [ConfigNodeAffinity(**val) for val in json_data[k]]
+                elif k == "topology_spread_constraints":
+                    json_data[k] = [ConfigTopologySpreadConstraints(**val) for val in json_data[k]]
+                elif k == "secret_env":
+                    json_data[k] = {key: ConfigSecretSource(**val) for key, val in json_data[k].items()}
+                elif k == "field_selector_env":
+                    json_data[k] = {key: ConfigFieldSelectorSource(**val) for key, val in json_data[k].items()}
+        except Exception:
+            log.exception("Error deserializing ActionCommandConfig from JSON")
+            raise
+
+        return json_data
+
+    @staticmethod
+    def to_json(state_data: dict) -> str:
         """Serialize the ActionCommandConfig instance to a JSON string."""
 
         def serialize_namedtuple(obj):
             if isinstance(obj, tuple) and hasattr(obj, "_fields"):
+                # checks if obj is a tuple and convert it to a dict
                 return obj._asdict()
             return obj
 
@@ -72,23 +111,28 @@ class ActionCommandConfig(Persistable):
                     "disk": state_data["disk"],
                     "cap_add": state_data["cap_add"],
                     "cap_drop": state_data["cap_drop"],
-                    "constraints": list(state_data["constraints"]),
+                    "constraints": [
+                        constraint._asdict() for constraint in state_data["constraints"]
+                    ],  # convert each ConfigConstraint to dictionary, so it would be a list of dicts
                     "docker_image": state_data["docker_image"],
-                    "docker_parameters": list(state_data["docker_parameters"]),
+                    "docker_parameters": [parameter._asdict() for parameter in state_data["docker_parameters"]],
                     "env": state_data["env"],
-                    "secret_env": state_data["secret_env"],
+                    "secret_env": {key: val._asdict() for key, val in state_data["secret_env"].items()},
                     "secret_volumes": [serialize_namedtuple(volume) for volume in state_data["secret_volumes"]],
                     "projected_sa_volumes": [
                         serialize_namedtuple(volume) for volume in state_data["projected_sa_volumes"]
                     ],
-                    "field_selector_env": state_data["field_selector_env"],
-                    "extra_volumes": list(state_data["extra_volumes"]),
+                    "field_selector_env": {key: val._asdict() for key, val in state_data["field_selector_env"].items()},
+                    "extra_volumes": [serialize_namedtuple(volume) for volume in state_data["extra_volumes"]],
                     "node_selectors": state_data["node_selectors"],
                     "node_affinities": [serialize_namedtuple(affinity) for affinity in state_data["node_affinities"]],
                     "labels": state_data["labels"],
                     "annotations": state_data["annotations"],
                     "service_account_name": state_data["service_account_name"],
                     "ports": state_data["ports"],
+                    "topology_spread_constraints": [
+                        serialize_namedtuple(constraint) for constraint in state_data["topology_spread_constraints"]
+                    ],
                 }
             )
         except KeyError:
