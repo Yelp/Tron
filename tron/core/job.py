@@ -136,8 +136,7 @@ class Job(Observable, Observer, Persistable):
     def to_json(state_data: dict) -> str:
         """Serialize the Job instance to a JSON string."""
         try:
-            json_data = json.dumps(state_data)
-            return json_data
+            return json.dumps(state_data)
         except Exception:
             log.exception("Error serializing Job to JSON:")
             raise

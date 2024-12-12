@@ -9,6 +9,7 @@ import time
 from collections import defaultdict
 from collections import OrderedDict
 from typing import Any
+from typing import cast
 from typing import DefaultDict
 from typing import Dict
 from typing import List
@@ -70,12 +71,12 @@ class DynamoDBStateStore:
         """
         # format of the keys always passed here is
         # job_state job_name  --> high level info about the job: enabled, run_nums
-        # job_state job_run_name --> high level info about the job run
+        # job_run_state job_run_name --> high level info about the job run
         config_watcher = get_config_watcher()
         config_watcher.reload_if_changed()
-        read_json = staticconf.read("read_json.enable", namespace=NAMESPACE, default=False)
+        read_json = staticconf.read("read_json.enable", namespace=NAMESPACE, default=True)
         first_items = self._get_first_partitions(keys)
-        remaining_items = self._get_remaining_partitions(first_items)
+        remaining_items = self._get_remaining_partitions(first_items, read_json)
         vals = self._merge_items(first_items, remaining_items, read_json)
         return vals
 
@@ -132,19 +133,32 @@ class DynamoDBStateStore:
         return self._get_items(new_keys)
 
     # TODO: Check max partitions as JSON is larger
-    def _get_remaining_partitions(self, items: list):
+    def _get_remaining_partitions(self, items: list, read_json: bool):
         """Get items in the remaining partitions: N = 1 and beyond"""
         keys_for_remaining_items = []
         for item in items:
+            max_partitions = int(item["num_partitions"]["N"])
+            if read_json and "num_json_val_partitions" in item:
+                max_partitions = max(max_partitions, int(item["num_json_val_partitions"]["N"]))
             remaining_items = [
                 {"key": {"S": str(item["key"]["S"])}, "index": {"N": str(i)}}
-                for i in range(1, int(max(item["num_partitions"]["N"], item["num_json_val_partitions"]["N"])) + 1)
+                # we start from 1 since we already have the 0th partition and we get the rest of the partitions
+                # based on the max number of partitions, whether that number is the partitions for the pickled objects
+                # or the partitions for the json data
+                for i in range(1, max_partitions + 1)
             ]
             keys_for_remaining_items.extend(remaining_items)
         return self._get_items(keys_for_remaining_items)
 
-    # read_json is a flag set in srv-configs to read json data or not, otherwise will read pickled data
     def _merge_items(self, first_items, remaining_items, read_json=False) -> dict:
+        """
+        Helper to merge multi-partition data into a single entry. If read_json is
+        False, we merge the pickle partitions - otherwise, we merge the json ones.
+
+
+        NOTE: if an exception is raised while merging JSON, we'll automatically
+        fallback to the pickled data.
+        """
         items = defaultdict(list)
         raw_items: DefaultDict[str, bytearray] = defaultdict(bytearray)
         json_items: DefaultDict[str, str] = defaultdict(str)
@@ -153,14 +167,15 @@ class DynamoDBStateStore:
         if remaining_items:
             first_items.extend(remaining_items)
         for item in first_items:
-            key = item["key"]["S"]  # key column of an item = "job_State MASTER.cits_test_load_foo1"
-            items[key].append(item)  # for jobs state one item is basically info for each job: run nums and enabled
+            key = item["key"]["S"]  # example of a key for a job name "job_State MASTER.cits_test_load_foo1"
+            items[key].append(item)
         for key, item in items.items():
             item.sort(key=lambda x: int(x["index"]["N"]))
             for val in item:
                 raw_items[key] += bytes(val["val"]["B"])
-            for json_val in item:
-                json_items[key] = json_val["json_val"]["S"]
+            if read_json:
+                for json_val in item:
+                    json_items[key] = json_val["json_val"]["S"]
         if read_json:
             try:
                 log.info("read_json is enabled. Deserializing JSON items to restore them instead of pickled data.")
@@ -247,11 +262,11 @@ class DynamoDBStateStore:
         try:
             json_key = key.split(" ")[0]
             if json_key == runstate.JOB_STATE:
-                job_data = Job.from_json(state)  # type: Dict[str, Any]
-                return job_data
+                job_data = Job.from_json(state)
+                return cast(Dict[str, Any], job_data)
             elif json_key == runstate.JOB_RUN_STATE:
-                job_run_data = JobRun.from_json(state)  # type: Dict[str, Any]
-                return job_run_data
+                job_run_data = JobRun.from_json(state)
+                return cast(Dict[str, Any], job_run_data)
             else:
                 raise ValueError(f"Unknown type: key {key}")
         except Exception:

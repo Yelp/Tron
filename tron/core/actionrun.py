@@ -200,16 +200,22 @@ class ActionRunAttempt(Persistable):
     def from_json(state_data: str):
         """Deserialize the ActionRunAttempt instance from a JSON string."""
         try:
-            json_data = json.loads(state_data)  # here we will need json.loads because "attempts" is a string
-            for k in json_data:
-                if k == "start_time" or k == "end_time":
-                    json_data[k] = datetime.datetime.fromisoformat(json_data[k]) if json_data[k] else None
-                elif k == "command_config":
-                    json_data[k] = ActionCommandConfig.from_json(json_data[k])
+            json_data = json.loads(state_data)
+            deserialized_data = {
+                "command_config": ActionCommandConfig.from_json(json_data["command_config"]),
+                "start_time": datetime.datetime.fromisoformat(json_data["start_time"])
+                if json_data["start_time"]
+                else None,
+                "end_time": datetime.datetime.fromisoformat(json_data["end_time"]) if json_data["end_time"] else None,
+                "rendered_command": json_data["rendered_command"],
+                "exit_status": json_data["exit_status"],
+                "mesos_task_id": json_data["mesos_task_id"],
+                "kubernetes_task_id": json_data["kubernetes_task_id"],
+            }
         except Exception:
             log.exception("Error deserializing ActionRunAttempt from JSON")
             raise
-        return json_data
+        return deserialized_data
 
     @classmethod
     def from_state(cls, state_data):
@@ -753,27 +759,41 @@ class ActionRun(Observable, Persistable):
         }
 
     @staticmethod
-    def from_json(state_data: Union[str, dict]):
-        """Handle special cases in the JSON dictionary."""
-        # we dont need to load the json again here cause "runs" is a dictionary
-        if isinstance(state_data, str):
-            state_data = json.loads(state_data)
-            assert isinstance(state_data, dict)  # Inform the type checker that state_data is a dict
-
-        for k in state_data:
-            if k == "action_runner":
-                state_data[k] = (
-                    SubprocessActionRunnerFactory.from_json(state_data[k])
-                    if state_data[k]
-                    else NoActionRunnerFactory.from_json()
-                )
-            elif k == "start_time" or k == "end_time":
-                state_data[k] = datetime.datetime.fromisoformat(state_data[k]) if state_data[k] else None
-            elif k == "attempts":
-                state_data[k] = [ActionRunAttempt.from_json(a) for a in state_data[k]]
-            elif k == "retries_delay":
-                state_data[k] = datetime.timedelta(seconds=state_data[k]) if state_data[k] else None
-        return state_data
+    def from_json(state_data: str):
+        """Deserialize the ActionRun instance from a JSON Dictionary."""
+        try:
+            json_data = json.loads(state_data)
+            if json_data.get("action_runner") is None:
+                action_runner_json = NoActionRunnerFactory.from_json()
+            else:
+                action_runner_json = SubprocessActionRunnerFactory.from_json(json_data["action_runner"])
+            deserialized_data = {
+                "job_run_id": json_data["job_run_id"],
+                "action_name": json_data["action_name"],
+                "state": json_data["state"],
+                "original_command": json_data["original_command"],
+                "start_time": datetime.datetime.fromisoformat(json_data["start_time"])
+                if json_data["start_time"]
+                else None,
+                "end_time": datetime.datetime.fromisoformat(json_data["end_time"]) if json_data["end_time"] else None,
+                "node_name": json_data["node_name"],
+                "exit_status": json_data["exit_status"],
+                "attempts": [ActionRunAttempt.from_json(a) for a in json_data["attempts"]],
+                "retries_remaining": json_data["retries_remaining"],
+                "retries_delay": datetime.timedelta(seconds=json_data["retries_delay"])
+                if json_data["retries_delay"]
+                else None,
+                "executor": json_data["executor"],
+                "trigger_downstreams": json_data["trigger_downstreams"],
+                "triggered_by": json_data["triggered_by"],
+                "on_upstream_rerun": json_data["on_upstream_rerun"],
+                "trigger_timeout_timestamp": json_data["trigger_timeout_timestamp"],
+                "action_runner": action_runner_json,
+            }
+        except Exception:
+            log.exception("Error deserializing ActionRun from JSON")
+            raise
+        return deserialized_data
 
     @staticmethod
     def to_json(state_data: dict) -> Optional[str]:
@@ -1388,8 +1408,6 @@ class KubernetesActionRun(ActionRun, Observer):
             )
         except Exception:
             log.exception(f"Unable to create task for ActionRun {self.id}")
-            self.fail(exitcode.EXIT_KUBERNETES_TASK_INVALID)
-            return None
         if not task:
             log.warning(
                 f"{self} cannot recover, Kubernetes is disabled or "

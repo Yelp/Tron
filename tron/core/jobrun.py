@@ -112,25 +112,26 @@ class JobRun(Observable, Observer, Persistable):
         """Deserialize the JobRun instance to a JSON string."""
         try:
             json_data = json.loads(state_data)
-            for k in json_data:
-                if k == "run_time":
-                    if json_data["run_time"]:
-                        run_time = datetime.datetime.fromisoformat(json_data[k])
-                        if json_data["time_zone"]:
-                            run_time = run_time.replace(tzinfo=pytz.timezone(json_data["time_zone"]))
-                        json_data["run_time"] = run_time
-                    else:
-                        json_data["run_time"] = None
-                elif k == "cleanup_run":
-                    json_data["cleanup_run"] = (
-                        ActionRun.from_json(json_data["cleanup_run"]) if json_data["cleanup_run"] else None
-                    )
-                elif k == "runs":
-                    json_data["runs"] = [ActionRun.from_json(run) for run in json_data["runs"]]
+            if json_data["run_time"]:
+                run_time = datetime.datetime.fromisoformat(json_data["run_time"])
+                if json_data["time_zone"]:
+                    run_time = run_time.replace(tzinfo=pytz.timezone(json_data["time_zone"]))
+            else:
+                run_time = None
+            deserialized_data = {
+                "job_name": json_data["job_name"],
+                "run_num": json_data["run_num"],
+                "node_name": json_data["node_name"],
+                "manual": json_data["manual"],
+                "runs": [ActionRun.from_json(run) for run in json_data["runs"]],
+                "cleanup_run": ActionRun.from_json(json_data["cleanup_run"]) if json_data["cleanup_run"] else None,
+                "run_time": run_time,
+                "time_zone": json_data["time_zone"],
+            }
         except Exception:
             log.exception("Error deserializing JobRun from JSON")
             raise
-        return json_data
+        return deserialized_data
 
     @property
     def id(self):
