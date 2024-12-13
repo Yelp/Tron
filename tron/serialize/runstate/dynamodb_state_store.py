@@ -74,7 +74,7 @@ class DynamoDBStateStore:
         # job_run_state job_run_name --> high level info about the job run
         config_watcher = get_config_watcher()
         config_watcher.reload_if_changed()
-        read_json = staticconf.read("read_json.enable", namespace=NAMESPACE, default=True)
+        read_json = staticconf.read("read_json.enable", namespace=NAMESPACE, default=False)
         first_items = self._get_first_partitions(keys)
         remaining_items = self._get_remaining_partitions(first_items, read_json)
         vals = self._merge_items(first_items, remaining_items, read_json)
