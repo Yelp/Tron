@@ -1,4 +1,5 @@
 import datetime
+import json
 from unittest import mock
 from unittest.mock import MagicMock
 
@@ -41,7 +42,7 @@ def build_mock_job():
     )
 
 
-class TestJobRun(TestCase):
+class TestJobRun:
 
     now = datetime.datetime(2012, 3, 14, 15, 9, 20, tzinfo=None)
     now_with_tz = datetime.datetime(2012, 3, 14, 15, 9, 20, tzinfo=pytz.utc)
@@ -198,6 +199,115 @@ class TestJobRun(TestCase):
 
         started_runs = self.job_run._start_action_runs()
         assert_equal(started_runs, startable_runs[1:])
+
+    @pytest.fixture
+    def jobrun_json(self):
+        runs = [
+            {
+                "job_run_id": "compute-infra-test-service.test_load_foo1.5910",
+                "action_name": "example_action",
+                "state": "succeeded",
+                "original_command": "date; sleep 150; date",
+                "start_time": "2023-10-01T12:00:00",
+                "end_time": "2023-10-01T12:30:00",
+                "node_name": "paasta",
+                "exit_status": 0,
+                "attempts": [],
+                "retries_remaining": 2,
+                "retries_delay": 60,
+                "action_runner": '{"status_path": "/tmp/tron", "exec_path": "/opt/venvs/tron/bin"}',
+                "executor": "kubernetes",
+                "trigger_timeout_timestamp": 1731584100,
+                "trigger_downstreams": False,
+                "triggered_by": [],
+                "on_upstream_rerun": None,
+            }
+        ]
+        cleanup = {
+            "job_run_id": "compute-infra-test-service.test_load_foo1.5910",
+            "action_name": "cleanup_action",
+            "state": "succeeded",
+            "original_command": "date; sleep 150; date",
+            "start_time": "2023-10-01T12:00:00",
+            "end_time": "2023-10-01T12:30:00",
+            "node_name": "paasta",
+            "exit_status": 0,
+            "attempts": [],
+            "retries_remaining": 2,
+            "retries_delay": 60,
+            "action_runner": '{"status_path": "/tmp/tron", "exec_path": "/opt/venvs/tron/bin"}',
+            "executor": "kubernetes",
+            "trigger_timeout_timestamp": 1731584100,
+            "trigger_downstreams": False,
+            "triggered_by": [],
+            "on_upstream_rerun": None,
+        }
+        serialized_cleanup = json.dumps(cleanup)
+        serialized_runs = [json.dumps(run) for run in runs]
+        return json.dumps(
+            {
+                "job_name": "example_job",
+                "run_num": 1,
+                "run_time": "2023-10-01T12:00:00",
+                "time_zone": None,
+                "node_name": "example_node",
+                "runs": serialized_runs,
+                "cleanup_run": serialized_cleanup,
+                "manual": False,
+            }
+        )
+
+    def test_from_json(self, jobrun_json):
+        result = jobrun.JobRun.from_json(jobrun_json)
+        expected = {
+            "job_name": "example_job",
+            "run_num": 1,
+            "run_time": datetime.datetime(2023, 10, 1, 12, 0, 0),
+            "node_name": "example_node",
+            "runs": [
+                {
+                    "job_run_id": "compute-infra-test-service.test_load_foo1.5910",
+                    "action_name": "example_action",
+                    "state": "succeeded",
+                    "original_command": "date; sleep 150; date",
+                    "start_time": datetime.datetime(2023, 10, 1, 12, 0, 0),
+                    "end_time": datetime.datetime(2023, 10, 1, 12, 30, 0),
+                    "node_name": "paasta",
+                    "exit_status": 0,
+                    "attempts": [],
+                    "retries_remaining": 2,
+                    "retries_delay": datetime.timedelta(seconds=60),
+                    "action_runner": {"status_path": "/tmp/tron", "exec_path": "/opt/venvs/tron/bin"},
+                    "executor": "kubernetes",
+                    "trigger_timeout_timestamp": 1731584100,
+                    "trigger_downstreams": False,
+                    "triggered_by": [],
+                    "on_upstream_rerun": None,
+                }
+            ],
+            "cleanup_run": {
+                "job_run_id": "compute-infra-test-service.test_load_foo1.5910",
+                "action_name": "cleanup_action",
+                "state": "succeeded",
+                "original_command": "date; sleep 150; date",
+                "start_time": datetime.datetime(2023, 10, 1, 12, 0, 0),
+                "end_time": datetime.datetime(2023, 10, 1, 12, 30, 0),
+                "node_name": "paasta",
+                "exit_status": 0,
+                "attempts": [],
+                "retries_remaining": 2,
+                "retries_delay": datetime.timedelta(seconds=60),
+                "action_runner": {"status_path": "/tmp/tron", "exec_path": "/opt/venvs/tron/bin"},
+                "executor": "kubernetes",
+                "trigger_timeout_timestamp": 1731584100,
+                "trigger_downstreams": False,
+                "triggered_by": [],
+                "on_upstream_rerun": None,
+            },
+            "manual": False,
+            "time_zone": None,
+        }
+        assert result == expected
 
     def test_start_action_runs_all_failed(self):
         startable_runs = [mock.create_autospec(actionrun.ActionRun) for _ in range(2)]
