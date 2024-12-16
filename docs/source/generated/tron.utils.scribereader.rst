@@ -1,7 +1,7 @@
-tron.utils.scribereader module
+tron.utils.logreader module
 ==============================
 
-.. automodule:: tron.utils.scribereader
+.. automodule:: tron.utils.logreader
    :members:
    :undoc-members:
    :show-inheritance:

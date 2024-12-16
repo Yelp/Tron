@@ -4,12 +4,11 @@ from unittest import mock
 import pytest
 import yaml
 
-import tron.utils.scribereader
-from tron.utils.scribereader import decompose_action_id
-from tron.utils.scribereader import read_log_stream_for_action_run
+import tron.utils.logreader
+from tron.utils.logreader import decompose_action_id
+from tron.utils.logreader import read_log_stream_for_action_run
 
 try:
-    import scribereader  # noqa: F401
     from clog.readers import S3LogsReader  # noqa: F401
 except ImportError:
     pytest.skip("yelp logs readers not available, skipping tests", allow_module_level=True)
@@ -21,8 +20,8 @@ def static_conf_patch(args):
 
 
 def test_read_log_stream_for_action_run_not_available():
-    with mock.patch("tron.utils.scribereader.s3reader_available", False):
-        output = tron.utils.scribereader.read_log_stream_for_action_run(
+    with mock.patch("tron.utils.logreader.s3reader_available", False):
+        output = tron.utils.logreader.read_log_stream_for_action_run(
             "namespace.job.1234.action",
             component="stdout",
             min_date=datetime.datetime.now(),
@@ -41,9 +40,9 @@ def test_read_log_stream_for_action_run():
         "tron.config.static_config.load_yaml_file",
         autospec=True,
     ), mock.patch(
-        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake"
+        "tron.utils.logreader.get_superregion", autospec=True, return_value="fake"
     ), mock.patch(
-        "tron.utils.scribereader.S3LogsReader", autospec=True
+        "tron.utils.logreader.S3LogsReader", autospec=True
     ) as mock_s3_reader:
 
         mock_s3_reader.return_value.get_log_reader.return_value = iter(
@@ -108,9 +107,9 @@ def test_read_log_stream_for_action_run_tz(local_datetime, expected_datetime):
         "tron.config.static_config.load_yaml_file",
         autospec=True,
     ), mock.patch(
-        "tron.utils.scribereader.get_superregion", autospec=True, return_value="fake"
+        "tron.utils.logreader.get_superregion", autospec=True, return_value="fake"
     ), mock.patch(
-        "tron.utils.scribereader.S3LogsReader", autospec=True
+        "tron.utils.logreader.S3LogsReader", autospec=True
     ) as mock_s3_log_reader:
 
         read_log_stream_for_action_run(
@@ -130,7 +129,7 @@ def test_read_log_stream_for_action_run_for_long_output():
     # outputted by the test, which is similar to the logging.max_lines_to_display
     # in tron.yaml in srv-configs
     max_lines = 1000
-    with mock.patch("tron.utils.scribereader.get_superregion", autospec=True, return_value="fake",), mock.patch(
+    with mock.patch("tron.utils.logreader.get_superregion", autospec=True, return_value="fake",), mock.patch(
         "tron.config.static_config.build_configuration_watcher",
         autospec=True,
     ), mock.patch(
@@ -139,7 +138,7 @@ def test_read_log_stream_for_action_run_for_long_output():
         "tron.config.static_config.load_yaml_file",
         autospec=True,
     ), mock.patch(
-        "tron.utils.scribereader.S3LogsReader", autospec=True
+        "tron.utils.logreader.S3LogsReader", autospec=True
     ) as mock_s3_reader:
 
         with open("./tests/utils/shortOutputTest.txt") as f:
