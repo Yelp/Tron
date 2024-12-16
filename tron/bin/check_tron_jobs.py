@@ -16,7 +16,7 @@ from tron.commands import cmd_utils
 from tron.commands import display
 from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
-from tron.utils.scribereader import get_superregion
+from tron.utils.logreader import get_superregion
 
 PRECIOUS_JOB_ATTR = "check_that_every_day_has_a_successful_run"
 NUM_PRECIOUS = 7

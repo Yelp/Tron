@@ -15,7 +15,7 @@ from tron import scheduler
 from tron.core.actionrun import KubernetesActionRun
 from tron.serialize import filehandler
 from tron.utils import timeutils
-from tron.utils.scribereader import read_log_stream_for_action_run
+from tron.utils.logreader import read_log_stream_for_action_run
 from tron.utils.timeutils import delta_total_seconds
 
 
