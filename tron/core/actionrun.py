@@ -1364,8 +1364,6 @@ class KubernetesActionRun(ActionRun, Observer):
             log.error(f"{self} no task ID, cannot recover")
             self.fail_unknown()
             return None
-        # when we get attempts here, the field_selector_env = {'PAASTA_POD_IP': ['status.podIP']} which is in a diff format than
-        # the field_selector_env in submit_command function.
         last_attempt = self.attempts[-1]
 
         if last_attempt.rendered_command is None:
@@ -1390,6 +1388,8 @@ class KubernetesActionRun(ActionRun, Observer):
                 docker_image=last_attempt.command_config.docker_image,
                 env=build_environment(original_env=last_attempt.command_config.env, run_id=self.id),
                 secret_env=last_attempt.command_config.secret_env,
+                # the field_selector_env = {'PAASTA_POD_IP': ['status.podIP']} is in a diff format than
+                # the field_selector_env in submit_command function.
                 field_selector_env=last_attempt.command_config.field_selector_env,
                 serializer=filehandler.OutputStreamSerializer(self.output_path),
                 secret_volumes=last_attempt.command_config.secret_volumes,
