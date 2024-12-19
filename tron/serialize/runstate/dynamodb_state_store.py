@@ -167,7 +167,7 @@ class DynamoDBStateStore:
         if remaining_items:
             first_items.extend(remaining_items)
         for item in first_items:
-            key = item["key"]["S"]  # example of a key for a job name "job_State MASTER.cits_test_load_foo1"
+            key = item["key"]["S"]
             items[key].append(item)
         for key, item in items.items():
             item.sort(key=lambda x: int(x["index"]["N"]))

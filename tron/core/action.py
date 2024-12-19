@@ -66,19 +66,22 @@ class ActionCommandConfig(Persistable):
             json_data = json.loads(state_data)
             deserialized_data = {
                 "constraints": [
-                    ConfigConstraint(**val) for val in json_data["constraints"]
+                    ConfigConstraint.from_dict(val) for val in json_data["constraints"]
                 ],  # convert back the list of dictionaries to a list of ConfigConstraint
-                "docker_parameters": [ConfigParameter(**val) for val in json_data["docker_parameters"]],
-                "extra_volumes": [ConfigVolume(**val) for val in json_data["extra_volumes"]],
-                "node_affinities": [ConfigNodeAffinity(**val) for val in json_data["node_affinities"]],
+                "docker_parameters": [ConfigParameter.from_dict(val) for val in json_data["docker_parameters"]],
+                "extra_volumes": [ConfigVolume.from_dict(val) for val in json_data["extra_volumes"]],
+                "node_affinities": [ConfigNodeAffinity.from_dict(val) for val in json_data["node_affinities"]],
                 "topology_spread_constraints": [
-                    ConfigTopologySpreadConstraints(**val) for val in json_data["topology_spread_constraints"]
+                    ConfigTopologySpreadConstraints.from_dict(val) for val in json_data["topology_spread_constraints"]
                 ],
-                "secret_volumes": [ConfigSecretVolume(**val) for val in json_data["secret_volumes"]],
-                "projected_sa_volumes": [ConfigProjectedSAVolume(**val) for val in json_data["projected_sa_volumes"]],
-                "secret_env": {key: ConfigSecretSource(**val) for key, val in json_data["secret_env"].items()},
+                "secret_volumes": [ConfigSecretVolume.from_dict(val) for val in json_data["secret_volumes"]],
+                "projected_sa_volumes": [
+                    ConfigProjectedSAVolume.from_dict(val) for val in json_data["projected_sa_volumes"]
+                ],
+                "secret_env": {key: ConfigSecretSource.from_dict(val) for key, val in json_data["secret_env"].items()},
                 "field_selector_env": {
-                    key: ConfigFieldSelectorSource(**val) for key, val in json_data["field_selector_env"].items()
+                    key: ConfigFieldSelectorSource.from_dict(val)
+                    for key, val in json_data["field_selector_env"].items()
                 },
                 "command": json_data["command"],
                 "cpus": json_data["cpus"],

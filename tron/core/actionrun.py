@@ -203,9 +203,9 @@ class ActionRunAttempt(Persistable):
             json_data = json.loads(state_data)
             deserialized_data = {
                 "command_config": ActionCommandConfig.from_json(json_data["command_config"]),
-                "start_time": datetime.datetime.fromisoformat(json_data["start_time"])
-                if json_data["start_time"]
-                else None,
+                "start_time": (
+                    datetime.datetime.fromisoformat(json_data["start_time"]) if json_data["start_time"] else None
+                ),
                 "end_time": datetime.datetime.fromisoformat(json_data["end_time"]) if json_data["end_time"] else None,
                 "rendered_command": json_data["rendered_command"],
                 "exit_status": json_data["exit_status"],
@@ -772,17 +772,17 @@ class ActionRun(Observable, Persistable):
                 "action_name": json_data["action_name"],
                 "state": json_data["state"],
                 "original_command": json_data["original_command"],
-                "start_time": datetime.datetime.fromisoformat(json_data["start_time"])
-                if json_data["start_time"]
-                else None,
+                "start_time": (
+                    datetime.datetime.fromisoformat(json_data["start_time"]) if json_data["start_time"] else None
+                ),
                 "end_time": datetime.datetime.fromisoformat(json_data["end_time"]) if json_data["end_time"] else None,
                 "node_name": json_data["node_name"],
                 "exit_status": json_data["exit_status"],
                 "attempts": [ActionRunAttempt.from_json(a) for a in json_data["attempts"]],
                 "retries_remaining": json_data["retries_remaining"],
-                "retries_delay": datetime.timedelta(seconds=json_data["retries_delay"])
-                if json_data["retries_delay"]
-                else None,
+                "retries_delay": (
+                    datetime.timedelta(seconds=json_data["retries_delay"]) if json_data["retries_delay"] else None
+                ),
                 "executor": json_data["executor"],
                 "trigger_downstreams": json_data["trigger_downstreams"],
                 "triggered_by": json_data["triggered_by"],
@@ -818,9 +818,9 @@ class ActionRun(Observable, Persistable):
                     "exit_status": state_data["exit_status"],
                     "attempts": [ActionRunAttempt.to_json(attempt) for attempt in state_data["attempts"]],
                     "retries_remaining": state_data["retries_remaining"],
-                    "retries_delay": state_data["retries_delay"].total_seconds()
-                    if state_data["retries_delay"] is not None
-                    else None,
+                    "retries_delay": (
+                        state_data["retries_delay"].total_seconds() if state_data["retries_delay"] is not None else None
+                    ),
                     "action_runner": action_runner_json,
                     "executor": state_data["executor"],
                     "trigger_downstreams": state_data["trigger_downstreams"],

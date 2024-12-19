@@ -91,9 +91,11 @@ class JobRun(Observable, Observer, Persistable):
                     "job_name": state_data["job_name"],
                     "run_num": state_data["run_num"],
                     "run_time": state_data["run_time"].isoformat() if state_data["run_time"] else None,
-                    "time_zone": state_data["run_time"].tzinfo.zone
-                    if state_data["run_time"] and state_data["run_time"].tzinfo
-                    else None,
+                    "time_zone": (
+                        state_data["run_time"].tzinfo.zone
+                        if state_data["run_time"] and state_data["run_time"].tzinfo
+                        else None
+                    ),
                     "node_name": state_data["node_name"],
                     "runs": [ActionRun.to_json(run) for run in state_data["runs"]],
                     "cleanup_run": ActionRun.to_json(state_data["cleanup_run"]) if state_data["cleanup_run"] else None,
