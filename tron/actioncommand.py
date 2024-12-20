@@ -210,7 +210,12 @@ class SubprocessActionRunnerFactory(Persistable):
     @staticmethod
     def from_json(state_data: str):
         try:
-            return json.loads(state_data)
+            json_data = json.loads(state_data)
+            deserialized_data = {
+                "status_path": json_data["status_path"],
+                "exec_path": json_data["exec_path"],
+            }
+            return deserialized_data
         except Exception:
             log.exception("Error deserializing SubprocessActionRunnerFactory from JSON")
             raise

@@ -258,7 +258,7 @@ class DynamoDBStateStore:
             prom_metrics.json_serialization_errors_counter.inc()
             return None
 
-    def _deserialize_item(self, key: str, state: str) -> Optional[Dict[str, Any]]:
+    def _deserialize_item(self, key: str, state: str) -> Dict[str, Any]:
         try:
             json_key = key.split(" ")[0]
             if json_key == runstate.JOB_STATE:

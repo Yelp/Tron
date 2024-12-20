@@ -127,7 +127,12 @@ class Job(Observable, Observer, Persistable):
         """deserialize the JSON string to python objects."""
         # We store the following fields for jobs in DynamoDB: enabled and list of run numbers
         try:
-            return json.loads(state_data)
+            json_data = json.loads(state_data)
+            deserialized_data = {
+                "enabled": json_data["enabled"],
+                "run_nums": json_data["run_nums"],
+            }
+            return deserialized_data
         except Exception:
             log.exception("Error deserializing Job from JSON:")
             raise

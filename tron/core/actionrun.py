@@ -1408,6 +1408,7 @@ class KubernetesActionRun(ActionRun, Observer):
             )
         except Exception:
             log.exception(f"Unable to create task for ActionRun {self.id}")
+            raise
         if not task:
             log.warning(
                 f"{self} cannot recover, Kubernetes is disabled or "
