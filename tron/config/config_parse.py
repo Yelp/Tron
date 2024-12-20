@@ -11,6 +11,7 @@ import getpass
 import itertools
 import logging
 import os
+from copy import deepcopy
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -1066,11 +1067,14 @@ def validate_config_mapping(config_mapping):
         msg = "A config mapping requires a %s namespace"
         raise ConfigError(msg % MASTER_NAMESPACE)
 
-    master = valid_config(config_mapping.pop(MASTER_NAMESPACE))
+    # we mutate this mapping - so let's make sure that we're making a copy
+    # in case the passed-in mapping is used elsewhere
+    config_mapping_to_validate = deepcopy(config_mapping)
+    master = valid_config(config_mapping_to_validate.pop(MASTER_NAMESPACE))
     nodes = get_nodes_from_master_namespace(master)
     yield MASTER_NAMESPACE, master
 
-    for name, content in config_mapping.items():
+    for name, content in config_mapping_to_validate.items():
         context = ConfigContext(
             name,
             nodes,
