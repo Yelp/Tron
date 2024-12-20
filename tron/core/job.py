@@ -123,7 +123,22 @@ class Job(Observable, Observer, Persistable):
         log.info(f"{self} created")
 
     @staticmethod
-    def to_json(state_data: dict) -> Optional[str]:
+    def from_json(state_data: str):
+        """deserialize the JSON string to python objects."""
+        # We store the following fields for jobs in DynamoDB: enabled and list of run numbers
+        try:
+            json_data = json.loads(state_data)
+            deserialized_data = {
+                "enabled": json_data["enabled"],
+                "run_nums": json_data["run_nums"],
+            }
+            return deserialized_data
+        except Exception:
+            log.exception("Error deserializing Job from JSON:")
+            raise
+
+    @staticmethod
+    def to_json(state_data: dict) -> str:
         """Serialize the Job instance to a JSON string."""
         try:
             return json.dumps(state_data)

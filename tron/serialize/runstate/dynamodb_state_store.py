@@ -9,6 +9,7 @@ import time
 from collections import defaultdict
 from collections import OrderedDict
 from typing import Any
+from typing import cast
 from typing import DefaultDict
 from typing import Dict
 from typing import List
@@ -19,8 +20,11 @@ from typing import Tuple
 from typing import TypeVar
 
 import boto3  # type: ignore
+import staticconf  # type: ignore
 
 import tron.prom_metrics as prom_metrics
+from tron.config.static_config import get_config_watcher
+from tron.config.static_config import NAMESPACE
 from tron.core.job import Job
 from tron.core.jobrun import JobRun
 from tron.metrics import timer
@@ -65,9 +69,15 @@ class DynamoDBStateStore:
         Fetch all under the same parition key(s).
         ret: <dict of key to states>
         """
+        # format of the keys always passed here is
+        # job_state job_name  --> high level info about the job: enabled, run_nums
+        # job_run_state job_run_name --> high level info about the job run
+        config_watcher = get_config_watcher()
+        config_watcher.reload_if_changed()
+        read_json = staticconf.read("read_json.enable", namespace=NAMESPACE, default=False)
         first_items = self._get_first_partitions(keys)
-        remaining_items = self._get_remaining_partitions(first_items)
-        vals = self._merge_items(first_items, remaining_items)
+        remaining_items = self._get_remaining_partitions(first_items, read_json)
+        vals = self._merge_items(first_items, remaining_items, read_json)
         return vals
 
     def chunk_keys(self, keys: Sequence[T]) -> List[Sequence[T]]:
@@ -123,20 +133,36 @@ class DynamoDBStateStore:
         return self._get_items(new_keys)
 
     # TODO: Check max partitions as JSON is larger
-    def _get_remaining_partitions(self, items: list):
+    def _get_remaining_partitions(self, items: list, read_json: bool):
         """Get items in the remaining partitions: N = 1 and beyond"""
         keys_for_remaining_items = []
         for item in items:
+            max_partitions = int(item["num_partitions"]["N"])
+            if read_json and "num_json_val_partitions" in item:
+                max_partitions = max(max_partitions, int(item["num_json_val_partitions"]["N"]))
             remaining_items = [
                 {"key": {"S": str(item["key"]["S"])}, "index": {"N": str(i)}}
-                for i in range(1, int(item["num_partitions"]["N"]))
+                # we start from 1 since we already have the 0th partition and we get the rest of the partitions
+                # based on the max number of partitions, whether that number is the partitions for the pickled objects
+                # or the partitions for the json data
+                for i in range(1, max_partitions + 1)
             ]
             keys_for_remaining_items.extend(remaining_items)
         return self._get_items(keys_for_remaining_items)
 
-    def _merge_items(self, first_items, remaining_items) -> dict:
+    def _merge_items(self, first_items, remaining_items, read_json=False) -> dict:
+        """
+        Helper to merge multi-partition data into a single entry. If read_json is
+        False, we merge the pickle partitions - otherwise, we merge the json ones.
+
+
+        NOTE: if an exception is raised while merging JSON, we'll automatically
+        fallback to the pickled data.
+        """
         items = defaultdict(list)
         raw_items: DefaultDict[str, bytearray] = defaultdict(bytearray)
+        json_items: DefaultDict[str, str] = defaultdict(str)
+        # item = job run, each job run can have multiple rows and each row is called a partition
         # Merge all items based their keys and deserialize their values
         if remaining_items:
             first_items.extend(remaining_items)
@@ -147,10 +173,25 @@ class DynamoDBStateStore:
             item.sort(key=lambda x: int(x["index"]["N"]))
             for val in item:
                 raw_items[key] += bytes(val["val"]["B"])
-        deserialized_items = {k: pickle.loads(v) for k, v in raw_items.items()}
+            if read_json:
+                for json_val in item:
+                    json_items[key] = json_val["json_val"]["S"]
+        if read_json:
+            try:
+                log.info("read_json is enabled. Deserializing JSON items to restore them instead of pickled data.")
+                deserialized_items = {k: self._deserialize_item(k, val) for k, val in json_items.items()}
+            except Exception as e:
+                log.exception(f"Error deserializing JSON items: {repr(e)}")
+                # if reading from json failed we want to try reading the pickled data instead
+                read_json = False
+
+        if not read_json:
+            log.info("read_json is disabled. Deserializing pickled items to restore them.")
+            deserialized_items = {k: pickle.loads(v) for k, v in raw_items.items()}
         return deserialized_items
 
     def save(self, key_value_pairs) -> None:
+        """Add items to the save_queue to be later consumed by _consume_save_queue"""
         for key, val in key_value_pairs:
             while True:
                 qlen = len(self.save_queue)
@@ -168,6 +209,7 @@ class DynamoDBStateStore:
                 break
 
     def _consume_save_queue(self):
+        """Consume the save_queue and save the items to dynamodb"""
         qlen = len(self.save_queue)
         saved = 0
         start = time.time()
@@ -215,6 +257,22 @@ class DynamoDBStateStore:
             log.exception(f"Serialization error for key {key}")
             prom_metrics.json_serialization_errors_counter.inc()
             return None
+
+    def _deserialize_item(self, key: str, state: str) -> Dict[str, Any]:
+        try:
+            json_key = key.split(" ")[0]
+            if json_key == runstate.JOB_STATE:
+                job_data = Job.from_json(state)
+                return cast(Dict[str, Any], job_data)
+            elif json_key == runstate.JOB_RUN_STATE:
+                job_run_data = JobRun.from_json(state)
+                return cast(Dict[str, Any], job_run_data)
+            else:
+                raise ValueError(f"Unknown type: key {key}")
+        except Exception:
+            log.exception(f"Deserialization error for key {key}")
+            prom_metrics.json_deserialization_errors_counter.inc()
+            raise
 
     def _save_loop(self):
         while True:

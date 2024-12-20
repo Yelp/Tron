@@ -8,6 +8,8 @@ import time
 from collections import deque
 from typing import Optional
 
+import pytz
+
 import tron.metrics as metrics
 from tron import command_context
 from tron import node
@@ -89,6 +91,11 @@ class JobRun(Observable, Observer, Persistable):
                     "job_name": state_data["job_name"],
                     "run_num": state_data["run_num"],
                     "run_time": state_data["run_time"].isoformat() if state_data["run_time"] else None,
+                    "time_zone": (
+                        state_data["run_time"].tzinfo.zone
+                        if state_data["run_time"] and state_data["run_time"].tzinfo
+                        else None
+                    ),
                     "node_name": state_data["node_name"],
                     "runs": [ActionRun.to_json(run) for run in state_data["runs"]],
                     "cleanup_run": ActionRun.to_json(state_data["cleanup_run"]) if state_data["cleanup_run"] else None,
@@ -101,6 +108,32 @@ class JobRun(Observable, Observer, Persistable):
         except Exception:
             log.exception("Error serializing JobRun to JSON:")
             raise
+
+    @staticmethod
+    def from_json(state_data: str):
+        """Deserialize the JobRun instance to a JSON string."""
+        try:
+            json_data = json.loads(state_data)
+            if json_data["run_time"]:
+                run_time = datetime.datetime.fromisoformat(json_data["run_time"])
+                if json_data["time_zone"]:
+                    run_time = run_time.replace(tzinfo=pytz.timezone(json_data["time_zone"]))
+            else:
+                run_time = None
+            deserialized_data = {
+                "job_name": json_data["job_name"],
+                "run_num": json_data["run_num"],
+                "node_name": json_data["node_name"],
+                "manual": json_data["manual"],
+                "runs": [ActionRun.from_json(run) for run in json_data["runs"]],
+                "cleanup_run": ActionRun.from_json(json_data["cleanup_run"]) if json_data["cleanup_run"] else None,
+                "run_time": run_time,
+                "time_zone": json_data["time_zone"],
+            }
+        except Exception:
+            log.exception("Error deserializing JobRun from JSON")
+            raise
+        return deserialized_data
 
     @property
     def id(self):

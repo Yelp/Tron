@@ -3,6 +3,7 @@ from unittest import mock
 
 import boto3
 import pytest
+import staticconf.testing
 from moto import mock_dynamodb2
 from moto.dynamodb2.responses import dynamo_json_dump
 
@@ -104,6 +105,7 @@ def small_object():
         "job_name": "example_job",
         "run_num": 1,
         "run_time": None,
+        "time_zone": None,
         "node_name": "example_node",
         "runs": [],
         "cleanup_run": None,
@@ -117,6 +119,7 @@ def large_object():
         "job_name": "example_job",
         "run_num": 1,
         "run_time": None,
+        "time_zone": None,
         "node_name": "example_node",
         "runs": [],
         "cleanup_run": None,
@@ -127,7 +130,8 @@ def large_object():
 
 @pytest.mark.usefixtures("store", "small_object", "large_object")
 class TestDynamoDBStateStore:
-    def test_save(self, store, small_object, large_object):
+    @pytest.mark.parametrize("read_json", [False, True])
+    def test_save(self, store, small_object, large_object, read_json):
         key_value_pairs = [
             (
                 store.build_key("job_state", "two"),
@@ -146,7 +150,12 @@ class TestDynamoDBStateStore:
             store.build_key("job_state", "two"),
             store.build_key("job_run_state", "four"),
         ]
-        vals = store.restore(keys)
+        mock_config = {"read_json.enable": read_json}
+        mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
+        with mock_configuration, mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore(keys)
         for key, value in key_value_pairs:
             assert_equal(vals[key], value)
 
@@ -185,7 +194,10 @@ class TestDynamoDBStateStore:
             store.build_key("job_state", "two"),
             store.build_key("job_run_state", "four"),
         ]
-        vals = store.restore(keys)
+        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore(keys)
         assert vals == {keys[1]: small_object}
 
     def test_save_more_than_4KB(self, store, small_object, large_object):
@@ -200,11 +212,16 @@ class TestDynamoDBStateStore:
 
         assert store.save_errors == 0
         keys = [store.build_key("job_state", "two")]
-        vals = store.restore(keys)
+
+        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore(keys)
         for key, value in key_value_pairs:
             assert_equal(vals[key], value)
 
-    def test_restore_more_than_4KB(self, store, small_object, large_object):
+    @pytest.mark.parametrize("read_json", [False, True])
+    def test_restore_more_than_4KB(self, store, small_object, large_object, read_json):
         keys = [store.build_key("job_state", i) for i in range(3)]
         value = large_object
         pairs = zip(keys, (value for i in range(len(keys))))
@@ -212,11 +229,18 @@ class TestDynamoDBStateStore:
         store._consume_save_queue()
 
         assert store.save_errors == 0
-        vals = store.restore(keys)
+
+        mock_config = {"read_json.enable": read_json}
+        mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
+        with mock_configuration, mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore(keys)
         for key in keys:
             assert_equal(vals[key], large_object)
 
-    def test_restore(self, store, small_object, large_object):
+    @pytest.mark.parametrize("read_json", [False, True])
+    def test_restore(self, store, small_object, large_object, read_json):
         keys = [store.build_key("job_state", i) for i in range(3)]
         value = small_object
         pairs = zip(keys, (value for i in range(len(keys))))
@@ -224,7 +248,12 @@ class TestDynamoDBStateStore:
         store._consume_save_queue()
 
         assert store.save_errors == 0
-        vals = store.restore(keys)
+        mock_config = {"read_json.enable": read_json}
+        mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
+        with mock_configuration, mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore(keys)
         for key in keys:
             assert_equal(vals[key], small_object)
 
@@ -286,7 +315,10 @@ class TestDynamoDBStateStore:
             return_value=unprocessed_value,
         ) as mock_failed_read:
             try:
-                store.restore(keys)
+                with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+                    "tron.config.static_config.build_configuration_watcher", autospec=True
+                ):
+                    store.restore(keys)
             except Exception:
                 assert_equal(mock_failed_read.call_count, 11)
 
@@ -298,6 +330,8 @@ class TestDynamoDBStateStore:
         mock_future.result.side_effect = Exception("mocked exception")
         with mock.patch("concurrent.futures.Future", return_value=mock_future, autospec=True):
             with mock.patch("concurrent.futures.as_completed", return_value=[mock_future], autospec=True):
-                with pytest.raises(Exception) as exec_info:
+                with pytest.raises(Exception) as exec_info, mock.patch(
+                    "tron.config.static_config.load_yaml_file", autospec=True
+                ), mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True):
                     store.restore(keys)
                 assert str(exec_info.value) == "mocked exception"
