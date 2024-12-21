@@ -63,7 +63,9 @@ window.isSelected = (current, value) ->
     if current == value then "selected" else ""
 
 window.makeTooltips = (root) ->
-    root.find('.tt-enable').tooltip()
+    root.find('.tt-enable').tooltip({
+        animation: false
+    })
 
 
 window.formatName = (name) =>
