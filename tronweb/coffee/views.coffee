@@ -64,6 +64,9 @@ window.isSelected = (current, value) ->
 
 window.makeTooltips = (root) ->
     root.find('.tt-enable').tooltip({
+        # There is some strange behaviour with the tooltip animation in Bootstrap 2
+        # that causes the object to get into a bad state and not appear as expected.
+        # Disabling animation is a workaround until we upgrade to Bootstrap 3 (or 4...or 5)
         animation: false
     })
 
