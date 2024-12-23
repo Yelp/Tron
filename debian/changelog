@@ -1,3 +1,17 @@
+tron (3.0.0) jammy; urgency=medium
+
+  * 3.0.0 tagged with 'make release'
+    Commit: [TRON-2238] Reading from JSON to restore jobs" state instead
+    of pickles (#1010)  * Reading from Json to restore jobs" state
+    instead of pickles  * Fixing some bugs through testing  * Deleting
+    some comments  * mocking get_config_watcher  * Try mocking one more
+    time  * Toggling off read_json since we want to merge that way  *
+    Removing some comments  * Addressed reviews  * Toggling read_json
+    back off  * Addressing more reviews  * one more review plz  *
+    includes reviews except tz
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Mon, 23 Dec 2024 07:56:01 -0800
+
 tron (2.8.1) jammy; urgency=medium
 
   * 2.8.1 tagged with 'make release'
