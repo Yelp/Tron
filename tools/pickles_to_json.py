@@ -190,7 +190,7 @@ def load_and_print_json(source_table: ServiceResource, key: str) -> None:
 
 # Convert
 # KKASP: REVIEW
-def convert_pickle_to_json(source_table: ServiceResource, key: str, dry_run: bool = True) -> None:
+def convert_pickle_to_json_and_update_table(source_table: ServiceResource, key: str, dry_run: bool = True) -> None:
     """
     Convert a single pickled item to JSON and update the DynamoDB entry.
 
@@ -239,20 +239,45 @@ def convert_pickle_to_json(source_table: ServiceResource, key: str, dry_run: boo
         logger.error(f"Key: {key} - Failed to convert pickle to JSON: {e}")
 
 
-def convert_all_pickles_to_json(source_table: ServiceResource, dry_run: bool = True) -> None:
+def convert_all_pickles_to_json_and_update_table(source_table: ServiceResource, dry_run: bool = True) -> None:
     """
     Convert all pickled items in the DynamoDB table to JSON and update the entries.
 
     :param source_table: The DynamoDB table resource.
     :param dry_run: If True, simulate the conversion without updating the table.
     """
-    response = source_table.scan()
-    items = response.get("Items", [])
+    items = scan_table(source_table)
+    total_keys = len(items)
+    converted_keys = 0
 
     for item in items:
         key = item.get("key", "Unknown Key")
+        try:
+            convert_pickle_to_json_and_update_table(source_table, key, dry_run)
+            converted_keys += 1
+        except Exception as e:
+            logger.error(f"Key: {key} - Failed to convert pickle to JSON: {e}")
 
-        convert_pickle_to_json(source_table, key, dry_run)
+    print(f"Total keys in the table: {total_keys}")
+    print(f"Number of keys converted: {converted_keys}")
+
+
+def scan_table(source_table: ServiceResource) -> List[dict]:
+    """
+    Scan the DynamoDB table and return all items, handling pagination.
+
+    :param source_table: The DynamoDB table resource to scan.
+    :return: A list of all items in the table.
+    """
+    items = []
+    response = source_table.scan()
+    items.extend(response.get("Items", []))
+
+    while "LastEvaluatedKey" in response:
+        response = source_table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
+        items.extend(response.get("Items", []))
+
+    return items
 
 
 aws_profile = "dev"
@@ -261,10 +286,13 @@ table_name = "infrastage-tron-state"
 table_region = "us-west-1"
 source_table = get_dynamodb_table(aws_profile, table_name, table_region)
 
+convert_all_pickles_to_json_and_update_table(source_table, dry_run=False)
+# load_and_print_json(source_table, "job_run_state paasta-contract-monitor.k8s.1573")
+
 # 1. Scan table
 # summarize_table(source_table)
-print(f"All jobs:\n{get_all_jobs(source_table)}\n")
-print(f"Jobs without json_val:\n{get_jobs_without_json_val(source_table, False)}\n")
+# print(f"All jobs:\n{get_all_jobs(source_table)}\n")
+# print(f"Jobs without json_val:\n{get_jobs_without_json_val(source_table, False)}\n")
 
 # # 2. Load and print a single job_state pickle
 # load_and_print_single_pickle(source_table, "job_state compute-infra-test-service.test_load_foo1")
@@ -279,7 +307,7 @@ print(f"Jobs without json_val:\n{get_jobs_without_json_val(source_table, False)}
 # convert_pickle_to_json(source_table, "job_state compute-infra-test-service.test_load_foo1", dry_run=True)
 
 # 5. Convert all pickles to JSON
-convert_all_pickles_to_json(source_table, dry_run=True)
+# convert_all_pickles_to_json(source_table, dry_run=True)
 
 
 # KKASP:
@@ -289,4 +317,5 @@ convert_all_pickles_to_json(source_table, dry_run=True)
 # 2. Test loading pickles
 # DONE: infrastrage-tron-state
 # 3. Test converting pickles to JSON
+# TODO: convert and print a single pickle and compare to a printed JSON?
 # 4. Add dry run flag that doesn't update the table
