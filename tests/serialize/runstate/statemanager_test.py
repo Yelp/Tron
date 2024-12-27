@@ -83,6 +83,7 @@ class TestPersistentStateManager(TestCase):
 
     def test_restore(self):
         job_names = ["one", "two"]
+        read_json = False
         with mock.patch.object(self.manager, "_restore_dicts", autospec=True,) as mock_restore_dicts, mock.patch.object(
             self.manager,
             "_restore_runs_for_job",
@@ -98,7 +99,7 @@ class TestPersistentStateManager(TestCase):
 
             restored_state = self.manager.restore(job_names)
             assert mock_restore_dicts.call_args_list == [
-                mock.call(runstate.JOB_STATE, job_names),
+                mock.call(runstate.JOB_STATE, job_names, read_json),
             ]
             assert len(mock_restore_runs.call_args_list) == 2
             assert restored_state == {
@@ -110,6 +111,7 @@ class TestPersistentStateManager(TestCase):
 
     def test_restore_runs_for_job(self):
         job_state = {"run_nums": [2, 3], "enabled": True}
+        read_json = False
         with mock.patch.object(
             self.manager,
             "_restore_dicts",
@@ -120,11 +122,14 @@ class TestPersistentStateManager(TestCase):
             ]
             runs = self.manager._restore_runs_for_job("job_a", job_state)
 
-            assert mock_restore_dicts.call_args_list == [mock.call(runstate.JOB_RUN_STATE, ["job_a.2", "job_a.3"])]
+            assert mock_restore_dicts.call_args_list == [
+                mock.call(runstate.JOB_RUN_STATE, ["job_a.2", "job_a.3"], read_json)
+            ]
             assert runs == [{"job_name": "job_a", "run_num": 3}, {"job_name": "job_a", "run_num": 2}]
 
     def test_restore_runs_for_job_one_missing(self):
         job_state = {"run_nums": [2, 3], "enabled": True}
+        read_json = False
         with mock.patch.object(
             self.manager,
             "_restore_dicts",
@@ -134,7 +139,7 @@ class TestPersistentStateManager(TestCase):
             runs = self.manager._restore_runs_for_job("job_a", job_state)
 
             assert mock_restore_dicts.call_args_list == [
-                mock.call(runstate.JOB_RUN_STATE, ["job_a.2", "job_a.3"]),
+                mock.call(runstate.JOB_RUN_STATE, ["job_a.2", "job_a.3"], read_json),
             ]
             assert runs == [{"job_name": "job_a", "run_num": 3}]
 
@@ -262,8 +267,9 @@ class TestStateChangeWatcher(TestCase):
 
     def test_restore(self):
         jobs = mock.Mock()
+        read_json = False
         self.watcher.restore(jobs)
-        self.watcher.state_manager.restore.assert_called_with(jobs)
+        self.watcher.state_manager.restore.assert_called_with(jobs, read_json)
 
     def test_handler_mesos_change(self):
         self.watcher.handler(
