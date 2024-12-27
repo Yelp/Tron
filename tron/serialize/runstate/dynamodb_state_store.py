@@ -20,11 +20,8 @@ from typing import Tuple
 from typing import TypeVar
 
 import boto3  # type: ignore
-import staticconf  # type: ignore
 
 import tron.prom_metrics as prom_metrics
-from tron.config.static_config import get_config_watcher
-from tron.config.static_config import NAMESPACE
 from tron.core.job import Job
 from tron.core.jobrun import JobRun
 from tron.metrics import timer
@@ -64,7 +61,7 @@ class DynamoDBStateStore:
         """
         return f"{type} {iden}"
 
-    def restore(self, keys) -> dict:
+    def restore(self, keys, read_json: bool = False) -> dict:
         """
         Fetch all under the same parition key(s).
         ret: <dict of key to states>
@@ -72,9 +69,6 @@ class DynamoDBStateStore:
         # format of the keys always passed here is
         # job_state job_name  --> high level info about the job: enabled, run_nums
         # job_run_state job_run_name --> high level info about the job run
-        config_watcher = get_config_watcher()
-        config_watcher.reload_if_changed()
-        read_json = staticconf.read("read_json.enable", namespace=NAMESPACE, default=False)
         first_items = self._get_first_partitions(keys)
         remaining_items = self._get_remaining_partitions(first_items, read_json)
         vals = self._merge_items(first_items, remaining_items, read_json)

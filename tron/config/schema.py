@@ -58,6 +58,7 @@ TronConfig = config_object_factory(
         "mesos_options",  # ConfigMesos
         "k8s_options",  # ConfigKubernetes
         "eventbus_enabled",  # bool or None
+        "read_json",  # bool, default is False
     ],
 )
 
