@@ -972,6 +972,7 @@ class ValidateConfig(Validator):
         "mesos_options": ConfigMesos(**ValidateMesos.defaults),
         "k8s_options": ConfigKubernetes(**ValidateKubernetes.defaults),
         "eventbus_enabled": None,
+        "read_json": False,
     }
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
     nodes = build_dict_name_validator(valid_node, allow_empty=True)
@@ -987,6 +988,7 @@ class ValidateConfig(Validator):
         "mesos_options": valid_mesos_options,
         "k8s_options": valid_kubernetes_options,
         "eventbus_enabled": valid_bool,
+        "read_json": valid_bool,
     }
     optional = False
 
