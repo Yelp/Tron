@@ -197,7 +197,7 @@ class JobScheduler(Observer):
         if queued_run:
             reactor.callLater(0, self.run_job, queued_run, run_queued=True)
 
-        # Attempt to schedule a new run.  This will only schedule a run if the
+        # Attempt to schedule a new run. This will only schedule a run if the
         # previous run was cancelled from a scheduled state, or if the job
         # scheduler is `schedule_on_complete`.
         self.schedule()
