@@ -1,3 +1,13 @@
+tron (3.1.0) jammy; urgency=medium
+
+  * 3.1.0 tagged with 'make release'
+    Commit: Add read_json to be a part of master.yaml config (#1015)  *
+    Add read_json to be a part of master.yaml config  * Fix the mypy
+    error & other failed tests  * Addressing reviews  * Add reas_json to
+    restore in shelve function
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Thu, 02 Jan 2025 12:51:55 -0800
+
 tron (3.0.0) jammy; urgency=medium
 
   * 3.0.0 tagged with 'make release'
