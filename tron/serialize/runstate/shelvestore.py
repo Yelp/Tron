@@ -93,7 +93,7 @@ class ShelveStateStore:
                 self.shelve[shelve_key] = state_data
         self.shelve.sync()
 
-    def restore(self, keys):
+    def restore(self, keys, read_json: bool = False):
         items = zip(
             keys,
             (self.shelve.get(str(key.key)) for key in keys),
