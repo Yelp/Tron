@@ -138,8 +138,8 @@ class PersistentStateManager:
         run_nums = job_state["run_nums"]
         keys = [jobrun.get_job_run_id(job_name, run_num) for run_num in run_nums]
         job_runs_restored_states = self._restore_dicts(runstate.JOB_RUN_STATE, keys, read_json)
-        restored_states_copy = copy.copy(job_runs_restored_states)
-        for run_id, state in restored_states_copy.items():
+        all_job_runs = copy.copy(job_runs_restored_states)
+        for run_id, state in all_job_runs.items():
             if state == {}:
                 log.error(f"Failed to restore {run_id}, no state found for it!")
                 job_runs_restored_states.pop(run_id)
