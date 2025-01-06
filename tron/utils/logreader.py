@@ -15,7 +15,7 @@ from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
 
 try:
-    from clog.readers import S3LogsReader
+    from logreader.readers import S3LogsReader
 
     s3reader_available = True
 except ImportError:
@@ -124,7 +124,7 @@ def read_log_stream_for_action_run(
         return [f"{action_run_id} has not started yet."]
 
     if not s3reader_available:
-        return ["yelp_clog (internal Yelp package) is not available - unable to display logs."]
+        return ["logreader (internal Yelp package) is not available - unable to display logs."]
 
     if max_lines == USE_SRV_CONFIGS:
         config_watcher = get_config_watcher()

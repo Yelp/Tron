@@ -9,7 +9,7 @@ from tron.utils.logreader import decompose_action_id
 from tron.utils.logreader import read_log_stream_for_action_run
 
 try:
-    from clog.readers import S3LogsReader  # noqa: F401
+    from logreader.readers import S3LogsReader  # noqa: F401
 except ImportError:
     pytest.skip("yelp logs readers not available, skipping tests", allow_module_level=True)
 

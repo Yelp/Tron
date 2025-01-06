@@ -1,4 +1,4 @@
 clusterman-metrics==2.2.1  # used by tron for pre-scaling for Spark runs
-simplejson==3.19.2  # required by tron cli
-yelp-clog==7.1.4  # logreader dependency
-yelp-meteorite==2.1.1  # used by task-processing to emit metrics, clusterman-metrics dependency
+logreader==1.2.0        # used by tron logreader
+simplejson==3.19.2      # required by tron CLI
+yelp-meteorite==2.1.1   # used by task-processing to emit metrics, clusterman-metrics dependency
