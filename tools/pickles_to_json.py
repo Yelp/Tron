@@ -23,9 +23,9 @@ def get_dynamodb_table(
 ) -> ServiceResource:
     """
     Get the DynamoDB table resource.
-    :param aws_profile: The name of the AWS profile to use (default is None for default profile).
-    :param table: The name of the table to get (default is "infrastage-tron-state").
-    :param region: The region of the table (default is "us-west-1").
+    :param aws_profile: The name of the AWS profile to use.
+    :param table: The name of the table to get.
+    :param region: The region of the table.
     :return: The DynamoDB table resource.
     """
     session = boto3.Session(profile_name=aws_profile) if aws_profile else boto3.Session()
