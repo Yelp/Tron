@@ -1,5 +1,6 @@
-import logging
+import argparse
 import math
+import os
 import pickle
 from typing import List
 from typing import Optional
@@ -11,311 +12,328 @@ from tron.core.job import Job
 from tron.core.jobrun import JobRun
 from tron.serialize import runstate
 
-# TODO: partitioned pickles!
-
 # Max DynamoDB object size is 400KB. Since we save two copies of the object (pickled and JSON),
 # we need to consider this max size applies to the entire item, so we use a max size of 200KB
 # for each version.
-#
-# In testing I could get away with 201_000 for both partitions so this should be enough overhead
-# to contain other attributes like object name and number of partitions.
 OBJECT_SIZE = 200_000
 
-# TODO: use logging for all the prints
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
 
-
-# Get Table
 def get_dynamodb_table(
-    aws_profile: str = "dev", table: str = "infrastage-tron-state", region: str = "us-west-1"
+    aws_profile: Optional[str] = None, table: str = "infrastage-tron-state", region: str = "us-west-1"
 ) -> ServiceResource:
     """
     Get the DynamoDB table resource.
-
-    :param aws_profile: The name of the AWS profile to use (default is "dev").
+    :param aws_profile: The name of the AWS profile to use (default is None for default profile).
     :param table: The name of the table to get (default is "infrastage-tron-state").
     :param region: The region of the table (default is "us-west-1").
     :return: The DynamoDB table resource.
     """
-    session = boto3.Session(profile_name=aws_profile)
+    session = boto3.Session(profile_name=aws_profile) if aws_profile else boto3.Session()
     return session.resource("dynamodb", region_name=region).Table(table)
-
-
-# Get Jobs
-def summarize_table(source_table: ServiceResource) -> None:
-    """
-    Summarize the DynamoDB table and output basic info about each key.
-
-    :param source_table: The DynamoDB table resource to scan.
-    """
-    response = source_table.scan()
-    items = response.get("Items", [])
-
-    print(f"{'Key':<120} {'Has json_val':<15} {'Num JSON Partitions':<20} {'Num Pickle Partitions':<20}")
-
-    for item in items:
-        key = item.get("key", "Unknown Key")
-        has_json_val = "json_val" in item
-        num_json_partitions = int(item.get("num_json_val_partitions", 0))
-        num_pickle_partitions = int(item.get("num_partitions", 0))
-
-        print(f"{key:<120} {str(has_json_val):<15} {num_json_partitions:<20} {num_pickle_partitions:<20}")
 
 
 def get_all_jobs(source_table: ServiceResource) -> List[str]:
     """
-    Scan the DynamoDB table and return a list of all job keys.
-
+    Scan the DynamoDB table and return a list of unique job keys.
     :param source_table: The DynamoDB table resource to scan.
     :return: A list of all job keys.
     """
-    response = source_table.scan()
-    items = response.get("Items", [])
-
-    all_job_keys = [item.get("key", "Unknown Key") for item in items]
-    return all_job_keys
+    items = scan_table(source_table)
+    unique_keys = {item.get("key", "Unknown Key") for item in items}
+    return list(unique_keys)
 
 
-def get_jobs_without_json_val(source_table: ServiceResource, partitioned: Optional[bool] = None) -> List[str]:
-    """
-    Scan the DynamoDB table and return a list of jobs that don't have a json_val.
-    Optionally filter by whether the jobs are partitioned.
-
-    :param source_table: The DynamoDB table resource to scan.
-    :param partitioned: If specified, filter jobs by partitioned status.
-                        True for partitioned, False for non-partitioned, None for no filter.
-    :return: A list of job keys without json_val, filtered by partitioned status if specified.
-    """
-    response = source_table.scan()
-    items = response.get("Items", [])
-
-    jobs_without_json_val = set()
-
-    for item in items:
-        key = item.get("key", "Unknown Key")
-        has_json_val = "json_val" not in item
-        num_partitions = int(item.get("num_partitions", 0))
-
-        if has_json_val:
-            if partitioned is None:
-                jobs_without_json_val.add(key)
-            elif partitioned and num_partitions > 1:
-                jobs_without_json_val.add(key)
-            elif not partitioned and num_partitions <= 1:
-                jobs_without_json_val.add(key)
-
-    return list(jobs_without_json_val)
-
-
-# Load and Print
-def load_and_combine_partitions(source_table: ServiceResource, key: str) -> bytes:
+def combine_pickle_partitions(source_table: ServiceResource, key: str) -> bytes:
     """
     Load and combine all partitions of a pickled item from DynamoDB.
-
     :param source_table: The DynamoDB table resource.
     :param key: The primary key of the item to retrieve.
     :return: The combined pickled data as bytes.
     """
+    response = source_table.get_item(Key={"key": key, "index": 0}, ConsistentRead=True)
+    if "Item" not in response:
+        raise Exception(f"No item found for key {key} at index 0")
+    item = response["Item"]
+    num_partitions = int(item.get("num_partitions", 1))
     combined_data = bytearray()
-    index = 0
-
-    while True:
-        response = source_table.get_item(Key={"key": key, "index": index})
+    for index in range(num_partitions):
+        response = source_table.get_item(Key={"key": key, "index": index}, ConsistentRead=True)
         if "Item" not in response:
-            break
-
+            raise Exception(f"Missing partition {index} for key {key}")
         item = response["Item"]
         combined_data.extend(item["val"].value)
-        index += 1
-
     return bytes(combined_data)
 
 
-def load_and_print_single_pickle(source_table: ServiceResource, key: str, print_full: bool = False) -> None:
+def dump_pickle_key(source_table: ServiceResource, key: str) -> None:
     """
-    Load the pickled data from DynamoDB for a given key, handle partitioned items,
-    and print the loaded pickle. Optionally print the entire pickle based on a flag.
-
+    Load the pickled data from DynamoDB for a given key, handling partitioned
+    items, and print the full pickle data.
     :param source_table: The DynamoDB table resource.
     :param key: The primary key of the item to retrieve.
-    :param print_full: Flag to indicate whether to print the entire pickle (default is False).
     """
     try:
-        pickled_data = load_and_combine_partitions(source_table, key)
+        pickled_data = combine_pickle_partitions(source_table, key)
         loaded_pickle = pickle.loads(pickled_data)
-
-        if print_full:
-            print(f"Key: {key:<100}\nFull Pickle:")
-            print(loaded_pickle)
-        else:
-            print(f"Key: {key:<100} Pickle successfully loaded")
-
+        print(f"Key: {key} - Pickle data:")
+        print(loaded_pickle)
     except Exception as e:
-        logger.error(f"Key: {key} - Failed to load pickle: {e}")
+        print(f"Key: {key} - Failed to load pickle: {e}")
+        raise
 
 
-def load_and_print_pickles(source_table: ServiceResource, keys: List[str]) -> None:
+def dump_pickle_keys(source_table: ServiceResource, keys: List[str]) -> None:
     """
     Load and print pickles for the given list of keys.
-
     :param source_table: The DynamoDB table resource.
     :param keys: A list of keys for which to load and print pickles.
     """
     for key in keys:
-        load_and_print_single_pickle(source_table, key)
+        dump_pickle_key(source_table, key)
 
 
-def load_and_print_json(source_table: ServiceResource, key: str) -> None:
+def validate_pickles(source_table: ServiceResource, keys: List[str]) -> None:
+    """
+    Validate pickles for the given list of keys without printing the data.
+    :param source_table: The DynamoDB table resource.
+    :param keys: A list of keys for which to validate pickles.
+    """
+    total_keys = len(keys)
+    success_count = 0
+    failure_count = 0
+    for key in keys:
+        try:
+            pickled_data = combine_pickle_partitions(source_table, key)
+            pickle.loads(pickled_data)
+            print(f"Key: {key} - Pickle successfully loaded")
+            success_count += 1
+        except Exception as e:
+            print(f"Key: {key} - Failed to load pickle: {e}")
+            failure_count += 1
+    print(f"Total keys: {total_keys}")
+    print(f"Successful validations: {success_count}")
+    print(f"Failures: {failure_count}")
+
+
+def dump_json_key(source_table: ServiceResource, key: str) -> None:
     """
     Load the JSON data from DynamoDB for a given key and print it.
-
     :param source_table: The DynamoDB table resource.
     :param key: The primary key of the item to retrieve.
     """
     try:
-        response = source_table.get_item(Key={"key": key, "index": 0})
-        item = response.get("Item", {})
-
-        if "json_val" in item:
-            json_data = item["json_val"]
-            print(f"Key: {key:<120} - JSON successfully loaded and printed")
+        json_data = combine_json_partitions(source_table, key)
+        if json_data is not None:
+            print(f"Key: {key} - JSON data:")
             print(json_data)
         else:
-            print(f"Key: {key:<120} - No JSON value found")
-
+            print(f"Key: {key} - No JSON value found")
     except Exception as e:
-        logger.error(f"Key: {key} - Failed to load JSON: {e}")
+        print(f"Key: {key} - Failed to load JSON: {e}")
 
 
-# Convert
-# KKASP: REVIEW
-def convert_pickle_to_json_and_update_table(source_table: ServiceResource, key: str, dry_run: bool = True) -> None:
+def dump_json_keys(source_table: ServiceResource, keys: List[str]) -> None:
     """
-    Convert a single pickled item to JSON and update the DynamoDB entry.
+    Load and print JSON data for the given list of keys.
+    :param source_table: The DynamoDB table resource.
+    :param keys: A list of keys for which to load and print JSON data.
+    """
+    for key in keys:
+        dump_json_key(source_table, key)
 
+
+def combine_json_partitions(source_table: ServiceResource, key: str) -> Optional[str]:
+    """
+    Combine all partitions of a JSON item from DynamoDB.
     :param source_table: The DynamoDB table resource.
     :param key: The primary key of the item to retrieve.
-    :param dry_run: If True, simulate the conversion without updating the table.
+    :return: The combined JSON data as a string, or None if not found.
+    """
+    response = source_table.get_item(Key={"key": key, "index": 0}, ConsistentRead=True)
+    if "Item" not in response:
+        return None
+    item = response["Item"]
+    num_json_partitions = int(item.get("num_json_val_partitions", 0))
+    if num_json_partitions == 0:
+        return None
+    combined_json = ""
+    for index in range(num_json_partitions):
+        response = source_table.get_item(Key={"key": key, "index": index}, ConsistentRead=True)
+        if "Item" not in response:
+            raise Exception(f"Missing JSON partition {index} for key {key}")
+        item = response["Item"]
+        if "json_val" in item:
+            combined_json += item["json_val"]
+        else:
+            raise Exception(f"No 'json_val' in partition {index} for key {key}")
+    return combined_json
+
+
+def convert_pickle_to_json_and_update_table(source_table: ServiceResource, key: str, dry_run: bool = True) -> bool:
+    """
+    Convert a single pickled item to JSON and update the DynamoDB entry.
+    Returns True if the conversion was successful, False if skipped.
+    Raises an exception if conversion fails.
     """
     try:
-        # Skip conversion for job_state MASTER and job_run_state MASTER jobs
+        # Skip conversion for job_state MASTER and job_run_state MASTER jobs that are from infrastage testing (i.e., not real jobs)
         if key.startswith("job_state MASTER") or key.startswith("job_run_state MASTER"):
-            # logger.info(f"Skipping conversion for key: {key}")
-            return
-
-        pickled_data = load_and_combine_partitions(source_table, key)
+            print(f"Skipping conversion for key: {key}")
+            return False
+        pickled_data = combine_pickle_partitions(source_table, key)
         state_data = pickle.loads(pickled_data)
-
         state_type = key.split()[0]
         if state_type == runstate.JOB_STATE:
             json_data = Job.to_json(state_data)
         elif state_type == runstate.JOB_RUN_STATE:
             json_data = JobRun.to_json(state_data)
         else:
-            raise ValueError(f"Unknown type: {state_type}")
-
+            # This will skip the state metadata and any other non-standard keys we have in the table
+            print(f"Key: {key} - Unknown state type: {state_type}. Skipping.")
+            return False
         num_json_partitions = math.ceil(len(json_data) / OBJECT_SIZE)
         for partition_index in range(num_json_partitions):
             json_partition = json_data[
                 partition_index * OBJECT_SIZE : min((partition_index + 1) * OBJECT_SIZE, len(json_data))
             ]
-
             if not dry_run:
                 source_table.update_item(
                     Key={"key": key, "index": partition_index},
                     UpdateExpression="SET json_val = :json, num_json_val_partitions = :num_partitions",
                     ExpressionAttributeValues={
                         ":json": json_partition,
-                        ":num_partitions": num_json_partitions,  # KKASP: is this correct?
+                        ":num_partitions": num_json_partitions,
                     },
                 )
-
         if dry_run:
-            logger.info(f"DRY RUN: Key: {key} - Pickle would have been converted to JSON and updated")
+            print(f"DRY RUN: Key: {key} - Pickle would have been converted to JSON and updated")
         else:
-            logger.info(f"Key: {key} - Pickle converted to JSON and updated")
+            print(f"Key: {key} - Pickle converted to JSON and updated")
+        return True
     except Exception as e:
-        logger.error(f"Key: {key} - Failed to convert pickle to JSON: {e}")
+        print(f"Key: {key} - Failed to convert pickle to JSON: {e}")
+        raise
 
 
-def convert_all_pickles_to_json_and_update_table(source_table: ServiceResource, dry_run: bool = True) -> None:
+def convert_pickles_to_json_and_update_table(
+    source_table: ServiceResource, keys: List[str], dry_run: bool = True
+) -> None:
     """
-    Convert all pickled items in the DynamoDB table to JSON and update the entries.
-
+    Convert pickled items in the DynamoDB table to JSON and update the entries.
     :param source_table: The DynamoDB table resource.
+    :param keys: List of keys to convert.
     :param dry_run: If True, simulate the conversion without updating the table.
     """
-    items = scan_table(source_table)
-    total_keys = len(items)
+    total_keys = len(keys)
     converted_keys = 0
-
-    for item in items:
-        key = item.get("key", "Unknown Key")
+    skipped_keys = 0
+    failed_keys = 0
+    for key in keys:
         try:
-            convert_pickle_to_json_and_update_table(source_table, key, dry_run)
-            converted_keys += 1
-        except Exception as e:
-            logger.error(f"Key: {key} - Failed to convert pickle to JSON: {e}")
-
-    print(f"Total keys in the table: {total_keys}")
-    print(f"Number of keys converted: {converted_keys}")
+            result = convert_pickle_to_json_and_update_table(source_table, key, dry_run)
+            if result:
+                converted_keys += 1
+            else:
+                skipped_keys += 1
+        except Exception:
+            failed_keys += 1
+    print(f"Total keys processed: {total_keys}")
+    print(f"Conversions attempted: {total_keys - skipped_keys}")
+    print(f"Conversions succeeded: {converted_keys}")
+    print(f"Conversions skipped: {skipped_keys}")
+    print(f"Conversions failed: {failed_keys}")
+    if dry_run:
+        print("Dry run complete. No changes were made to the DynamoDB table.")
 
 
 def scan_table(source_table: ServiceResource) -> List[dict]:
     """
     Scan the DynamoDB table and return all items, handling pagination.
-
     :param source_table: The DynamoDB table resource to scan.
     :return: A list of all items in the table.
     """
     items = []
     response = source_table.scan()
     items.extend(response.get("Items", []))
-
     while "LastEvaluatedKey" in response:
         response = source_table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
         items.extend(response.get("Items", []))
-
     return items
 
 
-aws_profile = "dev"
-table_name = "infrastage-tron-state"
-# table_name = "norcal-devc-tron-state"
-table_region = "us-west-1"
-source_table = get_dynamodb_table(aws_profile, table_name, table_region)
+def main():
+    parser = argparse.ArgumentParser(
+        description="Utilities for working with pickles and JSON items in Tron's DynamoDB state store.",
+        epilog="""
+Actions:
+  convert         Convert pickled state data to JSON format and update the DynamoDB table.
+  dump-pickle     Load and print the pickles for specified keys.
+  validate-pickle Validate pickle loads for specified keys.
+  dump-json       Load and print JSON data for specified keys.
+Examples:
+  Convert all pickles to JSON (dry run):
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action convert --all --dry-run
+  Convert specific pickles to JSON:
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action convert --keys "key1" "key2"
+  Validate specific pickle keys:
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action validate-pickle --keys "key1" "key2"
+  Load and print specific JSON keys:
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action dump-json --keys "key1" "key2"
+""",
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        "--aws-profile",
+        default=os.environ.get("AWS_PROFILE", None),
+        help="AWS profile to use (default: taken from AWS_PROFILE environment variable)",
+    )
+    parser.add_argument("--table-name", required=True, help="Name of the DynamoDB table")
+    parser.add_argument("--table-region", required=True, help="AWS region of the DynamoDB table")
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate the action without making any changes to the DynamoDB table",
+    )
+    parser.add_argument(
+        "--action",
+        choices=["convert", "dump-pickle", "validate-pickle", "dump-json"],
+        required=True,
+        help="Action to perform",
+    )
+    parser.add_argument(
+        "--keys",
+        nargs="+",
+        required=False,
+        help="Specific key(s) to perform the action on.",
+    )
+    parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Apply the action to all keys in the table.",
+    )
+    args = parser.parse_args()
+    source_table = get_dynamodb_table(args.aws_profile, args.table_name, args.table_region)
 
-convert_all_pickles_to_json_and_update_table(source_table, dry_run=False)
-# load_and_print_json(source_table, "job_run_state paasta-contract-monitor.k8s.1573")
+    if not args.keys and not args.all:
+        parser.error("You must provide either --keys or --all.")
 
-# 1. Scan table
-# summarize_table(source_table)
-# print(f"All jobs:\n{get_all_jobs(source_table)}\n")
-# print(f"Jobs without json_val:\n{get_jobs_without_json_val(source_table, False)}\n")
+    if args.all:
+        print("Processing all keys in the table...")
+        keys = get_all_jobs(source_table)
+    else:
+        keys = args.keys
 
-# # 2. Load and print a single job_state pickle
-# load_and_print_single_pickle(source_table, "job_state compute-infra-test-service.test_load_foo1")
-
-# # 2.1 Load and print a single job_run_state pickle
-# load_and_print_single_pickle(source_table, "job_run_state katamari_test_service.test_load_foo2.255")
-
-# 3. Load and print all pickles
-# load_and_print_pickles(source_table, get_all_jobs(source_table))
-
-# # 4. Convert a single pickle to JSON
-# convert_pickle_to_json(source_table, "job_state compute-infra-test-service.test_load_foo1", dry_run=True)
-
-# 5. Convert all pickles to JSON
-# convert_all_pickles_to_json(source_table, dry_run=True)
+    if args.action == "convert":
+        convert_pickles_to_json_and_update_table(source_table, keys=keys, dry_run=args.dry_run)
+    elif args.action == "dump-pickle":
+        dump_pickle_keys(source_table, keys)
+    elif args.action == "validate-pickle":
+        validate_pickles(source_table, keys)
+    elif args.action == "dump-json":
+        dump_json_keys(source_table, keys)
+    else:
+        print(f"Unknown action: {args.action}")
 
 
-# KKASP:
-# 1. Test getting job keys
-# DONE: infrastage-tron-state
-# TODO: norcal-devc-tron-state
-# 2. Test loading pickles
-# DONE: infrastrage-tron-state
-# 3. Test converting pickles to JSON
-# TODO: convert and print a single pickle and compare to a printed JSON?
-# 4. Add dry run flag that doesn't update the table
+if __name__ == "__main__":
+    main()
