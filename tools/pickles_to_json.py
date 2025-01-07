@@ -92,29 +92,6 @@ def dump_pickle_keys(source_table: ServiceResource, keys: List[str]) -> None:
         dump_pickle_key(source_table, key)
 
 
-def validate_pickles(source_table: ServiceResource, keys: List[str]) -> None:
-    """
-    Validate pickles for the given list of keys without printing the data.
-    :param source_table: The DynamoDB table resource.
-    :param keys: A list of keys for which to validate pickles.
-    """
-    total_keys = len(keys)
-    success_count = 0
-    failure_count = 0
-    for key in keys:
-        try:
-            pickled_data = combine_pickle_partitions(source_table, key)
-            pickle.loads(pickled_data)
-            print(f"Key: {key} - Pickle successfully loaded")
-            success_count += 1
-        except Exception as e:
-            print(f"Key: {key} - Failed to load pickle: {e}")
-            failure_count += 1
-    print(f"Total keys: {total_keys}")
-    print(f"Successful validations: {success_count}")
-    print(f"Failures: {failure_count}")
-
-
 def dump_json_key(source_table: ServiceResource, key: str) -> None:
     """
     Load the JSON data from DynamoDB for a given key and print it.
@@ -140,6 +117,46 @@ def dump_json_keys(source_table: ServiceResource, keys: List[str]) -> None:
     """
     for key in keys:
         dump_json_key(source_table, key)
+
+
+def delete_keys(source_table: ServiceResource, keys: List[str]) -> None:
+    """
+    Delete items with the given list of keys from the DynamoDB table.
+    :param source_table: The DynamoDB table resource.
+    :param keys: A list of keys to delete.
+    """
+    total_keys = len(keys)
+    deleted_count = 0
+    failure_count = 0
+    for key in keys:
+        try:
+            num_partitions = get_num_partitions(source_table, key)
+            for index in range(num_partitions):
+                source_table.delete_item(Key={"key": key, "index": index})
+            print(f"Key: {key} - Successfully deleted")
+            deleted_count += 1
+        except Exception as e:
+            print(f"Key: {key} - Failed to delete: {e}")
+            failure_count += 1
+    print(f"Total keys: {total_keys}")
+    print(f"Successfully deleted: {deleted_count}")
+    print(f"Failures: {failure_count}")
+
+
+def get_num_partitions(source_table: ServiceResource, key: str) -> int:
+    """
+    Get the number of partitions for a given key in the DynamoDB table.
+    :param source_table: The DynamoDB table resource.
+    :param key: The primary key of the item to retrieve.
+    :return: The number of partitions for the key.
+    """
+    response = source_table.get_item(Key={"key": key, "index": 0}, ConsistentRead=True)
+    if "Item" not in response:
+        return 0
+    item = response["Item"]
+    num_partitions = int(item.get("num_partitions", 1))
+    num_json_val_partitions = int(item.get("num_json_val_partitions", 0))
+    return max(num_partitions, num_json_val_partitions)
 
 
 def combine_json_partitions(source_table: ServiceResource, key: str) -> Optional[str]:
@@ -189,6 +206,7 @@ def convert_pickle_to_json_and_update_table(source_table: ServiceResource, key: 
             json_data = JobRun.to_json(state_data)
         else:
             # This will skip the state metadata and any other non-standard keys we have in the table
+            # TODO: how does this impact delete?
             print(f"Key: {key} - Unknown state type: {state_type}. Skipping.")
             return False
         num_json_partitions = math.ceil(len(json_data) / OBJECT_SIZE)
@@ -216,18 +234,22 @@ def convert_pickle_to_json_and_update_table(source_table: ServiceResource, key: 
 
 
 def convert_pickles_to_json_and_update_table(
-    source_table: ServiceResource, keys: List[str], dry_run: bool = True
+    source_table: ServiceResource,
+    keys: List[str],
+    dry_run: bool = True,
+    keys_file: Optional[str] = None,
 ) -> None:
     """
     Convert pickled items in the DynamoDB table to JSON and update the entries.
     :param source_table: The DynamoDB table resource.
     :param keys: List of keys to convert.
     :param dry_run: If True, simulate the conversion without updating the table.
+    :param keys_file: File to write failed keys to in dry run.
     """
     total_keys = len(keys)
     converted_keys = 0
     skipped_keys = 0
-    failed_keys = 0
+    failed_keys = []
     for key in keys:
         try:
             result = convert_pickle_to_json_and_update_table(source_table, key, dry_run)
@@ -235,13 +257,19 @@ def convert_pickles_to_json_and_update_table(
                 converted_keys += 1
             else:
                 skipped_keys += 1
-        except Exception:
-            failed_keys += 1
+        except Exception as e:
+            print(f"Key: {key} - Failed to convert pickle to JSON: {e}")
+            failed_keys.append(key)
     print(f"Total keys processed: {total_keys}")
     print(f"Conversions attempted: {total_keys - skipped_keys}")
     print(f"Conversions succeeded: {converted_keys}")
     print(f"Conversions skipped: {skipped_keys}")
-    print(f"Conversions failed: {failed_keys}")
+    print(f"Conversions failed: {len(failed_keys)}")
+    if dry_run and keys_file and failed_keys:
+        with open(keys_file, "w") as f:
+            for key in failed_keys:
+                f.write(f"{key}\n")
+        print(f"Failed keys have been written to {keys_file}")
     if dry_run:
         print("Dry run complete. No changes were made to the DynamoDB table.")
 
@@ -266,19 +294,24 @@ def main():
         description="Utilities for working with pickles and JSON items in Tron's DynamoDB state store.",
         epilog="""
 Actions:
-  convert         Convert pickled state data to JSON format and update the DynamoDB table.
-  dump-pickle     Load and print the pickles for specified keys.
-  validate-pickle Validate pickle loads for specified keys.
-  dump-json       Load and print JSON data for specified keys.
+  convert           Convert pickled state data to JSON format and update the DynamoDB table.
+  dump-pickle       Load and print the pickles for specified keys.
+  dump-json         Load and print JSON data for specified keys.
+  delete-keys       Delete the specified keys from the DynamoDB table.
+
 Examples:
+  Validate pickles (dry run, write failed keys to keys.txt):
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action convert --all --dry-run --keys-file keys.txt
   Convert all pickles to JSON (dry run):
     pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action convert --all --dry-run
+  Convert specific pickles to JSON using keys from a file:
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action convert --keys-file keys.txt
   Convert specific pickles to JSON:
     pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action convert --keys "key1" "key2"
-  Validate specific pickle keys:
-    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action validate-pickle --keys "key1" "key2"
-  Load and print specific JSON keys:
-    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action dump-json --keys "key1" "key2"
+  Load and print specific JSON keys using keys from a file:
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action dump-json --keys-file keys.txt
+  Delete specific keys:
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action delete-keys --keys "key1" "key2"
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -296,7 +329,7 @@ Examples:
     )
     parser.add_argument(
         "--action",
-        choices=["convert", "dump-pickle", "validate-pickle", "dump-json"],
+        choices=["convert", "dump-pickle", "dump-json", "delete-keys"],
         required=True,
         help="Action to perform",
     )
@@ -307,33 +340,69 @@ Examples:
         help="Specific key(s) to perform the action on.",
     )
     parser.add_argument(
+        "--keys-file",
+        required=False,
+        help="File containing keys to perform the action on. One key per line. On dry run, failed keys will be written to this file.",
+    )
+    parser.add_argument(
         "--all",
         action="store_true",
         help="Apply the action to all keys in the table.",
     )
+
     args = parser.parse_args()
     source_table = get_dynamodb_table(args.aws_profile, args.table_name, args.table_region)
-
-    if not args.keys and not args.all:
-        parser.error("You must provide either --keys or --all.")
-
+    if not args.keys and not args.keys_file and not args.all:
+        parser.error("You must provide either --keys, --keys-file, or --all.")
     if args.all:
         print("Processing all keys in the table...")
         keys = get_all_jobs(source_table)
     else:
-        keys = args.keys
-
+        keys = []
+        # TODO: either or?
+        if args.keys:
+            keys.extend(args.keys)
+        if args.keys_file:
+            try:
+                with open(args.keys_file) as f:
+                    keys_from_file = [line.strip() for line in f if line.strip()]
+                    keys.extend(keys_from_file)
+            except Exception as e:
+                parser.error(f"Error reading keys from file {args.keys_file}: {e}")
+        if not keys:
+            parser.error("No keys provided. Please provide keys via --keys or --keys-file.")
+        keys = list(set(keys))
     if args.action == "convert":
-        convert_pickles_to_json_and_update_table(source_table, keys=keys, dry_run=args.dry_run)
+        convert_pickles_to_json_and_update_table(
+            source_table,
+            keys=keys,
+            dry_run=args.dry_run,
+            keys_file=args.keys_file,
+        )
     elif args.action == "dump-pickle":
         dump_pickle_keys(source_table, keys)
-    elif args.action == "validate-pickle":
-        validate_pickles(source_table, keys)
     elif args.action == "dump-json":
         dump_json_keys(source_table, keys)
+    elif args.action == "delete-keys":
+        confirm = (
+            input(f"Are you sure you want to delete {len(keys)} keys from the table '{args.table_name}'? [y/N]: ")
+            .strip()
+            .lower()
+        )
+        if confirm in ("y", "yes"):
+            delete_keys(source_table, keys)
+        else:
+            print("Deletion cancelled.")
     else:
         print(f"Unknown action: {args.action}")
 
 
 if __name__ == "__main__":
     main()
+
+
+# KKASP: How to identify keys that can be deleted
+# 1. Update validate_pickles to catch these keys (or maybe just convert dry run?)
+#    - Write failed keys to file?
+# 2. Anything that doesn't have json_val after conversion can be deleted
+#    - TODO: failed keys file?
