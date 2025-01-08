@@ -126,7 +126,6 @@ class DynamoDBStateStore:
         new_keys = [{"key": {"S": key}, "index": {"N": "0"}} for key in keys]
         return self._get_items(new_keys)
 
-    # TODO: Check max partitions as JSON is larger
     def _get_remaining_partitions(self, items: list, read_json: bool):
         """Get items in the remaining partitions: N = 1 and beyond"""
         keys_for_remaining_items = []
@@ -357,12 +356,13 @@ class DynamoDBStateStore:
             delta=time.time() - start,
         )
 
-    # TODO: TRON-2238 - Is this ok if we just use the max number of partitions?
     def _delete_item(self, key: str) -> None:
         start = time.time()
         try:
+            num_partitions, num_json_val_partitions = self._get_num_of_partitions(key)
+            max_partitions = max(num_partitions, num_json_val_partitions)
             with self.table.batch_writer() as batch:
-                for index in range(self._get_num_of_partitions(key)):
+                for index in range(max_partitions):
                     batch.delete_item(
                         Key={
                             "key": key,
@@ -375,10 +375,9 @@ class DynamoDBStateStore:
                 delta=time.time() - start,
             )
 
-    # TODO: TRON-2238 - Get max partitions between pickle and json
-    def _get_num_of_partitions(self, key: str) -> int:
+    def _get_num_of_partitions(self, key: str) -> Tuple[int, int]:
         """
-        Return the number of partitions an item is divided into.
+        Return the number of partitions an item is divided into for both pickled and JSON data.
         """
         try:
             partition = self.table.get_item(
@@ -386,12 +385,14 @@ class DynamoDBStateStore:
                     "key": key,
                     "index": 0,
                 },
-                ProjectionExpression="num_partitions",
+                ProjectionExpression="num_partitions, num_json_val_partitions",
                 ConsistentRead=True,
             )
-            return int(partition.get("Item", {}).get("num_partitions", 0))
+            num_partitions = int(partition.get("Item", {}).get("num_partitions", 0))
+            num_json_val_partitions = int(partition.get("Item", {}).get("num_json_val_partitions", 0))
+            return num_partitions, num_json_val_partitions
         except self.client.exceptions.ResourceNotFoundException:
-            return 0
+            return 0, 0
 
     def cleanup(self) -> None:
         self.stopping = True
