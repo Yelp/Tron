@@ -206,7 +206,6 @@ def convert_pickle_to_json_and_update_table(source_table: ServiceResource, key: 
             json_data = JobRun.to_json(state_data)
         else:
             # This will skip the state metadata and any other non-standard keys we have in the table
-            # TODO: how does this impact delete?
             print(f"Key: {key} - Unknown state type: {state_type}. Skipping.")
             return False
         num_json_partitions = math.ceil(len(json_data) / OBJECT_SIZE)
@@ -359,7 +358,6 @@ Examples:
         keys = get_all_jobs(source_table)
     else:
         keys = []
-        # TODO: either or?
         if args.keys:
             keys.extend(args.keys)
         if args.keys_file:
@@ -399,10 +397,3 @@ Examples:
 
 if __name__ == "__main__":
     main()
-
-
-# KKASP: How to identify keys that can be deleted
-# 1. Update validate_pickles to catch these keys (or maybe just convert dry run?)
-#    - Write failed keys to file?
-# 2. Anything that doesn't have json_val after conversion can be deleted
-#    - TODO: failed keys file?
