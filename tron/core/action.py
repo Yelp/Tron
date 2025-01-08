@@ -121,8 +121,8 @@ class ActionCommandConfig(Persistable):
                     "cpus": state_data.get("cpus"),
                     "mem": state_data.get("mem"),
                     "disk": state_data.get("disk"),
-                    "cap_add": state_data.get("cap_add", []),
-                    "cap_drop": state_data.get("cap_drop", []),
+                    "cap_add": state_data["cap_add"],
+                    "cap_drop": state_data["cap_drop"],
                     "constraints": [
                         serialize_namedtuple(constraint) for constraint in state_data.get("constraints", [])
                     ],  # convert each ConfigConstraint to dictionary, so it would be a list of dicts
