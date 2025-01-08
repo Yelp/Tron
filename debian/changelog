@@ -1,3 +1,11 @@
+tron (3.1.1) jammy; urgency=medium
+
+  * 3.1.1 tagged with 'make release'
+    Commit: Merge pull request #1019 from Yelp/u/emanelsabban/capture-
+    json_val  Capturing exception when json_val doesnt exist
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Wed, 08 Jan 2025 13:04:07 -0800
+
 tron (3.1.0) jammy; urgency=medium
 
   * 3.1.0 tagged with 'make release'
