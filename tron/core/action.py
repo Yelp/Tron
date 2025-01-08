@@ -117,7 +117,7 @@ class ActionCommandConfig(Persistable):
         try:
             return json.dumps(
                 {
-                    "command": state_data.get("command"),
+                    "command": state_data["command"],
                     "cpus": state_data.get("cpus"),
                     "mem": state_data.get("mem"),
                     "disk": state_data.get("disk"),
