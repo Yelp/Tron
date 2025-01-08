@@ -169,7 +169,13 @@ class DynamoDBStateStore:
                 raw_items[key] += bytes(val["val"]["B"])
             if read_json:
                 for json_val in item:
-                    json_items[key] = json_val["json_val"]["S"]
+                    try:
+                        json_items[key] = json_val["json_val"]["S"]
+                    except Exception:
+                        log.exception(f"json_val not found for key {key}")
+                        # fallback to pickled data if json_val fails to exist for any key
+                        # TODO: it would be nice if we can read the pickled data only for this failed key instead of all keys
+                        read_json = False
         if read_json:
             try:
                 log.info("read_json is enabled. Deserializing JSON items to restore them instead of pickled data.")

@@ -117,37 +117,42 @@ class ActionCommandConfig(Persistable):
         try:
             return json.dumps(
                 {
-                    "command": state_data["command"],
-                    "cpus": state_data["cpus"],
-                    "mem": state_data["mem"],
-                    "disk": state_data["disk"],
-                    "cap_add": state_data["cap_add"],
-                    "cap_drop": state_data["cap_drop"],
+                    "command": state_data.get("command"),
+                    "cpus": state_data.get("cpus"),
+                    "mem": state_data.get("mem"),
+                    "disk": state_data.get("disk"),
+                    "cap_add": state_data.get("cap_add", []),
+                    "cap_drop": state_data.get("cap_drop", []),
                     "constraints": [
-                        serialize_namedtuple(constraint) for constraint in state_data["constraints"]
+                        serialize_namedtuple(constraint) for constraint in state_data.get("constraints", [])
                     ],  # convert each ConfigConstraint to dictionary, so it would be a list of dicts
-                    "docker_image": state_data["docker_image"],
+                    "docker_image": state_data.get("docker_image"),
                     "docker_parameters": [
-                        serialize_namedtuple(parameter) for parameter in state_data["docker_parameters"]
+                        serialize_namedtuple(parameter) for parameter in state_data.get("docker_parameters", [])
                     ],
-                    "env": state_data["env"],
-                    "secret_env": {key: serialize_namedtuple(val) for key, val in state_data["secret_env"].items()},
-                    "secret_volumes": [serialize_namedtuple(volume) for volume in state_data["secret_volumes"]],
+                    "env": state_data.get("env", {}),
+                    "secret_env": {
+                        key: serialize_namedtuple(val) for key, val in state_data.get("secret_env", {}).items()
+                    },
+                    "secret_volumes": [serialize_namedtuple(volume) for volume in state_data.get("secret_volumes", [])],
                     "projected_sa_volumes": [
-                        serialize_namedtuple(volume) for volume in state_data["projected_sa_volumes"]
+                        serialize_namedtuple(volume) for volume in state_data.get("projected_sa_volumes", [])
                     ],
                     "field_selector_env": {
-                        key: serialize_namedtuple(val) for key, val in state_data["field_selector_env"].items()
+                        key: serialize_namedtuple(val) for key, val in state_data.get("field_selector_env", {}).items()
                     },
-                    "extra_volumes": [serialize_namedtuple(volume) for volume in state_data["extra_volumes"]],
-                    "node_selectors": state_data["node_selectors"],
-                    "node_affinities": [serialize_namedtuple(affinity) for affinity in state_data["node_affinities"]],
-                    "labels": state_data["labels"],
-                    "annotations": state_data["annotations"],
-                    "service_account_name": state_data["service_account_name"],
-                    "ports": state_data["ports"],
+                    "extra_volumes": [serialize_namedtuple(volume) for volume in state_data.get("extra_volumes", [])],
+                    "node_selectors": state_data.get("node_selectors", {}),
+                    "node_affinities": [
+                        serialize_namedtuple(affinity) for affinity in state_data.get("node_affinities", [])
+                    ],
+                    "labels": state_data.get("labels", {}),
+                    "annotations": state_data.get("annotations", {}),
+                    "service_account_name": state_data.get("service_account_name"),
+                    "ports": state_data.get("ports", []),
                     "topology_spread_constraints": [
-                        serialize_namedtuple(constraint) for constraint in state_data["topology_spread_constraints"]
+                        serialize_namedtuple(constraint)
+                        for constraint in state_data.get("topology_spread_constraints", [])
                     ],
                 }
             )
