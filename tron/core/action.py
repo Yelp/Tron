@@ -118,15 +118,15 @@ class ActionCommandConfig(Persistable):
             return json.dumps(
                 {
                     "command": state_data["command"],
-                    "cpus": state_data.get("cpus"),
-                    "mem": state_data.get("mem"),
-                    "disk": state_data.get("disk"),
+                    "cpus": state_data["cpus"],
+                    "mem": state_data["mem"],
+                    "disk": state_data["disk"],
                     "cap_add": state_data["cap_add"],
                     "cap_drop": state_data["cap_drop"],
                     "constraints": [
                         serialize_namedtuple(constraint) for constraint in state_data.get("constraints", [])
                     ],  # convert each ConfigConstraint to dictionary, so it would be a list of dicts
-                    "docker_image": state_data.get("docker_image"),
+                    "docker_image": state_data["docker_image"],
                     "docker_parameters": [
                         serialize_namedtuple(parameter) for parameter in state_data.get("docker_parameters", [])
                     ],
