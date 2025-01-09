@@ -262,12 +262,37 @@ class TestDynamoDBStateStore:
         value = large_object
         pairs = list(zip(keys, (value for i in range(len(keys)))))
         store.save(pairs)
+        store._consume_save_queue()
 
         for key, value in pairs:
             store._delete_item(key)
-
         for key, value in pairs:
-            assert_equal(store._get_num_of_partitions(key), 0)
+            num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
+            assert_equal(num_partitions, 0)
+            assert_equal(num_json_val_partitions, 0)
+
+    def test_delete_item_with_json_partitions(self, store, small_object, large_object):
+        key = store.build_key("job_state", "test_job")
+        value = large_object
+
+        store.save([(key, value)])
+        store._consume_save_queue()
+
+        num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
+        assert num_partitions > 0
+        assert num_json_val_partitions > 0
+
+        store._delete_item(key)
+
+        num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
+        assert_equal(num_partitions, 0)
+        assert_equal(num_json_val_partitions, 0)
+
+        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore([key])
+        assert key not in vals
 
     def test_retry_saving(self, store, small_object, large_object):
         with mock.patch(
