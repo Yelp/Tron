@@ -1,3 +1,11 @@
+tron (3.2.0) jammy; urgency=medium
+
+  * 3.2.0 tagged with 'make release'
+    Commit: Merge pull request #1018 from Yelp/u/kkasp/update-delete-
+    item  Update delete_item logic to handle json partitions
+
+ -- Kevin Kaspari <kkasp@10-40-19-131-uswest1cdevc.dev.yelpcorp.com>  Thu, 09 Jan 2025 12:29:29 -0800
+
 tron (3.1.2) jammy; urgency=medium
 
   * 3.1.2 tagged with 'make release'
