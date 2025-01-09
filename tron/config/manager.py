@@ -2,6 +2,7 @@ import hashlib
 import logging
 import os
 from copy import deepcopy
+from typing import Union
 
 from tron import yaml
 from tron.config import config_parse
@@ -43,7 +44,7 @@ def read_raw(path) -> str:
         return fh.read()
 
 
-def hash_digest(content):
+def hash_digest(content: Union[str, bytes]) -> str:
     return hashlib.sha1(
         maybe_encode(content)
     ).hexdigest()  # TODO: TRON-2293 maybe_encode is a relic of Python2->Python3 migration. Remove it.
@@ -183,6 +184,25 @@ class ConfigManager:
         """Return a hash of the configuration contents for name."""
         if name not in self:
             return self.DEFAULT_HASH
+
+        if name in self.get_config_name_mapping():
+            # unfortunately, we have the parsed dict in memory.
+            # rather than hit the disk to get the raw string - let's convert
+            # the in-memory dict to a yaml string and hash that to save a couple
+            # ms (in testing, ~3ms over loading from disk and ~1ms over dumping to json :p)
+            # TODO: consider storing the hash alongside the config so that we only calculate
+            # hashes once?
+            return hash_digest(
+                yaml.dumps(
+                    self.get_config_name_mapping()[name],
+                    # ensure that the keys are always in a stable order
+                    sort_keys=True,
+                ),
+            )
+
+        # the config for any name should always be in our name mapping
+        # ...but just in case, let's fallback to reading from disk.
+        log.warning("%s not found in name mapping - falling back to hashing contents on disk!")
         return hash_digest(self.read_raw_config(name))
 
     def __contains__(self, name):
