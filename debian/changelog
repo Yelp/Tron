@@ -1,3 +1,14 @@
+tron (3.1.2) jammy; urgency=medium
+
+  * 3.1.2 tagged with 'make release'
+    Commit: Bump task_processing to v1.3.1 for capability fix (#1020)
+    Just like Yelp/paasta#3972 and Yelp/paasta#3973, we need to ensure
+    that there are no duplicates between cap_add and cap_drop -
+    otherwise, the cap_drop entry will "win" and the duplicate
+    capability will not be added.
+
+ -- Luis Perez <luisp@yelp.com>  Thu, 09 Jan 2025 09:21:33 -0800
+
 tron (3.1.1) jammy; urgency=medium
 
   * 3.1.1 tagged with 'make release'
