@@ -273,7 +273,7 @@ class TestDynamoDBStateStore:
 
     def test_delete_item_with_json_partitions(self, store, small_object, large_object):
         key = store.build_key("job_state", "test_job")
-        value = small_object
+        value = large_object
 
         store.save([(key, value)])
         store._consume_save_queue()
