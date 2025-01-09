@@ -2,12 +2,17 @@ import pytest
 
 from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigConstraint
+from tron.config.schema import ConfigFieldSelectorSource
+from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigParameter
+from tron.config.schema import ConfigProjectedSAVolume
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSecretVolume
 from tron.config.schema import ConfigSecretVolumeItem
+from tron.config.schema import ConfigTopologySpreadConstraints
 from tron.config.schema import ConfigVolume
 from tron.core.action import Action
+from tron.core.action import ActionCommandConfig
 
 
 class TestAction:
@@ -96,3 +101,149 @@ class TestAction:
         assert command_config.secret_env == {}
         assert command_config.secret_volumes == []
         assert command_config.extra_volumes == set()
+
+    @pytest.fixture
+    def action_command_config_json(self):
+        raw_json = """
+        {
+            "command": "echo 'Hello, World!'",
+            "cpus": 1.0,
+            "mem": 512.0,
+            "disk": 1024.0,
+            "cap_add": ["NET_ADMIN"],
+            "cap_drop": ["MKNOD"],
+            "constraints": [
+                {
+                    "attribute": "pool",
+                    "operator": "LIKE",
+                    "value": "default"
+                }
+            ],
+            "docker_image": "fake-docker.com:400/image",
+            "docker_parameters": [
+                {
+                    "key": "test",
+                    "value": 123
+                }
+            ],
+            "env": {"TESTING": "true"},
+            "secret_env": {
+                "TEST_SECRET": {
+                    "secret_name": "tron-secret-svc-sec--A",
+                    "key": "sec_A"
+                }
+            },
+            "secret_volumes": [
+                {
+                    "secret_volume_name": "secretvolumename",
+                    "secret_name": "secret",
+                    "container_path": "/b",
+                    "default_mode": "0644",
+                    "items": [
+                        {
+                            "key": "key",
+                            "path": "path",
+                            "mode": "0755"
+                        }
+                    ]
+                }
+            ],
+            "projected_sa_volumes": [
+                {
+                    "container_path": "/var/run/secrets/whatever",
+                    "audience": "for.bar.com",
+                    "expiration_seconds": 3600
+                }
+            ],
+            "extra_volumes": [
+                {
+                    "container_path": "/tmp",
+                    "host_path": "/home/tmp",
+                    "mode": "RO"
+                }
+            ],
+            "node_affinities": [
+                {
+                    "key": "topology.kubernetes.io/zone",
+                    "operator": "In",
+                    "value": ["us-west-1a", "us-west-1c"]
+                }
+            ],
+            "topology_spread_constraints": [
+                {
+                    "topology_key": "zone",
+                    "max_skew": 1,
+                    "when_unsatisfiable": "DoNotSchedule",
+                    "label_selector": {
+                        "match_labels": {
+                            "app": "myapp"
+                        }
+                    }
+                }
+            ],
+            "labels": {"app": "myapp"},
+            "annotations": {"annotation_key": "annotation_value"},
+            "service_account_name": "default",
+            "ports": [8080, 9090],
+            "field_selector_env": {
+                "key": {
+                    "field_path": "value"
+                }
+            },
+            "node_selectors": {"key": "node-A"}
+        }
+        """
+        return raw_json
+
+    def test_action_command_config_from_json(self, action_command_config_json):
+        result = ActionCommandConfig.from_json(action_command_config_json)
+
+        expected = {
+            "command": "echo 'Hello, World!'",
+            "cpus": 1.0,
+            "mem": 512.0,
+            "disk": 1024.0,
+            "cap_add": ["NET_ADMIN"],
+            "cap_drop": ["MKNOD"],
+            "constraints": [ConfigConstraint(attribute="pool", operator="LIKE", value="default")],
+            "docker_image": "fake-docker.com:400/image",
+            "docker_parameters": [ConfigParameter(key="test", value=123)],
+            "env": {"TESTING": "true"},
+            "secret_env": {"TEST_SECRET": ConfigSecretSource(secret_name="tron-secret-svc-sec--A", key="sec_A")},
+            "secret_volumes": [
+                ConfigSecretVolume(
+                    secret_volume_name="secretvolumename",
+                    secret_name="secret",
+                    container_path="/b",
+                    default_mode="0644",
+                    items=[{"key": "key", "path": "path", "mode": "0755"}],
+                )
+            ],
+            "projected_sa_volumes": [
+                ConfigProjectedSAVolume(
+                    container_path="/var/run/secrets/whatever",
+                    audience="for.bar.com",
+                    expiration_seconds=3600,
+                )
+            ],
+            "extra_volumes": [ConfigVolume(container_path="/tmp", host_path="/home/tmp", mode="RO")],
+            "node_affinities": [
+                ConfigNodeAffinity(key="topology.kubernetes.io/zone", operator="In", value=["us-west-1a", "us-west-1c"])
+            ],
+            "topology_spread_constraints": [
+                ConfigTopologySpreadConstraints(
+                    topology_key="zone",
+                    max_skew=1,
+                    when_unsatisfiable="DoNotSchedule",
+                    label_selector={"match_labels": {"app": "myapp"}},
+                )
+            ],
+            "labels": {"app": "myapp"},
+            "annotations": {"annotation_key": "annotation_value"},
+            "service_account_name": "default",
+            "ports": [8080, 9090],
+            "node_selectors": {"key": "node-A"},
+            "field_selector_env": {"key": ConfigFieldSelectorSource(field_path="value")},
+        }
+
+        assert result == expected

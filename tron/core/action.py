@@ -11,10 +11,15 @@ from typing import Union
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigAction
+from tron.config.schema import ConfigConstraint
+from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigNodeAffinity
+from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigProjectedSAVolume
+from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSecretVolume
 from tron.config.schema import ConfigTopologySpreadConstraints
+from tron.config.schema import ConfigVolume
 from tron.utils.persistable import Persistable
 
 log = logging.getLogger(__name__)
@@ -55,11 +60,57 @@ class ActionCommandConfig(Persistable):
         return ActionCommandConfig(**self.state_data)
 
     @staticmethod
-    def to_json(state_data: dict) -> Optional[str]:
+    def from_json(state_data: str):
+        """Deserialize a JSON string to an ActionCommandConfig instance."""
+        try:
+            json_data = json.loads(state_data)
+            deserialized_data = {
+                "constraints": [
+                    ConfigConstraint.from_dict(val) for val in json_data["constraints"]
+                ],  # convert back the list of dictionaries to a list of ConfigConstraint
+                "docker_parameters": [ConfigParameter.from_dict(val) for val in json_data["docker_parameters"]],
+                "extra_volumes": [ConfigVolume.from_dict(val) for val in json_data["extra_volumes"]],
+                "node_affinities": [ConfigNodeAffinity.from_dict(val) for val in json_data["node_affinities"]],
+                "topology_spread_constraints": [
+                    ConfigTopologySpreadConstraints.from_dict(val) for val in json_data["topology_spread_constraints"]
+                ],
+                "secret_volumes": [ConfigSecretVolume.from_dict(val) for val in json_data["secret_volumes"]],
+                "projected_sa_volumes": [
+                    ConfigProjectedSAVolume.from_dict(val) for val in json_data["projected_sa_volumes"]
+                ],
+                "secret_env": {key: ConfigSecretSource.from_dict(val) for key, val in json_data["secret_env"].items()},
+                "field_selector_env": {
+                    key: ConfigFieldSelectorSource.from_dict(val)
+                    for key, val in json_data["field_selector_env"].items()
+                },
+                "command": json_data["command"],
+                "cpus": json_data["cpus"],
+                "mem": json_data["mem"],
+                "disk": json_data["disk"],
+                "cap_add": json_data["cap_add"],
+                "cap_drop": json_data["cap_drop"],
+                "docker_image": json_data["docker_image"],
+                "env": json_data["env"],
+                "node_selectors": json_data["node_selectors"],
+                "labels": json_data["labels"],
+                "annotations": json_data["annotations"],
+                "service_account_name": json_data["service_account_name"],
+                "ports": json_data["ports"],
+            }
+        except Exception:
+            log.exception("Error deserializing ActionCommandConfig from JSON")
+            raise
+        return deserialized_data
+
+    @staticmethod
+    def to_json(state_data: dict) -> str:
         """Serialize the ActionCommandConfig instance to a JSON string."""
 
         def serialize_namedtuple(obj):
             if isinstance(obj, tuple) and hasattr(obj, "_fields"):
+                # checks if obj is a namedtuple and convert it to a dict
+                # TODO: future improvement here would be to use a custom json encoder to
+                # have json.dumps() automatically convert namedtuples to dictionaries
                 return obj._asdict()
             return obj
 
@@ -72,23 +123,32 @@ class ActionCommandConfig(Persistable):
                     "disk": state_data["disk"],
                     "cap_add": state_data["cap_add"],
                     "cap_drop": state_data["cap_drop"],
-                    "constraints": list(state_data["constraints"]),
+                    "constraints": [
+                        serialize_namedtuple(constraint) for constraint in state_data["constraints"]
+                    ],  # convert each ConfigConstraint to dictionary, so it would be a list of dicts
                     "docker_image": state_data["docker_image"],
-                    "docker_parameters": list(state_data["docker_parameters"]),
+                    "docker_parameters": [
+                        serialize_namedtuple(parameter) for parameter in state_data["docker_parameters"]
+                    ],
                     "env": state_data["env"],
-                    "secret_env": state_data["secret_env"],
+                    "secret_env": {key: serialize_namedtuple(val) for key, val in state_data["secret_env"].items()},
                     "secret_volumes": [serialize_namedtuple(volume) for volume in state_data["secret_volumes"]],
                     "projected_sa_volumes": [
                         serialize_namedtuple(volume) for volume in state_data["projected_sa_volumes"]
                     ],
-                    "field_selector_env": state_data["field_selector_env"],
-                    "extra_volumes": list(state_data["extra_volumes"]),
+                    "field_selector_env": {
+                        key: serialize_namedtuple(val) for key, val in state_data["field_selector_env"].items()
+                    },
+                    "extra_volumes": [serialize_namedtuple(volume) for volume in state_data["extra_volumes"]],
                     "node_selectors": state_data["node_selectors"],
                     "node_affinities": [serialize_namedtuple(affinity) for affinity in state_data["node_affinities"]],
                     "labels": state_data["labels"],
                     "annotations": state_data["annotations"],
                     "service_account_name": state_data["service_account_name"],
                     "ports": state_data["ports"],
+                    "topology_spread_constraints": [
+                        serialize_namedtuple(constraint) for constraint in state_data["topology_spread_constraints"]
+                    ],
                 }
             )
         except KeyError:

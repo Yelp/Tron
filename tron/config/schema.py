@@ -5,6 +5,8 @@
 """
 from collections import namedtuple
 from enum import Enum
+from typing import Any
+from typing import Dict
 
 MASTER_NAMESPACE = "MASTER"
 
@@ -31,6 +33,13 @@ def config_object_factory(name, required=None, optional=None):
     config_class.required_keys = required
     config_class.optional_keys = optional
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]):
+        supported_keys = set(required + optional)
+        filtered_data = {k: v for k, v in data.items() if k in supported_keys}
+        return cls(**filtered_data)
+
+    config_class.from_dict = from_dict
     return config_class
 
 
@@ -49,6 +58,7 @@ TronConfig = config_object_factory(
         "mesos_options",  # ConfigMesos
         "k8s_options",  # ConfigKubernetes
         "eventbus_enabled",  # bool or None
+        "read_json",  # bool, default is False
     ],
 )
 

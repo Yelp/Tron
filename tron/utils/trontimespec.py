@@ -48,11 +48,19 @@ def to_timezone(t, tzinfo):
     """
     if tzinfo:
         if not t.tzinfo:
+            # Ensure we have a default timezone set (UTC) if no tzinfo was given
             t = pytz.utc.localize(t)
+        # if tzinfo is provided, then the datetime object is converted to the given timezone
+        # and normalized to adjust for discrepancies that might arise from daylight savings
+        # time or other irregularities in the timezone.
         return tzinfo.normalize(t.astimezone(tzinfo))
     elif t.tzinfo:
+        # handles the case where tzinfo is not provided but t is timezone-aware
+        # then it is converted to UTC then normalized to adjust for discrepancies
+        # then lastly removing timezone info making t a timezone-naive datetime object
         return pytz.utc.normalize(t.astimezone(pytz.utc)).replace(tzinfo=None)
     else:
+        # handles the case where tzinfo is not provided and t is timezone-naive
         return t
 
 

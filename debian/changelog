@@ -1,3 +1,46 @@
+tron (3.1.2) jammy; urgency=medium
+
+  * 3.1.2 tagged with 'make release'
+    Commit: Bump task_processing to v1.3.1 for capability fix (#1020)
+    Just like Yelp/paasta#3972 and Yelp/paasta#3973, we need to ensure
+    that there are no duplicates between cap_add and cap_drop -
+    otherwise, the cap_drop entry will "win" and the duplicate
+    capability will not be added.
+
+ -- Luis Perez <luisp@yelp.com>  Thu, 09 Jan 2025 09:21:33 -0800
+
+tron (3.1.1) jammy; urgency=medium
+
+  * 3.1.1 tagged with 'make release'
+    Commit: Merge pull request #1019 from Yelp/u/emanelsabban/capture-
+    json_val  Capturing exception when json_val doesnt exist
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Wed, 08 Jan 2025 13:04:07 -0800
+
+tron (3.1.0) jammy; urgency=medium
+
+  * 3.1.0 tagged with 'make release'
+    Commit: Add read_json to be a part of master.yaml config (#1015)  *
+    Add read_json to be a part of master.yaml config  * Fix the mypy
+    error & other failed tests  * Addressing reviews  * Add reas_json to
+    restore in shelve function
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Thu, 02 Jan 2025 12:51:55 -0800
+
+tron (3.0.0) jammy; urgency=medium
+
+  * 3.0.0 tagged with 'make release'
+    Commit: [TRON-2238] Reading from JSON to restore jobs" state instead
+    of pickles (#1010)  * Reading from Json to restore jobs" state
+    instead of pickles  * Fixing some bugs through testing  * Deleting
+    some comments  * mocking get_config_watcher  * Try mocking one more
+    time  * Toggling off read_json since we want to merge that way  *
+    Removing some comments  * Addressed reviews  * Toggling read_json
+    back off  * Addressing more reviews  * one more review plz  *
+    includes reviews except tz
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Mon, 23 Dec 2024 07:56:01 -0800
+
 tron (2.8.1) jammy; urgency=medium
 
   * 2.8.1 tagged with 'make release'
