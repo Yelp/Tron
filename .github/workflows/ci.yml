@@ -51,7 +51,7 @@ jobs:
       # to bring those in
       - run: sudo apt-get install --quiet --assume-yes devscripts
       - run: make itest_${{ matrix.dist }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: deb-${{ matrix.dist }}
           path: dist/tron_*.deb
@@ -61,11 +61,11 @@ jobs:
     steps:
       - uses: actions/checkout@v2
       - run: mkdir -p dist/
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: deb-bionic
           path: dist/
-      - uses: actions/download-artifact@v3
+      - uses: actions/download-artifact@v4
         with:
           name: deb-jammy
           path: dist/
