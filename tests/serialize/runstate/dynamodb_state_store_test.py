@@ -262,8 +262,8 @@ class TestDynamoDBStateStore:
         value = large_object
         pairs = list(zip(keys, (value for i in range(len(keys)))))
         store.save(pairs)
-
         store._consume_save_queue()
+
         for key, value in pairs:
             store._delete_item(key)
         for key, value in pairs:
