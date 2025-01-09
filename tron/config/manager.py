@@ -193,7 +193,7 @@ class ConfigManager:
             # TODO: consider storing the hash alongside the config so that we only calculate
             # hashes once?
             return hash_digest(
-                yaml.dumps(
+                yaml.dump(
                     self.get_config_name_mapping()[name],
                     # ensure that the keys are always in a stable order
                     sort_keys=True,
