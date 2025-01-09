@@ -257,6 +257,7 @@ def convert_pickles_to_json_and_update_table(
     keys: List[str],
     dry_run: bool = True,
     keys_file: Optional[str] = None,
+    failed_keys_file: Optional[str] = None,
     job_names: List[str] = [],
 ) -> None:
     """
@@ -309,9 +310,14 @@ def convert_pickles_to_json_and_update_table(
 
     if keys_file:
         with open(keys_file, "w") as f:
-            for key in failed_keys + delete_keys:  # TODO: failed keys to separate file?
+            for key in delete_keys:
                 f.write(f"{key}\n")
-        print(f"Failed and delete keys have been written to {keys_file}")
+        print(f"Deprecated keys have been written to {keys_file}")
+    if failed_keys_file:
+        with open(failed_keys_file, "w") as f:
+            for key in failed_keys:
+                f.write(f"{key}\n")
+        print(f"Failed have been written to {failed_keys_file}")
     if dry_run:
         print("Dry run complete. No changes were made to the DynamoDB table.")
 
@@ -389,6 +395,11 @@ Examples:
         help="File containing keys to perform the action on. One key per line. On dry run, failed keys will be written to this file.",
     )
     parser.add_argument(
+        "--failed-keys-file",
+        required=False,
+        help="File to write failed keys to in dry run.",
+    )
+    parser.add_argument(
         "--all",
         action="store_true",
         help="Apply the action to all keys in the table.",
@@ -425,7 +436,12 @@ Examples:
 
     if args.action == "convert":
         convert_pickles_to_json_and_update_table(
-            source_table, keys=keys, dry_run=args.dry_run, keys_file=args.keys_file, job_names=job_names
+            source_table,
+            keys=keys,
+            dry_run=args.dry_run,
+            keys_file=args.keys_file,
+            failed_keys_file=args.failed_keys_file,
+            job_names=job_names,
         )
     elif args.action == "dump-pickle":
         dump_pickle_keys(source_table, keys)
