@@ -14,7 +14,7 @@ Submodules
    tron.utils.persistable
    tron.utils.proxy
    tron.utils.queue
-   tron.utils.scribereader
+   tron.utils.logreader
    tron.utils.state
    tron.utils.timeutils
    tron.utils.trontimespec
