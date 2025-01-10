@@ -1,3 +1,11 @@
+tron (3.2.1) jammy; urgency=medium
+
+  * 3.2.1 tagged with 'make release'
+    Commit: Merge pull request #1022 from Yelp/u/kkasp/pass-json-back-to-
+    save-queue  Pass json_val back to the save queue on failure
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Fri, 10 Jan 2025 07:27:17 -0800
+
 tron (3.2.0) jammy; urgency=medium
 
   * 3.2.0 tagged with 'make release'
