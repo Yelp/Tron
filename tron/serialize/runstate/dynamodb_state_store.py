@@ -226,10 +226,8 @@ class DynamoDBStateStore:
             except Exception as e:
                 error = "tron_dynamodb_save_failure: failed to save key " f'"{key}" to dynamodb:\n{repr(e)}'
                 log.error(error)
-                # Add items back to the queue if we failed to save. While we roll out and test TRON-2237 we will only re-add the Pickle.
-                # TODO: TRON-2239 - Pass JSON back to the save queue
                 with self.save_lock:
-                    self.save_queue[key] = (val, None)
+                    self.save_queue[key] = (val, json_val)
         duration = time.time() - start
         log.info(f"saved {saved} items in {duration}s")
 
