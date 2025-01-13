@@ -1,3 +1,13 @@
+tron (3.2.2) jammy; urgency=medium
+
+  * 3.2.2 tagged with 'make release'
+    Commit: Merge pull request #1014 from Yelp/u/kkasp/fix-tooltip-lol-
+    its-bootstrap-2.3.1  Disable the tooltip animation that is causing a
+    strange problem where you can"t get a tooltip when entering from the
+    top of an object
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Mon, 13 Jan 2025 06:59:56 -0800
+
 tron (3.2.1) jammy; urgency=medium
 
   * 3.2.1 tagged with 'make release'
