@@ -256,8 +256,8 @@ def convert_pickles_to_json_and_update_table(
     source_table: ServiceResource,
     keys: List[str],
     dry_run: bool = True,
-    keys_file: Optional[str] = None,
-    failed_keys_file: Optional[str] = None,
+    deprecated_keys_output: Optional[str] = None,
+    failed_keys_output: Optional[str] = None,
     job_names: List[str] = [],
 ) -> None:
     """
@@ -265,7 +265,9 @@ def convert_pickles_to_json_and_update_table(
     :param source_table: The DynamoDB table resource.
     :param keys: List of keys to convert.
     :param dry_run: If True, simulate the conversion without updating the table.
-    :param keys_file: File to write failed keys to in dry run.
+    :param deprecated_keys_output: Output file to write deprecated keys to.
+    :param failed_keys_output: Output file to write keys that failed to convert to.
+    :param job_names: List of job names to use for filtering keys.
     """
     total_keys = len(keys)
     converted_keys = 0
@@ -308,16 +310,16 @@ def convert_pickles_to_json_and_update_table(
     print(f"Conversions failed: {len(failed_keys)}")
     print(f"Keys to be deleted: {len(delete_keys)}")
 
-    if keys_file:
-        with open(keys_file, "w") as f:
+    if deprecated_keys_output:
+        with open(deprecated_keys_output, "w") as f:
             for key in delete_keys:
                 f.write(f"{key}\n")
-        print(f"Deprecated keys have been written to {keys_file}")
-    if failed_keys_file:
-        with open(failed_keys_file, "w") as f:
+        print(f"Deprecated keys have been written to {deprecated_keys_output}")
+    if failed_keys_output:
+        with open(failed_keys_output, "w") as f:
             for key in failed_keys:
                 f.write(f"{key}\n")
-        print(f"Failed have been written to {failed_keys_file}")
+        print(f"Failed have been written to {failed_keys_output}")
     if dry_run:
         print("Dry run complete. No changes were made to the DynamoDB table.")
 
@@ -346,22 +348,19 @@ Actions:
   dump-pickle       Load and print the pickles for specified keys.
   dump-json         Load and print JSON data for specified keys.
   delete-keys       Delete the specified keys from the DynamoDB table.
-
 Examples:
-  Validate pickles (dry run, write failed keys to keys.txt):
-    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action convert --all --dry-run --keys-file keys.txt --tron-api-url tron-infrastage
-  Convert all pickles to JSON (dry run):
-    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action convert --all --dry-run --tron-api-url tron-infrastage
-  Convert specific pickles to JSON using keys from a file:
-    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action convert --keys-file keys.txt --tron-api-url tron-infrastage
-  Convert specific pickles to JSON:
-    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action convert --keys "key1" "key2" --tron-api-url tron-infrastage
-  Load and print specific JSON keys using keys from a file:
-    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action dump-json --keys-file keys.txt
-  Delete specific keys:
-    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action delete-keys --keys "key1" "key2"
-  Delete keys from a file:
-    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 --action delete-keys --keys-file keys.txt
+  Validate pickles (dry run, write deprecated keys to deprecated_keys.txt):
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 convert --all --dry-run --deprecated-keys-output deprecated_keys.txt --tron-api tron-infrastage
+  Convert all pickles to JSON (without dry run):
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 convert --all --tron-api tron-infrastage
+  Convert specific pickles to JSON using keys from an input file:
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 convert --keys-file input_keys.txt --tron-api tron-infrastage
+  Load and print specific JSON keys using keys from an input file:
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 dump-json --keys-file input_keys.txt
+  Delete specific keys (dry run):
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 delete-keys --keys "key1" "key2" --dry-run
+  Delete keys from an input file (without dry run):
+    pickles_to_json.py --table-name infrastage-tron-state --table-region us-west-1 delete-keys --keys-file input_keys.txt
 """,
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -372,47 +371,114 @@ Examples:
     )
     parser.add_argument("--table-name", required=True, help="Name of the DynamoDB table")
     parser.add_argument("--table-region", required=True, help="AWS region of the DynamoDB table")
-    parser.add_argument(
-        "--dry-run",
-        action="store_true",
-        help="Simulate the action without making any changes to the DynamoDB table",
+
+    subparsers = parser.add_subparsers(dest="action", required=True, help="Action to perform")
+
+    convert_parser = subparsers.add_parser(
+        "convert", help="Convert pickled state data to JSON format and update the DynamoDB table."
     )
-    parser.add_argument(
-        "--action",
-        choices=["convert", "dump-pickle", "dump-json", "delete-keys"],
+    convert_parser.add_argument(
+        "--tron-api",
         required=True,
-        help="Action to perform",
+        help="Base URL of the Tron API to fetch job names from.",
     )
-    parser.add_argument(
+    convert_parser.add_argument(
         "--keys",
         nargs="+",
         required=False,
         help="Specific key(s) to perform the action on.",
     )
-    parser.add_argument(
+    convert_parser.add_argument(
         "--keys-file",
         required=False,
-        help="File containing keys to perform the action on. One key per line. On dry run, failed keys will be written to this file.",
+        help="Input file containing keys to perform the action on. One key per line.",
     )
-    parser.add_argument(
-        "--failed-keys-file",
+    convert_parser.add_argument(
+        "--deprecated-keys-output",
         required=False,
-        help="File to write failed keys to in dry run.",
+        help="Output file to write deprecated keys to. These are keys associated with jobs not present in Tron. One key per line.",
     )
-    parser.add_argument(
+    convert_parser.add_argument(
+        "--failed-keys-output",
+        required=False,
+        help="Output file to write keys that failed to convert. One key per line.",
+    )
+    convert_parser.add_argument(
         "--all",
         action="store_true",
         help="Apply the action to all keys in the table.",
     )
-    parser.add_argument(
-        "--tron-api-url",
-        required=True,
-        help="URL of the Tron API to fetch job names from.",
+    convert_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate the conversion without making any changes to the DynamoDB table",
     )
+
+    dump_pickle_parser = subparsers.add_parser("dump-pickle", help="Load and print the pickles for specified keys.")
+    dump_pickle_parser.add_argument(
+        "--keys",
+        nargs="+",
+        required=False,
+        help="Specific key(s) to perform the action on.",
+    )
+    dump_pickle_parser.add_argument(
+        "--keys-file",
+        required=False,
+        help="Input file containing keys to perform the action on. One key per line.",
+    )
+    dump_pickle_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Apply the action to all keys in the table.",
+    )
+
+    dump_json_parser = subparsers.add_parser("dump-json", help="Load and print JSON data for specified keys.")
+    dump_json_parser.add_argument(
+        "--keys",
+        nargs="+",
+        required=False,
+        help="Specific key(s) to perform the action on.",
+    )
+    dump_json_parser.add_argument(
+        "--keys-file",
+        required=False,
+        help="Input file containing keys to perform the action on. One key per line.",
+    )
+    dump_json_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Apply the action to all keys in the table.",
+    )
+
+    delete_keys_parser = subparsers.add_parser("delete-keys", help="Delete the specified keys from the DynamoDB table.")
+    delete_keys_parser.add_argument(
+        "--keys",
+        nargs="+",
+        required=False,
+        help="Specific key(s) to perform the action on.",
+    )
+    delete_keys_parser.add_argument(
+        "--keys-file",
+        required=False,
+        help="Input file containing keys to perform the action on. One key per line.",
+    )
+    delete_keys_parser.add_argument(
+        "--all",
+        action="store_true",
+        help="Apply the action to all keys in the table.",
+    )
+    delete_keys_parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Simulate the deletion without making any changes to the DynamoDB table",
+    )
+
     args = parser.parse_args()
     source_table = get_dynamodb_table(args.aws_profile, args.table_name, args.table_region)
+
     if not args.keys and not args.keys_file and not args.all:
         parser.error("You must provide either --keys, --keys-file, or --all.")
+
     if args.all:
         print("Processing all keys in the table...")
         keys = get_all_jobs(source_table)
@@ -431,16 +497,14 @@ Examples:
             parser.error("No keys provided. Please provide keys via --keys or --keys-file.")
         keys = list(set(keys))
 
-    # Get job names from the Tron API using the provided URL
-    job_names = get_job_names(args.tron_api_url)
-
     if args.action == "convert":
+        job_names = get_job_names(args.tron_api)
         convert_pickles_to_json_and_update_table(
             source_table,
             keys=keys,
             dry_run=args.dry_run,
-            keys_file=args.keys_file,
-            failed_keys_file=args.failed_keys_file,
+            deprecated_keys_output=args.deprecated_keys_output,
+            failed_keys_output=args.failed_keys_file,
             job_names=job_names,
         )
     elif args.action == "dump-pickle":
@@ -448,15 +512,20 @@ Examples:
     elif args.action == "dump-json":
         dump_json_keys(source_table, keys)
     elif args.action == "delete-keys":
-        confirm = (
-            input(f"Are you sure you want to delete {len(keys)} keys from the table '{args.table_name}'? [y/N]: ")
-            .strip()
-            .lower()
-        )
-        if confirm in ("y", "yes"):
-            delete_keys(source_table, keys)
+        if args.dry_run:
+            print(f"DRY RUN: Would delete {len(keys)} keys from the table '{args.table_name}'.")
+            for key in keys:
+                print(f"Would delete key: {key}")
         else:
-            print("Deletion cancelled.")
+            confirm = (
+                input(f"Are you sure you want to delete {len(keys)} keys from the table '{args.table_name}'? [y/N]: ")
+                .strip()
+                .lower()
+            )
+            if confirm in ("y", "yes"):
+                delete_keys(source_table, keys)
+            else:
+                print("Deletion cancelled.")
     else:
         print(f"Unknown action: {args.action}")
 
