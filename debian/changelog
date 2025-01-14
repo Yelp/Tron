@@ -1,3 +1,12 @@
+tron (3.2.3) jammy; urgency=medium
+
+  * 3.2.3 tagged with 'make release'
+    Commit: Merge pull request #1016 from Yelp/u/kkasp/TRON-2239-migrate-
+    pickle-only-state-to-JSON  U/kkasp/tron 2239 migrate pickle only
+    state to json
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Tue, 14 Jan 2025 12:05:21 -0800
+
 tron (3.2.2) jammy; urgency=medium
 
   * 3.2.2 tagged with 'make release'
