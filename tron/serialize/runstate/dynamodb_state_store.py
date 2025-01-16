@@ -165,11 +165,12 @@ class DynamoDBStateStore:
         for key, item in items.items():
             item.sort(key=lambda x: int(x["index"]["N"]))
             for val in item:
-                raw_items[key] += bytes(val["val"]["B"])
+                if "val" in val:
+                    raw_items[key] += bytes(val["val"]["B"])
             if read_json:
                 for json_val in item:
                     try:
-                        json_items[key] = json_val["json_val"]["S"]
+                        json_items[key] += json_val["json_val"]["S"]
                     except Exception:
                         log.exception(f"json_val not found for key {key}")
                         # fallback to pickled data if json_val fails to exist for any key
