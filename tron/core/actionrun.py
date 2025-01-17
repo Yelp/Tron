@@ -185,8 +185,13 @@ class ActionRunAttempt(Persistable):
                     "end_time": state_data["end_time"].isoformat() if state_data["end_time"] else None,
                     "rendered_command": state_data["rendered_command"],
                     "exit_status": state_data["exit_status"],
-                    "mesos_task_id": state_data["mesos_task_id"],
-                    "kubernetes_task_id": state_data["kubernetes_task_id"],
+                    # NOTE: mesos_task_id can be deleted once we delete all Mesos
+                    # code and run data - and kubernetes_task_id can then be
+                    # accessed unconditionally :)
+                    # (see note in ActionCommandConfig::to_json() for more
+                    # information about why we do this)
+                    "mesos_task_id": state_data.get("mesos_task_id"),
+                    "kubernetes_task_id": state_data.get("kubernetes_task_id"),
                 }
             )
         except KeyError:
@@ -811,12 +816,12 @@ class ActionRun(Observable, Persistable):
                     "job_run_id": state_data["job_run_id"],
                     "action_name": state_data["action_name"],
                     "state": state_data["state"],
-                    "original_command": state_data["original_command"],
+                    "original_command": state_data.get("original_command"),
                     "start_time": state_data["start_time"].isoformat() if state_data["start_time"] else None,
                     "end_time": state_data["end_time"].isoformat() if state_data["end_time"] else None,
                     "node_name": state_data["node_name"],
                     "exit_status": state_data["exit_status"],
-                    "attempts": [ActionRunAttempt.to_json(attempt) for attempt in state_data["attempts"]],
+                    "attempts": [ActionRunAttempt.to_json(attempt) for attempt in state_data.get("attempts", [])],
                     "retries_remaining": state_data["retries_remaining"],
                     "retries_delay": (
                         state_data["retries_delay"].total_seconds() if state_data["retries_delay"] is not None else None
