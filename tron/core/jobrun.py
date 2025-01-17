@@ -114,9 +114,9 @@ class JobRun(Observable, Observer, Persistable):
         """Deserialize the JobRun instance from a JSON string."""
         try:
             json_data = json.loads(state_data)
-            run_time_str = json_data["run_time"]
-            if run_time_str:
-                run_time = datetime.datetime.fromisoformat(run_time_str)
+            raw_run_time = json_data["run_time"]
+            if raw_run_time:
+                run_time = datetime.datetime.fromisoformat(raw_run_time)
                 if json_data["time_zone"]:
                     tz = pytz.timezone(json_data["time_zone"])
                     run_time = tz.localize(run_time)
