@@ -1,3 +1,16 @@
+tron (3.2.6) jammy; urgency=medium
+
+  * 3.2.6 tagged with 'make release'
+    Commit: Add default behaviour for jobs that dont have some keys and
+    handle the non-existent of some json_vals (#1017)  * Add default
+    behaviour for jobs that dont have some keys and handle the non-
+    existent of some json_vals  * Remove get from command  * cap add and
+    drop should have values  * removing the try/except since it was
+    added in a separate pr  * maybe not all gets are necessary  * Adding
+    comments
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Fri, 17 Jan 2025 11:47:48 -0800
+
 tron (3.2.5) jammy; urgency=medium
 
   * 3.2.5 tagged with 'make release'
