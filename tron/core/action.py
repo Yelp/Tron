@@ -115,6 +115,13 @@ class ActionCommandConfig(Persistable):
             return obj
 
         try:
+            # NOTE: you'll notice that there's a lot of get() accesses of state_data for
+            # pretty common fields - this is because ActionCommandConfig is used by more
+            # than one type of ActionRun (Kubernetes, Mesos, SSH) and these generally look
+            # different. Alternatively, some of these fields are used by KubernetesActionRun
+            # but are relatively new and older runs do not have data for them.
+            # Once we get rid of the SSH and Mesos code as well as older runs in DynamoDB,
+            # we'll likely be able to clean this up.
             return json.dumps(
                 {
                     "command": state_data["command"],

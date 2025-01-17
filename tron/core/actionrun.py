@@ -185,6 +185,11 @@ class ActionRunAttempt(Persistable):
                     "end_time": state_data["end_time"].isoformat() if state_data["end_time"] else None,
                     "rendered_command": state_data["rendered_command"],
                     "exit_status": state_data["exit_status"],
+                    # NOTE: mesos_task_id can be deleted once we delete all Mesos
+                    # code and run data - and kubernetes_task_id can then be
+                    # accessed unconditionally :)
+                    # (see note in ActionCommandConfig::to_json() for more
+                    # information about why we do this)
                     "mesos_task_id": state_data.get("mesos_task_id"),
                     "kubernetes_task_id": state_data.get("kubernetes_task_id"),
                 }
