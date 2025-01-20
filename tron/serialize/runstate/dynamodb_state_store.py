@@ -107,8 +107,8 @@ class DynamoDBStateStore:
         # let's avoid potentially mutating our input :)
         cand_keys_list = copy.copy(table_keys)
         attempts = 0
-        base_delay = 0.5
-        max_delay = 10
+        base_delay_seconds = 0.5
+        max_delay_seconds = 10
 
         while len(cand_keys_list) != 0 and attempts < MAX_UNPROCESSED_KEYS_RETRIES:
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
@@ -141,7 +141,7 @@ class DynamoDBStateStore:
             if cand_keys_list:
                 attempts += 1
                 # Exponential backoff for retrying unprocessed keys
-                exponential_delay = min(base_delay * (2 ** (attempts - 1)), max_delay)
+                exponential_delay = min(base_delay_seconds * (2 ** (attempts - 1)), max_delay_seconds)
                 # Full jitter (i.e. from 0 to exponential_delay) will help minimize the number and length of calls
                 jitter = random.uniform(0, exponential_delay)
                 delay = jitter
