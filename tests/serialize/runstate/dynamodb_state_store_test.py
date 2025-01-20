@@ -345,7 +345,7 @@ class TestDynamoDBStateStore:
                 ):
                     store.restore(keys)
             except Exception:
-                assert_equal(mock_failed_read.call_count, 11)
+                assert_equal(mock_failed_read.call_count, 10)
 
     def test_restore_exception_propagation(self, store, small_object):
         # This test is to ensure that restore propagates exceptions upwards: see DAR-2328

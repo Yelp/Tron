@@ -374,7 +374,9 @@ class DynamoDBStateStore:
 
             items.append(item)
 
-            while len(items) == MAX_TRANSACT_WRITE_ITEMS or index == max_partitions - 1:
+            # We want to write the items when we've either reached the max number of items
+            # for a transaction, or when we're done processing all partitions
+            if len(items) == MAX_TRANSACT_WRITE_ITEMS or index == max_partitions - 1:
                 try:
                     self.client.transact_write_items(TransactItems=items)
                     items = []
