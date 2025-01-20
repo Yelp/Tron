@@ -381,6 +381,10 @@ class DynamoDBStateStore:
                     self.client.transact_write_items(TransactItems=items)
                     items = []
                 except Exception as e:
+                    timer(
+                        name="tron.dynamodb.setitem",
+                        delta=time.time() - start,
+                    )
                     log.error(f"Failed to save partition for key: {key}, error: {repr(e)}")
                     raise e
         timer(
