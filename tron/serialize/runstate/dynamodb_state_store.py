@@ -20,6 +20,7 @@ from typing import Tuple
 from typing import TypeVar
 
 import boto3  # type: ignore
+import botocore  # type: ignore
 from botocore.config import Config  # type: ignore
 
 import tron.prom_metrics as prom_metrics
@@ -101,10 +102,10 @@ class DynamoDBStateStore:
             cand_keys_chunks.append(keys[i : min(len(keys), i + 100)])
         return cand_keys_chunks
 
-    def _calculate_backoff_delay(self, attempt: int) -> float:
-        base_delay_seconds = 0.5
+    def _calculate_backoff_delay(self, attempt: int) -> int:
+        base_delay_seconds = 1
         max_delay_seconds = 10
-        delay = min(base_delay_seconds * (2 ** (attempt - 1)), max_delay_seconds)
+        delay: int = min(base_delay_seconds * (2 ** (attempt - 1)), max_delay_seconds)
         return delay
 
     def _get_items(self, table_keys: list) -> object:
@@ -138,22 +139,25 @@ class DynamoDBStateStore:
                     unprocessed_keys = result.get("UnprocessedKeys", {}).get(self.name, {}).get("Keys", [])
                     if unprocessed_keys:
                         cand_keys_list.extend(unprocessed_keys)
-                except Exception as e:
+                except botocore.exceptions.ClientError as e:
+                    log.exception(f"ClientError during batch_get_item: {e.response}")
+                    raise
+                except Exception:
                     log.exception("Encountered issues retrieving data from DynamoDB")
-                    raise e
+                    raise
             if cand_keys_list:
                 attempts += 1
                 delay = self._calculate_backoff_delay(attempts)
                 log.warning(
                     f"Attempt {attempts}/{MAX_UNPROCESSED_KEYS_RETRIES} - "
-                    f"Retrying {len(cand_keys_list)} unprocessed keys after {delay:.2f}s delay."
+                    f"Retrying {len(cand_keys_list)} unprocessed keys after {delay}s delay."
                 )
                 time.sleep(delay)
         if cand_keys_list:
             error = Exception(
                 f"tron_dynamodb_restore_failure: failed to retrieve items with keys \n{cand_keys_list}\n from dynamodb after {MAX_UNPROCESSED_KEYS_RETRIES} retries."
             )
-            log.error(repr(error))
+            log.error(error)
             raise error
         return items
 

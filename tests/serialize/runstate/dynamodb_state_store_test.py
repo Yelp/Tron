@@ -334,13 +334,13 @@ class TestDynamoDBStateStore:
     @pytest.mark.parametrize(
         "attempt, expected_delay",
         [
-            (1, 0.5),
-            (2, 1.0),
-            (3, 2.0),
-            (4, 4.0),
-            (5, 8.0),
-            (6, 10.0),
-            (7, 10.0),
+            (1, 1),
+            (2, 2),
+            (3, 4),
+            (4, 8),
+            (5, 10),
+            (6, 10),
+            (7, 10),
         ],
     )
     def test_calculate_backoff_delay(self, store, attempt, expected_delay):
