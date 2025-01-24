@@ -119,7 +119,13 @@ class JobRun(Observable, Observer, Persistable):
                 run_time = datetime.datetime.fromisoformat(raw_run_time)
                 if json_data["time_zone"]:
                     tz = pytz.timezone(json_data["time_zone"])
-                    run_time = tz.localize(run_time)
+                    if run_time.tzinfo is None:
+                        # if runtime is timezone naive (i.e has no tz information) then localize it
+                        # otherwise we would get a ValueError if we attempt to localize a datetime object that has tz info
+                        run_time = tz.localize(run_time)
+                    else:
+                        # Convert to the desired timezone if it already has timezone information
+                        run_time = run_time.astimezone(tz)
             else:
                 run_time = None
             deserialized_data = {
