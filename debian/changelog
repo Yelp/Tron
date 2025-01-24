@@ -1,3 +1,11 @@
+tron (3.2.7) jammy; urgency=medium
+
+  * 3.2.7 tagged with 'make release'
+    Commit: Merge pull request #1027 from Yelp/u/emanelsabban/TRON-2354
+    Handling timezone aware jobs
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Fri, 24 Jan 2025 12:38:21 -0800
+
 tron (3.2.6) jammy; urgency=medium
 
   * 3.2.6 tagged with 'make release'
