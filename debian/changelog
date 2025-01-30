@@ -1,3 +1,11 @@
+tron (3.2.8) jammy; urgency=medium
+
+  * 3.2.8 tagged with 'make release'
+    Commit: Merge pull request #1025 from Yelp/u/kkasp/DAR-2558-fix-
+    overstep  Fix loop boundary on getting partitions
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Thu, 30 Jan 2025 11:59:51 -0800
+
 tron (3.2.7) jammy; urgency=medium
 
   * 3.2.7 tagged with 'make release'
