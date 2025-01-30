@@ -138,7 +138,7 @@ class DynamoDBStateStore:
                 # we start from 1 since we already have the 0th partition and we get the rest of the partitions
                 # based on the max number of partitions, whether that number is the partitions for the pickled objects
                 # or the partitions for the json data
-                for i in range(1, max_partitions + 1)
+                for i in range(1, max_partitions)
             ]
             keys_for_remaining_items.extend(remaining_items)
         return self._get_items(keys_for_remaining_items)
