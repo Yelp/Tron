@@ -39,8 +39,9 @@ OBJECT_SIZE = 200_000  # TODO: TRON-2240 - consider swapping back to 400_000 now
 MAX_SAVE_QUEUE = 500
 # This is distinct from the number of retries in the retry_config as this is used for handling unprocessed
 # keys outside the bounds of something like retrying on a ThrottlingException. We need this limit to avoid
-# infinite loops in the case where a key is truly unprocessable.
-MAX_UNPROCESSED_KEYS_RETRIES = 10
+# infinite loops in the case where a key is truly unprocessable. We allow for more retries than it should
+# ever take to avoid failing restores due to transient issues.
+MAX_UNPROCESSED_KEYS_RETRIES = 30
 MAX_TRANSACT_WRITE_ITEMS = 100
 log = logging.getLogger(__name__)
 T = TypeVar("T")
@@ -103,9 +104,11 @@ class DynamoDBStateStore:
         return cand_keys_chunks
 
     def _calculate_backoff_delay(self, attempt: int) -> int:
+        # Clamp attempt to 1 to avoid negative or zero exponent
+        safe_attempt = max(attempt, 1)
         base_delay_seconds = 1
         max_delay_seconds = 10
-        delay: int = min(base_delay_seconds * (2 ** (attempt - 1)), max_delay_seconds)
+        delay: int = min(base_delay_seconds * (2 ** (safe_attempt - 1)), max_delay_seconds)
         return delay
 
     def _get_items(self, table_keys: list) -> object:
@@ -154,11 +157,10 @@ class DynamoDBStateStore:
                 )
                 time.sleep(delay)
         if cand_keys_list:
-            error = Exception(
-                f"tron_dynamodb_restore_failure: failed to retrieve items with keys \n{cand_keys_list}\n from dynamodb after {MAX_UNPROCESSED_KEYS_RETRIES} retries."
-            )
-            log.error(error)
-            raise error
+            msg = f"tron_dynamodb_restore_failure: failed to retrieve items with keys \n{cand_keys_list}\n from dynamodb after {MAX_UNPROCESSED_KEYS_RETRIES} retries."
+            log.error(msg)
+
+            raise KeyError(msg)
         return items
 
     def _get_first_partitions(self, keys: list):
@@ -330,12 +332,17 @@ class DynamoDBStateStore:
     def __setitem__(self, key: str, value: Tuple[bytes, str]) -> None:
         """
         Partition the item and write up to MAX_TRANSACT_WRITE_ITEMS
-        partitions atomically. Retry up to 3 times on failure.
+        partitions atomically using TransactWriteItems.
 
-        Examine the size of `pickled_val` and `json_val`, and
-        splice them into different parts based on `OBJECT_SIZE`
-        with different sort keys, and save them under the same
-        partition key built.
+        The function examines the size of pickled_val and json_val,
+        splitting them into multiple segments based on OBJECT_SIZE,
+        storing each segment under the same partition key.
+
+        It relies on the boto3/botocore retry_config to handle
+        certain errors (e.g. throttling). If an error is not
+        addressed by boto3's internal logic, the transaction fails
+        and raises an exception. It is the caller's responsibility
+        to implement further retries.
         """
         start = time.time()
 
@@ -384,13 +391,13 @@ class DynamoDBStateStore:
                 try:
                     self.client.transact_write_items(TransactItems=items)
                     items = []
-                except Exception as e:
+                except Exception:
                     timer(
                         name="tron.dynamodb.setitem",
                         delta=time.time() - start,
                     )
-                    log.error(f"Failed to save partition for key: {key}, error: {repr(e)}")
-                    raise e
+                    log.exception(f"Failed to save partition for key: {key}")
+                    raise
         timer(
             name="tron.dynamodb.setitem",
             delta=time.time() - start,
