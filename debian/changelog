@@ -1,3 +1,14 @@
+tron (3.2.9) jammy; urgency=medium
+
+  * 3.2.9 tagged with 'make release'
+    Commit: Merge pull request #1023 from Yelp/u/kkasp/TRON-2342-
+    exponential-backoff-dynamo-get  Add dynamodb retry config for
+    throttling and other errors. Add exponential backoff and jitter for
+    unprocessed keys. Fix edge case where we succesfully process keys on
+    our last attempt but still fail
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Wed, 12 Feb 2025 13:03:36 -0800
+
 tron (3.2.8) jammy; urgency=medium
 
   * 3.2.8 tagged with 'make release'
