@@ -21,7 +21,7 @@ from typing import TypeVar
 
 import boto3  # type: ignore
 import botocore  # type: ignore
-from botocore.config import Config  # type: ignore
+from botocore.config import Config
 
 import tron.prom_metrics as prom_metrics
 from tron.core.job import Job
@@ -117,6 +117,7 @@ class DynamoDBStateStore:
         cand_keys_list = copy.copy(table_keys)
         attempts = 0
 
+        # TODO: TRON-2363 - We should refactor this to not consume attempts when we are still making progress
         while len(cand_keys_list) != 0 and attempts < MAX_UNPROCESSED_KEYS_RETRIES:
             with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
                 responses = [
@@ -149,6 +150,9 @@ class DynamoDBStateStore:
                     log.exception("Encountered issues retrieving data from DynamoDB")
                     raise
             if cand_keys_list:
+                # We use _calculate_backoff_delay to get a delay that increases exponentially
+                # with each retry. These retry attempts are distinct from the boto3 retry_config
+                # and are used specifically to handle unprocessed keys.
                 attempts += 1
                 delay = self._calculate_backoff_delay(attempts)
                 log.warning(
