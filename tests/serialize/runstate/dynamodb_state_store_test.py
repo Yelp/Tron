@@ -9,6 +9,7 @@ from moto.dynamodb2.responses import dynamo_json_dump
 
 from testifycompat import assert_equal
 from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
+from tron.serialize.runstate.dynamodb_state_store import MAX_UNPROCESSED_KEYS_RETRIES
 
 
 def mock_transact_write_items(self):
@@ -294,58 +295,80 @@ class TestDynamoDBStateStore:
             vals = store.restore([key])
         assert key not in vals
 
-    def test_retry_saving(self, store, small_object, large_object):
-        with mock.patch(
-            "moto.dynamodb2.responses.DynamoHandler.transact_write_items",
-            side_effect=KeyError("foo"),
-        ) as mock_failed_write:
-            keys = [store.build_key("job_state", i) for i in range(1)]
-            value = small_object
-            pairs = zip(keys, (value for i in range(len(keys))))
-            try:
-                store.save(pairs)
-            except Exception:
-                assert_equal(mock_failed_write.call_count, 3)
+    @pytest.mark.parametrize(
+        "test_object, side_effects, expected_save_errors, expected_queue_length",
+        [
+            # All attempts fail
+            ("small_object", [KeyError("foo")] * 3, 3, 1),
+            ("large_object", [KeyError("foo")] * 3, 3, 1),
+            # Failure followed by success
+            ("small_object", [KeyError("foo"), {}], 0, 0),
+            ("large_object", [KeyError("foo"), {}], 0, 0),
+        ],
+    )
+    def test_retry_saving(
+        self, test_object, side_effects, expected_save_errors, expected_queue_length, store, small_object, large_object
+    ):
+        object_mapping = {
+            "small_object": small_object,
+            "large_object": large_object,
+        }
+        value = object_mapping[test_object]
 
-    def test_retry_reading(self, store, small_object, large_object):
+        with mock.patch.object(
+            store.client,
+            "transact_write_items",
+            side_effect=side_effects,
+        ) as mock_transact_write:
+            keys = [store.build_key("job_state", 0)]
+            pairs = zip(keys, [value])
+            store.save(pairs)
+
+            for _ in side_effects:
+                store._consume_save_queue()
+
+            assert mock_transact_write.call_count == len(side_effects)
+            assert store.save_errors == expected_save_errors
+            assert len(store.save_queue) == expected_queue_length
+
+    @pytest.mark.parametrize(
+        "attempt, expected_delay",
+        [
+            (1, 1),
+            (2, 2),
+            (3, 4),
+            (4, 8),
+            (5, 10),
+            (6, 10),
+            (7, 10),
+        ],
+    )
+    def test_calculate_backoff_delay(self, store, attempt, expected_delay):
+        delay = store._calculate_backoff_delay(attempt)
+        assert_equal(delay, expected_delay)
+
+    def test_retry_reading(self, store):
         unprocessed_value = {
-            "Responses": {
-                store.name: [
-                    {
-                        "index": {"N": "0"},
-                        "key": {"S": "job_state 0"},
-                    },
-                ],
-            },
+            "Responses": {},
             "UnprocessedKeys": {
                 store.name: {
+                    "Keys": [{"key": {"S": store.build_key("job_state", 0)}, "index": {"N": "0"}}],
                     "ConsistentRead": True,
-                    "Keys": [
-                        {
-                            "index": {"N": "0"},
-                            "key": {"S": "job_state 0"},
-                        }
-                    ],
-                },
+                }
             },
-            "ResponseMetadata": {},
         }
-        keys = [store.build_key("job_state", i) for i in range(1)]
-        value = small_object
-        pairs = zip(keys, (value for i in range(len(keys))))
-        store.save(pairs)
+
+        keys = [store.build_key("job_state", 0)]
+
         with mock.patch.object(
             store.client,
             "batch_get_item",
             return_value=unprocessed_value,
-        ) as mock_failed_read:
-            try:
-                with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
-                    "tron.config.static_config.build_configuration_watcher", autospec=True
-                ):
-                    store.restore(keys)
-            except Exception:
-                assert_equal(mock_failed_read.call_count, 11)
+        ) as mock_batch_get_item, mock.patch("time.sleep") as mock_sleep, pytest.raises(Exception) as exec_info:
+            store.restore(keys)
+        assert "failed to retrieve items with keys" in str(exec_info.value)
+        assert mock_batch_get_item.call_count == MAX_UNPROCESSED_KEYS_RETRIES
+        assert mock_sleep.call_count == MAX_UNPROCESSED_KEYS_RETRIES
 
     def test_restore_exception_propagation(self, store, small_object):
         # This test is to ensure that restore propagates exceptions upwards: see DAR-2328
