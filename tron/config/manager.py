@@ -1,6 +1,8 @@
 import hashlib
 import logging
 import os
+from copy import deepcopy
+from typing import Union
 
 from tron import yaml
 from tron.config import config_parse
@@ -42,7 +44,7 @@ def read_raw(path) -> str:
         return fh.read()
 
 
-def hash_digest(content):
+def hash_digest(content: Union[str, bytes]) -> str:
     return hashlib.sha1(
         maybe_encode(content)
     ).hexdigest()  # TODO: TRON-2293 maybe_encode is a relic of Python2->Python3 migration. Remove it.
@@ -97,6 +99,7 @@ class ConfigManager:
     def __init__(self, config_path, manifest=None):
         self.config_path = config_path
         self.manifest = manifest or ManifestFile(config_path)
+        self.name_mapping = None
 
     def build_file_path(self, name):
         name = name.replace(".", "_").replace(os.path.sep, "_")
@@ -107,23 +110,32 @@ class ConfigManager:
         filename = self.manifest.get_file_name(name)
         return read_raw(filename)
 
-    def write_config(self, name, content):
+    def write_config(self, name: str, content: str) -> None:
+        loaded_content = from_string(content)
         self.validate_with_fragment(
             name,
-            from_string(content),
+            content=loaded_content,
             # TODO: remove this constraint after tron triggers across clusters are supported.
             should_validate_missing_dependency=False,
         )
+        # validate_with_fragment throws if the updated content is invalid - so if we get here
+        # we know it's safe to reflect the update in our config store
+        self.get_config_name_mapping()[name] = loaded_content
+
+        # ...and then let's also persist the update to disk since memory is temporary, but disk is forever™
         filename = self.get_filename_from_manifest(name)
         write_raw(filename, content)
 
-    def delete_config(self, name):
+    def delete_config(self, name: str) -> None:
         filename = self.manifest.get_file_name(name)
         if not filename:
             msg = "Namespace %s does not exist in manifest, cannot delete."
             log.info(msg % name)
             return
 
+        # to avoid needing to reload from disk on every config load - we need to ensure that
+        # we also persist config deletions into our cache
+        self.get_config_name_mapping().pop(name, None)
         self.manifest.delete(name)
         os.remove(filename)
 
@@ -141,7 +153,11 @@ class ConfigManager:
         content,
         should_validate_missing_dependency=True,
     ):
-        name_mapping = self.get_config_name_mapping()
+        # NOTE: we deepcopy rather than swap values to keep this a pure function
+        # get_config_name_mapping() returns a shared dict, so this would otherwise
+        # actually update the mapping - which would be unwanted/need to be rolled-back
+        # should validation fail.
+        name_mapping = deepcopy(self.get_config_name_mapping())
         name_mapping[name] = content
         try:
             JobGraph(
@@ -152,8 +168,11 @@ class ConfigManager:
             raise ConfigError(str(e))
 
     def get_config_name_mapping(self):
-        seq = self.manifest.get_file_mapping().items()
-        return {name: read(filename) for name, filename in seq}
+        if self.name_mapping is None:
+            log.info("Creating config mapping cache...")
+            seq = self.manifest.get_file_mapping().items()
+            self.name_mapping = {name: read(filename) for name, filename in seq}
+        return self.name_mapping
 
     def load(self):
         """Return the fully constructed configuration."""
@@ -165,6 +184,25 @@ class ConfigManager:
         """Return a hash of the configuration contents for name."""
         if name not in self:
             return self.DEFAULT_HASH
+
+        if name in self.get_config_name_mapping():
+            # unfortunately, we have the parsed dict in memory.
+            # rather than hit the disk to get the raw string - let's convert
+            # the in-memory dict to a yaml string and hash that to save a couple
+            # ms (in testing, ~3ms over loading from disk and ~1ms over dumping to json :p)
+            # TODO: consider storing the hash alongside the config so that we only calculate
+            # hashes once?
+            return hash_digest(
+                yaml.dump(
+                    self.get_config_name_mapping()[name],
+                    # ensure that the keys are always in a stable order
+                    sort_keys=True,
+                ),
+            )
+
+        # the config for any name should always be in our name mapping
+        # ...but just in case, let's fallback to reading from disk.
+        log.warning("%s not found in name mapping - falling back to hashing contents on disk!")
         return hash_digest(self.read_raw_config(name))
 
     def __contains__(self, name):
