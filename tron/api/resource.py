@@ -5,6 +5,7 @@ view current state, event history and send commands to trond.
 import collections
 import datetime
 import logging
+import math
 import traceback
 
 import staticconf
@@ -310,10 +311,16 @@ class JobCollectionResource(resource.Resource):
         include_action_runs=False,
         include_action_graph=True,
         include_node_pool=True,
+        page=None,
+        page_size=None,
     ):
+        jobs = self.job_collection.get_jobs()
+        if page is not None and page_size is not None:
+            start = (page - 1) * page_size
+            jobs = jobs[start : start + page_size]
         return adapter.adapt_many(
             adapter.JobAdapter,
-            self.job_collection.get_jobs(),
+            jobs,
             include_job_run,
             include_action_runs,
             include_action_graph,
@@ -350,13 +357,45 @@ class JobCollectionResource(resource.Resource):
             "include_node_pool",
             default=True,
         )
+
+        page = requestargs.get_integer(request, "page")
+        page_size = requestargs.get_integer(request, "page_size")
+
+        jobs = self.get_data(
+            include_job_runs,
+            include_action_runs,
+            include_action_graph,
+            include_node_pool,
+            page,
+            page_size,
+        )
+
+        if page is not None and page_size is not None:
+            total = len(self.job_collection.get_jobs())
+            if page < 1 or page_size < 1:
+                return respond(
+                    request=request,
+                    response={"error": "page and page_size must be positive integers"},
+                    code=http.BAD_REQUEST,
+                )
+            if page > math.ceil(total / page_size):
+                return respond(
+                    request=request,
+                    response={"error": "page out of range"},
+                    code=http.BAD_REQUEST,
+                )
+            response = dict(jobs=jobs, pagination=dict(page=page, page_size=page_size, total=total))
+        else:
+            response = dict(jobs=jobs)
+        return respond(request=request, response=response)
+
+    @AsyncResource.bounded
+    def render_SEARCH(self, request):
+        query = requestargs.get_string(request, "query")
+        jobs = self.job_collection.get_jobs()
+        filtered_jobs = [job for job in jobs if query.lower() in job.get_name().lower()]
         response = dict(
-            jobs=self.get_data(
-                include_job_runs,
-                include_action_runs,
-                include_action_graph,
-                include_node_pool,
-            ),
+            jobs=adapter.adapt_many(adapter.JobAdapter, filtered_jobs),
         )
         return respond(request=request, response=response)
 
