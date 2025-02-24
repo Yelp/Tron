@@ -1,3 +1,18 @@
+tron (3.2.11) jammy; urgency=medium
+
+  * 3.2.11 tagged with 'make release'
+    Commit: Try to load config_name_mapping from disk just once (#1013)
+    There"s enough files (and enough YAML in these files) that the
+    IO/YAML parsing takes a significant amount of time.  While it"s nice
+    to always load from the source-of-truth (i.e., the files on-disk) -
+    it"s not worth paying the performance penalty (especially at the
+    scale we"re seeing internally) for a negligible benefit.  Locally
+    (with a large test config), this results in a ~5x improvement in
+    timings. More concretely, my test configs were taking ~30ish seconds
+    *without* this diff and ~6ish seconds *with* this diff.
+
+ -- Luis Perez <luisp@yelp.com>  Mon, 24 Feb 2025 09:08:41 -0800
+
 tron (3.2.10) jammy; urgency=medium
 
   * 3.2.10 tagged with 'make release'
