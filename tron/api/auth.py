@@ -2,6 +2,7 @@ import logging
 import os
 from functools import lru_cache
 from typing import NamedTuple
+from typing import Optional
 
 import cachetools.func
 import requests
@@ -49,16 +50,25 @@ class AuthorizationFilter:
             return AuthorizationOutcome(True, "Auth not enabled")
         token = (request.getHeader("Authorization") or "").strip()
         token = token.split()[-1] if token else ""  # removes "Bearer" prefix
+        url_path = request.path.decode()
+        service = url_path.split("/")[-1].split(".", 1)[0] if "/jobs/" in url_path else None
         auth_outcome = self._is_request_authorized_impl(
             # path and method are byte arrays in twisted
-            path=request.path.decode(),
+            path=url_path,
             token=token,
             method=request.method.decode(),
+            service=service,
         )
         return auth_outcome if self.enforce else AuthorizationOutcome(True, "Auth dry-run")
 
     @cachetools.func.ttl_cache(maxsize=AUTH_CACHE_SIZE, ttl=AUTH_CACHE_TTL)
-    def _is_request_authorized_impl(self, path: str, token: str, method: str) -> AuthorizationOutcome:
+    def _is_request_authorized_impl(
+        self,
+        path: str,
+        token: str,
+        method: str,
+        service: Optional[str],
+    ) -> AuthorizationOutcome:
         """Check if API request is authorized
 
         :param str path: API path
@@ -75,6 +85,7 @@ class AuthorizationFilter:
                         "backend": "tron",
                         "token": token,
                         "method": method.lower(),
+                        "service": service,
                     },
                 },
                 timeout=2,

@@ -24,16 +24,17 @@ def test_is_request_authorized(mock_auth_filter):
         "result": {"allowed": True, "reason": "User allowed"}
     }
     assert mock_auth_filter.is_request_authorized(
-        mock_request("/allowed", "aaa.bbb.ccc", "get")
+        mock_request("/api/jobs/foobar.run.2", "aaa.bbb.ccc", "get")
     ) == AuthorizationOutcome(True, "User allowed")
     mock_auth_filter.session.post.assert_called_once_with(
         url="http://localhost:31337/whatever",
         json={
             "input": {
-                "path": "/allowed",
+                "path": "/api/jobs/foobar.run.2",
                 "backend": "tron",
                 "token": "aaa.bbb.ccc",
                 "method": "get",
+                "service": "foobar",
             }
         },
         timeout=2,
