@@ -2,6 +2,7 @@ from unittest.mock import MagicMock
 from unittest.mock import patch
 
 import pytest
+from twisted.web.server import Request
 
 from tron.api.auth import AuthorizationFilter
 from tron.api.auth import AuthorizationOutcome
@@ -14,7 +15,7 @@ def mock_auth_filter():
 
 
 def mock_request(path: str, token: str, method: str):
-    res = MagicMock(path=path.encode(), method=method.encode())
+    res = MagicMock(spec=Request, path=path.encode(), method=method.encode())
     res.getHeader.return_value = token
     return res
 
