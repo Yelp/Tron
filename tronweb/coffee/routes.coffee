@@ -1,8 +1,18 @@
-
 # Routes
+# This file defines the URL structure and navigation flow for Tronweb.
+#
+# Flow:
+# 1. When a URL changes (e.g., #job/name), Backbone matches it to a route handler
+# 2. The route handler creates appropriate models (i.e. from job.coffee, etc.) and views
+# 3. The route handler fetches data from the API
+# 4. Returned data is rendered in the view
 window.modules = window.modules || {}
 module = window.modules.routes = {}
 
+# Backbone router that handles URL navigation and view management
+# Routes follow the pattern: "url/:parameter": "handlerMethod".
+# E.g. navigating to .../#job/my-job-name will call the job method
+# with name = "my-job-name", and this feeds into updateMainView.
 class module.TronRoutes extends Backbone.Router
 
     routes:
@@ -16,6 +26,8 @@ class module.TronRoutes extends Backbone.Router
         "configs":                  "configs"
         "config/:name":             "config"
 
+    # Create a view based on the provided model and viewType. Then, trigger
+    # the model's API call and update the main view with returned content.
     updateMainView: (model, viewType) ->
         view = new viewType(model: model)
         model.fetch()
@@ -82,7 +94,7 @@ class module.TronRoutes extends Backbone.Router
         document.title = "#{name}.#{run}.#{action}"
         mainView.updateMain(view)
 
-
+# Main view that manages our overall page structure
 class MainView extends Backbone.View
 
     initialize: (options) ->
@@ -114,13 +126,13 @@ class MainView extends Backbone.View
         @
 
     renderNav: =>
-        console.log('rendering nav')
         @$('#nav').html @navView.render().el
 
     close: =>
         @trigger('closeView')
 
 
+# URL parameter helpers
 module.splitKeyValuePairs = (pairs) ->
     _.mash(param.split('=') for param in pairs)
 
