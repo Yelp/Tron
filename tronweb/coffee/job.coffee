@@ -1,5 +1,10 @@
-
 # Jobs
+# This file defines the models and views for Jobs and JobRuns.
+#
+# Flow:
+# 1. Routes in routes.coffee match URLs like #job/name or #job/name/run
+# 2. The router creates models from this file (Job, JobRun) and triggers API calls
+# 3. When data returns, the views defined here render the Job information
 window.modules = window.modules || {}
 window.modules.job = module = {}
 
@@ -230,7 +235,7 @@ class window.JobView extends Backbone.View
         </div>
         """
 
-    # TODO: move to JobActionGraphView
+
     renderGraph: =>
         new GraphView(
             model: @model.get('action_graph')
@@ -238,7 +243,7 @@ class window.JobView extends Backbone.View
             height: @$('table.details').height() - 5 # TODO: why -5 to get it flush?
         ).render()
 
-    # TODO: move to JobTimelineView
+
     renderTimeline: =>
         jobRuns = @model.get('runs')[...@sliderView.displayCount]
         jobRuns = (new JobRunTimelineEntry(run, @currentDate) for run in jobRuns)
@@ -346,6 +351,7 @@ formatInterval = (interval) ->
         </span>
     """
 
+# TODO: TRON-1761 - Fix cron validation. Would be nice to not have all these...
 window.formatScheduler = (scheduler) ->
     [icon, value] = switch scheduler.type
         when 'interval' then ['icon-time', formatInterval(scheduler.value)]
