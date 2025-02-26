@@ -1,5 +1,6 @@
-
-# Common view elements
+# Views
+# This file provides reusable view components and UI utilities used across Tronweb (e.g. consistent
+# date formatting, tooltips, filtering, and interactive elements).
 window.modules = window.modules || {}
 window.modules.views = module = {}
 
@@ -225,15 +226,14 @@ class window.RefreshToggleView extends Backbone.View
 
 
 class window.ClickableListEntry extends Backbone.View
-    # A ciew for an element in a list that is clickable
 
     className: ->
         "clickable"
 
     events:
-        "click":    "propogateClick"
+        "click":    "propagateClick"
 
-    propogateClick: (event) =>
+    propagateClick: (event) =>
         if event.button == 0
             document.location = @$('a').first().attr('href')
 
