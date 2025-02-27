@@ -1,1 +1,2 @@
 tron/logging.conf var/lib/tron
+tronweb/ opt/venvs/tron/
