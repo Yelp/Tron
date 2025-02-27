@@ -39,6 +39,10 @@ default_headers = {
 
 def get_sso_auth_token() -> str:
     """Generate an authentication token for the calling user from the Single Sign On provider, if configured"""
+
+    # These imports are here because:
+    # - okta-auth is an internal library, so can never be imported or type-checked in public builds
+    # - there's an annoying circular import with the cmd_utils module
     from okta_auth import get_and_cache_jwt_default  # type: ignore
     from tron.commands.cmd_utils import get_client_config
 
@@ -49,6 +53,7 @@ def get_sso_auth_token() -> str:
 def build_url_request(uri, data, headers=None, method=None):
     headers = headers or default_headers
     enc_data = urllib.parse.urlencode(data).encode() if data else None
+    # Currently implementing auth only for management actions (i.e. POST requests)
     if os.getenv("TRONCTL_API_AUTH") and (data or method.upper() == "POST"):
         token = get_sso_auth_token()
         if token:
