@@ -5,32 +5,21 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v2.5.0
     hooks:
-      - id: trailing-whitespace
-      - id: end-of-file-fixer
-        exclude: CHANGELOG.md
       - id: check-docstring-first
       - id: check-json
       - id: check-yaml
       - id: requirements-txt-fixer
-      - id: fix-encoding-pragma
-        args: [--remove]
       - id: pretty-format-json
         args: [--autofix, --indent, '4', --no-sort-keys]
-  - repo: https://github.com/PyCQA/flake8
-    rev: 5.0.4
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+  # Ruff version.
+    rev: v0.9.9
     hooks:
-      - id: flake8
-        exclude: ^docs/source/conf.py$
-  - repo: https://github.com/asottile/reorder_python_imports
-    rev: v1.9.0
-    hooks:
-      - id: reorder-python-imports
-        args: [--py3-plus]
-  - repo: https://github.com/asottile/pyupgrade
-    rev: v3.3.1
-    hooks:
-      - id: pyupgrade
-        args: [--py38-plus]
+      # Run the linter.
+      - id: ruff
+        args: [ --fix ]
+      # Run the formatter.
+      - id: ruff-format
   - repo: local
     hooks:
       - id: patch-enforce-autospec
@@ -40,8 +29,3 @@ repos:
         entry: contrib/mock_patch_checker.py
         language: script
         files: ^tests/.*\.py$
-  - repo: http://github.com/psf/black
-    rev: 22.3.0
-    hooks:
-      - id: black
-        args: [--target-version, py38]
