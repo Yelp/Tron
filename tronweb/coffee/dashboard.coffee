@@ -1,5 +1,3 @@
-
-# Dashboard
 window.modules = window.modules || {}
 window.modules.dashboard = module = {}
 

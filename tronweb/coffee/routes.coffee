@@ -7,7 +7,7 @@
 # 3. The route handler fetches data from the API
 # 4. Returned data is rendered in the view
 window.modules = window.modules || {}
-module = window.modules.routes = {}
+window.modules.routes = module = {}
 
 # Backbone router that handles URL navigation and view management
 # Routes follow the pattern: "url/:parameter": "handlerMethod".

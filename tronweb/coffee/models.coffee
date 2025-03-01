@@ -1,8 +1,7 @@
-
 # Models
 # This file provides core model functionality and sets up global Backbone behaviour
 window.modules = window.modules || {}
-module = window.modules.models = {}
+window.modules.models = module = {}
 
 # Override Backbone's sync to prepend '/api' to all API URLs
 backboneSync = Backbone.sync
