@@ -1,6 +1,4 @@
-
-# Configs
-
+# TODO: what is this?
 
 class window.NamespaceList extends Backbone.Model
 
@@ -38,7 +36,7 @@ class window.NamespaceListView extends Backbone.View
 
     tagName: "div"
 
-    className: "span8"
+    className: "span12"
 
     template: _.template """
         <h1>
