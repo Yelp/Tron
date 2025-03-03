@@ -1,3 +1,11 @@
+tron (3.2.12) jammy; urgency=medium
+
+  * 3.2.12 tagged with 'make release'
+    Commit: Merge pull request #1030 from Yelp/jfong/TRON-1797-tronweb-
+    path  TRON-1797: Put tronweb in a python-version-agnostic location
+
+ -- Jen Patague <jfong@yelp.com>  Mon, 03 Mar 2025 12:15:00 -0800
+
 tron (3.2.11) jammy; urgency=medium
 
   * 3.2.11 tagged with 'make release'
