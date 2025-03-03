@@ -197,7 +197,7 @@ class window.JobView extends Backbone.View
                     <span id="refresh"></span>
                 </h1>
             </div>
-            <div class="span5 outline-block">
+            <div class="span4 outline-block">
                 <h2>Details</h2>
                 <div>
                 <table class="table details">
@@ -218,7 +218,7 @@ class window.JobView extends Backbone.View
                 </table>
                 </div>
             </div>
-            <div class="span7 outline-block">
+            <div class="span8 outline-block">
                 <h2>Action Graph</h2>
                 <div id="action-graph" class="graph job-view"></div>
             </div>
@@ -239,8 +239,9 @@ class window.JobView extends Backbone.View
     renderGraph: =>
         new GraphView(
             model: @model.get('action_graph')
-            buildContent: (d) -> """<code class="command">#{d.command}</code>"""
-            height: @$('table.details').height() - 5 # TODO: why -5 to get it flush?
+            buildContent: (d) ->
+                window.modules.graph.tooltips.buildTooltipContent(d)
+            height: @$('table.details').height()
         ).render()
 
 
@@ -424,7 +425,7 @@ class window.JobRunView extends Backbone.View
                 </h1>
 
             </div>
-            <div class="span5 outline-block">
+            <div class="span4 outline-block">
                 <h2>Details</h2>
                 <div>
                 <table class="table details">
@@ -449,7 +450,7 @@ class window.JobRunView extends Backbone.View
                 </table>
                 </div>
             </div>
-            <div class="span7 outline-block">
+            <div class="span8 outline-block">
                 <h2>Action Graph</h2>
                 <div id="action-graph" class="graph job-view"></div>
             </div>
@@ -512,16 +513,30 @@ class window.JobRunView extends Backbone.View
         ).render()
 
     popupTemplate: _.template """
-        <div class="top-right-corner"><%= formatState(state) %></div>
-        <code class="command"><%= command || raw_command %></code>
+        <div class="tooltip-header">
+            <h4><%= name %></h4>
+            <span class="state-badge"><%= formatState(state) %></span>
+        </div>
+        <div class="tooltip-content">
+            <code class="command"><%= command || raw_command %></code>
+        </div>
         """
 
     renderGraph: =>
+        @originalActionGraph = @model.get('action_graph')
+
+        @actionLookup = {}
+        for action in @originalActionGraph
+            @actionLookup[action.name] = action
+
         new GraphView(
-            model: @model.get('action_graph')
-            buildContent: @popupTemplate
-            nodeClass: (d) -> "node #{d.state}"
-            height: @$('table.details').height() - 5 # TODO: why -5 to get it flush?
+            model: @originalActionGraph
+            # Look up the full action data before passing to template. This allows us to show action state on the popup tooltip.
+            buildContent: (nodeData) =>
+                window.modules.graph.tooltips.buildTooltipContent(nodeData, {actionLookup: @actionLookup})
+            nodeClass: (d) ->
+                "node #{d.state || 'unknown'}"
+            height: @$('table.details').height()
         ).render()
 
     sortActionRuns: =>
