@@ -30,32 +30,33 @@ exclude = [
     "site-packages",
     "venv",
 ]
-output-format = "github"
 show-fixes = true
 
 [tool.ruff.lint]
 select = [
-    "I",     # isort - import order
-    "UP",    # pyupgrade
-    "T10",   # debugger
-    "E",     # pycodestyle
-    "W",     # pycodestyle
-    "F",     # pyflakes
+    "I",   # isort - import order
+    "UP",  # pyupgrade
+    "T10", # debugger
+    "E",   # pycodestyle errors
+    "W",   # pycodestyle warnings
+    "F",   # pyflakes
 ]
 
 ignore = [
     # pycodestyle errors
-    "E203",  # whitespace before ':'
-    "E231",  # missing whitespace after ','
-    "E241",  # multiple spaces after ','
-    "E251",  # unexpected spaces around keyword / parameter equals
-    "E265",  # block comment should start with '# '
-    "E501",  # line too long
-
+    "E203", # whitespace before ':'
+    "E231", # missing whitespace after ','
+    "E241", # multiple spaces after ','
+    "E251", # unexpected spaces around keyword / parameter equals
+    "E265", # block comment should start with '# '
+    "E501", # line too long
+    "E721", # Use is and is not for type comparisons, or isinstance() for isinstance checks
     # pyupgrade
-    "UP006", # pyupgrade Use `builtins.type` instead of `typing.Type` for type annotation
-    "UP031", # pyupgrade Use format specifiers instead of percent format
-    "UP035", # pyupgrade `typing.Type` is deprecated, use `builtins.type` instead
+    "UP006", # Use `builtins.type` instead of `typing.Type` for type annotation
+    "UP031", # Use format specifiers instead of percent format
+    "UP032", # Use f-string instead of format call
+    "UP035", # `typing.Type` is deprecated, use `builtins.type` instead
+    "UP036", # Version block is outdated for minimum Python version
 ]
 
 [tool.ruff.format]
