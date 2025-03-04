@@ -6,6 +6,7 @@ assertions.
 These assertions should **not** be used in new code, and are only for migrating
 old tests.
 """
+
 import pytest
 
 

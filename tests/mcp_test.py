@@ -19,7 +19,6 @@ from tron.serialize.runstate import statemanager
 
 
 class TestMasterControlProgram:
-
     TEST_CONFIG = "tests/data/test_config.yaml"
 
     @pytest.fixture(autouse=True)

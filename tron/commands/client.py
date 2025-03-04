@@ -1,6 +1,7 @@
 """
 A command line http client used by tronview, tronctl, and tronfig
 """
+
 import logging
 import os
 import urllib.error
@@ -11,6 +12,7 @@ from typing import Dict
 
 import tron
 from tron.config.schema import MASTER_NAMESPACE
+
 
 try:
     import simplejson

@@ -13,6 +13,7 @@ from tron import ssh
 from tron.utils import collections
 from tron.utils import twistedutils
 
+
 log = logging.getLogger(__name__)
 
 # We should also only wait a certain amount of time for a new channel to be
@@ -450,7 +451,6 @@ class Node:
                 self._fail_run(run, None)
             elif run.state == RUN_STATE_STARTING:
                 if run.channel and run.channel.start_defer is not None:
-
                     # This means our run IS still waiting to start. There
                     # should be an outstanding timeout sitting on this guy as
                     # well. We'll just short circuit it.
@@ -458,7 +458,7 @@ class Node:
                 else:
                     # Doesn't seem like this should ever happen.
                     log.warning(
-                        "Run %r caught in starting state, but" " start_defer is over.",
+                        "Run %r caught in starting state, but start_defer is over.",
                         run_id,
                     )
                     self._fail_run(run, None)

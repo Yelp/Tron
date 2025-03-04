@@ -3,6 +3,7 @@ from functools import partial
 import staticconf  # type: ignore
 from staticconf import config
 
+
 FILENAME = "/nail/srv/configs/tron.yaml"
 NAMESPACE = "tron"
 

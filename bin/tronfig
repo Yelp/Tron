@@ -13,6 +13,7 @@ from tron.config import ConfigError
 from tron.config import manager
 from tron.config import schema
 
+
 log = logging.getLogger("tronfig")
 
 
@@ -56,7 +57,7 @@ def parse_cli():
         "--validate-dir",
         action="store_true",
         dest="validate_dir",
-        help="Full validation of a folder, don't upload, " "same as -V but checks for more edge-cases",
+        help="Full validation of a folder, don't upload, same as -V but checks for more edge-cases",
     )
     parser.add_argument(
         "-n",

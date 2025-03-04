@@ -49,9 +49,7 @@ class TestRegister(TestCase):
             "tron.bin.action_runner.os.makedirs", autospec=True
         ) as self.mock_makedirs, mock.patch(
             "tron.bin.action_runner.os.access", autospec=True
-        ) as self.mock_access, mock.patch(
-            "tron.bin.action_runner.StatusFile", autospec=True
-        ) as self.mock_status_file:
+        ) as self.mock_access, mock.patch("tron.bin.action_runner.StatusFile", autospec=True) as self.mock_status_file:
             self.output_path = "/bogus/path/does/not/exist"
             self.command = "command"
             self.run_id = "Job.test.1"

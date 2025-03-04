@@ -1,6 +1,7 @@
 """
 Test cases for the web services interface to tron
 """
+
 from unittest import mock
 from unittest.mock import MagicMock
 
@@ -21,6 +22,7 @@ from tron.core import job
 from tron.core import jobrun
 from tron.core.job_collection import JobCollection
 from tron.core.job_scheduler import JobScheduler
+
 
 with mock.patch(
     "tron.api.async_resource.AsyncResource.bounded",
@@ -129,7 +131,10 @@ class TestActionRunResource(WWWTestCase):
     def setup_resource(self):
         self.job_run = mock.MagicMock()
         self.action_run = mock.MagicMock(output_path=["one"])
-        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True,), mock.patch(
+        with mock.patch(
+            "tron.config.static_config.load_yaml_file",
+            autospec=True,
+        ), mock.patch(
             "tron.config.static_config.build_configuration_watcher",
             autospec=True,
         ):

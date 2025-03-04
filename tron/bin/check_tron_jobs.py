@@ -18,6 +18,7 @@ from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
 from tron.utils.logreader import get_superregion
 
+
 PRECIOUS_JOB_ATTR = "check_that_every_day_has_a_successful_run"
 NUM_PRECIOUS = 7
 
@@ -91,7 +92,7 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
     relevant_job_run, last_state = get_relevant_run_and_state(job_content)
     if relevant_job_run is None:
         kwargs["output"] = (
-            f"CRIT: {job['name']} hasn't had a successful " f"run yet on {cluster}.\n{pretty_print_job(job_content)}"
+            f"CRIT: {job['name']} hasn't had a successful run yet on {cluster}.\n{pretty_print_job(job_content)}"
         )
         kwargs["status"] = 2
         return kwargs
@@ -175,7 +176,7 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
         f"{precious_runs_note}"
     )
     if action_run_details:
-        kwargs["output"] += "\nHere is the last action:\n" f"{pretty_print_actions(action_run_details)}\n\n"
+        kwargs["output"] += f"\nHere is the last action:\n{pretty_print_actions(action_run_details)}\n\n"
     kwargs["output"] += (
         "And the job run view:\n"
         f"{pretty_print_job_run(relevant_job_run)}\n\n"

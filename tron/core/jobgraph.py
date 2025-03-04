@@ -7,6 +7,7 @@ from tron.core.action import Action
 from tron.core.actiongraph import ActionGraph
 from tron.utils import maybe_decode
 
+
 AdjListEntry = namedtuple("AdjListEntry", ["action_name", "is_trigger"])
 
 

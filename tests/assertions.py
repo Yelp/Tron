@@ -1,6 +1,7 @@
 """
- Assertions for testify.
+Assertions for testify.
 """
+
 from testifycompat import assert_in
 from testifycompat import assert_not_reached
 

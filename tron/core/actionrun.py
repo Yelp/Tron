@@ -1,6 +1,7 @@
 """
- tron.core.actionrun
+tron.core.actionrun
 """
+
 import datetime
 import json
 import logging
@@ -394,7 +395,7 @@ class ActionRun(Observable, Persistable):
         self.trigger_timeout_call = None
 
         self.action_command = None
-        self.in_delay = None  # type: Optional[DelayedCall]
+        self.in_delay: Optional[DelayedCall] = None
 
     @property
     def state(self):
@@ -598,7 +599,7 @@ class ActionRun(Observable, Persistable):
             if self.last_attempt is not None and self.last_attempt.end_time is None:
                 self.last_attempt.exit(exit_status, self.end_time)
             log.info(
-                f"{self} completed with {target}, transitioned to " f"{self.state}, exit status: {exit_status}",
+                f"{self} completed with {target}, transitioned to {self.state}, exit status: {exit_status}",
             )
             return self.transition_and_notify(target)
         else:
@@ -658,7 +659,7 @@ class ActionRun(Observable, Persistable):
     ) -> Optional[Union[bool, ActionCommand]]:
         if self.is_done:
             log.info(
-                f"{self} got exit code {exit_status} but already in terminal " f'state "{self.state}", not retrying',
+                f"{self} got exit code {exit_status} but already in terminal state \"{self.state}\", not retrying",
             )
             return None
         if self.last_attempt is not None:
@@ -1013,7 +1014,7 @@ class SSHActionRun(ActionRun, Observer):
     def handle_unknown(self):
         if isinstance(self.action_runner, NoActionRunnerFactory):
             log.info(
-                f"Unable to recover action_run {self.id}: " "action_run has no action_runner",
+                f"Unable to recover action_run {self.id}: action_run has no action_runner",
             )
             return self.fail_unknown()
 
@@ -1030,7 +1031,7 @@ class SSHActionRun(ActionRun, Observer):
         log.info(f"Creating recovery run for actionrun {self.id}")
         if isinstance(self.action_runner, NoActionRunnerFactory):
             log.info(
-                f"Unable to recover action_run {self.id}: " "action_run has no action_runner",
+                f"Unable to recover action_run {self.id}: action_run has no action_runner",
             )
             return None
 
@@ -1097,7 +1098,7 @@ class SSHActionRun(ActionRun, Observer):
 
     def submit_recovery_command(self, recovery_run, recovery_action_command):
         log.info(
-            f"Submitting recovery job with command {recovery_action_command.command} " f"to node {recovery_run.node}",
+            f"Submitting recovery job with command {recovery_action_command.command} to node {recovery_run.node}",
         )
         try:
             deferred = recovery_run.node.submit_command(recovery_action_command)
@@ -1170,7 +1171,7 @@ class MesosActionRun(ActionRun, Observer):
     def recover(self):
         if not self.machine.check("running"):
             log.error(
-                f"{self} unable to transition from {self.machine.state}" "to running for recovery",
+                f"{self} unable to transition from {self.machine.state}to running for recovery",
             )
             return
 
@@ -1193,7 +1194,7 @@ class MesosActionRun(ActionRun, Observer):
         )
         if not task:
             log.warning(
-                f"{self} cannot recover, Mesos is disabled or " f"invalid task ID {last_attempt.mesos_task_id!r}",
+                f"{self} cannot recover, Mesos is disabled or invalid task ID {last_attempt.mesos_task_id!r}",
             )
             self.fail_unknown()
             return
@@ -1416,8 +1417,7 @@ class KubernetesActionRun(ActionRun, Observer):
             raise
         if not task:
             log.warning(
-                f"{self} cannot recover, Kubernetes is disabled or "
-                f"invalid task ID {last_attempt.kubernetes_task_id!r}",
+                f"{self} cannot recover, Kubernetes is disabled or invalid task ID {last_attempt.kubernetes_task_id!r}",
             )
             self.fail_unknown()
             return None
@@ -1479,7 +1479,6 @@ class KubernetesActionRun(ActionRun, Observer):
     def _exit_unsuccessful(
         self, exit_status=None, retry_original_command=True, non_retryable_exit_codes=[]
     ) -> Optional[Union[bool, ActionCommand]]:
-
         k8s_cluster = KubernetesClusterRepository.get_cluster()
         non_retryable_exit_codes = [] if not k8s_cluster else k8s_cluster.non_retryable_exit_codes
 

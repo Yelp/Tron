@@ -1,6 +1,7 @@
 """
- Daemonize trond.
+Daemonize trond.
 """
+
 import contextlib
 import logging.config
 import os
@@ -8,7 +9,7 @@ import signal
 import threading
 import time
 
-import ipdb
+import ipdb  # noqa: T100
 import pkg_resources
 from twisted.internet import defer
 from twisted.internet import reactor
@@ -21,6 +22,7 @@ from tron.mesos import MesosClusterRepository
 from tron.utils import chdir
 from tron.utils import flock
 from tron.utils import signals
+
 
 log = logging.getLogger(__name__)
 
@@ -171,4 +173,4 @@ class TronDaemon:
         reactor.callLater(0, self.mcp.reconfigure)
 
     def _handle_debug(self, _signal_number, _stack_frame):
-        ipdb.set_trace()
+        ipdb.set_trace()  # noqa: T100

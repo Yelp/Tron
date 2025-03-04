@@ -252,7 +252,10 @@ def test_job_watch_notifies_about_runs(mock_job):
         run_time="some_time",
         node="node",
     )
-    with mock.patch.object(mock_job, "handler",) as mock_handler, mock.patch.object(
+    with mock.patch.object(
+        mock_job,
+        "handler",
+    ) as mock_handler, mock.patch.object(
         mock_job,
         "notify",
     ) as mock_notify:

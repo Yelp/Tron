@@ -1,6 +1,7 @@
 """
 Common code for command line utilities (see bin/)
 """
+
 import argparse
 import difflib
 import logging
@@ -10,6 +11,7 @@ import sys
 import tron
 from tron import yaml
 from tron.commands.client import Client
+
 
 log = logging.getLogger("tron.commands")
 

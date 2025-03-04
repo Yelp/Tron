@@ -14,6 +14,7 @@ import yaml
 from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
 
+
 try:
     from logreader.readers import S3LogsReader
 
@@ -144,7 +145,6 @@ def read_log_stream_for_action_run(
 
     paasta_logs = PaaSTALogs(component, paasta_cluster, action_run_id)
     stream_name = paasta_logs.stream_name
-    end_date: Optional[datetime.date]
 
     # S3 reader accepts datetime objects and respects timezone information
     # if min_date and max_date timezone is missing, astimezone() will assume local timezone and convert it to UTC

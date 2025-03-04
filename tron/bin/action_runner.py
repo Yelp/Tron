@@ -2,6 +2,7 @@
 """
 Write pid and stdout/stderr to a standard location before execing a command.
 """
+
 import argparse
 import contextlib
 import logging
@@ -14,6 +15,7 @@ from typing import Dict
 from typing import Optional
 
 from tron import yaml
+
 
 STATUS_FILE = "status"
 

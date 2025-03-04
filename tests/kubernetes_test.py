@@ -37,7 +37,10 @@ def mock_kubernetes_task():
 
 @pytest.fixture
 def mock_kubernetes_cluster():
-    with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
+    with mock.patch(
+        "tron.kubernetes.PyDeferredQueue",
+        autospec=True,
+    ), mock.patch(
         "tron.kubernetes.TaskProcessor",
         autospec=True,
     ), mock.patch(
@@ -52,7 +55,10 @@ def mock_kubernetes_cluster():
 
 @pytest.fixture
 def mock_disabled_kubernetes_cluster():
-    with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
+    with mock.patch(
+        "tron.kubernetes.PyDeferredQueue",
+        autospec=True,
+    ), mock.patch(
         "tron.kubernetes.TaskProcessor",
         autospec=True,
     ), mock.patch(
@@ -741,7 +747,10 @@ def test_set_enabled_disable(mock_kubernetes_cluster):
 
 def test_configure_default_volumes():
     # default_volume validation is done at config time, we just need to validate we are setting it
-    with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
+    with mock.patch(
+        "tron.kubernetes.PyDeferredQueue",
+        autospec=True,
+    ), mock.patch(
         "tron.kubernetes.TaskProcessor",
         autospec=True,
     ), mock.patch(

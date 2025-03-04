@@ -4,6 +4,7 @@ from tron.core.job import Job
 from tron.utils import collections
 from tron.utils import proxy
 
+
 log = logging.getLogger(__name__)
 
 

@@ -17,6 +17,7 @@ import tron.metrics as metrics
 from tron.actioncommand import ActionCommand
 from tron.utils.queue import PyDeferredQueue
 
+
 TASK_LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
 TASK_OUTPUT_LOGGER = "tron.mesos.task_output"
 CLUSTERMAN_YAML_FILE_PATH = "/nail/srv/configs/clusterman.yaml"
@@ -372,7 +373,7 @@ class MesosCluster:
     def handle_next_event(self, deferred_result=None):
         if self.deferred and not self.deferred.called:
             log.warning(
-                "Already have handlers waiting for next event in queue, " "not adding more",
+                "Already have handlers waiting for next event in queue, not adding more",
             )
             return
         self.deferred = self.queue.get()

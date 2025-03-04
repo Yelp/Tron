@@ -7,6 +7,7 @@ python tools/migration/migrate_config_0.5.1_to_0.5.2.py \
     --source old_config_filename \
     --dest new_config_dir
 """
+
 import optparse
 import os
 

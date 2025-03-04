@@ -10,6 +10,7 @@ from testifycompat import assert_gt
 from tests import sandbox
 from tron.core import actionrun
 
+
 BASIC_CONFIG = """
 ssh_options:
     agent: true

@@ -9,6 +9,7 @@ import bsddb3  # type: ignore
 
 from tron.utils import maybe_decode
 
+
 log = logging.getLogger(__name__)
 
 

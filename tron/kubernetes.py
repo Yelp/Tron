@@ -30,6 +30,7 @@ from tron.serialize.filehandler import OutputStreamSerializer
 from tron.utils import exitcode
 from tron.utils.queue import PyDeferredQueue
 
+
 if TYPE_CHECKING:
     from tron.serialize.runstate.statemanager import StateChangeWatcher
 
@@ -179,7 +180,7 @@ class KubernetesTask(ActionCommand):
                     # The else statement should handle the situation gracefully when either current/last state are missing
                     if event_missing_state and event_missing_previous_state:
                         self.log.error(
-                            f"Got an event with missing state - assuming {'success' if exit_code==0 else 'failure'}."
+                            f"Got an event with missing state - assuming {'success' if exit_code == 0 else 'failure'}."
                         )
                         self.log.error(f"Event with missing state: {raw_object}")
                     else:

@@ -1,5 +1,7 @@
 """Implements the Observer/Observable pattern,"""
+
 import logging
+
 
 log = logging.getLogger(__name__)
 

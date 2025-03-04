@@ -1,4 +1,5 @@
 """Utilities used for configuration parsing and validation."""
+
 import datetime
 import functools
 import itertools
@@ -7,6 +8,7 @@ from string import Formatter
 
 from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
+
 
 MAX_IDENTIFIER_LENGTH = 255
 IDENTIFIER_RE = re.compile(r"^[A-Za-z_][\w\-]{0,254}$")

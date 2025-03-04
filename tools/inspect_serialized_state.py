@@ -7,6 +7,7 @@ Count of jobs
 Table of Jobs with start date of last run
 
 """
+
 import optparse
 
 from tron.config import manager

@@ -1,9 +1,10 @@
 """
- Classes which create external representations of core objects. This allows
- the core objects to remain decoupled from the API and clients. These classes
- act as an adapter between the data format api clients expect, and the internal
- data of an object.
+Classes which create external representations of core objects. This allows
+the core objects to remain decoupled from the API and clients. These classes
+act as an adapter between the data format api clients expect, and the internal
+data of an object.
 """
+
 import functools
 import os.path
 import time
@@ -342,7 +343,6 @@ class ActionRunGraphAdapter:
 
 
 class JobRunAdapter(RunAdapter):
-
     field_names = [
         "id",
         "run_num",
@@ -384,7 +384,6 @@ class JobRunAdapter(RunAdapter):
 
 
 class JobAdapter(ReprAdapter):
-
     field_names = ["status", "all_nodes", "allow_overlap", "queueing"]
     translated_field_names = [
         "name",
@@ -469,7 +468,6 @@ class JobAdapter(ReprAdapter):
 
 
 class JobIndexAdapter(ReprAdapter):
-
     translated_field_names = ["name", "actions"]
 
     def get_name(self):
@@ -486,7 +484,6 @@ class JobIndexAdapter(ReprAdapter):
 
 
 class SchedulerAdapter(ReprAdapter):
-
     translated_field_names = ["value", "type", "jitter"]
 
     def get_value(self):
@@ -500,7 +497,6 @@ class SchedulerAdapter(ReprAdapter):
 
 
 class EventAdapter(ReprAdapter):
-
     field_names = ["name", "entity", "time"]
     translated_field_names = ["level"]
 

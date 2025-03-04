@@ -13,6 +13,7 @@ from tron.core.job import Job
 from tron.core.jobrun import JobRun
 from tron.serialize import runstate
 
+
 # Max DynamoDB object size is 400KB. Since we save two copies of the object (pickled and JSON),
 # we need to consider this max size applies to the entire item, so we use a max size of 200KB
 # for each version.

@@ -21,6 +21,7 @@ from tron.commands import client
 from tron.config import manager
 from tron.config import schema
 
+
 # Used for getting the locations of the executable
 test_dir, _ = os.path.split(__file__)
 repo_root, _ = os.path.split(test_dir)
@@ -93,7 +94,6 @@ class TronSandboxException(Exception):
 
 
 class SandboxTestCase(TestCase):
-
     _suites = ["sandbox"]
 
     sandbox = None

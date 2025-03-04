@@ -22,7 +22,6 @@ from tron.core import job
 
 
 class MockAdapter(ReprAdapter):
-
     field_names = ["one", "two"]
     translated_field_names = ["three", "four"]
 

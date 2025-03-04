@@ -32,6 +32,7 @@ from tron.config.schedule_parse import ConfigDailyScheduler
 from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import MASTER_NAMESPACE
 
+
 BASE_CONFIG = dict(
     ssh_options=dict(agent=False, identities=["tests/test_id_rsa"]),
     time_zone="EST",
@@ -120,7 +121,7 @@ def make_k8s_options():
 
 
 def make_action(**kwargs):
-    kwargs.setdefault("name", "action"),
+    (kwargs.setdefault("name", "action"),)
     kwargs.setdefault("command", "command")
     kwargs.setdefault("executor", schema.ExecutorTypes.ssh.value)
     kwargs.setdefault("requires", ())
@@ -129,7 +130,7 @@ def make_action(**kwargs):
 
 
 def make_cleanup_action(**kwargs):
-    kwargs.setdefault("name", "cleanup"),
+    (kwargs.setdefault("name", "cleanup"),)
     kwargs.setdefault("command", "command")
     kwargs.setdefault("executor", schema.ExecutorTypes.ssh.value)
     kwargs.setdefault("expected_runtime", datetime.timedelta(1))
@@ -743,7 +744,7 @@ class TestJobConfig(TestCase):
             **BASE_CONFIG,
         )
 
-        expected_message = "jobs.MASTER.test_job1.action1 has a dependency " '"action" that is not in the same job!'
+        expected_message = "jobs.MASTER.test_job1.action1 has a dependency \"action\" that is not in the same job!"
         exception = assert_raises(
             ConfigError,
             valid_config,

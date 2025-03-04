@@ -38,7 +38,11 @@ class TronDaemonTestCase(TestCase):
             assert mock_flock.call_count == 0
 
     def test_run_uses_context(self):
-        with mock.patch("tron.trondaemon.setup_logging", mock.Mock(), autospec=None,), mock.patch(
+        with mock.patch(
+            "tron.trondaemon.setup_logging",
+            mock.Mock(),
+            autospec=None,
+        ), mock.patch(
             "tron.trondaemon.no_daemon_context",
             mock.Mock(),
             autospec=None,

@@ -11,6 +11,7 @@ from tron.config import manager
 from tron.config import schema
 from tron.serialize.runstate.statemanager import PersistenceManagerFactory
 
+
 # Default values for arguments
 DEFAULT_WORKING_DIR = "/var/lib/tron/"
 DEFAULT_CONF_PATH = "config/"

@@ -43,7 +43,6 @@ def build_mock_job():
 
 
 class TestJobRun:
-
     now = datetime.datetime(2012, 3, 14, 15, 9, 20, tzinfo=None)
     now_with_tz = datetime.datetime(2012, 3, 14, 15, 9, 20, tzinfo=pytz.utc)
 
@@ -501,7 +500,6 @@ class TestJobRunFromState(TestCase):
 
 
 class MockJobRun(MagicMock):
-
     manual = False
 
     node = "anode"

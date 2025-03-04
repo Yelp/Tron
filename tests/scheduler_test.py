@@ -49,7 +49,6 @@ class TestSchedulerFromConfig(TestCase):
 
 
 class GeneralSchedulerTestCase(testingutils.MockTimeTestCase):
-
     now = datetime.datetime.now().replace(hour=15, minute=0)
 
     def expected_time(self, date):
@@ -87,7 +86,6 @@ class GeneralSchedulerTestCase(testingutils.MockTimeTestCase):
 
 
 class GeneralSchedulerTimeTestBase(testingutils.MockTimeTestCase):
-
     now = datetime.datetime(2012, 3, 14, 15, 9, 26)
 
     @setup
@@ -96,7 +94,6 @@ class GeneralSchedulerTimeTestBase(testingutils.MockTimeTestCase):
 
 
 class GeneralSchedulerTodayTest(GeneralSchedulerTimeTestBase):
-
     now = datetime.datetime.now().replace(hour=12, minute=0)
 
     def test(self):
@@ -115,7 +112,6 @@ class GeneralSchedulerTodayTest(GeneralSchedulerTimeTestBase):
 
 
 class GeneralSchedulerTomorrowTest(GeneralSchedulerTimeTestBase):
-
     now = datetime.datetime.now().replace(hour=15, minute=0)
 
     def test(self):
@@ -135,7 +131,6 @@ class GeneralSchedulerTomorrowTest(GeneralSchedulerTimeTestBase):
 
 
 class GeneralSchedulerLongJobRunTest(GeneralSchedulerTimeTestBase):
-
     now = datetime.datetime.now().replace(hour=12, minute=0)
 
     def test_long_jobs_dont_wedge_scheduler(self):
@@ -153,7 +148,6 @@ class GeneralSchedulerLongJobRunTest(GeneralSchedulerTimeTestBase):
 
 
 class GeneralSchedulerDSTTest(testingutils.MockTimeTestCase):
-
     now = datetime.datetime(2011, 11, 6, 1, 10, 0)
     now_utc = timeutils.current_time(tz=pytz.timezone("UTC"))
 
@@ -258,7 +252,6 @@ def scheduler_from_config(config):
 
 
 class ComplexParserTest(testingutils.MockTimeTestCase):
-
     now = datetime.datetime(2011, 6, 1)
 
     def test_parse_all(self):
