@@ -24,7 +24,8 @@ module.GraphUtils = {
         }
 
     getNodeWidth: (node) ->
-        # Use canvas to measure text width accurately
+        # Use canvas to measure text width accurately. We need to do all this because Cytoscape no longer
+        # supports setting the node width as 'label'. See https://github.com/cytoscape/cytoscape.js/issues/2713
         ctx = document.createElement('canvas').getContext("2d")
         fStyle = node.pstyle('font-style').strValue
         size = node.pstyle('font-size').pfValue + 'px'
@@ -32,7 +33,6 @@ module.GraphUtils = {
         weight = node.pstyle('font-weight').strValue
         ctx.font = "#{fStyle} #{weight} #{size} #{family}"
 
-        # Add padding similar to what you had before
         return ctx.measureText(node.data('name')).width + 20
 
     defaultStylesheet: [
@@ -237,6 +237,8 @@ class window.GraphView extends Backbone.View
             }
             style: module.GraphUtils.defaultStylesheet
             layout: module.GraphUtils.getDefaultLayout()
+            # We cap the zoom in and out. Turns out if you don't do this it is extremely easy to lose the
+            # graph. This + the reset button should make this a non-issue.
             minZoom: 0.2
             maxZoom: 3
         })
