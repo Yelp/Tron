@@ -6,6 +6,7 @@ Update tron state from k8s api if tron has not yet updated correctly
 
 This will search for completed pods in the cluster specified in the kubeconfig in the `tron` namespace and use tronctl to transition any whose states do not match.
 """
+
 import argparse
 import base64
 import hashlib
@@ -23,6 +24,7 @@ from task_processing.plugins.kubernetes.kube_client import KubeClient
 
 from tron.commands.client import Client
 from tron.commands.cmd_utils import get_client_config
+
 
 POD_STATUS_TO_TRON_STATE = {
     "Succeeded": "success",
@@ -52,7 +54,7 @@ def limit_size_with_hash(name: str, limit: int = 63, suffix: int = 4) -> str:
     if len(name) > limit:
         digest = hashlib.md5(name.encode()).digest()
         hash = base64.b32encode(digest).decode().replace("=", "").lower()
-        return f"{name[:(limit-suffix-1)]}-{hash[:suffix]}"
+        return f"{name[: (limit - suffix - 1)]}-{hash[:suffix]}"
     else:
         return name
 

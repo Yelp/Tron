@@ -6,6 +6,7 @@ contain a validated configuration.
 WARNING: it is *NOT* safe to delete classes that are being validated (or their attributes) if there are any references to them in DynamoDB until TRON-2200 is complete! (See DAR-2328)
 NOTE: this means that reverting a change that adds a new attribute is not safe :)
 """
+
 import datetime
 import getpass
 import itertools
@@ -66,6 +67,7 @@ from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
 from tron.config.schema import TronConfig
 
+
 log = logging.getLogger(__name__)
 
 
@@ -89,7 +91,7 @@ def build_format_string_validator(context_object):
         except (KeyError, ValueError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
             raise ConfigError(error_msg % (e, config_context.path, value))
-        except (TypeError) as e:
+        except TypeError as e:
             error_msg = "Wrong command format %s: %s at %s"
             raise ConfigError(error_msg % (value, e, config_context.path))
 

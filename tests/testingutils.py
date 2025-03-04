@@ -10,6 +10,7 @@ from testifycompat import teardown
 from testifycompat import TestCase
 from tron.utils import timeutils
 
+
 log = logging.getLogger(__name__)
 
 # TODO: remove when replaced with tron.eventloop
@@ -39,7 +40,6 @@ class MockReactorTestCase(TestCase):
 
 # TODO: remove
 class MockTimeTestCase(TestCase):
-
     now = None
 
     @setup

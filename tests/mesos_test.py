@@ -273,7 +273,10 @@ class TestMesosTask(TestCase):
         assert self.task.is_complete
 
     def test_log_event_error(self):
-        with mock.patch.object(self.task, "log_event_info",) as mock_log_event, mock.patch.object(
+        with mock.patch.object(
+            self.task,
+            "log_event_info",
+        ) as mock_log_event, mock.patch.object(
             self.task.log,
             "warning",
         ) as mock_log:
@@ -303,10 +306,16 @@ class TestMesosTask(TestCase):
 class TestMesosCluster(TestCase):
     @setup_teardown
     def setup_mocks(self):
-        with mock.patch("tron.mesos.PyDeferredQueue", autospec=True,) as queue_cls, mock.patch(
+        with mock.patch(
+            "tron.mesos.PyDeferredQueue",
+            autospec=True,
+        ) as queue_cls, mock.patch(
             "tron.mesos.TaskProcessor",
             autospec=True,
-        ) as processor_cls, mock.patch("tron.mesos.Subscription", autospec=True,) as runner_cls, mock.patch(
+        ) as processor_cls, mock.patch(
+            "tron.mesos.Subscription",
+            autospec=True,
+        ) as runner_cls, mock.patch(
             "tron.mesos.get_mesos_leader",
             autospec=True,
         ) as mock_get_leader:

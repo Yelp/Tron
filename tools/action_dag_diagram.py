@@ -1,13 +1,14 @@
 """
- Create a graphviz diagram from a Tron Job configuration.
+Create a graphviz diagram from a Tron Job configuration.
 
- Usage:
-    python tools/action_dag_diagram.py -c <config> -n <job_name>
+Usage:
+   python tools/action_dag_diagram.py -c <config> -n <job_name>
 
- This will create a file named <job_name>.dot
- You can create a diagram using:
-    dot -Tpng -o <job_name>.png <job_name>.dot
+This will create a file named <job_name>.dot
+You can create a diagram using:
+   dot -Tpng -o <job_name>.png <job_name>.dot
 """
+
 import optparse
 
 from tron.config import manager

@@ -1,6 +1,7 @@
 """
 Parse and validate scheduler configuration and return immutable structures.
 """
+
 import calendar
 import datetime
 import re
@@ -10,6 +11,7 @@ from tron.config import config_utils
 from tron.config import ConfigError
 from tron.config import schema
 from tron.utils import crontab
+
 
 ConfigGenericSchedule = schema.config_object_factory(
     "ConfigGenericSchedule",

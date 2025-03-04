@@ -7,6 +7,7 @@ Compatibility fixtures for migrating code from testify to py.test
     a class_* fixture that is not attached to a class-level method, so your
     tests will probably fail.
 """
+
 import pytest
 
 

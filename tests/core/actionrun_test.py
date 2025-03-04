@@ -966,7 +966,6 @@ class TestSSHActionRunRecover:
 
 
 class TestActionRunStateRestore:
-
     now = datetime.datetime(2012, 3, 14, 15, 19)
 
     @pytest.fixture(autouse=True)
@@ -1633,16 +1632,19 @@ class TestMesosActionRun:
 
             mock_get_cluster = mock_cluster_repo.get_cluster
             mock_get_cluster.assert_called_once_with()
-            mock_get_cluster.return_value.create_task.assert_called_once_with(
-                action_run_id=self.action_run.id,
-                command=self.command,
-                serializer=serializer,
-                task_id="my_mesos_id",
-                extra_volumes=[e._asdict() for e in self.extra_volumes],
-                constraints=[["an attr", "an op", "a val"]],
-                docker_parameters=[{"key": "init", "value": "true"}],
-                **self.other_task_kwargs,
-            ), mock_get_cluster.return_value.create_task.calls
+            (
+                mock_get_cluster.return_value.create_task.assert_called_once_with(
+                    action_run_id=self.action_run.id,
+                    command=self.command,
+                    serializer=serializer,
+                    task_id="my_mesos_id",
+                    extra_volumes=[e._asdict() for e in self.extra_volumes],
+                    constraints=[["an attr", "an op", "a val"]],
+                    docker_parameters=[{"key": "init", "value": "true"}],
+                    **self.other_task_kwargs,
+                ),
+                mock_get_cluster.return_value.create_task.calls,
+            )
             task = mock_get_cluster.return_value.create_task.return_value
             mock_get_cluster.return_value.recover.assert_called_once_with(task)
             mock_watch.assert_called_once_with(task)
@@ -1881,31 +1883,34 @@ class TestKubernetesActionRun:
 
             mock_get_cluster = mock_cluster_repo.get_cluster
             mock_get_cluster.assert_called_once_with()
-            mock_get_cluster.return_value.create_task.assert_called_once_with(
-                action_run_id=mock_k8s_action_run.id,
-                command=last_attempt.rendered_command,
-                cpus=mock_k8s_action_run.command_config.cpus,
-                mem=mock_k8s_action_run.command_config.mem,
-                disk=mock_k8s_action_run.command_config.disk,
-                docker_image=mock_k8s_action_run.command_config.docker_image,
-                env=mock.ANY,
-                secret_env=mock_k8s_action_run.command_config.secret_env,
-                field_selector_env=mock_k8s_action_run.command_config.field_selector_env,
-                serializer=serializer,
-                volumes=mock_k8s_action_run.command_config.extra_volumes,
-                secret_volumes=mock_k8s_action_run.command_config.secret_volumes,
-                projected_sa_volumes=mock_k8s_action_run.command_config.projected_sa_volumes,
-                cap_add=mock_k8s_action_run.command_config.cap_add,
-                cap_drop=mock_k8s_action_run.command_config.cap_drop,
-                task_id=last_attempt.kubernetes_task_id,
-                node_selectors=mock_k8s_action_run.command_config.node_selectors,
-                node_affinities=mock_k8s_action_run.command_config.node_affinities,
-                topology_spread_constraints=mock_k8s_action_run.command_config.topology_spread_constraints,
-                pod_labels=mock_k8s_action_run.command_config.labels,
-                pod_annotations=mock_k8s_action_run.command_config.annotations,
-                service_account_name=mock_k8s_action_run.command_config.service_account_name,
-                ports=mock_k8s_action_run.command_config.ports,
-            ), mock_get_cluster.return_value.create_task.calls
+            (
+                mock_get_cluster.return_value.create_task.assert_called_once_with(
+                    action_run_id=mock_k8s_action_run.id,
+                    command=last_attempt.rendered_command,
+                    cpus=mock_k8s_action_run.command_config.cpus,
+                    mem=mock_k8s_action_run.command_config.mem,
+                    disk=mock_k8s_action_run.command_config.disk,
+                    docker_image=mock_k8s_action_run.command_config.docker_image,
+                    env=mock.ANY,
+                    secret_env=mock_k8s_action_run.command_config.secret_env,
+                    field_selector_env=mock_k8s_action_run.command_config.field_selector_env,
+                    serializer=serializer,
+                    volumes=mock_k8s_action_run.command_config.extra_volumes,
+                    secret_volumes=mock_k8s_action_run.command_config.secret_volumes,
+                    projected_sa_volumes=mock_k8s_action_run.command_config.projected_sa_volumes,
+                    cap_add=mock_k8s_action_run.command_config.cap_add,
+                    cap_drop=mock_k8s_action_run.command_config.cap_drop,
+                    task_id=last_attempt.kubernetes_task_id,
+                    node_selectors=mock_k8s_action_run.command_config.node_selectors,
+                    node_affinities=mock_k8s_action_run.command_config.node_affinities,
+                    topology_spread_constraints=mock_k8s_action_run.command_config.topology_spread_constraints,
+                    pod_labels=mock_k8s_action_run.command_config.labels,
+                    pod_annotations=mock_k8s_action_run.command_config.annotations,
+                    service_account_name=mock_k8s_action_run.command_config.service_account_name,
+                    ports=mock_k8s_action_run.command_config.ports,
+                ),
+                mock_get_cluster.return_value.create_task.calls,
+            )
             task = mock_get_cluster.return_value.create_task.return_value
             mock_get_cluster.return_value.recover.assert_called_once_with(task)
             mock_watch.assert_called_once_with(task)
@@ -2004,7 +2009,6 @@ class TestKubernetesActionRun:
 
     @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
     def test_non_retryable_exit(self, mock_cluster_repo, mock_k8s_action_run):
-
         mock_cluster = mock.Mock()
         mock_cluster.non_retryable_exit_codes = [13]
         mock_cluster_repo.get_cluster.return_value = mock_cluster
@@ -2027,7 +2031,6 @@ class TestKubernetesActionRun:
 
     @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
     def test_retryable_exit(self, mock_cluster_repo, mock_k8s_action_run):
-
         mock_cluster = mock.Mock()
         mock_cluster.non_retryable_exit_codes = [-12]
 

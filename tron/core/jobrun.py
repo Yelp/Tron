@@ -1,6 +1,7 @@
 """
- Classes to manage job runs.
+Classes to manage job runs.
 """
+
 import datetime
 import json
 import logging
@@ -25,6 +26,7 @@ from tron.utils import timeutils
 from tron.utils.observer import Observable
 from tron.utils.observer import Observer
 from tron.utils.persistable import Persistable
+
 
 log = logging.getLogger(__name__)
 state_logger = logging.getLogger(f"{__name__}.state_changes")
@@ -307,7 +309,7 @@ class JobRun(Observable, Observer, Persistable):
             started = self._start_action_runs()
             if any(started):
                 log.info(
-                    f"{self} action runs triggered: " f"{', '.join(str(s) for s in started)}",
+                    f"{self} action runs triggered: {', '.join(str(s) for s in started)}",
                 )
             return
 
@@ -328,7 +330,7 @@ class JobRun(Observable, Observer, Persistable):
             started = self._start_action_runs()
             if any(started):
                 log.info(
-                    f"{self} action runs started: " f"{', '.join(str(s) for s in started)}",
+                    f"{self} action runs started: {', '.join(str(s) for s in started)}",
                 )
                 return
 

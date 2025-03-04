@@ -2,6 +2,7 @@
 Web Services Interface used by command-line clients and web frontend to
 view current state, event history and send commands to trond.
 """
+
 import collections
 import datetime
 import logging
@@ -13,6 +14,7 @@ from prometheus_client.twisted import MetricsResource as MetricsResourceProm
 from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
 
+
 try:
     import simplejson as json
 
@@ -20,15 +22,20 @@ try:
 except ImportError:
     import json
 
-from twisted.web import http, resource, static, server
+from twisted.web import http
+from twisted.web import resource
+from twisted.web import server
+from twisted.web import static
 
 from tron import __version__
-from tron.api import adapter, controller
+from tron.api import adapter
+from tron.api import controller
 from tron.api import requestargs
 from tron.api.async_resource import AsyncResource
-from tron.metrics import view_all_metrics
 from tron.metrics import meter
+from tron.metrics import view_all_metrics
 from tron.utils import maybe_decode
+
 
 log = logging.getLogger(__name__)
 
@@ -138,7 +145,6 @@ def resource_from_collection(collection, name, child_resource):
 
 
 class ActionRunResource(resource.Resource):
-
     isLeaf = True
 
     def __init__(self, action_run, job_run):
@@ -191,7 +197,7 @@ class JobRunResource(resource.Resource):
             return ActionRunResource(action_run, self.job_run)
 
         return ErrorResource(
-            f"Cannot find action '{action_name}' for " f"'{self.job_run}'",
+            f"Cannot find action '{action_name}' for '{self.job_run}'",
         )
 
     @AsyncResource.bounded
@@ -276,7 +282,6 @@ class JobResource(resource.Resource):
 
 
 class ActionRunHistoryResource(resource.Resource):
-
     isLeaf = True
 
     def __init__(self, action_runs):
@@ -429,7 +434,6 @@ class ConfigResource(resource.Resource):
 
 
 class StatusResource(resource.Resource):
-
     isLeaf = True
 
     def __init__(self, master_control):
@@ -449,7 +453,6 @@ class StatusResource(resource.Resource):
 
 
 class MetricsResource(resource.Resource):
-
     isLeaf = True
 
     def __init__(self):

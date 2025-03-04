@@ -12,6 +12,7 @@ from tron.core.jobgraph import JobGraph
 from tron.utils import maybe_decode
 from tron.utils import maybe_encode
 
+
 log = logging.getLogger(__name__)
 
 

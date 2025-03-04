@@ -14,6 +14,7 @@
  Pre 0.5 state files can be read by the YamlStateStore. See the configuration
  documentation for more details on how to create state_persistence sections.
 """
+
 import optparse
 
 from tron.config import manager

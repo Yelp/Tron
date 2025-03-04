@@ -16,6 +16,7 @@ from tron.kubernetes import KubernetesClusterRepository
 from tron.mesos import MesosClusterRepository
 from tron.serialize.runstate import statemanager
 
+
 log = logging.getLogger(__name__)
 
 
@@ -28,7 +29,7 @@ def timer(function_name: str):
         pass
     finally:
         end = time.time()
-        log.info(f"Execution time for function {function_name}: {end-start}")
+        log.info(f"Execution time for function {function_name}: {end - start}")
 
 
 def apply_master_configuration(mapping, master_config):

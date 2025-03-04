@@ -11,6 +11,7 @@ from tron.serialize import filehandler
 from tron.utils import timeutils
 from tron.utils.observer import Observer
 
+
 log = logging.getLogger(__name__)
 
 
@@ -153,7 +154,7 @@ class JobScheduler(Observer):
         # Alternatively, if run_queued is True, this job_run is already queued.
         if not run_queued and not job_run.is_scheduled:
             log.info(
-                f"{job_run} in state {job_run.state} is not scheduled, " "scheduling a new run instead of running",
+                f"{job_run} in state {job_run.state} is not scheduled, scheduling a new run instead of running",
             )
             return self.schedule()
 

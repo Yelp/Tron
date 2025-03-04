@@ -9,7 +9,7 @@ from tron.bin import get_tron_metrics
 def test_send_data_metric():
     process = mock.Mock()
     process.communicate = mock.Mock(return_value=(b"fake_output", b"fake_error"))
-    cmd_str = "meteorite data -v fake_name fake_metric_type fake_value " "-d fake_dim_key:fake_dim_value"
+    cmd_str = "meteorite data -v fake_name fake_metric_type fake_value -d fake_dim_key:fake_dim_value"
 
     with mock.patch(
         "subprocess.Popen",

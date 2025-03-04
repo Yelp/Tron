@@ -172,7 +172,6 @@ class RetryAction:
         poll_interval_s: int = DEFAULT_POLLING_INTERVAL_S,
         jitter: bool = True,
     ) -> bool:
-
         if deps_timeout_s != RetryAction.NO_TIMEOUT and jitter:
             init_delay_s = random.randint(1, min(deps_timeout_s, poll_interval_s)) - 1
             self._elapsed += datetime.timedelta(seconds=init_delay_s)
@@ -254,7 +253,6 @@ def retry_actions(
 
 
 class DisplayRetries(display.TableDisplay):
-
     columns = ["Action Name", "Final Status"]
     fields = ["full_action_name", "status"]
     widths = [60, 60]

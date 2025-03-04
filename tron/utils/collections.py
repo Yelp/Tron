@@ -1,5 +1,7 @@
 """Utilities for working with collections."""
+
 import logging
+
 
 log = logging.getLogger(__name__)
 

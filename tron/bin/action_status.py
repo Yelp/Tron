@@ -6,6 +6,7 @@ import signal
 
 from tron import yaml
 
+
 log = logging.getLogger("tron.action_status")
 
 STATUS_FILE = "status"

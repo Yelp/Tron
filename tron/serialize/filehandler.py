@@ -1,6 +1,7 @@
 """
 Tools for managing and properly closing file handles.
 """
+
 import logging
 import os.path
 import shutil
@@ -13,6 +14,7 @@ from threading import RLock
 from typing import List
 
 from tron.utils import maybe_encode
+
 
 log = logging.getLogger(__name__)
 

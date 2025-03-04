@@ -4,6 +4,7 @@
 Part of the command line interface to the tron daemon. Provides the interface
 to controlling jobs and runs.
 """
+
 import argparse
 import asyncio
 import datetime
@@ -41,6 +42,7 @@ from tron.commands.retry import parse_deps_timeout
 from tron.commands.retry import print_retries_table
 from tron.commands.retry import retry_actions
 from tron.commands.retry import RetryAction
+
 
 COMMAND_HELP = (
     (

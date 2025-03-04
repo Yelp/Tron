@@ -13,6 +13,7 @@ from tron.commands import client
 from tron.commands import display
 from tron.core.actionrun import ActionRun
 
+
 DEFAULT_MAX_PARALLEL_RUNS = 3
 LIMIT_MAX_PARALLEL_RUNS = 10
 DEFAULT_POLLING_INTERVAL_S = 10
@@ -43,8 +44,7 @@ def print_backfill_cmds(job: str, date_strs: List[str]) -> None:
 
 def confirm_backfill(job: str, date_strs: List[str]) -> bool:
     print(
-        f"To backfill for the job '{job}', a job run will be created for each "
-        f"of the following {len(date_strs)} dates:"
+        f"To backfill for the job '{job}', a job run will be created for each of the following {len(date_strs)} dates:"
     )
     pprint.pprint(date_strs)
     print("")
@@ -275,7 +275,6 @@ async def run_backfill_for_date_range(
 
 
 class DisplayBackfillRuns(display.TableDisplay):
-
     columns = ["Date", "Job Run Name", "Final State"]
     fields = ["run_time", "run_name", "run_state"]
     widths = [15, 60, 15]

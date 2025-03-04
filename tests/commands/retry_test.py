@@ -172,9 +172,9 @@ def test_wait_for_retry_deps_not_done(fake_retry_action, mock_client_request, ev
 
 def test_wait_for_retry_deps_done(fake_retry_action, mock_client_request, event_loop):
     fake_retry_action.tron_client.job_runs.return_value["runs"][2]["state"] = "skipped"
-    fake_retry_action.tron_client.action_runs.return_value[
-        "triggered_by"
-    ] = "a_fake_trigger_0 (done), a_fake_trigger_1 (done)"
+    fake_retry_action.tron_client.action_runs.return_value["triggered_by"] = (
+        "a_fake_trigger_0 (done), a_fake_trigger_1 (done)"
+    )
     mock_client_request.return_value.error = False
     random.seed(1)  # init delay is 1s
 

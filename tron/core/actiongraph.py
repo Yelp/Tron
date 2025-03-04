@@ -5,6 +5,7 @@ from typing import Mapping
 from tron.core.action import Action
 from tron.utils.timeutils import delta_total_seconds
 
+
 log = logging.getLogger(__name__)
 Trigger = namedtuple("Trigger", ["name", "command"])
 

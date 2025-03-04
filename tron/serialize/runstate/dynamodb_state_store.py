@@ -29,6 +29,7 @@ from tron.core.jobrun import JobRun
 from tron.metrics import timer
 from tron.serialize import runstate
 
+
 # Max DynamoDB object size is 400KB. Since we save two copies of the object (pickled and JSON),
 # we need to consider this max size applies to the entire item, so we use a max size of 200KB
 # for each version.
@@ -270,7 +271,7 @@ class DynamoDBStateStore:
                 # reset errors count if we can successfully save
                 saved += 1
             except Exception as e:
-                error = "tron_dynamodb_save_failure: failed to save key " f'"{key}" to dynamodb:\n{repr(e)}'
+                error = f"tron_dynamodb_save_failure: failed to save key \"{key}\" to dynamodb:\n{repr(e)}"
                 log.error(error)
                 with self.save_lock:
                     self.save_queue[key] = (val, json_val)
@@ -286,7 +287,11 @@ class DynamoDBStateStore:
         return key.split()[0]
 
     # TODO: TRON-2305 - In an ideal world, we wouldn't be passing around state/state_data dicts. It would be a lot nicer to have regular objects here
-    def _serialize_item(self, key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE], state: Dict[str, Any]) -> Optional[str]:  # type: ignore
+    def _serialize_item(
+        self,
+        key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE],  # type: ignore
+        state: Dict[str, Any],
+    ) -> Optional[str]:
         try:
             if key == runstate.JOB_STATE:
                 log.info(f"Serializing Job: {state.get('job_name')}")

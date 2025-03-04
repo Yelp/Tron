@@ -174,7 +174,6 @@ class TestDeltaTotalSeconds(TestCase):
 
 
 class DateArithmeticTestCase(testingutils.MockTimeTestCase):
-
     # Set a date with days less then 28, otherwise some tests will fail
     # when run on days > 28.
     now = datetime.datetime(2012, 3, 20)
@@ -366,5 +365,4 @@ class DateArithmeticYMDHTest(TestCase):
 
 
 class TestDateArithmeticWithTimezone(DateArithmeticTestCase):
-
     now = pytz.timezone("US/Pacific").localize(datetime.datetime(2012, 3, 20))

@@ -1,6 +1,7 @@
 """
 Web Controllers for the API.
 """
+
 import logging
 from typing import Dict
 from typing import TypedDict
@@ -8,6 +9,7 @@ from typing import TypedDict
 from tron import yaml
 from tron.config.manager import ConfigManager
 from tron.eventbus import EventBus
+
 
 log = logging.getLogger(__name__)
 
@@ -46,7 +48,6 @@ class JobCollectionController:
 
 
 class ActionRunController:
-
     mapped_commands = {
         "start",
         "success",
@@ -70,7 +71,7 @@ class ActionRunController:
             )
 
         if command == "start" and self.job_run.is_scheduled:
-            return "Action run cannot be started if its job run is still " "scheduled."
+            return "Action run cannot be started if its job run is still scheduled."
 
         if command == "recover" and not self.action_run.is_unknown:
             return "Action run cannot be recovered if its state is not unknown."
@@ -116,7 +117,6 @@ class ActionRunController:
 
 
 class JobRunController:
-
     mapped_commands = {"start", "success", "cancel", "fail", "stop"}
 
     def __init__(self, job_run, job_scheduler):

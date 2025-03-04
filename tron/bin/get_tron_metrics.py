@@ -12,12 +12,13 @@ import textwrap
 from tron.commands import cmd_utils
 from tron.commands.client import Client
 
+
 log = logging.getLogger("get_tron_metrics")
 
 
 def parse_cli():
     parser = cmd_utils.build_option_parser()
-    parser.description = "Collects metrics from Tron via its API and forwards them to " "meteorite."
+    parser.description = "Collects metrics from Tron via its API and forwards them to meteorite."
     parser.add_argument(
         "--dry-run",
         action="store_true",
@@ -63,7 +64,7 @@ def send_data_metric(name, metric_type, value, dimensions={}, dry_run=False):
             dimensions=dimensions,
         )
         log.info(
-            f"Would have sent this to meteorite:\n" f"{pprint.pformat(metric_args)}",
+            f"Would have sent this to meteorite:\n{pprint.pformat(metric_args)}",
         )
         return
 
@@ -82,7 +83,7 @@ def send_data_metric(name, metric_type, value, dimensions={}, dry_run=False):
 
     if process.returncode != 0:
         log.error(
-            "Meteorite failed with:\n" f"{textwrap.indent(error, '    ')}",
+            f"Meteorite failed with:\n{textwrap.indent(error, '    ')}",
         )
     else:
         log.debug(f"From meteorite: {output}")

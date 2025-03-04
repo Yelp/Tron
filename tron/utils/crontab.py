@@ -1,4 +1,5 @@
 """Parse a crontab entry and return a dictionary."""
+
 import calendar
 import itertools
 import re
@@ -7,6 +8,7 @@ from typing import Optional
 from typing import Set
 from typing import Tuple
 from typing import Union
+
 
 PREDEFINED_SCHEDULE = {
     "@yearly": "0 0 1 1 *",

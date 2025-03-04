@@ -18,6 +18,7 @@ Tron schedulers
  jobs scheduled with the start_time of the previous run (False), or the
  end time of the previous run (False).
 """
+
 import datetime
 import logging
 import random
@@ -25,6 +26,7 @@ import random
 from tron.config import schedule_parse
 from tron.utils import timeutils
 from tron.utils import trontimespec
+
 
 log = logging.getLogger(__name__)
 

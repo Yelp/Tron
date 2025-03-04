@@ -1,12 +1,14 @@
 """
- Immutable config schema objects.
- WARNING: it is *NOT* safe to delete these classes (or their attributes) if there are any references to them in DynamoDB until TRON-2200 is complete! (See DAR-2328)
- NOTE: this means that reverting a change that adds a new attribute is not safe :)
+Immutable config schema objects.
+WARNING: it is *NOT* safe to delete these classes (or their attributes) if there are any references to them in DynamoDB until TRON-2200 is complete! (See DAR-2328)
+NOTE: this means that reverting a change that adds a new attribute is not safe :)
 """
+
 from collections import namedtuple
 from enum import Enum
 from typing import Any
 from typing import Dict
+
 
 MASTER_NAMESPACE = "MASTER"
 

@@ -10,6 +10,7 @@ from twisted.conch.ssh import keys
 from twisted.internet import defer
 from twisted.python import failure
 
+
 # Ignore CryptographyDeprecationWarning as we don't use `cryptography` directly and
 # the warnings are coming from one of our dependencies (Twisted) that does. There's
 # nothing we can do until they stop using the deprecated ciphers - so ignoring these warnings should be safe
@@ -80,7 +81,6 @@ class NoPasswordAuthClient(default.SSHUserAuthClient):
 
 
 class ClientTransport(transport.SSHClientTransport):
-
     connection_defer = None
 
     def __init__(self, username, options, expected_pub_key):
@@ -111,7 +111,6 @@ class ClientTransport(transport.SSHClientTransport):
 
 
 class ClientConnection(connection.SSHConnection):
-
     service_start_defer = None
     service_stop_defer = None
 
@@ -173,7 +172,6 @@ class ClientConnection(connection.SSHConnection):
 
 
 class ExecChannel(channel.SSHChannel):
-
     name = b"session"
     exit_defer = None
     start_defer = None
@@ -257,7 +255,7 @@ class ExecChannel(channel.SSHChannel):
     def closed(self):
         if self.exit_status is None and self.running and self.exit_defer and not self.exit_defer.called:
             log.warning(
-                "Channel has been closed without receiving an exit" " status",
+                "Channel has been closed without receiving an exit status",
             )
             f = failure.Failure(exc_value=ChannelClosedEarlyError())
             self.exit_defer.errback(f)

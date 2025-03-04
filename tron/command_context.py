@@ -1,6 +1,7 @@
 """Command Context is how we construct the command line for a command which may
 have variables that need to be rendered.
 """
+
 import operator
 import re
 from functools import reduce

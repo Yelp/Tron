@@ -8,6 +8,7 @@ import tron.utils.logreader
 from tron.utils.logreader import decompose_action_id
 from tron.utils.logreader import read_log_stream_for_action_run
 
+
 try:
     from logreader.readers import S3LogsReader  # noqa: F401
 except ImportError:
@@ -36,15 +37,15 @@ def test_read_log_stream_for_action_run():
         "staticconf.read",
         autospec=True,
         side_effect=static_conf_patch({"logging.max_lines_to_display": 1000}),
-    ), mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True,), mock.patch(
-        "tron.config.static_config.load_yaml_file",
+    ), mock.patch(
+        "tron.config.static_config.build_configuration_watcher",
         autospec=True,
     ), mock.patch(
-        "tron.utils.logreader.get_superregion", autospec=True, return_value="fake"
-    ), mock.patch(
+        "tron.config.static_config.load_yaml_file",
+        autospec=True,
+    ), mock.patch("tron.utils.logreader.get_superregion", autospec=True, return_value="fake"), mock.patch(
         "tron.utils.logreader.S3LogsReader", autospec=True
     ) as mock_s3_reader:
-
         mock_s3_reader.return_value.get_log_reader.return_value = iter(
             [
                 """{
@@ -103,15 +104,15 @@ def test_read_log_stream_for_action_run_tz(local_datetime, expected_datetime):
         "staticconf.read",
         autospec=True,
         side_effect=static_conf_patch({"logging.max_lines_to_display": 1000}),
-    ), mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True,), mock.patch(
-        "tron.config.static_config.load_yaml_file",
+    ), mock.patch(
+        "tron.config.static_config.build_configuration_watcher",
         autospec=True,
     ), mock.patch(
-        "tron.utils.logreader.get_superregion", autospec=True, return_value="fake"
-    ), mock.patch(
+        "tron.config.static_config.load_yaml_file",
+        autospec=True,
+    ), mock.patch("tron.utils.logreader.get_superregion", autospec=True, return_value="fake"), mock.patch(
         "tron.utils.logreader.S3LogsReader", autospec=True
     ) as mock_s3_log_reader:
-
         read_log_stream_for_action_run(
             "namespace.job.1234.action",
             component="stdout",
@@ -129,7 +130,11 @@ def test_read_log_stream_for_action_run_for_long_output():
     # outputted by the test, which is similar to the logging.max_lines_to_display
     # in tron.yaml in srv-configs
     max_lines = 1000
-    with mock.patch("tron.utils.logreader.get_superregion", autospec=True, return_value="fake",), mock.patch(
+    with mock.patch(
+        "tron.utils.logreader.get_superregion",
+        autospec=True,
+        return_value="fake",
+    ), mock.patch(
         "tron.config.static_config.build_configuration_watcher",
         autospec=True,
     ), mock.patch(
@@ -137,10 +142,7 @@ def test_read_log_stream_for_action_run_for_long_output():
     ), mock.patch(
         "tron.config.static_config.load_yaml_file",
         autospec=True,
-    ), mock.patch(
-        "tron.utils.logreader.S3LogsReader", autospec=True
-    ) as mock_s3_reader:
-
+    ), mock.patch("tron.utils.logreader.S3LogsReader", autospec=True) as mock_s3_reader:
         with open("./tests/utils/shortOutputTest.txt") as f:
             content_list = f.readlines()
 

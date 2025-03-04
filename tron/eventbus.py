@@ -9,6 +9,7 @@ from typing import Optional
 
 from twisted.internet import reactor
 
+
 log = logging.getLogger(__name__)
 
 
@@ -206,7 +207,7 @@ class EventBus:
         save_reason = None
         if time.time() > self.log_last_save + self.log_save_interval:
             if self.log_updates > 0:
-                save_reason = f"{self.log_save_interval}s passed, " f"{self.log_updates} updates"
+                save_reason = f"{self.log_save_interval}s passed, {self.log_updates} updates"
             else:
                 self.log_last_save = time.time()
                 log.debug("skipping save, no updates")
@@ -264,7 +265,7 @@ class EventBus:
         new_subscriptions = defaultdict(list)
         removed = 0
         for prefix, subs in self.event_subscribers.items():
-            for (sub, cb) in subs:
+            for sub, cb in subs:
                 if sub == subscriber:
                     removed += 1
                     continue
@@ -280,6 +281,6 @@ class EventBus:
         for prefix, subscribers in self.event_subscribers.items():
             log.debug(f"check {prefix}: {event_id.startswith(prefix)}")
             if event_id.startswith(prefix):
-                for (sub, cb) in subscribers:
+                for sub, cb in subscribers:
                     log.debug(f"notifying {sub} about {event_id}")
                     reactor.callLater(0, cb, dict(id=event_id, **event))
