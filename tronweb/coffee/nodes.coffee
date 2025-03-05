@@ -1,15 +1,10 @@
-
-
 class NodeModel extends Backbone.Model
-
 
 
 class NodePoolModel extends Backbone.Model
 
 
-
 class NodeInlineView extends Backbone.View
-
     tagName: "span"
 
     template: _.template """
@@ -24,7 +19,6 @@ class NodeInlineView extends Backbone.View
 
 
 class NodePoolInlineView extends Backbone.View
-
     tagName: "span"
 
     template: _.template """
