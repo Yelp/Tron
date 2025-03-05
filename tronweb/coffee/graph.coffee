@@ -35,6 +35,47 @@ module.GraphUtils = {
 
         return ctx.measureText(node.data('name')).width + 20
 
+    # Search based on node name. Highlights matching nodes and their connected edges, dims the rest.
+    applySearch: (cy, searchText) ->
+        if searchText
+            cy.nodes().forEach (node) ->
+                nodeName = node.data('name').toLowerCase()
+                if nodeName.includes(searchText)
+                    node.style('opacity', 1)
+                else
+                    node.style('opacity', 0.2)
+
+            cy.edges().style('opacity', 0.1)
+
+            matchingNodes = cy.nodes().filter (node) ->
+                node.data('name').toLowerCase().includes(searchText)
+
+            matchingNodes.connectedEdges().style('opacity', 0.8)
+        else
+            # Reset all styles when search is cleared
+            cy.nodes().style('opacity', 1)
+            cy.edges().style('opacity', 1)
+
+    # Reset the graph to its initial state, including layout and node positions
+    resetGraph: (cy) ->
+        cy.stop()
+        cy.nodes().style('opacity', 1)
+        cy.edges().style('opacity', 1)
+
+        # Reset node positions before re-layout
+        cy.nodes().positions (node) ->
+            return { x: 0, y: 0 }
+
+        layout = cy.layout(module.GraphUtils.getDefaultLayout())
+        layout.run()
+
+        # Fit all elements (if no elements are specified it fits all, so we pass undefined) with 25px padding
+        cy.fit(undefined, 25)
+        cy.center()
+
+        cy.nodes().forEach (node) ->
+            node.data 'manuallyPositioned', false
+
     defaultStylesheet: [
         {
             selector: 'node',
@@ -116,47 +157,6 @@ module.GraphUtils = {
             }
         }
     ]
-
-    # Search based on node name. Highlights matching nodes and their connected edges, dims the rest.
-    applySearch: (cy, searchText) ->
-        if searchText
-            cy.nodes().forEach (node) ->
-                nodeName = node.data('name').toLowerCase()
-                if nodeName.includes(searchText)
-                    node.style('opacity', 1)
-                else
-                    node.style('opacity', 0.2)
-
-            cy.edges().style('opacity', 0.1)
-
-            matchingNodes = cy.nodes().filter (node) ->
-                node.data('name').toLowerCase().includes(searchText)
-
-            matchingNodes.connectedEdges().style('opacity', 0.8)
-        else
-            # Reset all styles when search is cleared
-            cy.nodes().style('opacity', 1)
-            cy.edges().style('opacity', 1)
-
-    # Reset the graph to its initial state, including layout and node positions
-    resetGraph: (cy) ->
-        cy.stop()
-        cy.nodes().style('opacity', 1)
-        cy.edges().style('opacity', 1)
-
-        # Reset node positions before re-layout
-        cy.nodes().positions (node) ->
-            return { x: 0, y: 0 }
-
-        layout = cy.layout(@getDefaultLayout())
-        layout.run()
-
-        # Fit all elements (if no elements are specified it fits all, so we pass undefined) with 25px padding
-        cy.fit(undefined, 25)
-        cy.center()
-
-        cy.nodes().forEach (node) ->
-            node.data 'manuallyPositioned', false
 }
 
 module.tooltips = {
@@ -417,6 +417,29 @@ class GraphModalView extends Backbone.View
             height: modalHeight + 'px'
         })
 
+        # Disable interactions on the main graph while the modal is open.
+        #
+        # This is necessary because Cytoscape graphs use canvas elements for rendering, and canvas
+        # events don't respect modal z-index in the same way as normal DOM elements. Without this,
+        # interactions in the full-screen modal would also affect the main graph when the mouse is
+        # over an area where they overlap.
+        if @graphOptions.cy
+            # Save current state to restore from when the modal is closed
+            @savedInteractionState = {
+                userPanningEnabled: @graphOptions.cy.userPanningEnabled(),
+                userZoomingEnabled: @graphOptions.cy.userZoomingEnabled(),
+                boxSelectionEnabled: @graphOptions.cy.boxSelectionEnabled(),
+                autoungrabify: @graphOptions.cy.autoungrabify(),
+                autounselectify: @graphOptions.cy.autounselectify()
+            }
+
+            # Disable all interactions
+            @graphOptions.cy.userPanningEnabled(false)
+            @graphOptions.cy.userZoomingEnabled(false)
+            @graphOptions.cy.boxSelectionEnabled(false)
+            @graphOptions.cy.autoungrabify(true)
+            @graphOptions.cy.autounselectify(true)
+
         options = _.extend {},
             @graphOptions,
             model: @model
@@ -450,6 +473,14 @@ class GraphModalView extends Backbone.View
     removeGraph: (event) =>
         return if event.target != $('.modal')[0]
         @$('.modal-body.graph').empty()
+
+        # Restore all interaction capabilities on the main graph
+        if @graphOptions.cy && @savedInteractionState
+            @graphOptions.cy.userPanningEnabled(@savedInteractionState.userPanningEnabled)
+            @graphOptions.cy.userZoomingEnabled(@savedInteractionState.userZoomingEnabled)
+            @graphOptions.cy.boxSelectionEnabled(@savedInteractionState.boxSelectionEnabled)
+            @graphOptions.cy.autoungrabify(@savedInteractionState.autoungrabify)
+            @graphOptions.cy.autounselectify(@savedInteractionState.autounselectify)
 
     render: =>
         @$el.append(@template)
