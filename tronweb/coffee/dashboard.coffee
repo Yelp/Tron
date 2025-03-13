@@ -103,6 +103,8 @@ class window.StatusBoxView extends ClickableListEntry
 
     tagName: "div"
 
+    # TODO: TRON-2386 - We don't really use these status=-box classes outside of overriding the yellow on disabled
+    # jobs for...whatever reason. We should just remove them.
     className: =>
         "span2 clickable status-box #{@getState()}"
 

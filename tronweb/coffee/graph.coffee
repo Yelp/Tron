@@ -83,7 +83,7 @@ module.GraphUtils = {
                 'label': 'data(name)'
                 'text-valign': 'center'
                 'text-halign': 'center'
-                'background-color': '#f8f8f8'
+                'background-color': '#F8F8F8'
                 'color': '#000'
                 'font-size': '16px'
                 'font-weight': 'bold'
@@ -100,6 +100,8 @@ module.GraphUtils = {
             }
         },
         {
+            # TODO: TRON-2387 - Bezier doesn't produce the best looking graph as nodes can overlap edges a bit, but there are some weird issues with a taxi curve-style
+            # that I can't figure out. Would be nice to fix this in the future.
             selector: 'edge',
             style: {
                 'curve-style': 'bezier'
@@ -121,7 +123,7 @@ module.GraphUtils = {
             selector: '.succeeded',
             style: {
                 'border-color': '#218E0B'      # @green from LESS
-                'background-color': '#f0ffe0'  # Light green
+                'background-color': '#F0FFE0'  # Light green
             }
         },
         # Info states (.info mixin in LESS)
@@ -129,7 +131,7 @@ module.GraphUtils = {
             selector: '.running, .starting',
             style: {
                 'border-color': '#2F47B8'      # @blue
-                'background-color': '#f0f5ff'  # Light blue
+                'background-color': '#F0F5FF'  # Light blue
             }
         },
         # Warning states (.warning mixin in LESS)
@@ -137,7 +139,7 @@ module.GraphUtils = {
             selector: '.cancelled, .skipped',
             style: {
                 'border-color': '#A6790D'      # @yellow
-                'background-color': '#fffbf0'  # Light yellow
+                'background-color': '#FFFBF0'  # Light yellow
             }
         },
         # Error states (.error mixin in LESS)
@@ -145,7 +147,7 @@ module.GraphUtils = {
             selector: '.failed, .unknown',
             style: {
                 'border-color': '#BA434F'      # @red
-                'background-color': '#fff0f0'  # Light red
+                'background-color': '#FFF0F0'  # Light red
             }
         },
         # Pending states (.pending mixin in LESS)
@@ -153,9 +155,17 @@ module.GraphUtils = {
             selector: '.scheduled, .waiting, .queued',
             style: {
                 'border-color': '#999999'      # @medium-grey
-                'background-color': '#f9f9f9'  # Light grey
+                'background-color': '#F9F9F9'  # Light grey
             }
-        }
+        },
+        # Unknown state
+        {
+            selector: '.unknown',
+            style: {
+                'border-color': '#D66600'      # @orange
+                'background-color': '#FFDBBB'  # Light orange
+            }
+        },
     ]
 }
 

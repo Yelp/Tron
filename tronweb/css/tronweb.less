@@ -171,8 +171,6 @@ input.focused,
 #version {
     text-align: center;
     color: white;
-    //margin-top: 5px;
-    //margin-bottom: -10px;
     margin-bottom: 5px;
 }
 
@@ -183,11 +181,12 @@ input.focused,
 @green: #218E0B;
 @blue: #2F47B8;
 @yellow: #A6790D;
+@orange: #D66600;
 @red: #BA434F;
 
-@hl-text: #fff;
+@hl-text: #FFF;
 @dark-blue: #0F2277;
-@dark-yellow: #faa732;
+@dark-yellow: #FAA732;
 @dark-red: #A10C1A;
 
 @light-blue: #6177DB;
@@ -649,7 +648,7 @@ div.refresh-view span {
 }
 
 #action-graph .modal.fade.in {
-    top: 2%;
+    top: 3%;
     width: auto;
     margin-left: 75px;
     left: 0;
@@ -697,6 +696,7 @@ div.refresh-view span {
     margin: 1px 5px 0 0;
 }
 
+// TODO: TRON-2386 - We don't use most of these for colour as we have the base styles below (like .success or .info). Only disabled makes it to the page.
 .status-box.disabled {
     background: @dark-yellow;
 }
@@ -736,6 +736,12 @@ div.refresh-view span {
     color: @hl-text;
 }
 
+.unknown
+{
+    background: @orange;
+    color: @hl-text;
+}
+
 #all-view > .dashboard-view {
     width: auto;
     margin-right: 20px;
@@ -745,7 +751,7 @@ div.refresh-view span {
 /*****************************************************************************
  *  States
  *****************************************************************************/
-// TODO: Remove some of these? Degraded and up seem to be old states that are no longer used.
+// TODO: TRON-2386 - Remove some of these? Degraded and up seem to be old states that are no longer used.
 .enabled,
 .up,
 .succeeded
@@ -766,7 +772,6 @@ div.refresh-view span {
     .warning;
 }
 
-.unknown,
 .failed,
 .degraded,
 .label-important
@@ -780,6 +785,8 @@ div.refresh-view span {
 {
     .pending;
 }
+
+// Not pictured above is the .unknown state which is the only consumer of @orange for now
 
 /******************************************************************************
  *  Label
