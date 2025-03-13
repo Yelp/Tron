@@ -9,6 +9,7 @@ Submodules
 
    tron.api.adapter
    tron.api.async_resource
+   tron.api.auth
    tron.api.controller
    tron.api.requestargs
    tron.api.resource
