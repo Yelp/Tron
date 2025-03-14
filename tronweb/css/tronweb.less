@@ -171,8 +171,6 @@ input.focused,
 #version {
     text-align: center;
     color: white;
-    //margin-top: 5px;
-    //margin-bottom: -10px;
     margin-bottom: 5px;
 }
 
@@ -183,11 +181,12 @@ input.focused,
 @green: #218E0B;
 @blue: #2F47B8;
 @yellow: #A6790D;
+@orange: #D66600;
 @red: #BA434F;
 
-@hl-text: #fff;
+@hl-text: #FFF;
 @dark-blue: #0F2277;
-@dark-yellow: #faa732;
+@dark-yellow: #FAA732;
 @dark-red: #A10C1A;
 
 @light-blue: #6177DB;
@@ -589,105 +588,52 @@ div.refresh-view span {
 }
 
 /******************************************************************************
- *  Force Graph
- *****************************************************************************/
-.graph {
-    position: relative;
-
-    .node {
-        cursor: default;
-    }
-}
-
-.graph svg marker {
-    fill: #555;
-}
-
-.node circle {
-  stroke-width: 4px;
-  stroke: #fff;
-  fill: @light-blue;
-}
-
-.node.failed circle {
-    fill: @red;
-}
-
-.node.succeeded circle {
-    fill: @green;
-}
-
-.node.queued circle, .node.scheduled circle {
-    fill: #ccc;
-}
-
-.node text {
-    stroke: @text;
-    font-family: "Open Sans";
-    font-weight: 300;
-    font-size: 12px;
-}
-
-.link {
-  stroke: #555;
-  stroke-width: 0.8px;
-}
-
-
-
-/******************************************************************************
  *  Popover / Tooltips
  *****************************************************************************/
 
-@popup-bg: #fff;
+.cy-tooltip {
+    padding: 0 !important;
+    border-radius: 4px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+    overflow: hidden;
+}
 
-.popover.top {
-    max-width: 600px;
-    min-width: 400px;
-    .clear-border;
-    .clear-box-shadow;
-    .outline-border;
+.tooltip-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 8px 12px;
+    background-color: #f5f5f5;
+    border-bottom: 1px solid #ddd;
+}
+
+.tooltip-header h4 {
+    margin: 0;
+    font-size: 14px;
+    font-weight: bold;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 300px;
+}
+
+.tooltip-content {
     padding: 0;
-    background: @popup-bg;
-
-    .arrow {
-        border-top-color: @medium-grey;
-        display: none;
-    }
-    .arrow:after {
-        border-top-color: @popup-bg;
-    }
-    code {
-        background: none;
-    }
-    .popover-title {
-        font-weight: bold;
-        .clear-border;
-        background: @medium-grey;
-        color: white;
-        font-size: 12px;
-        border: 0;
-    }
-    .popover-content {
-        font-size: 12px;
-        padding: 20px;
-        code, ul {
-            padding: 0;
-        }
-        .top-right-corner {
-            top: 7px;
-            right: 10px;
-        }
-    }
 }
 
-.tooltip.top .tooltip-arrow {
-    border-width: 6px 5px 0;
-}
-
-.tooltip.top {
-    border: 0 !important;
-    background: none !important;
+.cy-tooltip code.command,
+.tooltip-content code.command {
+    display: block;
+    white-space: pre-wrap;
+    word-break: break-all;
+    margin: 0;
+    font-family: monospace;
+    font-size: 12px;
+    background-color: #2d2d2d !important;
+    color: #f8f8f2 !important;
+    padding: 10px 12px;
+    border-radius: 0 0 4px 4px;
+    border: 0;
 }
 
 /******************************************************************************
@@ -702,7 +648,7 @@ div.refresh-view span {
 }
 
 #action-graph .modal.fade.in {
-    top: 2%;
+    top: 3%;
     width: auto;
     margin-left: 75px;
     left: 0;
@@ -717,7 +663,6 @@ div.refresh-view span {
    top: -35px;
    right: 10px;
 }
-
 
 /******************************************************************************
  *  Dashboard
@@ -751,6 +696,7 @@ div.refresh-view span {
     margin: 1px 5px 0 0;
 }
 
+// TODO: TRON-2386 - We don't use most of these for colour as we have the base styles below (like .success or .info). Only disabled makes it to the page.
 .status-box.disabled {
     background: @dark-yellow;
 }
@@ -785,6 +731,17 @@ div.refresh-view span {
     color: @hl-text;
 }
 
+.pending {
+    background: @medium-grey;
+    color: @hl-text;
+}
+
+.unknown
+{
+    background: @orange;
+    color: @hl-text;
+}
+
 #all-view > .dashboard-view {
     width: auto;
     margin-right: 20px;
@@ -794,7 +751,7 @@ div.refresh-view span {
 /*****************************************************************************
  *  States
  *****************************************************************************/
-
+// TODO: TRON-2386 - Remove some of these? Degraded and up seem to be old states that are no longer used.
 .enabled,
 .up,
 .succeeded
@@ -803,18 +760,18 @@ div.refresh-view span {
 }
 
 .running,
-.starting,
+.starting
 {
     .info;
 }
 
 .cancelled,
-.disabled
+.disabled,
+.skipped
 {
     .warning;
 }
 
-.unknown,
 .failed,
 .degraded,
 .label-important
@@ -822,6 +779,14 @@ div.refresh-view span {
     .error;
 }
 
+.scheduled,
+.waiting,
+.queued
+{
+    .pending;
+}
+
+// Not pictured above is the .unknown state which is the only consumer of @orange for now
 
 /******************************************************************************
  *  Label

@@ -1,10 +1,8 @@
-
-# Dashboard
 window.modules = window.modules || {}
 window.modules.dashboard = module = {}
 
-class window.Dashboard extends Backbone.Model
 
+class window.Dashboard extends Backbone.Model
     initialize: (options)->
         options = options || {}
         @refreshModel = new RefreshModel(interval: 30)
@@ -34,14 +32,12 @@ matchType = (item, query) ->
 
 
 class window.DashboardFilterModel extends FilterModel
-
     filterTypes:
         name:       buildMatcher(fieldGetter('name'), matchAny)
         type:       buildMatcher(_.identity, matchType)
 
 
 class window.DashboardFilterView extends FilterView
-
     createtype: _.template """
         <div class="input-prepend">
            <i class="icon-markerright icon-grey"></i>
@@ -58,7 +54,6 @@ class window.DashboardFilterView extends FilterView
     """
 
 class window.DashboardView extends Backbone.View
-
     initialize: (options) =>
         @refreshView = new RefreshToggleView(model: @model.refreshModel)
         @filterView = new DashboardFilterView(model: @model.filterModel)
@@ -103,12 +98,13 @@ class window.DashboardView extends Backbone.View
 
 
 class window.StatusBoxView extends ClickableListEntry
-
     initialize: (options) =>
         @listenTo(@model, "change", @render)
 
     tagName: "div"
 
+    # TODO: TRON-2386 - We don't really use these status=-box classes outside of overriding the yellow on disabled
+    # jobs for...whatever reason. We should just remove them.
     className: =>
         "span2 clickable status-box #{@getState()}"
 
@@ -132,7 +128,6 @@ class window.StatusBoxView extends ClickableListEntry
         @
 
 class module.JobStatusBoxView extends StatusBoxView
-
     buildUrl: =>
         "#job/#{@model.get('name')}"
 

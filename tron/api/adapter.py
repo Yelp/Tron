@@ -333,7 +333,7 @@ class ActionRunGraphAdapter:
                 "name": trigger.name,
                 "command": trigger.command,
                 "dependencies": [d.name for d in dependencies],
-                "state": "unknown",
+                "state": "unknown",  # TODO: TRON-2382: why is this hardcoded and never updated? Can we update this after improving our API timings?
             }
 
         return [build(action_run) for action_run in self.action_runs] + [
