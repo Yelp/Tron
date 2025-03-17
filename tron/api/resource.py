@@ -106,6 +106,20 @@ def handle_command(request, api_controller, obj, **kwargs):
         return respond(request=request, response={"error": trace})
 
 
+class AuthenticatedResource(resource.Resource):
+    def render(self, request):
+        """Overriding base `render` method to support authentication"""
+        auth_outcome = AuthorizationFilter.get_from_env().is_request_authorized(request)
+        if not auth_outcome.authorized:
+            return respond(
+                request=request,
+                response={"reason": auth_outcome.reason},
+                code=http.FORBIDDEN,
+                headers={"X-Auth-Failure-Reason": auth_outcome.reason},
+            )
+        return super().render(request)
+
+
 class ErrorResource(resource.Resource):
     """Equivalent to resource.NoResource, except error message is returned
     as JSON, not HTML"""
@@ -138,7 +152,7 @@ def resource_from_collection(collection, name, child_resource):
     return child_resource(item)
 
 
-class ActionRunResource(resource.Resource):
+class ActionRunResource(AuthenticatedResource):
 
     isLeaf = True
 
@@ -173,7 +187,7 @@ class ActionRunResource(resource.Resource):
         )
 
 
-class JobRunResource(resource.Resource):
+class JobRunResource(AuthenticatedResource):
     def __init__(self, job_run, job_scheduler):
         resource.Resource.__init__(self)
         self.job_run = job_run
@@ -215,7 +229,7 @@ def is_negative_int(string):
     return string.startswith("-") and string[1:].isdigit()
 
 
-class JobResource(resource.Resource):
+class JobResource(AuthenticatedResource):
     def __init__(self, job_scheduler):
         resource.Resource.__init__(self)
         self.job_scheduler = job_scheduler
@@ -276,7 +290,7 @@ class JobResource(resource.Resource):
         )
 
 
-class ActionRunHistoryResource(resource.Resource):
+class ActionRunHistoryResource(AuthenticatedResource):
 
     isLeaf = True
 
@@ -292,7 +306,7 @@ class ActionRunHistoryResource(resource.Resource):
         )
 
 
-class JobCollectionResource(resource.Resource):
+class JobCollectionResource(AuthenticatedResource):
     def __init__(self, job_collection):
         self.job_collection = job_collection
         self.controller = controller.JobCollectionController(job_collection)
@@ -374,7 +388,7 @@ class JobCollectionResource(resource.Resource):
         )
 
 
-class ConfigResource(resource.Resource):
+class ConfigResource(AuthenticatedResource):
     """Resource for configuration changes"""
 
     isLeaf = True
@@ -461,7 +475,7 @@ class MetricsResource(resource.Resource):
         return respond(request=request, response=view_all_metrics())
 
 
-class EventsResource(resource.Resource):
+class EventsResource(AuthenticatedResource):
     isLeaf = True
 
     def __init__(self):
@@ -488,7 +502,7 @@ class EventsResource(resource.Resource):
         return respond(request=request, response=response)
 
 
-class ApiRootResource(resource.Resource):
+class ApiRootResource(AuthenticatedResource):
     def __init__(self, mcp):
         self._master_control = mcp
         resource.Resource.__init__(self)
@@ -514,18 +528,6 @@ class ApiRootResource(resource.Resource):
             "namespaces": self.children[b"config"].get_config_index(),
         }
         return respond(request=request, response=response)
-
-    def render(self, request):
-        """Overriding base `render` method to support auth"""
-        auth_outcome = AuthorizationFilter.get_from_env().is_request_authorized(request)
-        if not auth_outcome.authorized:
-            return respond(
-                request=request,
-                response={"reason": auth_outcome.reason},
-                code=http.FORBIDDEN,
-                headers={"X-Auth-Failure-Reason": auth_outcome.reason},
-            )
-        return super().render(request)
 
 
 class RootResource(resource.Resource):
