@@ -51,13 +51,12 @@ class AuthorizationFilter:
         token = (request.getHeader("Authorization") or "").strip()
         token = token.split()[-1] if token else ""  # removes "Bearer" prefix
         url_path = request.path.decode()
-        service = url_path.split("/")[-1].split(".", 1)[0] if "/jobs/" in url_path else None
         auth_outcome = self._is_request_authorized_impl(
             # path and method are byte arrays in twisted
             path=url_path,
             token=token,
             method=request.method.decode(),
-            service=service,
+            service=self._extract_service_from_path(url_path),
         )
         return auth_outcome if self.enforce else AuthorizationOutcome(True, "Auth dry-run")
 
@@ -104,3 +103,18 @@ class AuthorizationFilter:
 
         reason = response["result"].get("reason", "Ok")
         return AuthorizationOutcome(True, reason)
+
+    @staticmethod
+    def _extract_service_from_path(path: str) -> Optional[str]:
+        """If a request path contains a service name, extract it.
+
+        Example:
+        /api/jobs/someservice.instance/110/run -> someservice
+
+        :param str path: request path
+        :return: service name, or None if not found
+        """
+        if not path.startswith("/api/jobs/"):
+            return None
+        path_parts = path.split("/")
+        return path_parts[3].split(".", 1)[0] if len(path_parts) > 3 and path_parts[3] else None
