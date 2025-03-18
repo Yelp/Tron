@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from functools import lru_cache
 from typing import NamedTuple
 from typing import Optional
@@ -12,6 +13,7 @@ from twisted.web.server import Request
 logger = logging.getLogger(__name__)
 AUTH_CACHE_SIZE = 50000
 AUTH_CACHE_TTL = 30 * 60
+SERVICE_NAME_PATH_PATTERN = re.compile(r"^/api/jobs/([^/.]+)")
 
 
 class AuthorizationOutcome(NamedTuple):
@@ -114,7 +116,5 @@ class AuthorizationFilter:
         :param str path: request path
         :return: service name, or None if not found
         """
-        if not path.startswith("/api/jobs/"):
-            return None
-        path_parts = path.split("/")
-        return path_parts[3].split(".", 1)[0] if len(path_parts) > 3 and path_parts[3] else None
+        match = SERVICE_NAME_PATH_PATTERN.search(path)
+        return match.group(1) if match else None
