@@ -1,3 +1,11 @@
+tron (3.3.2) jammy; urgency=medium
+
+  * 3.3.2 tagged with 'make release'
+    Commit: Merge pull request #1034 from Yelp/u/mpiano/SEC-
+    19862_fix_service_param  fix service name extraction logic
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Fri, 21 Mar 2025 11:28:33 -0700
+
 tron (3.3.1) jammy; urgency=medium
 
   * 3.3.1 tagged with 'make release'
