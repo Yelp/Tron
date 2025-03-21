@@ -1,18 +1,16 @@
-
-# Generic models
+# Models
+# This file provides core model functionality and sets up global Backbone behaviour
 window.modules = window.modules || {}
-module = window.modules.models = {}
+window.modules.models = module = {}
 
-
+# Override Backbone's sync to prepend '/api' to all API URLs
 backboneSync = Backbone.sync
-
 Backbone.sync = (method, model, options) ->
     options.url = '/api' + _.result(model, 'url')
     backboneSync(method, model, options)
 
 
 class window.RefreshModel extends Backbone.Model
-
     initialize: (options) =>
         options = options || {}
         @interval = (options.interval || 5) * 1000
@@ -29,12 +27,10 @@ class window.RefreshModel extends Backbone.Model
 
     enableRefresh: =>
         if not @enabled
-            console.log("Enabling refresh")
             @enabled = true
             @scheduleRefresh()
 
     disableRefresh: =>
-        console.log("Disabling refresh")
         @enabled = false
         @clear()
 
@@ -45,17 +41,15 @@ class window.RefreshModel extends Backbone.Model
     doRefresh: =>
         @clear()
         if @enabled
-            console.log("trigger refresh event")
             @trigger('refresh')
             @scheduleRefresh()
 
     scheduleRefresh: =>
         if not @timeout
-            console.log("scheduled with " + @interval)
             @timeout = setTimeout(@doRefresh, @interval)
 
-class window.StatusModel extends Backbone.Model
 
+class window.StatusModel extends Backbone.Model
     urlRoot: ->
         "/status/"
 
@@ -79,7 +73,6 @@ window.nestedName = (field) ->
 
 
 class window.FilterModel extends Backbone.Model
-
     filterTypes:
         name:       buildMatcher(fieldGetter('name'), matchAny)
         state:      buildMatcher(fieldGetter('state'), _.str.startsWith)
@@ -98,7 +91,6 @@ class window.FilterModel extends Backbone.Model
 
 
 class IndexEntry
-
     constructor: (@name) ->
 
     toLowerCase: =>
@@ -115,21 +107,20 @@ class IndexEntry
 
 
 class JobIndexEntry extends IndexEntry
-
     type: "Job"
 
     getUrl: =>
         "#job/#{@name}"
 
-class ConfigIndexEntry extends IndexEntry
 
+class ConfigIndexEntry extends IndexEntry
     type: "Config"
 
     getUrl: =>
         "#config/#{@name}"
 
-class CommandIndexEntry extends IndexEntry
 
+class CommandIndexEntry extends IndexEntry
     constructor: (@name, @job_name, @action_name) ->
         @name = name
 
@@ -140,7 +131,6 @@ class CommandIndexEntry extends IndexEntry
 
 
 class module.QuickFindModel extends Backbone.Model
-
     url: "/"
 
     getJobEntries: (jobs) =>

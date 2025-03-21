@@ -1,7 +1,5 @@
-
-
 window.modules = window.modules || {}
-module = window.modules.navbar = {}
+window.modules.navbar = module = {}
 
 
 class module.NavView extends Backbone.View

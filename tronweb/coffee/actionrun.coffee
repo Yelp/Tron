@@ -1,11 +1,8 @@
-
-
 window.modules = window.modules || {}
-module = window.modules.actionrun = {}
+window.modules.actionrun = module = {}
 
 
 class module.ActionRun extends Backbone.Model
-
     initialize: (options) =>
         super options
         options = options || {}
@@ -29,7 +26,6 @@ class module.ActionRun extends Backbone.Model
 
 
 class module.ActionRunHistoryEntry extends module.ActionRun
-
     idAttribute: "id"
 
     parse: (resp, options) =>
@@ -37,7 +33,6 @@ class module.ActionRunHistoryEntry extends module.ActionRun
 
 
 class module.ActionRunHistory extends Backbone.Collection
-
     initialize: (models, options) =>
         options = options || {}
         @job_name = options.job_name
@@ -59,7 +54,6 @@ class module.ActionRunHistory extends Backbone.Collection
 
 
 class module.ActionRunHistoryListEntryView extends ClickableListEntry
-
     tagName: "tr"
 
     template: _.template """
@@ -81,7 +75,6 @@ class module.ActionRunHistoryListEntryView extends ClickableListEntry
 
 
 class module.ActionRunTimelineEntry
-
     constructor: (@actionRun, @maxDate) ->
 
     toString: =>
@@ -107,7 +100,6 @@ class module.ActionRunTimelineEntry
 
 
 class module.ActionRunListEntryView extends ClickableListEntry
-
     initialize: (options) =>
         @listenTo(@model, "change", @render)
 
@@ -140,7 +132,6 @@ module.formatExit = (exit) ->
 
 
 class module.ActionRunView extends Backbone.View
-
     initialize: (options) =>
         @listenTo(@model, "change", @render)
         @refreshView = new RefreshToggleView(model: @model.refreshModel)
@@ -234,8 +225,8 @@ class module.ActionRunView extends Backbone.View
         modules.views.makeHeaderToggle(@$el)
         @
 
-class ActionRunHistorySliderModel
 
+class ActionRunHistorySliderModel
     constructor: (@model) ->
 
     length: =>
@@ -243,7 +234,6 @@ class ActionRunHistorySliderModel
 
 
 class module.ActionRunHistoryView extends Backbone.View
-
     initialize: (options) =>
         @listenTo(@model, "sync", @render)
         sliderModel = new ActionRunHistorySliderModel(@model)
