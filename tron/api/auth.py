@@ -1,5 +1,6 @@
 import logging
 import os
+import re
 from functools import lru_cache
 from typing import NamedTuple
 from typing import Optional
@@ -12,6 +13,7 @@ from twisted.web.server import Request
 logger = logging.getLogger(__name__)
 AUTH_CACHE_SIZE = 50000
 AUTH_CACHE_TTL = 30 * 60
+SERVICE_NAME_PATH_PATTERN = re.compile(r"^/api/jobs/([^/.]+)")
 
 
 class AuthorizationOutcome(NamedTuple):
@@ -51,13 +53,12 @@ class AuthorizationFilter:
         token = (request.getHeader("Authorization") or "").strip()
         token = token.split()[-1] if token else ""  # removes "Bearer" prefix
         url_path = request.path.decode()
-        service = url_path.split("/")[-1].split(".", 1)[0] if "/jobs/" in url_path else None
         auth_outcome = self._is_request_authorized_impl(
             # path and method are byte arrays in twisted
             path=url_path,
             token=token,
             method=request.method.decode(),
-            service=service,
+            service=self._extract_service_from_path(url_path),
         )
         return auth_outcome if self.enforce else AuthorizationOutcome(True, "Auth dry-run")
 
@@ -104,3 +105,16 @@ class AuthorizationFilter:
 
         reason = response["result"].get("reason", "Ok")
         return AuthorizationOutcome(True, reason)
+
+    @staticmethod
+    def _extract_service_from_path(path: str) -> Optional[str]:
+        """If a request path contains a service name, extract it.
+
+        Example:
+        /api/jobs/someservice.instance/110/run -> someservice
+
+        :param str path: request path
+        :return: service name, or None if not found
+        """
+        match = SERVICE_NAME_PATH_PATTERN.search(path)
+        return match.group(1) if match else None

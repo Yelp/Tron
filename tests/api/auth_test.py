@@ -74,3 +74,16 @@ def test_is_request_authorized_disabled(mock_auth_filter):
         assert mock_auth_filter.is_request_authorized(mock_request("/buzz", "", "post")) == AuthorizationOutcome(
             True, "Auth not enabled"
         )
+
+
+@pytest.mark.parametrize(
+    "path,expected",
+    (
+        ("/api/jobs/someservice.instance/110/run", "someservice"),
+        ("/api/jobs/someweirdservice/110/run", "someweirdservice"),
+        ("/api/jobs/", None),
+        ("/api", None),
+    ),
+)
+def test_extract_service_from_path(path, expected):
+    assert AuthorizationFilter._extract_service_from_path(path) == expected
