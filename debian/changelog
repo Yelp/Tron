@@ -1,3 +1,13 @@
+tron (3.4.1) jammy; urgency=medium
+
+  * 3.4.1 tagged with 'make release'
+    Commit: Bump task_processing to v1.3.3 for Watch restart fix (#1035)
+    This brings in https://github.com/Yelp/task_processing/pull/223,
+    which should ensure that we don"t get stuck in a funky restart loop
+    if k8s tells us our watch"s resourceVersion is too old
+
+ -- Luis Perez <luisp@yelp.com>  Wed, 26 Mar 2025 11:46:03 -0700
+
 tron (3.4.0) jammy; urgency=medium
 
   * 3.4.0 tagged with 'make release'
