@@ -1,3 +1,11 @@
+tron (3.4.2) jammy; urgency=medium
+
+  * 3.4.2 tagged with 'make release'
+    Commit: Merge pull request #1036 from Yelp/u/kkasp/TRON-2396-lower-
+    min-zoom-for-big-ol-charts  Halve minZoom for some of our big charts
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Thu, 27 Mar 2025 10:42:14 -0700
+
 tron (3.4.1) jammy; urgency=medium
 
   * 3.4.1 tagged with 'make release'
