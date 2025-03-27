@@ -249,7 +249,7 @@ class window.GraphView extends Backbone.View
             layout: module.GraphUtils.getDefaultLayout()
             # We cap the zoom in and out. Turns out if you don't do this it is extremely easy to lose the
             # graph. This + the reset button should make this a non-issue.
-            minZoom: 0.2
+            minZoom: 0.1
             maxZoom: 3
         })
 
