@@ -1,3 +1,11 @@
+tron (3.4.6) jammy; urgency=medium
+
+  * 3.4.6 tagged with 'make release'
+    Commit: Merge pull request #1039 from Yelp/u/kkasp/KKASP-0001-
+    download-more-time  Upgrade moment and get the latest tz info
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Mon, 07 Apr 2025 11:10:20 -0700
+
 tron (3.4.5) jammy; urgency=medium
 
   * 3.4.5 tagged with 'make release'
