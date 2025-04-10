@@ -1,3 +1,11 @@
+tron (3.4.7) jammy; urgency=medium
+
+  * 3.4.7 tagged with 'make release'
+    Commit: Merge pull request #1042 from Yelp/u/kkasp/DAR-2637-lower-
+    max-transact-items  Reduce transact size to avoid cap
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Thu, 10 Apr 2025 08:24:26 -0700
+
 tron (3.4.6) jammy; urgency=medium
 
   * 3.4.6 tagged with 'make release'
