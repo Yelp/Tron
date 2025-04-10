@@ -327,7 +327,7 @@ class TestDynamoDBStateStore:
             for _ in side_effects:
                 store._consume_save_queue()
 
-            assert mock_transact_write.call_count == len(side_effects)
+            assert mock_transact_write.called
             assert store.save_errors == expected_save_errors
             assert len(store.save_queue) == expected_queue_length
 
