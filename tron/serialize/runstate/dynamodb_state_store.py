@@ -42,7 +42,7 @@ MAX_SAVE_QUEUE = 500
 # infinite loops in the case where a key is truly unprocessable. We allow for more retries than it should
 # ever take to avoid failing restores due to transient issues.
 MAX_UNPROCESSED_KEYS_RETRIES = 30
-MAX_TRANSACT_WRITE_ITEMS = 100
+MAX_TRANSACT_WRITE_ITEMS = 10
 log = logging.getLogger(__name__)
 T = TypeVar("T")
 
