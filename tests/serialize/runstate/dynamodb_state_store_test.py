@@ -303,7 +303,7 @@ class TestDynamoDBStateStore:
             ("large_object", [KeyError("foo")] * 3, 3, 1),
             # Failure followed by success
             ("small_object", [KeyError("foo"), {}], 0, 0),
-            ("large_object", [KeyError("foo"), {}], 0, 0),
+            ("large_object", [KeyError("foo")] + [{}] * 10, 0, 0),
         ],
     )
     def test_retry_saving(
