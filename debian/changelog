@@ -1,3 +1,10 @@
+tron (3.4.8) jammy; urgency=medium
+
+  * 3.4.8 tagged with 'make release'
+    Commit: fix build_url_request when method is None (#1041)
+
+ -- Luis Perez <luisp@yelp.com>  Mon, 14 Apr 2025 10:52:51 -0700
+
 tron (3.4.7) jammy; urgency=medium
 
   * 3.4.7 tagged with 'make release'
