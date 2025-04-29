@@ -48,7 +48,8 @@ class PersistenceManagerFactory:
         if store_type == schema.StatePersistenceTypes.dynamodb:
             table_name = persistence_config.table_name
             dynamodb_region = persistence_config.dynamodb_region
-            store = DynamoDBStateStore(table_name, dynamodb_region)
+            max_transact_write_items = persistence_config.max_transact_write_items
+            store = DynamoDBStateStore(table_name, dynamodb_region, max_transact_write_items=max_transact_write_items)
 
         buffer = StateSaveBuffer(buffer_size)
         return PersistentStateManager(store, buffer)

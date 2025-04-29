@@ -858,12 +858,18 @@ class ValidateStatePersistence(Validator):
     config_class = schema.ConfigState
     defaults = {
         "buffer_size": 1,
+        "dynamodb_region": None,
+        "table_name": None,
+        "max_transact_write_items": 8,
     }
 
     validators = {
         "name": valid_string,
         "store_type": config_utils.build_real_enum_validator(schema.StatePersistenceTypes),
         "buffer_size": valid_int,
+        "dynamodb_region": valid_string,
+        "table_name": valid_string,
+        "max_transact_write_items": valid_int,
     }
 
     def post_validation(self, config, config_context):
@@ -872,6 +878,22 @@ class ValidateStatePersistence(Validator):
         if buffer_size and buffer_size < 1:
             path = config_context.path
             raise ConfigError("%s buffer_size must be >= 1." % path)
+
+        store_type = config.get("store_type")
+
+        if store_type == schema.StatePersistenceTypes.dynamodb.value:
+            if not config.get("table_name"):
+                raise ConfigError(f"{config_context.path} table_name is required when store_type is 'dynamodb'")
+            if not config.get("dynamodb_region"):
+                raise ConfigError(f"{config_context.path} dynamodb_region is required when store_type is 'dynamodb'")
+
+            max_transact = config.get("max_transact_write_items")
+
+            # Upper bound is based on boto3 transact_write_items limit
+            if not 1 <= max_transact <= 100:
+                raise ConfigError(
+                    f"{config_context.path} max_transact_write_items must be between 1 and 100, got {max_transact}"
+                )
 
 
 valid_state_persistence = ValidateStatePersistence()
