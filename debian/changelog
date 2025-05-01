@@ -1,3 +1,12 @@
+tron (3.4.9) jammy; urgency=medium
+
+  * 3.4.9 tagged with 'make release'
+    Commit: Merge pull request #1043 from Yelp/u/kkasp/TRON-2414-set-
+    extra-safe-transaction-limit  Drop under the limit a bit more for
+    maximum safety
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Thu, 01 May 2025 10:54:54 -0700
+
 tron (3.4.8) jammy; urgency=medium
 
   * 3.4.8 tagged with 'make release'
