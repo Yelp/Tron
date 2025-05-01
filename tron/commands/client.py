@@ -47,7 +47,7 @@ def get_sso_auth_token() -> str:
     from tron.commands.cmd_utils import get_client_config
 
     client_id = get_client_config().get("auth_sso_oidc_client_id")
-    return get_and_cache_jwt_default(client_id) if client_id else ""  # type: ignore
+    return get_and_cache_jwt_default(client_id, refreshable=True) if client_id else ""  # type: ignore
 
 
 def build_url_request(uri, data, headers=None, method=None):
