@@ -106,6 +106,7 @@ ConfigState = config_object_factory(
         "buffer_size",
         "dynamodb_region",
         "table_name",
+        "max_transact_write_items",
     ],
 )
 

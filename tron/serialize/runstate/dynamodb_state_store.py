@@ -42,14 +42,12 @@ MAX_SAVE_QUEUE = 500
 # infinite loops in the case where a key is truly unprocessable. We allow for more retries than it should
 # ever take to avoid failing restores due to transient issues.
 MAX_UNPROCESSED_KEYS_RETRIES = 30
-# While the AWS maximum is 100, we set this to 10 to avoid hitting the 4MB limit for the transaction. See DAR-2637
-MAX_TRANSACT_WRITE_ITEMS = 10
 log = logging.getLogger(__name__)
 T = TypeVar("T")
 
 
 class DynamoDBStateStore:
-    def __init__(self, name, dynamodb_region, stopping=False) -> None:
+    def __init__(self, name, dynamodb_region, stopping=False, max_transact_write_items=8) -> None:
         # Standard mode includes an exponential backoff by a base factor of 2 for a
         # maximum backoff time of 20 seconds (min(b*r^i, MAX_BACKOFF) where b is a
         # random number between 0 and 1 and r is the base factor of 2). This might
@@ -70,6 +68,7 @@ class DynamoDBStateStore:
         self.dynamodb_region = dynamodb_region
         self.table = self.dynamodb.Table(name)
         self.stopping = stopping
+        self.max_transact_write_items = max_transact_write_items
         self.save_queue: OrderedDict = OrderedDict()
         self.save_lock = threading.Lock()
         self.save_errors = 0
@@ -336,7 +335,7 @@ class DynamoDBStateStore:
 
     def __setitem__(self, key: str, value: Tuple[bytes, str]) -> None:
         """
-        Partition the item and write up to MAX_TRANSACT_WRITE_ITEMS
+        Partition the item and write up to self.max_transact_write_items
         partitions atomically using TransactWriteItems.
 
         The function examines the size of pickled_val and json_val,
@@ -392,7 +391,7 @@ class DynamoDBStateStore:
 
             # We want to write the items when we've either reached the max number of items
             # for a transaction, or when we're done processing all partitions
-            if len(items) == MAX_TRANSACT_WRITE_ITEMS or index == max_partitions - 1:
+            if len(items) == self.max_transact_write_items or index == max_partitions - 1:
                 try:
                     self.client.transact_write_items(TransactItems=items)
                     items = []
@@ -401,6 +400,11 @@ class DynamoDBStateStore:
                         name="tron.dynamodb.setitem",
                         delta=time.time() - start,
                     )
+                    # TODO: TRON-2419 - We should be smarter here. While each batch is atomic, a sufficiently
+                    # large JobRun could exceed the max size of a single transaction (e.g. a JobRun with 12
+                    # partitions). While one batch might succeed (saving partitions 1-8), the next one (for
+                    # partitions 9-12) might fail. We should to handle this case or we will see more hanging
+                    # chads in DynamoDB.
                     log.exception(f"Failed to save partition for key: {key}")
                     raise
         timer(
