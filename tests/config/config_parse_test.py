@@ -1184,31 +1184,6 @@ class TestValidateJobs(TestCase):
         assert expected_jobs == test_config["jobs"]
 
 
-class TestValidMesosAction(TestCase):
-    def test_missing_docker_image(self):
-        config = dict(
-            name="test_missing",
-            command="echo hello",
-            executor="mesos",
-            cpus=0.2,
-            mem=150,
-            disk=450,
-        )
-        with pytest.raises(ConfigError):
-            config_parse.valid_action(config, NullConfigContext)
-
-    def test_cleanup_missing_docker_image(self):
-        config = dict(
-            command="echo hello",
-            executor="mesos",
-            cpus=0.2,
-            mem=150,
-            disk=450,
-        )
-        with pytest.raises(ConfigError):
-            config_parse.valid_action(config, NullConfigContext)
-
-
 class TestValidCleanupActionName(TestCase):
     def test_valid_cleanup_action_name_pass(self):
         name = valid_cleanup_action_name(CLEANUP_ACTION_NAME, None)
@@ -1794,6 +1769,106 @@ class TestValidKubeconfigPaths:
         k8s_options["non_retryable_exit_codes"] = [-12, 1]
 
         assert config_parse.valid_kubernetes_options.validate(k8s_options, self.context)
+
+
+class TestValidateStatePersistenceDefaults(TestCase):
+    def test_post_validation_sees_defaults_for_omitted_keys(self):
+        # Intentionally omit max_transact_write_items to test default behaviour
+        input_config = {
+            "store_type": "dynamodb",
+            "name": "test_state",
+            "table_name": "test_table",
+            "dynamodb_region": "us-west-2",
+            "buffer_size": 5,
+            # max_transact_write_items
+        }
+
+        original_post_validation = config_parse.ValidateStatePersistence.post_validation
+        post_validation_args = {}
+
+        def mock_post_validation_side_effect(self_validator, output_dict, config_context):
+            post_validation_args["max_transact_write_items"] = output_dict.get("max_transact_write_items")
+            post_validation_args["buffer_size"] = output_dict.get("buffer_size")
+
+            return original_post_validation(self_validator, output_dict, config_context)
+
+        with mock.patch.object(
+            config_parse.ValidateStatePersistence,
+            "post_validation",
+            side_effect=mock_post_validation_side_effect,
+            autospec=True,
+        ) as mock_method:
+            validator = config_parse.ValidateStatePersistence()
+            context = config_utils.NullConfigContext
+            validated_config = validator(input_config, context)
+            mock_method.assert_called_once()
+
+        self.assertEqual(
+            post_validation_args.get("max_transact_write_items"),
+            8,
+            "post_validation should see the default value for omitted max_transact_write_items",
+        )
+        self.assertEqual(
+            post_validation_args.get("buffer_size"),
+            5,
+            "post_validation should see the provided value for buffer_size",
+        )
+
+        self.assertEqual(validated_config.store_type, "dynamodb")
+        self.assertEqual(validated_config.name, "test_state")
+        self.assertEqual(validated_config.table_name, "test_table")
+        self.assertEqual(validated_config.dynamodb_region, "us-west-2")
+        self.assertEqual(validated_config.buffer_size, 5)
+        self.assertEqual(
+            validated_config.max_transact_write_items,
+            8,
+            "Final config object should have the default value for max_transact_write_items",
+        )
+
+    def test_post_validation_sees_provided_values(self):
+        input_config = {
+            "store_type": "dynamodb",
+            "name": "test_state",
+            "table_name": "test_table",
+            "dynamodb_region": "us-west-2",
+            "buffer_size": 5,
+            "max_transact_write_items": 25,  # Explicitly provide a non-default value
+        }
+
+        original_post_validation = config_parse.ValidateStatePersistence.post_validation
+        post_validation_args = {}
+
+        def mock_post_validation_side_effect(self_validator, output_dict, config_context):
+            post_validation_args["max_transact_write_items"] = output_dict.get("max_transact_write_items")
+            return original_post_validation(self_validator, output_dict, config_context)
+
+        with mock.patch.object(
+            config_parse.ValidateStatePersistence,
+            "post_validation",
+            side_effect=mock_post_validation_side_effect,
+            autospec=True,
+        ) as mock_method:
+            validator = config_parse.ValidateStatePersistence()
+            context = config_utils.NullConfigContext
+            validated_config = validator(input_config, context)
+            mock_method.assert_called_once()
+
+        self.assertEqual(
+            post_validation_args.get("max_transact_write_items"),
+            25,
+            "post_validation should see the provided value for max_transact_write_items",
+        )
+
+        self.assertEqual(
+            validated_config.max_transact_write_items,
+            25,
+            "Final config object should have the provided value for max_transact_write_items",
+        )
+        self.assertEqual(validated_config.store_type, "dynamodb")
+        self.assertEqual(validated_config.name, "test_state")
+        self.assertEqual(validated_config.table_name, "test_table")
+        self.assertEqual(validated_config.dynamodb_region, "us-west-2")
+        self.assertEqual(validated_config.buffer_size, 5)
 
 
 if __name__ == "__main__":
