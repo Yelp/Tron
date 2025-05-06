@@ -332,19 +332,37 @@ class ValidateSecretVolume(Validator):
 
     def post_validation(self, valid_input, config_context):
         """Propagate default mode and enforce the secret-key match."""
-        # Our secrets will really only ever have one key, so weirdly we only care about a single item of this array AND it must have the same name as the secret (which is the single key)
-        items = valid_input.get("items", [])
+        # Ensure 'items' is an iterable list, even if defaulted to None by set_defaults.
+        # The 'or []' handles the case where valid_input.get('items') returns None.
+        items = valid_input.get("items") or []
 
+        # Our secrets will really only ever have one key, so weirdly we only care about a single
+        # item of this array AND it must have the same name as the secret (which is the single key).
         if len(items) > 1:
             raise ConfigError(
                 "There is more than one item in the items array. This is unsupported as we don't support multi-key secrets."
             )
 
+        processed_items = []
+        modified = False
+        default_mode = valid_input.get("default_mode", self.defaults["default_mode"])
+        secret_name = valid_input.get("secret_name")
+
         for item in items:
-            if item.key != valid_input.get("secret_name"):
-                raise ConfigError("item key does not match the secret name.")
+            if item.key != secret_name:
+                raise ConfigError(f"Item key '{item.key}' does not match the volume's secret name '{secret_name}'")
+
+            final_item = item
             if item.mode is None:
-                item._replace(mode=valid_input.get("default_mode", self.defaults["default_mode"]))
+                # Apply volume's default_mode to items without an explicit mode.
+                final_item = item._replace(mode=default_mode)
+                modified = True
+            processed_items.append(final_item)
+
+        if modified:
+            # Update valid_input with the (potentially) modified items tuple.
+            # This ensures the final object reflects applied defaults.
+            valid_input["items"] = tuple(processed_items)
 
 
 valid_secret_volume = ValidateSecretVolume()
