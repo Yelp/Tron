@@ -1844,7 +1844,6 @@ class TestValidKubeconfigPaths:
 
 class TestValidateStatePersistenceDefaults(TestCase):
     def test_post_validation_sees_defaults_for_omitted_keys(self):
-        # Intentionally omit max_transact_write_items to test default behaviour
         input_config = {
             "store_type": "dynamodb",
             "name": "test_state",
@@ -1874,27 +1873,15 @@ class TestValidateStatePersistenceDefaults(TestCase):
             validated_config = validator(input_config, context)
             mock_method.assert_called_once()
 
-        self.assertEqual(
-            post_validation_args.get("max_transact_write_items"),
-            8,
-            "post_validation should see the default value for omitted max_transact_write_items",
-        )
-        self.assertEqual(
-            post_validation_args.get("buffer_size"),
-            5,
-            "post_validation should see the provided value for buffer_size",
-        )
+        assert post_validation_args.get("max_transact_write_items") == 8
+        assert post_validation_args.get("buffer_size") == 5
 
-        self.assertEqual(validated_config.store_type, "dynamodb")
-        self.assertEqual(validated_config.name, "test_state")
-        self.assertEqual(validated_config.table_name, "test_table")
-        self.assertEqual(validated_config.dynamodb_region, "us-west-2")
-        self.assertEqual(validated_config.buffer_size, 5)
-        self.assertEqual(
-            validated_config.max_transact_write_items,
-            8,
-            "Final config object should have the default value for max_transact_write_items",
-        )
+        assert validated_config.store_type == "dynamodb"
+        assert validated_config.name == "test_state"
+        assert validated_config.table_name == "test_table"
+        assert validated_config.dynamodb_region == "us-west-2"
+        assert validated_config.buffer_size == 5
+        assert validated_config.max_transact_write_items == 8
 
     def test_post_validation_sees_provided_values(self):
         input_config = {
@@ -1903,7 +1890,7 @@ class TestValidateStatePersistenceDefaults(TestCase):
             "table_name": "test_table",
             "dynamodb_region": "us-west-2",
             "buffer_size": 5,
-            "max_transact_write_items": 25,  # Explicitly provide a non-default value
+            "max_transact_write_items": 25,
         }
 
         original_post_validation = config_parse.ValidateStatePersistence.post_validation
@@ -1924,22 +1911,14 @@ class TestValidateStatePersistenceDefaults(TestCase):
             validated_config = validator(input_config, context)
             mock_method.assert_called_once()
 
-        self.assertEqual(
-            post_validation_args.get("max_transact_write_items"),
-            25,
-            "post_validation should see the provided value for max_transact_write_items",
-        )
+        assert post_validation_args.get("max_transact_write_items") == 25
 
-        self.assertEqual(
-            validated_config.max_transact_write_items,
-            25,
-            "Final config object should have the provided value for max_transact_write_items",
-        )
-        self.assertEqual(validated_config.store_type, "dynamodb")
-        self.assertEqual(validated_config.name, "test_state")
-        self.assertEqual(validated_config.table_name, "test_table")
-        self.assertEqual(validated_config.dynamodb_region, "us-west-2")
-        self.assertEqual(validated_config.buffer_size, 5)
+        assert validated_config.max_transact_write_items == 25
+        assert validated_config.store_type == "dynamodb"
+        assert validated_config.name == "test_state"
+        assert validated_config.table_name == "test_table"
+        assert validated_config.dynamodb_region == "us-west-2"
+        assert validated_config.buffer_size == 5
 
 
 if __name__ == "__main__":
