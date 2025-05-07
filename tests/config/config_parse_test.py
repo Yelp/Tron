@@ -1608,6 +1608,77 @@ class TestValidSecretVolumeItem:
     def test_valid_job_secret_volume_success(self, config):
         config_parse.valid_secret_volume_item(config, NullConfigContext)
 
+    @pytest.mark.parametrize(
+        "item_config, default_mode, expected",
+        [
+            (
+                # Item inherits volume default_mode
+                {"key": "s1", "path": "p1"},
+                "0755",
+                "0755",
+            ),
+            (
+                # Item explicit mode overrides volume default_mode
+                {"key": "s2", "path": "p2", "mode": "0600"},
+                "0755",
+                "0600",
+            ),
+            (
+                # Item inherits class default for volume default_mode
+                {"key": "s3", "path": "p3"},
+                None,
+                "0644",
+            ),
+        ],
+    )
+    def test_item_mode_propagation_and_override(self, item_config, default_mode, expected):
+        input_config = {
+            "secret_volume_name": "test_vol",
+            "secret_name": item_config["key"],
+            "container_path": "/secrets",
+            "items": [item_config],
+        }
+        if default_mode is not None:
+            input_config["default_mode"] = default_mode
+
+        context = config_utils.NullConfigContext
+        validated_volume_obj = config_parse.valid_secret_volume(input_config, context)
+
+        assert validated_volume_obj.items is not None
+        assert len(validated_volume_obj.items) == 1
+
+        actual_item_mode = validated_volume_obj.items[0].mode
+        assert actual_item_mode == expected
+
+    def test_volume_when_items_key_is_omitted(self):
+        input_config = {
+            "secret_volume_name": "vol_no_items",
+            "secret_name": "s_no_items",
+            "container_path": "/secrets",
+            "default_mode": "0400",
+        }
+        context = config_utils.NullConfigContext
+        validated_volume_obj = config_parse.valid_secret_volume(input_config, context)
+
+        assert validated_volume_obj.default_mode == "0400"
+        assert validated_volume_obj.items is None
+
+    def test_volume_when_items_is_empty(self):
+        input_config = {
+            "secret_volume_name": "vol_empty_items",
+            "secret_name": "s_empty_items",
+            "container_path": "/secrets",
+            "default_mode": "0700",
+            "items": [],
+        }
+        context = config_utils.NullConfigContext
+        validated_volume_obj = config_parse.valid_secret_volume(input_config, context)
+
+        assert validated_volume_obj.default_mode == "0700"
+        assert validated_volume_obj.items is not None
+        assert isinstance(validated_volume_obj.items, tuple)
+        assert len(validated_volume_obj.items) == 0
+
 
 class TestValidSecretVolume:
     @pytest.mark.parametrize(
