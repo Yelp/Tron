@@ -1,3 +1,11 @@
+tron (3.4.10) jammy; urgency=medium
+
+  * 3.4.10 tagged with 'make release'
+    Commit: Merge pull request #1045 from Yelp/u/kkasp/TRON-2414-fix-
+    broken-config-parse  U/kkasp/tron 2414 fix broken config parse
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Thu, 08 May 2025 09:51:28 -0700
+
 tron (3.4.9) jammy; urgency=medium
 
   * 3.4.9 tagged with 'make release'
