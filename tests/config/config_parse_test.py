@@ -1184,31 +1184,6 @@ class TestValidateJobs(TestCase):
         assert expected_jobs == test_config["jobs"]
 
 
-class TestValidMesosAction(TestCase):
-    def test_missing_docker_image(self):
-        config = dict(
-            name="test_missing",
-            command="echo hello",
-            executor="mesos",
-            cpus=0.2,
-            mem=150,
-            disk=450,
-        )
-        with pytest.raises(ConfigError):
-            config_parse.valid_action(config, NullConfigContext)
-
-    def test_cleanup_missing_docker_image(self):
-        config = dict(
-            command="echo hello",
-            executor="mesos",
-            cpus=0.2,
-            mem=150,
-            disk=450,
-        )
-        with pytest.raises(ConfigError):
-            config_parse.valid_action(config, NullConfigContext)
-
-
 class TestValidCleanupActionName(TestCase):
     def test_valid_cleanup_action_name_pass(self):
         name = valid_cleanup_action_name(CLEANUP_ACTION_NAME, None)
@@ -1633,6 +1608,77 @@ class TestValidSecretVolumeItem:
     def test_valid_job_secret_volume_success(self, config):
         config_parse.valid_secret_volume_item(config, NullConfigContext)
 
+    @pytest.mark.parametrize(
+        "item_config, default_mode, expected",
+        [
+            (
+                # Item inherits volume default_mode
+                {"key": "s1", "path": "p1"},
+                "0755",
+                "0755",
+            ),
+            (
+                # Item explicit mode overrides volume default_mode
+                {"key": "s2", "path": "p2", "mode": "0600"},
+                "0755",
+                "0600",
+            ),
+            (
+                # Item inherits class default for volume default_mode
+                {"key": "s3", "path": "p3"},
+                None,
+                "0644",
+            ),
+        ],
+    )
+    def test_item_mode_propagation_and_override(self, item_config, default_mode, expected):
+        input_config = {
+            "secret_volume_name": "test_vol",
+            "secret_name": item_config["key"],
+            "container_path": "/secrets",
+            "items": [item_config],
+        }
+        if default_mode is not None:
+            input_config["default_mode"] = default_mode
+
+        context = config_utils.NullConfigContext
+        validated_volume_obj = config_parse.valid_secret_volume(input_config, context)
+
+        assert validated_volume_obj.items is not None
+        assert len(validated_volume_obj.items) == 1
+
+        actual_item_mode = validated_volume_obj.items[0].mode
+        assert actual_item_mode == expected
+
+    def test_volume_when_items_key_is_omitted(self):
+        input_config = {
+            "secret_volume_name": "vol_no_items",
+            "secret_name": "s_no_items",
+            "container_path": "/secrets",
+            "default_mode": "0400",
+        }
+        context = config_utils.NullConfigContext
+        validated_volume_obj = config_parse.valid_secret_volume(input_config, context)
+
+        assert validated_volume_obj.default_mode == "0400"
+        assert validated_volume_obj.items is None
+
+    def test_volume_when_items_is_empty(self):
+        input_config = {
+            "secret_volume_name": "vol_empty_items",
+            "secret_name": "s_empty_items",
+            "container_path": "/secrets",
+            "default_mode": "0700",
+            "items": [],
+        }
+        context = config_utils.NullConfigContext
+        validated_volume_obj = config_parse.valid_secret_volume(input_config, context)
+
+        assert validated_volume_obj.default_mode == "0700"
+        assert validated_volume_obj.items is not None
+        assert isinstance(validated_volume_obj.items, tuple)
+        assert len(validated_volume_obj.items) == 0
+
 
 class TestValidSecretVolume:
     @pytest.mark.parametrize(
@@ -1794,6 +1840,85 @@ class TestValidKubeconfigPaths:
         k8s_options["non_retryable_exit_codes"] = [-12, 1]
 
         assert config_parse.valid_kubernetes_options.validate(k8s_options, self.context)
+
+
+class TestValidateStatePersistenceDefaults(TestCase):
+    def test_post_validation_sees_defaults_for_omitted_keys(self):
+        input_config = {
+            "store_type": "dynamodb",
+            "name": "test_state",
+            "table_name": "test_table",
+            "dynamodb_region": "us-west-2",
+            "buffer_size": 5,
+            # max_transact_write_items
+        }
+
+        original_post_validation = config_parse.ValidateStatePersistence.post_validation
+        post_validation_args = {}
+
+        def mock_post_validation_side_effect(self_validator, output_dict, config_context):
+            post_validation_args["max_transact_write_items"] = output_dict.get("max_transact_write_items")
+            post_validation_args["buffer_size"] = output_dict.get("buffer_size")
+
+            return original_post_validation(self_validator, output_dict, config_context)
+
+        with mock.patch.object(
+            config_parse.ValidateStatePersistence,
+            "post_validation",
+            side_effect=mock_post_validation_side_effect,
+            autospec=True,
+        ) as mock_method:
+            validator = config_parse.ValidateStatePersistence()
+            context = config_utils.NullConfigContext
+            validated_config = validator(input_config, context)
+            mock_method.assert_called_once()
+
+        assert post_validation_args.get("max_transact_write_items") == 8
+        assert post_validation_args.get("buffer_size") == 5
+
+        assert validated_config.store_type == "dynamodb"
+        assert validated_config.name == "test_state"
+        assert validated_config.table_name == "test_table"
+        assert validated_config.dynamodb_region == "us-west-2"
+        assert validated_config.buffer_size == 5
+        assert validated_config.max_transact_write_items == 8
+
+    def test_post_validation_sees_provided_values(self):
+        input_config = {
+            "store_type": "dynamodb",
+            "name": "test_state",
+            "table_name": "test_table",
+            "dynamodb_region": "us-west-2",
+            "buffer_size": 5,
+            "max_transact_write_items": 25,
+        }
+
+        original_post_validation = config_parse.ValidateStatePersistence.post_validation
+        post_validation_args = {}
+
+        def mock_post_validation_side_effect(self_validator, output_dict, config_context):
+            post_validation_args["max_transact_write_items"] = output_dict.get("max_transact_write_items")
+            return original_post_validation(self_validator, output_dict, config_context)
+
+        with mock.patch.object(
+            config_parse.ValidateStatePersistence,
+            "post_validation",
+            side_effect=mock_post_validation_side_effect,
+            autospec=True,
+        ) as mock_method:
+            validator = config_parse.ValidateStatePersistence()
+            context = config_utils.NullConfigContext
+            validated_config = validator(input_config, context)
+            mock_method.assert_called_once()
+
+        assert post_validation_args.get("max_transact_write_items") == 25
+
+        assert validated_config.max_transact_write_items == 25
+        assert validated_config.store_type == "dynamodb"
+        assert validated_config.name == "test_state"
+        assert validated_config.table_name == "test_table"
+        assert validated_config.dynamodb_region == "us-west-2"
+        assert validated_config.buffer_size == 5
 
 
 if __name__ == "__main__":

@@ -392,8 +392,9 @@ class Validator:
         defaults, and returning an instance of the config_class.
         """
         output_dict = self.validate_contents(in_dict, config_context)
-        self.post_validation(output_dict, config_context)
         self.set_defaults(output_dict, config_context)
+        self.post_validation(output_dict, config_context)
+
         return self.config_class(**output_dict)
 
     def validate_contents(self, input, config_context):
