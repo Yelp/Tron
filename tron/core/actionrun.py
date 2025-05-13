@@ -7,10 +7,13 @@ import logging
 import os
 from dataclasses import dataclass
 from dataclasses import fields
+from typing import cast
 from typing import Dict
 from typing import List
+from typing import Literal
 from typing import Optional
 from typing import Set
+from typing import TYPE_CHECKING
 from typing import Union
 
 from twisted.internet import reactor
@@ -30,10 +33,13 @@ from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
 from tron.core.action import ActionCommandConfig
+from tron.core.actiongraph import ActionGraph
 from tron.eventbus import EventBus
 from tron.kubernetes import KubernetesClusterRepository
 from tron.kubernetes import KubernetesTask
+from tron.mesos import MesosCluster
 from tron.mesos import MesosClusterRepository
+from tron.mesos import MesosTask
 from tron.serialize import filehandler
 from tron.utils import exitcode
 from tron.utils import maybe_decode
@@ -43,6 +49,9 @@ from tron.utils.observer import Observable
 from tron.utils.observer import Observer
 from tron.utils.persistable import Persistable
 from tron.utils.state import Machine
+
+if TYPE_CHECKING:
+    from twisted.internet.epollreactor import EPollReactor
 
 
 log = logging.getLogger(__name__)
@@ -594,7 +603,7 @@ class ActionRun(Observable, Persistable):
     def kill(self, final=True):
         raise NotImplementedError()
 
-    def recover(self):
+    def recover(self) -> Optional[ActionCommand]:
         raise NotImplementedError()
 
     def _done(self, target, exit_status=0) -> Optional[bool]:
@@ -1040,7 +1049,7 @@ class SSHActionRun(ActionRun, Observer):
         log.info(f"Starting try #{self.recover_tries} to recover {self.id}, waiting {desired_delay}")
         return self.do_recover(delay=desired_delay)
 
-    def recover(self):
+    def recover(self) -> Optional[Union[DelayedCall, Literal[True]]]:  # type: ignore[override]  # this ActionRun subclass is not long for this world (hopefully)
         log.info(f"Creating recovery run for actionrun {self.id}")
         if isinstance(self.action_runner, NoActionRunnerFactory):
             log.info(
@@ -1058,10 +1067,8 @@ class SSHActionRun(ActionRun, Observer):
 
         return self.do_recover(delay=0)
 
-    def do_recover(self, delay):
-        recovery_command = (
-            f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"
-        )
+    def do_recover(self, delay) -> Optional[Union[DelayedCall, Literal[True]]]:
+        recovery_command = f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"  # type: ignore[union-attr]  # hopefully we can remove the Union with TRON-2304
         command_config = action.ActionCommandConfig(command=recovery_command)
         rendered_command = self.render_command(recovery_command)
         attempt = ActionRunAttempt(
@@ -1102,14 +1109,14 @@ class SSHActionRun(ActionRun, Observer):
         if not delay:
             return self.submit_recovery_command(recovery_run, recovery_action_command)
         else:
-            return reactor.callLater(
+            return cast("EPollReactor", reactor).callLater(
                 delay,
                 self.submit_recovery_command,
                 recovery_run,
                 recovery_action_command,
             )
 
-    def submit_recovery_command(self, recovery_run, recovery_action_command):
+    def submit_recovery_command(self, recovery_run, recovery_action_command) -> Optional[Literal[True]]:
         log.info(
             f"Submitting recovery job with command {recovery_action_command.command} " f"to node {recovery_run.node}",
         )
@@ -1121,6 +1128,8 @@ class SSHActionRun(ActionRun, Observer):
             return True
         except node.Error as e:
             log.warning(f"Failed to submit recovery for {self.id}: {e!r}")
+
+        return None
 
     def handle_action_command_state_change(self, action_command, event, event_data=None):
         """Observe ActionCommand state changes."""
@@ -1149,7 +1158,7 @@ class SSHActionRun(ActionRun, Observer):
 class MesosActionRun(ActionRun, Observer):
     """An ActionRun that executes the command on a Mesos cluster."""
 
-    def _create_mesos_task(self, mesos_cluster, serializer, attempt, task_id=None):
+    def _create_mesos_task(self, mesos_cluster: MesosCluster, serializer, attempt, task_id=None) -> Optional[MesosTask]:
         command_config = attempt.command_config
         return mesos_cluster.create_task(
             action_run_id=self.id,
@@ -1172,7 +1181,7 @@ class MesosActionRun(ActionRun, Observer):
         task = self._create_mesos_task(mesos_cluster, serializer, attempt)
         if not task:  # Mesos is disabled
             self.fail(exitcode.EXIT_MESOS_DISABLED)
-            return
+            return None
 
         attempt.mesos_task_id = task.get_mesos_id()
 
@@ -1181,17 +1190,17 @@ class MesosActionRun(ActionRun, Observer):
         mesos_cluster.submit(task)
         return task
 
-    def recover(self):
+    def recover(self) -> Optional[MesosTask]:
         if not self.machine.check("running"):
             log.error(
                 f"{self} unable to transition from {self.machine.state}" "to running for recovery",
             )
-            return
+            return None
 
         if not self.attempts or self.attempts[-1].mesos_task_id is None:
             log.error(f"{self} no task ID, cannot recover")
             self.fail_unknown()
-            return
+            return None
 
         last_attempt = self.attempts[-1]
 
@@ -1207,10 +1216,10 @@ class MesosActionRun(ActionRun, Observer):
         )
         if not task:
             log.warning(
-                f"{self} cannot recover, Mesos is disabled or " f"invalid task ID {last_attempt.mesos_task_id!r}",
+                f"{self} cannot recover, Mesos is disabled or invalid task ID {last_attempt.mesos_task_id!r}",
             )
             self.fail_unknown()
-            return
+            return None
 
         self.watch(task)
         mesos_cluster.recover(task)
@@ -1528,7 +1537,7 @@ class KubernetesActionRun(ActionRun, Observer):
             return self._exit_unsuccessful(action_command.exit_status)
         return None
 
-    handler = handle_action_command_state_change
+    handler = handle_action_command_state_change  # type: ignore[assignment]  # luisp gave up trying to type this
 
 
 def min_filter(seq):
@@ -1543,7 +1552,7 @@ def eager_all(seq):
 class ActionRunCollection:
     """A collection of ActionRuns used by a JobRun."""
 
-    def __init__(self, action_graph, run_map):
+    def __init__(self, action_graph: ActionGraph, run_map: Dict[str, ActionRun]):
         self.action_graph = action_graph
         self.run_map: Dict[str, ActionRun] = run_map
         # Setup proxies

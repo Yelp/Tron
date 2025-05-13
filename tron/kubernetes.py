@@ -310,7 +310,7 @@ class KubernetesCluster:
 
         # queue to to use for tron<->task_proc communication - will hold k8s events seen
         # by task_processing and held for tron to process.
-        self.queue = PyDeferredQueue()
+        self.queue: PyDeferredQueue[Event] = PyDeferredQueue()
         # this will hold the current event to process (retrieved from the PyDeferredQueue above)
         # which we will eventually wrap with some callbacks to actually process using the Twisted
         # reactor started as part of tron's startup process
@@ -376,9 +376,9 @@ class KubernetesCluster:
 
         self.deferred = self.queue.get()
         if self.deferred is None:
-            log.warning("Unable to get a handler for next event in queue - this should never happen!")
             # TODO: figure out how to recover if we were unable to get a handler
             # Not adding a callback is very bad here as this means we will never handle future events
+            log.warning("Unable to get a handler for next event in queue - this should never happen!")  # type: ignore[unreachable]  # luisp is not sure why we initially added this check...
         # we want to process the event we just popped off the queue, but we also want
         # to form a sort of event loop, so we add two callbacks:
         # * one to actually deal with the event

@@ -4,6 +4,7 @@ import functools
 import itertools
 import re
 from string import Formatter
+from typing import Optional
 
 from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
@@ -292,7 +293,7 @@ class Validator:
     collection from the source.
     """
 
-    config_class = None
+    config_class: Optional[type] = None
     defaults = {}  # type: ignore
     validators = {}  # type: ignore
     optional = False

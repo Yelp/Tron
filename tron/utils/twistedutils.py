@@ -1,13 +1,20 @@
+from typing import Any
+from typing import cast
+from typing import TYPE_CHECKING
+
 from twisted.internet import defer
-from twisted.internet import reactor
+from twisted.internet import reactor  # This is the global reactor instance
 from twisted.python import failure
+
+if TYPE_CHECKING:
+    from twisted.internet.epollreactor import EPollReactor
 
 
 class Error(Exception):
     pass
 
 
-def _cancel(deferred):
+def _cancel(deferred: defer.Deferred[object]) -> None:
     """Re-implementing what's available in newer twisted in a crappy, but
     workable way."""
 
@@ -17,8 +24,8 @@ def _cancel(deferred):
         _cancel(deferred.result)
 
 
-def defer_timeout(deferred, timeout):
+def defer_timeout(deferred: defer.Deferred[Any], timeout: float) -> None:
     try:
-        reactor.callLater(timeout, deferred.cancel)
+        cast("EPollReactor", reactor).callLater(timeout, deferred.cancel)
     except AttributeError:
-        reactor.callLater(timeout, lambda: _cancel(deferred))
+        cast("EPollReactor", reactor).callLater(timeout, lambda: _cancel(deferred))

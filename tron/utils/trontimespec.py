@@ -12,11 +12,30 @@
 """A complete time specification based on the Google App Engine GROC spec."""
 import calendar
 import datetime
+from typing import Any
+from typing import cast
+from typing import Generator
+from typing import Iterable
+from typing import List
+from typing import Optional
+from typing import Protocol
+from typing import Tuple
+from typing import Union
 
 import pytz
 
 
-def get_timezone(timezone_string):
+class PytzTimezone(Protocol):
+    def localize(self, dt: datetime.datetime, is_dst: Optional[bool] = None) -> datetime.datetime:
+        ...
+
+    def normalize(self, dt: datetime.datetime) -> datetime.datetime:
+        ...
+
+    # feel free to add more methods as needed until we have saner types
+
+
+def get_timezone(timezone_string: Optional[str]) -> Optional[PytzTimezone]:
     """Converts a timezone string to a pytz timezone object.
 
     Arguments:
@@ -35,7 +54,7 @@ def get_timezone(timezone_string):
         return None
 
 
-def to_timezone(t, tzinfo):
+def to_timezone(t: datetime.datetime, tzinfo: Optional[PytzTimezone]) -> datetime.datetime:
     """Converts 't' to the time zone 'tzinfo'.
 
     Arguments:
@@ -53,7 +72,8 @@ def to_timezone(t, tzinfo):
         # if tzinfo is provided, then the datetime object is converted to the given timezone
         # and normalized to adjust for discrepancies that might arise from daylight savings
         # time or other irregularities in the timezone.
-        return tzinfo.normalize(t.astimezone(tzinfo))
+        # HACK: maybe once we're on a newer python and can drop pytz we can clean this up
+        return tzinfo.normalize(t.astimezone(cast(datetime.tzinfo, tzinfo)))
     elif t.tzinfo:
         # handles the case where tzinfo is not provided but t is timezone-aware
         # then it is converted to UTC then normalized to adjust for discrepancies
@@ -64,7 +84,7 @@ def to_timezone(t, tzinfo):
         return t
 
 
-def naive_as_timezone(t, tzinfo):
+def naive_as_timezone(t: datetime.datetime, tzinfo: PytzTimezone) -> datetime.datetime:
     """Interprets the naive datetime with the given time zone."""
     try:
         result = tzinfo.localize(t, is_dst=None)
@@ -79,7 +99,7 @@ def naive_as_timezone(t, tzinfo):
     return result
 
 
-def get_time(time_string):
+def get_time(time_string: str) -> Optional[datetime.time]:
     """Converts a string to a datetime.time object.
 
     Arguments:
@@ -104,10 +124,16 @@ hour_range = range(0, 24)
 minute_range = second_range = range(0, 60)
 
 
-def validate_spec(source, value_range, type, default=None, allow_last=False):
-    default = default if default is not None else value_range
+def validate_spec(
+    source: Optional[List[Union[int, str]]],
+    value_range: range,
+    type: str,
+    default: Optional[List[Union[int, str]]] = None,
+    allow_last: bool = False,
+) -> Union[List[Union[int, str]], range]:
+    resolved_default: Union[List[Union[int, str]], range] = default if default is not None else value_range
     if not source:
-        return default
+        return resolved_default
 
     has_last = False
     source_wo_last = []
@@ -133,15 +159,15 @@ class TimeSpecification:
 
     def __init__(
         self,
-        ordinals=None,
-        weekdays=None,
-        months=None,
-        monthdays=None,
-        timestr=None,
-        timezone=None,
-        minutes=None,
-        hours=None,
-        seconds=None,
+        ordinals: Optional[List[Union[int, str]]] = None,
+        weekdays: Optional[List[Union[int, str]]] = None,
+        months: Optional[List[Union[int, str]]] = None,
+        monthdays: Optional[List[Union[int, str]]] = None,
+        timestr: Optional[str] = None,
+        timezone: Optional[str] = None,
+        minutes: Optional[List[Union[int, str]]] = None,
+        hours: Optional[List[Union[int, str]]] = None,
+        seconds: Optional[List[Union[int, str]]] = None,
     ):
 
         if weekdays and monthdays:
@@ -154,7 +180,8 @@ class TimeSpecification:
             timestr = "00:00"
 
         if timestr:
-            time = get_time(timestr)
+            # TODO: there's a bug here if get_time returns None - fix this once we're done typing tron
+            time = cast(datetime.time, get_time(timestr))
             hours = [time.hour]
             minutes = [time.minute]
             seconds = [0]
@@ -177,72 +204,77 @@ class TimeSpecification:
             [],
             True,
         )
-        self.timezone = get_timezone(timezone)
+        self.timezone: Optional[PytzTimezone] = get_timezone(timezone)
 
-    def next_day(self, first_day, year, month):
+    def next_day(self, first_day: int, year: int, month: int) -> List[int]:
         """Returns matching days for the given year and month."""
         first_day_of_month, last_day_of_month = calendar.monthrange(
             year,
             month,
         )
 
-        def map_last(day):
+        def map_last(day: int) -> int:
             return last_day_of_month if day == TOKEN_LAST else day
 
-        def day_filter(day):
+        def day_filter(day: int) -> bool:
             return first_day <= day <= last_day_of_month
 
-        def sort_days(days):
+        def sort_days(days: Iterable[int]) -> List[int]:
             return sorted(filter(day_filter, days))
 
         if self.monthdays:
-            return sort_days(map_last(day) for day in self.monthdays)
+            # these casts are a necessary evil due to the TOKEN_LAST shenanigans we do
+            return sort_days(map_last(day) for day in cast(List[int], self.monthdays))
 
         start_day = (first_day_of_month + 1) % 7
 
-        def days_from_weekdays():
-            for ordinal in self.ordinals:
+        def days_from_weekdays() -> Generator[int, None, None]:
+            # these casts are a necessary evil due to the TOKEN_LAST shenanigans we do
+            for ordinal in cast(List[int], self.ordinals):
                 week = (ordinal - 1) * 7
-                for weekday in self.weekdays:
+                for weekday in cast(List[int], self.weekdays):
                     yield ((weekday - start_day) % 7) + week + 1
 
         return sort_days(days_from_weekdays())
 
-    def next_month(self, start_date):
+    def next_month(self, start_date: datetime.datetime) -> Generator[Tuple[int, int], None, None]:
         """Create a generator which yields valid months after the start month."""
         current = start_date.month
-        potential = [m for m in self.months if m >= current]
+        # these casts are a necessary evil due to the TOKEN_LAST shenanigans we do
+        potential = [m for m in cast(List[int], self.months) if m >= current]
         year_wraps = 0
 
         while True:
             if not potential:
                 year_wraps += 1
-                potential = list(self.months)
+                potential = cast(List[int], list(self.months))
 
             yield potential.pop(0), start_date.year + year_wraps
 
-    def next_time(self, start_date, is_start_day):
+    def next_time(self, start_date: datetime.datetime, is_start_day: bool) -> Optional[datetime.time]:
         """Return the next valid time."""
         start_hour = start_date.time().hour
 
-        def hour_filter(hour):
+        def hour_filter(hour: int) -> bool:
             return not is_start_day or hour >= start_hour
 
-        for hour in filter(hour_filter, self.hours):
-            for minute in self.minutes:
-                for second in self.seconds:
+        # NOTE: these casts are a necessary evil due to the TOKEN_LAST shenanigans we do
+        for hour in filter(hour_filter, cast(List[int], self.hours)):
+            for minute in cast(List[int], self.minutes):
+                for second in cast(List[int], self.seconds):
                     candidate = datetime.time(hour, minute, second)
 
                     if is_start_day and start_date.time() >= candidate:
                         continue
 
                     return candidate
+        return None
 
-    def get_match(self, start):
+    def get_match(self, start: datetime.datetime) -> Optional[datetime.datetime]:
         """Returns the next datetime match after start."""
         start_date = to_timezone(start, self.timezone).replace(tzinfo=None)
 
-        def get_first_day(month, year):
+        def get_first_day(month: int, year: int) -> int:
             if (month, year) != (start_date.month, start_date.year):
                 return 1
             return start_date.day
@@ -266,18 +298,20 @@ class TimeSpecification:
                     second=time.second,
                     microsecond=0,
                 )
-                candidate = self.handle_timezone(candidate, start.tzinfo)
+                # HACK: as usual for this file, more casting to work around tz shenanigans
+                candidate = self.handle_timezone(candidate, cast(PytzTimezone, start.tzinfo))
                 if not candidate:
                     continue
                 return candidate
+        return None
 
     # TODO: test
-    def handle_timezone(self, out, tzinfo):
+    def handle_timezone(self, out: datetime.datetime, tzinfo: Optional[PytzTimezone]) -> datetime.datetime:
         if self.timezone:
             out = naive_as_timezone(out, self.timezone)
         return to_timezone(out, tzinfo)
 
-    def __eq__(self, other):
+    def __eq__(self, other: Any) -> bool:
         attrs = [
             "hours",
             "minutes",
@@ -290,5 +324,5 @@ class TimeSpecification:
         ]
         return all(getattr(other, attr, None) == getattr(self, attr, None) for attr in attrs)
 
-    def __ne__(self, other):
+    def __ne__(self, other: Any) -> bool:
         return not self == other

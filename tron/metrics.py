@@ -1,4 +1,9 @@
-from pyformance.meters import Counter  # type: ignore
+# XXX: we should probably get rid of this and switch to just meteorite/prometheus
+from typing import Dict
+from typing import Optional
+from typing import Union
+
+from pyformance.meters import Counter  # type: ignore[import-untyped]  # this library is not typed
 from pyformance.meters import Histogram
 from pyformance.meters import Meter
 from pyformance.meters import SimpleGauge
@@ -14,31 +19,32 @@ def get_metric(metric_type, name, dimensions, default):
     return all_metrics.setdefault(key, default)
 
 
-def timer(name, delta, dimensions=None):
+def timer(name, delta: Union[int, float], dimensions: Optional[Dict[str, str]] = None) -> None:
     timer = get_metric("timer", name, dimensions, Timer())
     timer._update(delta)
 
 
-def count(name, inc=1, dimensions=None):
+def count(name, inc=1, dimensions=None) -> None:
     counter = get_metric("counter", name, dimensions, Counter())
     counter.inc(inc)
 
 
-def meter(name, dimensions=None):
+def meter(name, dimensions=None) -> None:
     meter = get_metric("meter", name, dimensions, Meter())
     meter.mark()
 
 
-def gauge(name, value, dimensions=None):
+def gauge(name, value, dimensions=None) -> None:
     gauge = get_metric("gauge", name, dimensions, SimpleGauge())
     gauge.set_value(value)
 
 
-def histogram(name, value, dimensions=None):
+def histogram(name, value, dimensions=None) -> None:
     histogram = get_metric("histogram", name, dimensions, Histogram())
     histogram.add(value)
 
 
+# These view functions should probably be typed as returning TypedDicts
 def view_timer(timer):
     data = view_meter(timer)
     data.update(view_histogram(timer))

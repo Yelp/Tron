@@ -12,12 +12,13 @@ import pytz
 
 import tron.metrics as metrics
 from tron import command_context
-from tron import node
 from tron import prom_metrics
 from tron.core.actiongraph import ActionGraph
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunCollection
 from tron.core.actionrun import ActionRunFactory
+from tron.node import Node
+from tron.node import NodePoolRepository
 from tron.serialize import filehandler
 from tron.utils import maybe_decode
 from tron.utils import next_or_none
@@ -57,7 +58,7 @@ class JobRun(Observable, Observer, Persistable):
         job_name: str,
         run_num: int,
         run_time: datetime.datetime,
-        node: node.Node,
+        node: Node,
         output_path: Optional[filehandler.OutputPath] = None,
         base_context: Optional[command_context.CommandContext] = None,
         action_runs: Optional[ActionRunCollection] = None,
@@ -65,18 +66,18 @@ class JobRun(Observable, Observer, Persistable):
         manual: Optional[bool] = None,
     ):
         super().__init__()
-        self.job_name = maybe_decode(
+        self.job_name: str = maybe_decode(
             job_name
         )  # TODO: TRON-2293 - maybe_decode is a relic of Python2->Python3 migration. Remove it.
-        self.run_num = run_num
-        self.run_time = run_time
-        self.node = node
-        self.output_path = output_path or filehandler.OutputPath()
+        self.run_num: int = run_num
+        self.run_time: datetime.datetime = run_time
+        self.node: Node = node
+        self.output_path: filehandler.OutputPath = output_path or filehandler.OutputPath()
         self.output_path.append(str(self.run_num))
         self.action_runs_proxy = None
-        self._action_runs = None
-        self.action_graph = action_graph
-        self.manual = manual
+        self._action_runs: Optional[ActionRunCollection] = None
+        self.action_graph: Optional[ActionGraph] = action_graph
+        self.manual: Optional[bool] = manual
 
         if action_runs:
             self.action_runs = action_runs
@@ -187,7 +188,7 @@ class JobRun(Observable, Observer, Persistable):
         run_node,
     ):
         """Restore a JobRun from a serialized state."""
-        pool_repo = node.NodePoolRepository.get_instance()
+        pool_repo = NodePoolRepository.get_instance()
         run_node = pool_repo.get_node(state_data.get("node_name"), run_node)
         job_name = state_data["job_name"]
 
@@ -348,7 +349,7 @@ class JobRun(Observable, Observer, Persistable):
 
         cleanup_run.start()
 
-    handler = handle_action_run_state_change
+    handler = handle_action_run_state_change  # type: ignore[assignment]  # luisp gave up trying to type this
 
     def finalize(self):
         """The last step of a JobRun. Called when the cleanup action
