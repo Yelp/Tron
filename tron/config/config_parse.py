@@ -241,7 +241,7 @@ def valid_k8s_master_address(value: str, config_context: ConfigContext) -> str:
 
 
 class ValidateConstraint(Validator):
-    config_class = ConfigConstraint
+    config_class: type = ConfigConstraint
     validators = {
         "attribute": valid_string,
         "operator": config_utils.build_enum_validator(OPERATORS.keys()),
@@ -253,7 +253,7 @@ valid_constraint = ValidateConstraint()
 
 
 class ValidateDockerParameter(Validator):
-    config_class = ConfigParameter
+    config_class: type = ConfigParameter
     validators = {
         "key": valid_string,
         "value": valid_string,
@@ -264,7 +264,7 @@ valid_docker_parameter = ValidateDockerParameter()
 
 
 class ValidateVolume(Validator):
-    config_class = ConfigVolume
+    config_class: type = ConfigVolume
     validators = {
         "container_path": valid_string,
         "host_path": valid_string,
@@ -276,7 +276,7 @@ valid_volume = ValidateVolume()
 
 
 class ValidateSecretSource(Validator):
-    config_class = ConfigSecretSource
+    config_class: type = ConfigSecretSource
     validators = {
         "secret_name": valid_string,  # name of Kubernetes Secret
         "key": valid_string,  # key name in Secret data
@@ -301,7 +301,7 @@ def valid_permission_mode(value: Union[str, int], config_context: ConfigContext)
 
 
 class ValidateSecretVolumeItem(Validator):
-    config_class = ConfigSecretVolumeItem
+    config_class: type = ConfigSecretVolumeItem
 
     validators = {
         "key": valid_string,  # name of current secret
@@ -314,7 +314,7 @@ valid_secret_volume_item = ValidateSecretVolumeItem()
 
 
 class ValidateSecretVolume(Validator):
-    config_class = ConfigSecretVolume
+    config_class: type = ConfigSecretVolume
 
     optional = True
     defaults = {
@@ -369,7 +369,7 @@ valid_secret_volume = ValidateSecretVolume()
 
 
 class ValidateProjectedSAVolume(Validator):
-    config_class = ConfigProjectedSAVolume
+    config_class: type = ConfigProjectedSAVolume
     optional = True
     defaults = {
         "expiration_seconds": 1800,
@@ -385,7 +385,7 @@ valid_projected_sa_volume = ValidateProjectedSAVolume()
 
 
 class ValidateFieldSelectorSource(Validator):
-    config_class = ConfigFieldSelectorSource
+    config_class: type = ConfigFieldSelectorSource
     validators = {
         "field_path": valid_string,  # k8s field path - e.g., `status.podIP`
     }
@@ -403,7 +403,7 @@ def _valid_node_affinity_operator(value: str, config_context: ConfigContext) -> 
 
 
 class ValidateNodeAffinity(Validator):
-    config_class = ConfigNodeAffinity
+    config_class: type = ConfigNodeAffinity
     validators = {
         "key": valid_string,
         "operator": _valid_node_affinity_operator,
@@ -437,7 +437,7 @@ def _valid_topology_spread_label_selector(value: Dict[str, str], config_context:
 
 
 class ValidateTopologySpreadConstraints(Validator):
-    config_class = ConfigTopologySpreadConstraints
+    config_class: type = ConfigTopologySpreadConstraints
     validators = {
         "max_skew": valid_int,
         "when_unsatisfiable": _valid_when_unsatisfiable,
@@ -452,7 +452,7 @@ valid_topology_spread_constraints = ValidateTopologySpreadConstraints()
 class ValidateSSHOptions(Validator):
     """Validate SSH options."""
 
-    config_class = ConfigSSHOptions
+    config_class: type = ConfigSSHOptions
     optional = True
     defaults = {
         "agent": False,
@@ -495,7 +495,7 @@ valid_ssh_options = ValidateSSHOptions()
 
 
 class ValidateNode(Validator):
-    config_class = schema.ConfigNode
+    config_class: type = schema.ConfigNode
     validators = {
         "name": config_utils.valid_identifier,
         "username": config_utils.valid_string,
@@ -522,7 +522,7 @@ valid_node = ValidateNode()
 
 
 class ValidateNodePool(Validator):
-    config_class = schema.ConfigNodePool
+    config_class: type = schema.ConfigNodePool
     validators = {
         "name": valid_identifier,
         "nodes": build_list_of_type_validator(valid_identifier),
@@ -590,7 +590,7 @@ def valid_trigger_downstreams(trigger_downstreams, config_context):
 class ValidateAction(Validator):
     """Validate an action."""
 
-    config_class = ConfigAction
+    config_class: type = ConfigAction
 
     defaults = {
         "node": None,
@@ -598,7 +598,7 @@ class ValidateAction(Validator):
         "retries": None,
         "retries_delay": None,
         "expected_runtime": datetime.timedelta(hours=24),
-        "executor": schema.ExecutorTypes.ssh.value,
+        "executor": schema.ExecutorTypes.ssh.value,  # type: ignore[attr-defined] # ExecutorTypes is an Enum
         "cpus": None,
         "mem": None,
         "disk": None,
@@ -686,14 +686,14 @@ def valid_cleanup_action_name(value, config_context):
 
 
 class ValidateCleanupAction(Validator):
-    config_class = ConfigCleanupAction
+    config_class: type = ConfigCleanupAction
     defaults = {
         "node": None,
         "name": CLEANUP_ACTION_NAME,
         "retries": None,
         "retries_delay": None,
         "expected_runtime": datetime.timedelta(hours=24),
-        "executor": schema.ExecutorTypes.ssh.value,
+        "executor": schema.ExecutorTypes.ssh.value,  # type: ignore[attr-defined] # ExecutorTypes is an Enum
         "cpus": None,
         "mem": None,
         "disk": None,
@@ -771,8 +771,8 @@ valid_cleanup_action = ValidateCleanupAction()
 class ValidateJob(Validator):
     """Validate jobs."""
 
-    config_class = ConfigJob
-    defaults = {
+    config_class: type = ConfigJob
+    defaults: Dict[str, Union[int, bool, None, Dict, datetime.timedelta]] = {
         "run_limit": 50,
         "all_nodes": False,
         "cleanup_action": None,
@@ -857,7 +857,7 @@ valid_job = ValidateJob()
 
 
 class ValidateActionRunner(Validator):
-    config_class = schema.ConfigActionRunner
+    config_class: type = schema.ConfigActionRunner
     optional = True
     defaults = {
         "runner_type": None,
@@ -873,7 +873,7 @@ class ValidateActionRunner(Validator):
 
 
 class ValidateStatePersistence(Validator):
-    config_class = schema.ConfigState
+    config_class: type = schema.ConfigState
     defaults = {
         "buffer_size": 1,
         "dynamodb_region": None,
@@ -918,7 +918,7 @@ valid_state_persistence = ValidateStatePersistence()
 
 
 class ValidateMesos(Validator):
-    config_class = ConfigMesos
+    config_class: type = ConfigMesos
     option = True
     defaults = {
         "master_address": None,
@@ -948,7 +948,7 @@ valid_mesos_options = ValidateMesos()
 
 
 class ValidateKubernetes(Validator):
-    config_class = ConfigKubernetes
+    config_class: type = ConfigKubernetes
     optional = True
     defaults = {
         "kubeconfig_path": None,
@@ -997,7 +997,7 @@ class ValidateConfig(Validator):
     values. Throws a ConfigError if any part of the input dict is invalid.
     """
 
-    config_class = TronConfig
+    config_class: type = TronConfig
     defaults = {
         "action_runner": {},
         "output_stream_dir": None,
@@ -1070,7 +1070,7 @@ class ValidateNamedConfig(Validator):
     are, in turn, reconciled by Tron.
     """
 
-    config_class = NamedTronConfig
+    config_class: type = NamedTronConfig
     type_name = "NamedConfigFragment"
     defaults = {
         "jobs": (),
@@ -1146,7 +1146,7 @@ class ConfigContainer:
             job_names.extend(config.jobs)
         return job_names
 
-    def get_jobs(self):
+    def get_jobs(self) -> Dict[str, schema.ConfigJob]:
         return dict(
             itertools.chain.from_iterable(config.jobs.items() for _, config in self.configs.items()),
         )

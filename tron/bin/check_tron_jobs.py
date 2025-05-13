@@ -7,7 +7,7 @@ import time
 from collections import defaultdict
 from enum import Enum
 
-import pytimeparse
+import pytimeparse  # type: ignore[import-untyped]  # no stubs or py.typed marker; likely want to move off of this
 from pyrsistent import m
 from pyrsistent import pmap
 from pysensu_yelp import send_event
