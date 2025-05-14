@@ -360,6 +360,7 @@ class DynamoDBStateStore:
 
         max_partitions = max(num_partitions, num_json_val_partitions)
         prom_metrics.tron_dynamodb_partitions_histogram.observe(max_partitions)
+
         for index in range(max_partitions):
             item = {
                 "Put": {
