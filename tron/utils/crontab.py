@@ -2,10 +2,12 @@
 import calendar
 import itertools
 import re
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
+from typing import TypedDict
 from typing import Union
 
 PREDEFINED_SCHEDULE = {
@@ -17,6 +19,15 @@ PREDEFINED_SCHEDULE = {
     "@midnight": "0 0 * * *",
     "@hourly": "0 * * * *",
 }
+
+
+class ParsedCrontab(TypedDict):
+    minutes: Optional[Union[List[int], List[Union[int, str]]]]
+    hours: Optional[Union[List[int], List[Union[int, str]]]]
+    monthdays: Optional[Union[List[int], List[Union[int, str]]]]
+    months: Optional[Union[List[int], List[Union[int, str]]]]
+    weekdays: Optional[Union[List[int], List[Union[int, str]]]]
+    ordinals: None
 
 
 def convert_predefined(line: str) -> str:
@@ -65,7 +76,7 @@ class FieldParser:
 
         return sorted_groups
 
-    def get_match_groups(self, source: str) -> dict:
+    def get_match_groups(self, source: str) -> Dict[str, Optional[str]]:
         match = self.range_pattern.match(source)
         if not match:
             raise ValueError("Unknown expression: %s" % source)
@@ -81,9 +92,12 @@ class FieldParser:
             step = self.validate_bounds(match_groups["step"])
         return self.get_range(min_value, max_value, step)
 
-    def get_value_range(self, match_groups: dict) -> Tuple[int, int]:
+    def get_value_range(self, match_groups: Dict[str, Optional[str]]) -> Tuple[int, int]:
         if match_groups["min"] == "*":
             return self.bounds
+
+        if match_groups["min"] is None:
+            raise ValueError("min value in cron pattern is unexpectedly None")
 
         min_value = self.validate_bounds(match_groups["min"])
         if match_groups["max"]:
@@ -166,7 +180,7 @@ weekday_parser = WeekdayFieldParser()
 
 
 # TODO: support L (for dow), W, #
-def parse_crontab(line: str) -> dict:
+def parse_crontab(line: str) -> ParsedCrontab:
     line = convert_predefined(line)
     minutes, hours, dom, months, dow = line.split(None, 4)
 

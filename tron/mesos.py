@@ -5,10 +5,11 @@ import socket
 import time
 from typing import Any
 from typing import Dict
+from typing import Optional
 from urllib.parse import urlparse
 
 import requests
-import staticconf  # type: ignore # need to upgrade to get type stubs
+import staticconf
 from task_processing.runners.subscription import Subscription
 from task_processing.task_processor import TaskProcessor
 from twisted.internet.defer import logError
@@ -457,7 +458,7 @@ class MesosCluster:
         extra_volumes,
         serializer,
         task_id=None,
-    ):
+    ) -> Optional[MesosTask]:
         if not self.runner:
             return None
 
@@ -484,7 +485,7 @@ class MesosCluster:
                 task_config = task_config.set_task_id(task_id)
             except ValueError:
                 log.error(f"Invalid {task_id} for {action_run_id}")
-                return
+                return None
 
         return MesosTask(action_run_id, task_config, serializer)
 

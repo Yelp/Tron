@@ -2,25 +2,37 @@
 import calendar
 import datetime
 import re
+from typing import Dict
+from typing import Optional
+from typing import Pattern as RePattern
+from typing import Type
+from typing import Union
 
 
-def current_time(tz=None):
+def current_time(tz: Optional[datetime.tzinfo] = None) -> datetime.datetime:
     """Return the current datetime."""
     return datetime.datetime.now(tz=tz)
 
 
-def current_timestamp():
+def current_timestamp() -> float:
     """Return the current time as a timestamp."""
     return current_time().timestamp()
 
 
-def delta_total_seconds(td):
+def delta_total_seconds(td: datetime.timedelta) -> float:
     """Equivalent to timedelta.total_seconds() available in Python 2.7."""
     microseconds, seconds, days = td.microseconds, td.seconds, td.days
     return (microseconds + (seconds + days * 24 * 3600) * 10**6) / 10**6
 
 
-def macro_timedelta(start_date, years=0, months=0, days=0, hours=0, minutes=0):
+def macro_timedelta(
+    start_date: datetime.datetime,
+    years: int = 0,
+    months: int = 0,
+    days: int = 0,
+    hours: int = 0,
+    minutes: int = 0,
+) -> datetime.timedelta:
     """Since datetime doesn't provide timedeltas at the year or month level,
     this function generates timedeltas of the appropriate sizes.
     """
@@ -53,7 +65,10 @@ def macro_timedelta(start_date, years=0, months=0, days=0, hours=0, minutes=0):
     return delta
 
 
-def duration(start_time, end_time=None):
+def duration(
+    start_time: Optional[datetime.datetime],
+    end_time: Optional[datetime.datetime] = None,
+) -> Optional[datetime.timedelta]:
     """Get a timedelta between end_time and start_time, where end_time defaults
     to now().
 
@@ -62,7 +77,9 @@ def duration(start_time, end_time=None):
     """
     if not start_time:
         return None
+
     last_time = end_time if end_time else current_time()
+
     return last_time - start_time
 
 
@@ -71,9 +88,9 @@ class DateArithmetic:
     a date with the delta added or subtracted.
     """
 
-    DATE_TYPE_PATTERN = re.compile(r"(\w+)([+-]\d+)?")
+    DATE_TYPE_PATTERN: RePattern[str] = re.compile(r"(\w+)([+-]\d+)?")
 
-    DATE_FORMATS = {
+    DATE_FORMATS: Dict[str, str] = {
         "year": "%Y",
         "month": "%m",
         "day": "%d",
@@ -86,7 +103,11 @@ class DateArithmetic:
     }
 
     @classmethod
-    def parse(cls, date_str, dt=None):
+    def parse(
+        cls: Type["DateArithmetic"],
+        date_str: str,
+        dt: Optional[datetime.datetime] = None,
+    ) -> Optional[Union[str, int]]:
         """Parse a date arithmetic pattern (Ex: 'shortdate-1'). Supports
         date strings: shortdate, year, month, day, unixtime, daynumber.
         Supports subtraction and addition operations of integers. Time unit is
@@ -96,7 +117,7 @@ class DateArithmetic:
         date_str = date_str.replace(" ", "")
         match = cls.DATE_TYPE_PATTERN.match(date_str)
         if not match:
-            return
+            return None
         attr, value = match.groups()
         delta = int(value) if value else 0
 
@@ -117,3 +138,5 @@ class DateArithmetic:
 
         if attr == "daynumber":
             return dt.toordinal() + delta
+
+        return None

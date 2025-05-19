@@ -1,13 +1,22 @@
 from collections import defaultdict
-from collections import namedtuple
+from typing import DefaultDict
+from typing import Dict
+from typing import List
+from typing import NamedTuple
 from typing import Optional
+from typing import Set
 
 from tron.config.config_parse import ConfigContainer
+from tron.config.schema import ConfigAction
+from tron.config.schema import ConfigJob
 from tron.core.action import Action
 from tron.core.actiongraph import ActionGraph
 from tron.utils import maybe_decode
 
-AdjListEntry = namedtuple("AdjListEntry", ["action_name", "is_trigger"])
+
+class AdjListEntry(NamedTuple):
+    action_name: str
+    is_trigger: bool
 
 
 class JobGraph:
@@ -15,16 +24,22 @@ class JobGraph:
     cross-job dependencies (aka triggers)
     """
 
-    def __init__(self, config_container: ConfigContainer, should_validate_missing_dependency: Optional[bool] = False):
+    def __init__(
+        self, config_container: ConfigContainer, should_validate_missing_dependency: Optional[bool] = False
+    ) -> None:
         """Build an adjacency list and a reverse adjacency list for the graph,
         and store all the actions as well as which actions belong to which job
         """
-        self.action_map = {}
-        self._actions_for_job = defaultdict(list)
-        self._adj_list = defaultdict(list)
-        self._rev_adj_list = defaultdict(list)
+        self.action_map: Dict[str, Action] = {}
+        self._actions_for_job: DefaultDict[str, List[str]] = defaultdict(list)
+        self._adj_list: DefaultDict[str, List[AdjListEntry]] = defaultdict(list)
+        self._rev_adj_list: DefaultDict[str, List[AdjListEntry]] = defaultdict(list)
 
-        all_actions = set()
+        all_actions: Set[str] = set()
+        job_config: ConfigJob
+        action_config: ConfigAction
+        cleanup_action_config: Optional[ConfigAction]
+
         for job_name, job_config in config_container.get_jobs().items():
             for action_name, action_config in job_config.actions.items():
                 full_name = self._save_action(action_name, job_name, action_config)
@@ -46,17 +61,20 @@ class JobGraph:
                 self._save_action(cleanup_action_config.name, job_name, cleanup_action_config)
 
         if should_validate_missing_dependency:
-            missing_dependent_actions = defaultdict(list)
-            for action_name in self._rev_adj_list:
-                for dependent_action_entry in self._rev_adj_list[action_name]:
+            missing_dependent_actions: DefaultDict[str, List[str]] = defaultdict(list)
+            for action_name_key in self._rev_adj_list:  # NOTE: renamed to avoid conflict with outer scope action_name
+                for dependent_action_entry in self._rev_adj_list[action_name_key]:
                     if dependent_action_entry.action_name not in all_actions:
-                        missing_dependent_actions[dependent_action_entry.action_name].append(action_name)
+                        missing_dependent_actions[dependent_action_entry.action_name].append(action_name_key)
 
-            error_messages = []
-            for action_name, child_action_names in missing_dependent_actions.items():
+            error_messages: List[str] = []
+            for (
+                missing_action_name,
+                child_action_names,
+            ) in missing_dependent_actions.items():  # NOTE: renamed to avoid conflict with outer scope action_name
                 error_messages.append(
                     "Action {} is dependency of actions:\n{}".format(
-                        action_name,
+                        missing_action_name,
                         "\n".join(
                             [f"  - {child_action_name}" for child_action_name in child_action_names],
                         ),
@@ -74,10 +92,11 @@ class JobGraph:
                     ),
                 )
 
-    def get_action_graph_for_job(self, job_name):
+    def get_action_graph_for_job(self, job_name: str) -> ActionGraph:
         """Traverse the JobGraph for a specific job to construct an ActionGraph for it"""
-        job_action_map = {}
-        required_actions, required_triggers = defaultdict(set), defaultdict(set)
+        job_action_map: Dict[str, Action] = {}
+        required_actions: DefaultDict[str, Set[str]] = defaultdict(set)
+        required_triggers: DefaultDict[str, Set[str]] = defaultdict(set)
 
         for action_name in self._actions_for_job[job_name]:
             # Any actions that belong to _this job_ are not prefixed by the job name
@@ -94,18 +113,28 @@ class JobGraph:
             required_triggers = self._get_required_triggers(action_name, required_triggers, search_up=False)
         return ActionGraph(job_action_map, required_actions, required_triggers)
 
-    def _save_action(self, action_name, job_name, config):
-        action_name = maybe_decode(
+    def _save_action(
+        self,
+        action_name: str,
+        job_name: str,
+        config: ConfigAction,
+    ) -> str:
+        decoded_action_name = maybe_decode(
             action_name
         )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
-        full_name = f"{job_name}.{action_name}"
+        full_name = f"{job_name}.{decoded_action_name}"
         self.action_map[full_name] = Action.from_config(config)
         self._actions_for_job[job_name].append(full_name)
         return full_name
 
-    def _get_required_triggers(self, action_name, triggers, search_up=True):
-        stack = [action_name]
-        visited = set()
+    def _get_required_triggers(
+        self,
+        action_name: str,
+        triggers: DefaultDict[str, Set[str]],
+        search_up: bool = True,
+    ) -> DefaultDict[str, Set[str]]:
+        stack: List[str] = [action_name]
+        visited: Set[str] = set()
 
         # Do DFS to search the adjacency list and find all of the required triggers
         # for a particular action
