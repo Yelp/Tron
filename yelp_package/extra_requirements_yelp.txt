@@ -12,6 +12,7 @@ okta-auth==1.1.0           # used for API auth
 pygpgme==0.3               # vault-tools dependency
 pyhcl==0.4.5               # vault-tools dependency
 pyjwt==2.9.0               # required by okta-auth
+pyopenssl==23.2.0          # vault-tools dependency
 saml-helper==2.5.3         # required by okta-auth
 simplejson==3.19.2         # required by tron CLI
 smmap==5.0.2               # vault-tools dependency
