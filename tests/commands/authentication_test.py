@@ -10,7 +10,7 @@ from tron.commands.authentication import get_vault_auth_token
 @patch("tron.commands.authentication.get_vault_client", autospec=True)
 @patch("tron.commands.authentication.get_vault_url", autospec=True)
 @patch("tron.commands.authentication.get_vault_ca", autospec=True)
-def test_get_service_auth_token(
+def test_get_vault_auth_token(
     mock_vault_ca,
     mock_vault_url,
     mock_get_vault_client,
