@@ -3,7 +3,6 @@ import logging
 import humanize
 from twisted.internet import reactor
 
-from tron import prom_metrics
 from tron.core import recovery
 from tron.core.job import Job
 from tron.core.jobrun import JobRun
@@ -163,16 +162,6 @@ class JobScheduler(Observer):
         if not self.job.allow_overlap and any(self.job.runs.get_active(node)):
             self._queue_or_cancel_active(job_run)
             return
-
-        # If we're actually going to run the job (not cancel or queue it)
-        if (
-            not run_queued
-            and job_run.is_scheduled
-            and (self.job.allow_overlap or not any(self.job.runs.get_active(node)))
-        ):
-            # Increment job run counter when we're actually starting a run
-            prom_metrics.tron_job_runs_created_counter.inc()
-
         job_run.start()
         self.schedule_termination(job_run)
         if not self.job.scheduler.schedule_on_complete:

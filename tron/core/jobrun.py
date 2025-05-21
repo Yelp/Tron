@@ -13,6 +13,7 @@ import pytz
 import tron.metrics as metrics
 from tron import command_context
 from tron import node
+from tron import prom_metrics
 from tron.core.actiongraph import ActionGraph
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunCollection
@@ -267,6 +268,8 @@ class JobRun(Observable, Observer, Persistable):
     def start(self):
         self.log_state_update(state="start")
         if self._do_start():
+            # Increment job run counter when we're actually starting a run
+            prom_metrics.tron_job_runs_created_counter.inc()
             return True
 
     def _do_start(self):

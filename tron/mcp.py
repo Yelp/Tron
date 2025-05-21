@@ -29,7 +29,7 @@ def timer(
     operation_name: str,
     histogram_metric: Optional[Histogram] = None,
     gauge_metric: Optional[Gauge] = None,
-):
+) -> None:
     start_time = time.time()
     log.info(f"Starting {operation_name}...")
     duration = 0.0
@@ -96,7 +96,7 @@ class MasterControlProgram:
                 namespace_to_reconfigure=namespace_to_reconfigure,
             )
 
-    def _update_metrics(self):
+    def _update_metrics(self) -> None:
         """Update Prometheus metrics related to jobs and actions"""
         try:
             job_names = self.jobs.get_names()

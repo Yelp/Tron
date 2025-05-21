@@ -34,7 +34,9 @@ tron_action_count_gauge = Gauge("tron_action_count", "Total number of Actions co
 tron_action_runs_created_counter = Counter(
     "tron_action_runs_created", "Total number of ActionRuns created", ["executor"]
 )
-
+tron_action_runs_valid_counter = Counter(
+    "tron_action_runs_valid_total", "Total number of Valid ActionRuns created", ["executor"]
+)
 # We experience some variability in the time it takes to restore, but
 # this captures the distribution in different environments pretty well.
 duration_buckets_sec = [

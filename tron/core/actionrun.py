@@ -544,6 +544,8 @@ class ActionRun(Observable, Persistable):
             return False
 
         executor = self.executor or "ssh"
+
+        # Increment all the actionRuns created
         prom_metrics.tron_action_runs_created_counter.labels(executor=str(executor)).inc()
 
         if len(self.attempts) == 0:
@@ -564,6 +566,8 @@ class ActionRun(Observable, Persistable):
             self.fail(exitcode.EXIT_INVALID_COMMAND)
             return None
 
+        # Increment the valid actionRuns created
+        prom_metrics.tron_action_runs_valid_counter.labels(executor=str(executor)).inc()
         return self.submit_command(new_attempt)
 
     def create_attempt(self, original_command=True):
