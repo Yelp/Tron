@@ -18,6 +18,7 @@ from twisted.internet.base import DelayedCall
 
 from tron import command_context
 from tron import node
+from tron import prom_metrics
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
@@ -542,6 +543,11 @@ class ActionRun(Observable, Persistable):
         if not self.machine.check("start"):
             return False
 
+        executor = self.executor or "ssh"
+
+        # Increment all the actionRuns created
+        prom_metrics.tron_action_runs_created_counter.labels(executor=str(executor)).inc()
+
         if len(self.attempts) == 0:
             log.info(f"{self} starting")
         else:
@@ -560,6 +566,8 @@ class ActionRun(Observable, Persistable):
             self.fail(exitcode.EXIT_INVALID_COMMAND)
             return None
 
+        # Increment the valid actionRuns created
+        prom_metrics.tron_action_runs_valid_counter.labels(executor=str(executor)).inc()
         return self.submit_command(new_attempt)
 
     def create_attempt(self, original_command=True):
