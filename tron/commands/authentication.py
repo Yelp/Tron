@@ -1,4 +1,5 @@
 import os
+from functools import lru_cache
 from typing import cast
 
 from botocore.credentials import InstanceMetadataFetcher
@@ -7,10 +8,10 @@ from botocore.credentials import InstanceMetadataProvider
 from tron.commands.cmd_utils import get_client_config
 
 try:
-    from vault_tools.paasta_secret import get_client as get_vault_client  # type: ignore
+    from vault_tools.paasta_secret import get_client as get_vault_client  # type: ignore # library lacks py.typed marker
     from vault_tools.paasta_secret import get_vault_url
     from vault_tools.paasta_secret import get_vault_ca
-    from okta_auth import get_and_cache_jwt_default  # type: ignore
+    from okta_auth import get_and_cache_jwt_default  # type: ignore # library lacks py.typed marker
 except ImportError:
 
     def get_vault_client(url: str, capath: str) -> None:
@@ -26,6 +27,7 @@ except ImportError:
         return ""
 
 
+@lru_cache(maxsize=1)
 def get_current_ecosystem() -> str:
     """Get current ecosystem from host configs, defaults to dev if no config is found"""
     try:
@@ -39,7 +41,7 @@ def get_current_ecosystem() -> str:
 def get_sso_auth_token() -> str:
     """Generate an authentication token for the calling user from the Single Sign On provider, if configured"""
     client_id = get_client_config().get("auth_sso_oidc_client_id")
-    return get_and_cache_jwt_default(client_id, refreshable=True) if client_id else ""  # type: ignore
+    return cast(str, get_and_cache_jwt_default(client_id, refreshable=True)) if client_id else ""
 
 
 def get_vault_auth_token() -> str:
