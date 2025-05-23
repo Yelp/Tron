@@ -9,7 +9,6 @@ import sys
 
 import tron
 from tron import yaml
-from tron.commands.client import Client
 
 log = logging.getLogger("tron.commands")
 
@@ -78,6 +77,9 @@ def tron_jobs_completer(prefix, **kwargs):
             inputs=[job.strip("\n\r") for job in jobs],
         )
     else:
+        # this import is here to avoid an annoying circular dependency
+        from tron.commands.client import Client
+
         if "client" not in kwargs:
             client = Client(get_default_server())
         else:

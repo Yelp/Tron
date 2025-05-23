@@ -1,4 +1,5 @@
 asynctest
+botocore-stubs
 debugpy
 flake8
 mock

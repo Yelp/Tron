@@ -1,5 +1,6 @@
 astroid==2.13.3
 asynctest==0.12.0
+botocore-stubs==1.38.19
 cfgv==2.0.1
 debugpy==1.8.1
 dill==0.3.6
@@ -29,6 +30,7 @@ requirements-tools==1.2.1
 toml==0.10.2
 tomli==2.0.1
 tomlkit==0.11.6
+types-awscrt==0.27.2
 types-pytz==2024.2.0.20240913
 types-PyYAML==6.0.12
 types-requests==2.31.0.5
