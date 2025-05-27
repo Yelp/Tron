@@ -1,3 +1,11 @@
+tron (3.5.0) jammy; urgency=medium
+
+  * 3.5.0 tagged with 'make release'
+    Commit: add support for api auth via vault (#1048)  add support for
+    api auth via vault
+
+ -- Matteo Piano <mpiano@yelp.com>  Tue, 27 May 2025 08:47:48 -0700
+
 tron (3.4.10) jammy; urgency=medium
 
   * 3.4.10 tagged with 'make release'

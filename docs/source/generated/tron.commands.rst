@@ -7,6 +7,7 @@ Submodules
 .. toctree::
    :maxdepth: 4
 
+   tron.commands.authentication
    tron.commands.backfill
    tron.commands.client
    tron.commands.cmd_utils
