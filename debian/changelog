@@ -1,3 +1,10 @@
+tron (3.5.1) jammy; urgency=medium
+
+  * 3.5.1 tagged with 'make release'
+    Commit: fix some annoying warnings (#1049)
+
+ -- Matteo Piano <mpiano@yelp.com>  Tue, 27 May 2025 10:22:44 -0700
+
 tron (3.5.0) jammy; urgency=medium
 
   * 3.5.0 tagged with 'make release'
