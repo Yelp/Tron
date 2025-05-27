@@ -20,8 +20,8 @@ from typing import Tuple
 from typing import TypeVar
 
 import boto3  # type: ignore
-import botocore  # type: ignore
-from botocore.config import Config  # type: ignore
+import botocore
+from botocore.config import Config
 
 import tron.prom_metrics as prom_metrics
 from tron.core.job import Job
