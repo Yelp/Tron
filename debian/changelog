@@ -1,3 +1,10 @@
+tron (3.5.2) jammy; urgency=medium
+
+  * 3.5.2 tagged with 'make release'
+    Commit: use oidc token method from vault-tools (#1050)
+
+ -- Matteo Piano <mpiano@yelp.com>  Wed, 28 May 2025 07:36:00 -0700
+
 tron (3.5.1) jammy; urgency=medium
 
   * 3.5.1 tagged with 'make release'
