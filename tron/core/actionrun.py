@@ -543,10 +543,8 @@ class ActionRun(Observable, Persistable):
         if not self.machine.check("start"):
             return False
 
-        executor = self.executor or "ssh"
-
         # Increment all the actionRuns created
-        prom_metrics.tron_action_runs_created_counter.labels(executor=str(executor)).inc()
+        prom_metrics.tron_action_runs_created_counter.labels(executor=self.executor).inc()
 
         if len(self.attempts) == 0:
             log.info(f"{self} starting")
@@ -566,9 +564,13 @@ class ActionRun(Observable, Persistable):
             self.fail(exitcode.EXIT_INVALID_COMMAND)
             return None
 
-        # Increment the valid actionRuns created
-        prom_metrics.tron_action_runs_valid_counter.labels(executor=str(executor)).inc()
-        return self.submit_command(new_attempt)
+        result = self.submit_command(new_attempt)
+
+        # We only count ActionRuns that were successfully submitted for execution
+        if result:
+            prom_metrics.tron_action_runs_created_counter.labels(executor=self.executor).inc()
+
+        return result
 
     def create_attempt(self, original_command=True):
         current_time = timeutils.current_time()
