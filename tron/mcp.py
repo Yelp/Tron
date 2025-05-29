@@ -1,10 +1,5 @@
 import logging
 import time
-from contextlib import contextmanager
-from typing import Optional
-
-from prometheus_client import Gauge
-from prometheus_client import Histogram
 
 from tron import actioncommand
 from tron import command_context
@@ -22,30 +17,6 @@ from tron.mesos import MesosClusterRepository
 from tron.serialize.runstate import statemanager
 
 log = logging.getLogger(__name__)
-
-
-@contextmanager
-def timer(
-    operation_name: str,
-    histogram_metric: Optional[Histogram] = None,
-    gauge_metric: Optional[Gauge] = None,
-) -> None:
-    start_time = time.time()
-    log.info(f"Starting {operation_name}...")
-    duration = 0.0
-    try:
-        yield
-    except Exception:
-        log.exception(f"Exception during timed operation: {operation_name}")
-        raise
-    finally:
-        end_time = time.time()
-        duration = end_time - start_time
-        if histogram_metric:
-            histogram_metric.observe(duration)
-        if gauge_metric:
-            gauge_metric.set(duration)
-        log.info(f"Execution time for {operation_name}: {duration:.2f}s")
 
 
 def apply_master_configuration(mapping, master_config):
@@ -125,8 +96,9 @@ class MasterControlProgram:
         self._load_config()
 
         # Jobs will also get scheduled (internally) once the state for action runs are restored in restore_state
-        with timer(
-            "full_restore_process",
+        with prom_metrics.timer(
+            operation_name="full_restore_process",
+            log=log,
             histogram_metric=prom_metrics.tron_restore_duration_seconds_histogram,
             gauge_metric=prom_metrics.tron_last_restore_duration_seconds_gauge,
         ):
@@ -239,8 +211,9 @@ class MasterControlProgram:
         """
         log.info("Restoring from DynamoDB")
 
-        with timer(
+        with prom_metrics.timer(
             operation_name="state_data_retrieval_from_dynamodb",
+            log=log,
             histogram_metric=prom_metrics.tron_dynamodb_data_retrieval_duration_seconds_histogram,
             gauge_metric=prom_metrics.tron_last_dynamodb_data_retrieval_duration_seconds_gauge,
         ):
@@ -249,8 +222,9 @@ class MasterControlProgram:
 
         log.info("Applying retrieved state to Tron objects...")
 
-        with timer(
+        with prom_metrics.timer(
             operation_name="apply_state_to_job_objects",
+            log=log,
             histogram_metric=prom_metrics.tron_job_state_application_duration_seconds_histogram,
             gauge_metric=prom_metrics.tron_last_job_state_application_duration_seconds_gauge,
         ):

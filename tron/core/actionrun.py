@@ -543,9 +543,6 @@ class ActionRun(Observable, Persistable):
         if not self.machine.check("start"):
             return False
 
-        # Increment all the actionRuns created
-        prom_metrics.tron_action_runs_created_counter.labels(executor=self.executor).inc()
-
         if len(self.attempts) == 0:
             log.info(f"{self} starting")
         else:
@@ -566,7 +563,9 @@ class ActionRun(Observable, Persistable):
 
         result = self.submit_command(new_attempt)
 
-        # We only count ActionRuns that were successfully submitted for execution
+        # We only count ActionRuns that were successfully submitted for execution. We do
+        # this instead of counting all ActionRuns that were created because submission
+        # represents the meaningful work boundary.
         if result:
             prom_metrics.tron_action_runs_created_counter.labels(executor=self.executor).inc()
 
@@ -607,6 +606,9 @@ class ActionRun(Observable, Persistable):
             self.end_time = timeutils.current_time()
             if self.last_attempt is not None and self.last_attempt.end_time is None:
                 self.last_attempt.exit(exit_status, self.end_time)
+
+            prom_metrics.tron_action_runs_completed_counter.labels(executor=self.executor, outcome=target).inc()
+
             log.info(
                 f"{self} completed with {target}, transitioned to " f"{self.state}, exit status: {exit_status}",
             )

@@ -1,3 +1,8 @@
+import logging
+import time
+from contextlib import contextmanager
+from typing import Optional
+
 from prometheus_client import Counter
 from prometheus_client import Gauge
 from prometheus_client import Histogram
@@ -30,11 +35,22 @@ tron_dynamodb_partitions_histogram = Histogram(
 
 tron_job_count_gauge = Gauge("tron_job_count", "Total number of Jobs configured in Tron")
 tron_job_runs_created_counter = Counter("tron_job_runs_created", "Total number of JobRuns created")
+tron_job_runs_completed_counter = Counter(
+    "tron_job_runs_completed",
+    "Total number of JobRuns that completed execution",
+    ["outcome"],
+)
+
 tron_action_count_gauge = Gauge("tron_action_count", "Total number of Actions configured in Tron (sum across all jobs)")
 tron_action_runs_created_counter = Counter(
     "tron_action_runs_created",
     "Total number of ActionRuns successfully submitted to executors for execution",
     ["executor"],
+)
+tron_action_runs_completed_counter = Counter(
+    "tron_action_runs_completed",
+    "Total number of ActionRuns that completed execution",
+    ["executor", "outcome"],
 )
 # We experience some variability in the time it takes to restore, but
 # this captures the distribution in different environments pretty well.
@@ -110,3 +126,29 @@ tron_last_job_state_application_duration_seconds_gauge = Gauge(
 tron_last_startup_duration_seconds_gauge = Gauge(
     "tron_last_startup_duration_seconds", "Duration of the most recent total Tron startup process"
 )
+
+
+@contextmanager
+def timer(
+    operation_name: str,
+    log: logging.Logger,
+    histogram_metric: Optional[Histogram] = None,
+    gauge_metric: Optional[Gauge] = None,
+):
+    """Context manager for timing operations with optional Prometheus metrics."""
+    start_time = time.time()
+    log.info(f"Starting {operation_name}...")
+    duration = 0.0
+    try:
+        yield
+    except Exception:
+        log.exception(f"Exception during timed operation: {operation_name}")
+        raise
+    finally:
+        end_time = time.time()
+        duration = end_time - start_time
+        if histogram_metric:
+            histogram_metric.observe(duration)
+        if gauge_metric:
+            gauge_metric.set(duration)
+        log.info(f"Execution time for {operation_name}: {duration:.2f}s")
