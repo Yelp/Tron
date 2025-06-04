@@ -1,3 +1,11 @@
+tron (3.6.0) jammy; urgency=medium
+
+  * 3.6.0 tagged with 'make release'
+    Commit: Merge pull request #1046 from Yelp/u/kkasp/TRON-2391-
+    aggregate-metrics  U/kkasp/tron 2391 aggregate metrics
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Wed, 04 Jun 2025 10:43:44 -0700
+
 tron (3.5.2) jammy; urgency=medium
 
   * 3.5.2 tagged with 'make release'
