@@ -18,6 +18,7 @@ from twisted.internet.base import DelayedCall
 
 from tron import command_context
 from tron import node
+from tron import prom_metrics
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
@@ -560,7 +561,15 @@ class ActionRun(Observable, Persistable):
             self.fail(exitcode.EXIT_INVALID_COMMAND)
             return None
 
-        return self.submit_command(new_attempt)
+        result = self.submit_command(new_attempt)
+
+        # We only count ActionRuns that were successfully submitted for execution. We do
+        # this instead of counting all ActionRuns that were created because submission
+        # represents the meaningful work boundary.
+        if result:
+            prom_metrics.tron_action_runs_created_counter.labels(executor=self.executor).inc()
+
+        return result
 
     def create_attempt(self, original_command=True):
         current_time = timeutils.current_time()
@@ -597,6 +606,11 @@ class ActionRun(Observable, Persistable):
             self.end_time = timeutils.current_time()
             if self.last_attempt is not None and self.last_attempt.end_time is None:
                 self.last_attempt.exit(exit_status, self.end_time)
+
+            prom_metrics.tron_action_runs_completed_counter.labels(
+                executor=self.executor, outcome=target, exit_status=str(exit_status)
+            ).inc()
+
             log.info(
                 f"{self} completed with {target}, transitioned to " f"{self.state}, exit status: {exit_status}",
             )
