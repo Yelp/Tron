@@ -50,7 +50,7 @@ tron_action_runs_created_counter = Counter(
 tron_action_runs_completed_counter = Counter(
     "tron_action_runs_completed",
     "Total number of ActionRuns that completed execution",
-    ["executor", "outcome"],
+    ["executor", "outcome", "exit_status"],
 )
 # We experience some variability in the time it takes to restore, but
 # this captures the distribution in different environments pretty well.

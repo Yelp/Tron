@@ -607,7 +607,9 @@ class ActionRun(Observable, Persistable):
             if self.last_attempt is not None and self.last_attempt.end_time is None:
                 self.last_attempt.exit(exit_status, self.end_time)
 
-            prom_metrics.tron_action_runs_completed_counter.labels(executor=self.executor, outcome=target).inc()
+            prom_metrics.tron_action_runs_completed_counter.labels(
+                executor=self.executor, outcome=target, exit_status=str(exit_status)
+            ).inc()
 
             log.info(
                 f"{self} completed with {target}, transitioned to " f"{self.state}, exit status: {exit_status}",
