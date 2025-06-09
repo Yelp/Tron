@@ -113,7 +113,7 @@ class AuthenticatedResource(resource.Resource):
         if not auth_outcome.authorized:
             return respond(
                 request=request,
-                response={"reason": auth_outcome.reason},
+                response={"error": f"Auth failed (reason: {auth_outcome.reason})"},
                 code=http.FORBIDDEN,
                 headers={"X-Auth-Failure-Reason": auth_outcome.reason},
             )
