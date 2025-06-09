@@ -1,3 +1,10 @@
+tron (3.6.1) jammy; urgency=medium
+
+  * 3.6.1 tagged with 'make release'
+    Commit: return auth error that clients can parse (#1052)
+
+ -- Matteo Piano <mpiano@yelp.com>  Mon, 09 Jun 2025 05:24:25 -0700
+
 tron (3.6.0) jammy; urgency=medium
 
   * 3.6.0 tagged with 'make release'
