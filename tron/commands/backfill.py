@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import functools
+import os
 import pprint
 import re
 import signal
@@ -232,7 +233,8 @@ async def run_backfill_for_date_range(
 
     # Trigger authentication before submitting all async jobs, so auth tokens
     # are cached and won't prompt the user in the individual API calls
-    get_auth_token()
+    if os.getenv("TRONCTL_API_AUTH"):
+        get_auth_token()
 
     tron_client = client.Client(server, user_attribution=True)
     url_index = tron_client.index()
