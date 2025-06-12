@@ -11,6 +11,7 @@ from urllib.parse import urljoin
 
 from tron.commands import client
 from tron.commands import display
+from tron.commands.authentication import get_auth_token
 from tron.core.actionrun import ActionRun
 
 DEFAULT_MAX_PARALLEL_RUNS = 3
@@ -228,6 +229,11 @@ async def run_backfill_for_date_range(
     most, max_parallel runs can run in parallel to prevent resource exhaustion.
     """
     loop = asyncio.get_event_loop()
+
+    # Trigger authentication before submitting all async jobs, so auth tokens
+    # are cached and won't prompt the user in the individual API calls
+    get_auth_token()
+
     tron_client = client.Client(server, user_attribution=True)
     url_index = tron_client.index()
 
