@@ -92,10 +92,8 @@ class KubernetesTask(ActionCommand):
         """
         Update internal resource utilization statistics of all tronjobs running for this task's Tron master.
         """
-        # TODO(TRON-1612): these should eventually be Prometheus metrics
-        # these should be replaced with gauges in prometheus
         multiplier = -1 if decrement else 1
-        # prometheus gauges
+
         prom_metrics.tron_cpu_gauge.inc(self.task_config.cpus * multiplier)
         prom_metrics.tron_memory_gauge.inc(self.task_config.memory * multiplier)
         prom_metrics.tron_disk_gauge.inc(self.task_config.disk * multiplier)
@@ -130,6 +128,7 @@ class KubernetesTask(ActionCommand):
             hostname = event.raw.get("spec", {}).get("nodeName", "UNKNOWN")
             self.log.info(f"Running on hostname: {hostname}")
 
+    # TODO: TRON-2436: Refactor this
     def handle_event(self, event: Event) -> None:
         """
         Transitions Tron's state machine for this task based on events from task_processing.
@@ -187,7 +186,7 @@ class KubernetesTask(ActionCommand):
                         last_state_termination_metadata = main_container_last_state.get("terminated", {}) or {}
                         if k8s_type == "finished":
                             # this is kinda wild: we're seeing that a kubelet will sometimes fail to start a container (usually
-                            # due to what appear to be race conditons like those mentioned in
+                            # due to what appear to be race conditions like those mentioned in
                             # https://github.com/kubernetes/kubernetes/issues/100047#issuecomment-797624208) and then decide that
                             # these Pods should be phase=Succeeded with an exit code of 0 - even though the container never actually
                             # started. So far, we've noticed that when this happens, the finished_at and reason fields will be None
@@ -205,11 +204,19 @@ class KubernetesTask(ActionCommand):
                                     f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
                                 )
                         elif k8s_type in KUBERNETES_FAILURE_TYPES:
+                            pod_status_reason = pod_status.get("reason")
+                            pod_status_message = pod_status.get("message", "").lower()
+
+                            # pod killed due to ephemeral storage eviction
+                            if pod_status_reason == "Evicted" and "ephemeral storage" in pod_status_message:
+                                exit_code = exitcode.EXIT_KUBERNETES_EPHEMERAL_STORAGE_EVICTION
+                                self.log.warning(
+                                    f"Tronjob failed due to ephemeral storage eviction: {pod_status_message}"
+                                )
                             # pod killed before it reached terminal state, assume node scaledown
-                            if not (state_termination_metadata or last_state_termination_metadata):
+                            elif not (state_termination_metadata or last_state_termination_metadata):
                                 self.log.warning("Container did not complete, likely due to scaling down a node.")
                                 exit_code = exitcode.EXIT_KUBERNETES_NODE_SCALEDOWN
-
                             # Handling spot terminations
                             elif (
                                 last_state_termination_metadata.get("exitCode") == 137
@@ -403,7 +410,7 @@ class KubernetesCluster:
 
     def _handle_task_event(self, event: Event) -> None:
         """
-        Helper method to correctly route task-related events to the appropiate task.
+        Helper method to correctly route task-related events to the appropriate task.
         """
         task_id = getattr(event, "task_id", None)
         if task_id is None:
@@ -589,7 +596,7 @@ class KubernetesCluster:
         # Tron know that that Pod is for a task it cares about
         self.tasks[task.get_kubernetes_id()] = task
 
-        # XXX: if spark-on-k8s ends up running through task_processing, we'll need to revist
+        # XXX: if spark-on-k8s ends up running through task_processing, we'll need to revisit
         # reimplementing the clusterman resource reporting that MesosCluster::submit() used to do
         if not self.runner.run(task.get_config()):
             log.warning(f"Unable to submit task {task.get_kubernetes_id()} to configured k8s cluster.")

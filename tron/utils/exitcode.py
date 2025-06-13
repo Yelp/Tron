@@ -11,6 +11,7 @@ EXIT_KUBERNETES_ABNORMAL = -9
 EXIT_KUBERNETES_SPOT_INTERRUPTION = -10
 EXIT_KUBERNETES_NODE_SCALEDOWN = -11
 EXIT_KUBERNETES_TASK_LOST = -12
+EXIT_KUBERNETES_EPHEMERAL_STORAGE_EVICTION = -13
 
 EXIT_REASONS = {
     EXIT_INVALID_COMMAND: "Invalid command",
@@ -24,5 +25,6 @@ EXIT_REASONS = {
     EXIT_KUBERNETES_ABNORMAL: "Kubernetes task failed in an unexpected manner",
     EXIT_KUBERNETES_SPOT_INTERRUPTION: "Kubernetes task failed due to spot interruption",
     EXIT_KUBERNETES_NODE_SCALEDOWN: "Kubernetes task failed due to the autoscaler scaling down a node",
-    EXIT_KUBERNETES_TASK_LOST: "Tron lost track of a pod it already thought it had started for a job.",
+    EXIT_KUBERNETES_TASK_LOST: "Kubernetes task is lost and the final outcome unknown",
+    EXIT_KUBERNETES_EPHEMERAL_STORAGE_EVICTION: "Kubernetes task failed due to ephemeral storage eviction",
 }
