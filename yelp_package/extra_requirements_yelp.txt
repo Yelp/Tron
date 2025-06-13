@@ -8,7 +8,7 @@ hvac==1.2.1                # vault-tools dependency
 ipaddress==1.0.23          # vault-tools dependency
 logreader==1.2.0           # used by tron logreader
 ndg-httpsclient==0.5.1     # vault-tools dependency
-okta-auth==1.1.0           # used for API auth
+okta-auth==1.1.1           # used for API auth
 pygpgme==0.3               # vault-tools dependency
 pyhcl==0.4.5               # vault-tools dependency
 pyjwt==2.9.0               # required by okta-auth
