@@ -232,9 +232,10 @@ async def run_backfill_for_date_range(
     loop = asyncio.get_event_loop()
 
     # Trigger authentication before submitting all async jobs, so auth tokens
-    # are cached and won't prompt the user in the individual API calls
+    # are cached and won't prompt the user in the individual API calls.
+    # We pass `no_cache` to ensure a new refresh token is generated and stored in memory.
     if os.getenv("TRONCTL_API_AUTH"):
-        get_auth_token()
+        get_auth_token(no_cache=True)
 
     tron_client = client.Client(server, user_attribution=True)
     url_index = tron_client.index()
