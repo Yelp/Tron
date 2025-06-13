@@ -94,7 +94,7 @@ class ActionCommandConfig(Persistable):
                 "env": json_data["env"],
                 "node_selectors": json_data["node_selectors"],
                 "labels": json_data["labels"],
-                "idempotent": json_data["idempotent"] if "idempotent" in json_data else False,
+                "idempotent": json_data.get("idempotent", False),
                 "annotations": json_data["annotations"],
                 "service_account_name": json_data["service_account_name"],
                 "ports": json_data["ports"],
