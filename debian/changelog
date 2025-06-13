@@ -1,3 +1,10 @@
+tron (3.6.2) jammy; urgency=medium
+
+  * 3.6.2 tagged with 'make release'
+    Commit: cache auth tokens before starting backfill jobs (#1053)
+
+ -- Matteo Piano <mpiano@yelp.com>  Fri, 13 Jun 2025 01:23:13 -0700
+
 tron (3.6.1) jammy; urgency=medium
 
   * 3.6.1 tagged with 'make release'
