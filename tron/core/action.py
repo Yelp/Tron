@@ -48,6 +48,7 @@ class ActionCommandConfig(Persistable):
     node_affinities: List[ConfigNodeAffinity] = field(default_factory=list)
     topology_spread_constraints: List[ConfigTopologySpreadConstraints] = field(default_factory=list)
     labels: dict = field(default_factory=dict)
+    idempotent: bool = False
     annotations: dict = field(default_factory=dict)
     service_account_name: Optional[str] = None
     ports: List[int] = field(default_factory=list)
@@ -93,6 +94,7 @@ class ActionCommandConfig(Persistable):
                 "env": json_data["env"],
                 "node_selectors": json_data["node_selectors"],
                 "labels": json_data["labels"],
+                "idempotent": json_data.get("idempotent", False),
                 "annotations": json_data["annotations"],
                 "service_account_name": json_data["service_account_name"],
                 "ports": json_data["ports"],
@@ -154,6 +156,7 @@ class ActionCommandConfig(Persistable):
                         serialize_namedtuple(affinity) for affinity in state_data.get("node_affinities", [])
                     ],
                     "labels": state_data.get("labels", {}),
+                    "idempotent": state_data.get("idempotent", False),
                     "annotations": state_data.get("annotations", {}),
                     "service_account_name": state_data.get("service_account_name"),
                     "ports": state_data.get("ports", []),
@@ -186,6 +189,7 @@ class Action:
     triggered_by: Optional[set] = None
     on_upstream_rerun: Optional[str] = None
     trigger_timeout: Optional[datetime.timedelta] = None
+    idempotent: bool = False
 
     @property
     def is_cleanup(self):
@@ -219,6 +223,7 @@ class Action:
             node_affinities=config.node_affinities or [],
             topology_spread_constraints=config.topology_spread_constraints or [],
             labels=config.labels or {},
+            idempotent=config.idempotent,
             annotations=config.annotations or {},
             service_account_name=config.service_account_name or None,
             ports=config.ports or [],
@@ -235,6 +240,7 @@ class Action:
             triggered_by=config.triggered_by,
             on_upstream_rerun=config.on_upstream_rerun,
             trigger_timeout=config.trigger_timeout,
+            idempotent=config.idempotent,
         )
 
         return cls(**kwargs)

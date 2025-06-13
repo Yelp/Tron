@@ -182,6 +182,7 @@ class TestAction:
                 }
             ],
             "labels": {"app": "myapp"},
+            "idempotent": true,
             "annotations": {"annotation_key": "annotation_value"},
             "service_account_name": "default",
             "ports": [8080, 9090],
@@ -242,6 +243,7 @@ class TestAction:
             "annotations": {"annotation_key": "annotation_value"},
             "service_account_name": "default",
             "ports": [8080, 9090],
+            "idempotent": True,
             "node_selectors": {"key": "node-A"},
             "field_selector_env": {"key": ConfigFieldSelectorSource(field_path="value")},
         }
