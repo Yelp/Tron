@@ -1,3 +1,32 @@
+tron (3.6.3) jammy; urgency=medium
+
+  * 3.6.3 tagged with 'make release'
+    Commit: ignore cached okta token in backfills (#1054)
+
+ -- Matteo Piano <mpiano@yelp.com>  Mon, 16 Jun 2025 01:38:02 -0700
+
+tron (3.6.2) jammy; urgency=medium
+
+  * 3.6.2 tagged with 'make release'
+    Commit: cache auth tokens before starting backfill jobs (#1053)
+
+ -- Matteo Piano <mpiano@yelp.com>  Fri, 13 Jun 2025 01:23:13 -0700
+
+tron (3.6.1) jammy; urgency=medium
+
+  * 3.6.1 tagged with 'make release'
+    Commit: return auth error that clients can parse (#1052)
+
+ -- Matteo Piano <mpiano@yelp.com>  Mon, 09 Jun 2025 05:24:25 -0700
+
+tron (3.6.0) jammy; urgency=medium
+
+  * 3.6.0 tagged with 'make release'
+    Commit: Merge pull request #1046 from Yelp/u/kkasp/TRON-2391-
+    aggregate-metrics  U/kkasp/tron 2391 aggregate metrics
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Wed, 04 Jun 2025 10:43:44 -0700
+
 tron (3.5.2) jammy; urgency=medium
 
   * 3.5.2 tagged with 'make release'

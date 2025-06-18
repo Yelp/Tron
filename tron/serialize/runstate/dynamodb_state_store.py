@@ -178,6 +178,9 @@ class DynamoDBStateStore:
             max_partitions = int(item["num_partitions"]["N"])
             if read_json and "num_json_val_partitions" in item:
                 max_partitions = max(max_partitions, int(item["num_json_val_partitions"]["N"]))
+
+            prom_metrics.tron_dynamodb_partitions_histogram.observe(max_partitions)
+
             remaining_items = [
                 {"key": {"S": str(item["key"]["S"])}, "index": {"N": str(i)}}
                 # we start from 1 since we already have the 0th partition and we get the rest of the partitions
@@ -356,6 +359,8 @@ class DynamoDBStateStore:
         items = []
 
         max_partitions = max(num_partitions, num_json_val_partitions)
+        prom_metrics.tron_dynamodb_partitions_histogram.observe(max_partitions)
+
         for index in range(max_partitions):
             item = {
                 "Put": {

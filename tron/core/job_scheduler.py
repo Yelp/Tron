@@ -162,7 +162,6 @@ class JobScheduler(Observer):
         if not self.job.allow_overlap and any(self.job.runs.get_active(node)):
             self._queue_or_cancel_active(job_run)
             return
-
         job_run.start()
         self.schedule_termination(job_run)
         if not self.job.scheduler.schedule_on_complete:

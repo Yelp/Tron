@@ -1,10 +1,10 @@
 import logging
 import time
-from contextlib import contextmanager
 
 from tron import actioncommand
 from tron import command_context
 from tron import node
+from tron import prom_metrics
 from tron.config import manager
 from tron.config.schema import MASTER_NAMESPACE
 from tron.core.job import Job
@@ -17,18 +17,6 @@ from tron.mesos import MesosClusterRepository
 from tron.serialize.runstate import statemanager
 
 log = logging.getLogger(__name__)
-
-
-@contextmanager
-def timer(function_name: str):
-    start = time.time()
-    try:
-        yield
-    except Exception:
-        pass
-    finally:
-        end = time.time()
-        log.info(f"Execution time for function {function_name}: {end-start}")
 
 
 def apply_master_configuration(mapping, master_config):
@@ -79,22 +67,55 @@ class MasterControlProgram:
                 namespace_to_reconfigure=namespace_to_reconfigure,
             )
 
+    def _update_metrics(self) -> None:
+        """Update Prometheus metrics related to jobs and actions"""
+        try:
+            job_names = self.jobs.get_names()
+            job_count = len(job_names) if job_names else 0
+            prom_metrics.tron_job_count_gauge.set(job_count)
+
+            total_actions = 0
+            if self.jobs:
+                for job_scheduler in self.jobs:
+                    job = job_scheduler.get_job()
+                    if job and job.action_graph and job.action_graph.action_map:
+                        num_actions_in_job = len(job.action_graph.action_map)
+                        total_actions += num_actions_in_job
+
+            prom_metrics.tron_action_count_gauge.set(total_actions)
+        except Exception:
+            log.exception("Failed to update job and action count metrics")
+
     def initial_setup(self):
         """When the MCP is initialized the config is applied before the state.
         In this case jobs shouldn't be scheduled until the state is applied.
         """
+        overall_startup_start_time = time.time()
+
         # The job schedule factories will be created in the function below
         self._load_config()
+
         # Jobs will also get scheduled (internally) once the state for action runs are restored in restore_state
-        with timer("self.restore_state"):
+        with prom_metrics.timer(
+            operation_name="full_restore_process",
+            log=log,
+            histogram_metric=prom_metrics.tron_restore_duration_seconds_histogram,
+            gauge_metric=prom_metrics.tron_last_restore_duration_seconds_gauge,
+        ):
             self.restore_state(
                 actioncommand.create_action_runner_factory_from_config(
                     self.config.load().get_master().action_runner,
                 ),
             )
+
         # Any job with existing state would have been scheduled already. Jobs
         # without any state will be scheduled here.
         self.jobs.run_queue_schedule()
+
+        overall_startup_duration = time.time() - overall_startup_start_time
+        prom_metrics.tron_startup_duration_seconds_histogram.observe(overall_startup_duration)
+        prom_metrics.tron_last_startup_duration_seconds_gauge.set(overall_startup_duration)
+        log.info(f"Tron total startup finished in {overall_startup_duration:.2f}s.")
 
     def apply_config(self, config_container, reconfigure=False, namespace_to_reconfigure=None):
         """Apply a configuration."""
@@ -132,11 +153,15 @@ class MasterControlProgram:
             reconfigure,
             namespace_to_reconfigure,
         )
+
         # We will build the schedulers once the watcher is invoked
         log.info(
             f"Tron built the schedulers for Tron jobs internally! Time elapsed since Tron started {time.time() - self.boot_time}s"
         )
         self.state_watcher.watch_all(updated_jobs, [Job.NOTIFY_STATE_CHANGE, Job.NOTIFY_NEW_RUN])
+
+        # Do this last so that all Job objects, schedulers, and action graphs are fully built and linked within the JobCollection
+        self._update_metrics()
 
     def build_job_scheduler_factory(self, master_config, job_graph):
         """Creates JobSchedulerFactory, which are how Tron tracks job schedules internally"""
@@ -185,18 +210,27 @@ class MasterControlProgram:
         to the configured Jobs.
         """
         log.info("Restoring from DynamoDB")
-        with timer("restore"):
+
+        with prom_metrics.timer(
+            operation_name="state_data_retrieval_from_dynamodb",
+            log=log,
+            histogram_metric=prom_metrics.tron_dynamodb_data_retrieval_duration_seconds_histogram,
+            gauge_metric=prom_metrics.tron_last_dynamodb_data_retrieval_duration_seconds_gauge,
+        ):
             # restores the state of the jobs and their runs from DynamoDB
             states = self.state_watcher.restore(self.jobs.get_names(), self.read_json)
-        log.info(
-            f"Tron will start restoring state for the jobs and will start scheduling them! Time elapsed since Tron started {time.time() - self.boot_time}"
-        )
-        # loads the runs' state and schedule the next run for each job
-        with timer("self.jobs.restore_state"):
+
+        log.info("Applying retrieved state to Tron objects...")
+
+        with prom_metrics.timer(
+            operation_name="apply_state_to_job_objects",
+            log=log,
+            histogram_metric=prom_metrics.tron_job_state_application_duration_seconds_histogram,
+            gauge_metric=prom_metrics.tron_last_job_state_application_duration_seconds_gauge,
+        ):
             self.jobs.restore_state(states.get("job_state", {}), action_runner)
-        log.info(
-            f"Tron completed restoring state for the jobs. Time elapsed since Tron started {time.time() - self.boot_time}"
-        )
+
+        log.info("Tron state restore complete.")
 
     def __str__(self):
         return "MCP"

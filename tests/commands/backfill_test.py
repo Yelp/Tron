@@ -121,6 +121,7 @@ def test_backfill_run_cancel(
     assert expected == event_loop.run_until_complete(fake_backfill_run.cancel())
 
 
+@mock.patch("tron.commands.backfill.get_auth_token", lambda: "")
 @mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
 def test_run_backfill_for_date_range_job_dne(mock_get_obj_type, event_loop):
     mock_get_obj_type.side_effect = ValueError
@@ -130,6 +131,7 @@ def test_run_backfill_for_date_range_job_dne(mock_get_obj_type, event_loop):
         )
 
 
+@mock.patch("tron.commands.backfill.get_auth_token", lambda: "")
 @mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
 def test_run_backfill_for_date_range_not_a_job(mock_get_obj_type, event_loop):
     mock_get_obj_type.return_value = client.TronObjectIdentifier("JOB_RUN", "a_url")
@@ -146,6 +148,7 @@ def test_run_backfill_for_date_range_not_a_job(mock_get_obj_type, event_loop):
         (False, {"succeeded", "failed", "not started"}),
     ],
 )
+@mock.patch("tron.commands.backfill.get_auth_token", lambda: "")
 @mock.patch.object(client, "get_object_type_from_identifier", autospec=True)
 def test_run_backfill_for_date_range_normal(mock_get_obj_type, event_loop, ignore_errors, expected):
     run_states = (state for state in ["succeeded", "failed", "unknown"])

@@ -12,14 +12,14 @@ except ImportError:
     def get_instance_oidc_identity_token(role: str, ecosystem: Optional[str] = None) -> str:
         return ""
 
-    def get_and_cache_jwt_default(client_id: str) -> str:
+    def get_and_cache_jwt_default(client_id: str, refreshable: bool = False, force: bool = False) -> str:
         return ""
 
 
-def get_sso_auth_token() -> str:
+def get_sso_auth_token(no_cache: bool = False) -> str:
     """Generate an authentication token for the calling user from the Single Sign On provider, if configured"""
     client_id = get_client_config().get("auth_sso_oidc_client_id")
-    return cast(str, get_and_cache_jwt_default(client_id, refreshable=True)) if client_id else ""
+    return cast(str, get_and_cache_jwt_default(client_id, refreshable=True, force=no_cache)) if client_id else ""
 
 
 def get_vault_auth_token() -> str:
@@ -28,6 +28,6 @@ def get_vault_auth_token() -> str:
     return cast(str, get_instance_oidc_identity_token(vault_role))
 
 
-def get_auth_token() -> str:
+def get_auth_token(no_cache: bool = False) -> str:
     """Generate authentication token via Vault or Okta"""
-    return get_vault_auth_token() if os.getenv("TRONCTL_VAULT_AUTH") else get_sso_auth_token()
+    return get_vault_auth_token() if os.getenv("TRONCTL_VAULT_AUTH") else get_sso_auth_token(no_cache)
