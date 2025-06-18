@@ -26,5 +26,5 @@ EXIT_REASONS = {
     EXIT_KUBERNETES_SPOT_INTERRUPTION: "Kubernetes task failed due to spot interruption",
     EXIT_KUBERNETES_NODE_SCALEDOWN: "Kubernetes task failed due to the autoscaler scaling down a node",
     EXIT_KUBERNETES_TASK_LOST: "Kubernetes task is lost and the final outcome unknown",
-    EXIT_KUBERNETES_EPHEMERAL_STORAGE_EVICTION: "Kubernetes task failed due to ephemeral storage eviction",
+    EXIT_KUBERNETES_EPHEMERAL_STORAGE_EVICTION: "Kubernetes task failed due to exceeding disk-space usage limits",
 }
