@@ -1,3 +1,12 @@
+tron (3.7.0) jammy; urgency=medium
+
+  * 3.7.0 tagged with 'make release'
+    Commit: Save idempotent to json - TRON-2154 (#1051)  * Save
+    idempotent to json  * set idempotent to false if it doesnt exist  *
+    address review
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Wed, 18 Jun 2025 13:09:02 -0700
+
 tron (3.6.3) jammy; urgency=medium
 
   * 3.6.3 tagged with 'make release'
