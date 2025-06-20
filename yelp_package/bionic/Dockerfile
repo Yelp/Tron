@@ -37,5 +37,5 @@ RUN echo "deb http://dl.yarnpkg.com/debian/ stable main" > /etc/apt/sources.list
 RUN echo "deb http://deb.nodesource.com/node_10.x bionic main" > /etc/apt/sources.list.d/nodesource.list
 RUN apt-get -q update && apt-get -q install -y --no-install-recommends yarn nodejs
 
-RUN pip3 install --trusted-host 169.254.255.254 --index-url ${PIP_INDEX_URL} virtualenv==20.29.3
+RUN pip3 install --trusted-host 169.254.255.254 --index-url ${PIP_INDEX_URL} virtualenv==20.17.1
 WORKDIR /work
