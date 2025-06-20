@@ -24,7 +24,8 @@ override_dh_virtualenv:
                 --python=/usr/bin/python3.8 \
                 --preinstall cython==0.29.36 \
                 --preinstall pip==18.1 \
-                --preinstall setuptools==46.1.3
+                --preinstall setuptools==46.1.3 \
+                --only-binary=cryptography
 	@echo patching k8s client lib for configuration class
 	patch debian/tron/opt/venvs/tron/lib/python3.8/site-packages/kubernetes/client/configuration.py contrib/patch-config-loggers.diff
 override_dh_installinit:
