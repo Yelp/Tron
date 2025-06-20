@@ -19,7 +19,7 @@ from typing import Sequence
 from typing import Tuple
 from typing import TypeVar
 
-import boto3  # type: ignore
+import boto3
 import botocore
 from botocore.config import Config
 

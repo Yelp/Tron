@@ -257,47 +257,64 @@ class ActionRun(Observable, Persistable):
     WAITING = "waiting"
     UNKNOWN = "unknown"
 
-    default_transitions = dict(fail=FAILED, success=SUCCEEDED)
+    default_transitions = {"fail": FAILED, "success": SUCCEEDED}
     STATE_MACHINE = Machine(
         SCHEDULED,
         **{
-            CANCELLED: dict(skip=SKIPPED),
-            FAILED: dict(skip=SKIPPED),
-            RUNNING: dict(
-                cancel=CANCELLED,
-                fail_unknown=UNKNOWN,
+            CANCELLED: {
+                "skip": SKIPPED,
+                # special case for when a human manually runs a cancelled run and wants to update Tron
                 **default_transitions,
-            ),
-            STARTING: dict(
-                started=RUNNING,
-                fail=FAILED,
-                fail_unknown=UNKNOWN,
-                cancel=CANCELLED,
-            ),
-            UNKNOWN: dict(
-                running=RUNNING,
-                fail_unknown=UNKNOWN,
+            },
+            FAILED: {
+                "skip": SKIPPED,
+                # NOTE: This is a special case for when a human manually runs a failed run and wants to update Tron
+                "success": SUCCEEDED,
+            },
+            SUCCEEDED: {
+                # NOTE: this entire set of transitions is a special case for when a human wants to update Tron's state
+                # (e.g., maybe the run succeeded, but a human noticed issues with the output, deleted it, and wants to
+                # track this failure in Tron)
+                "skip": SKIPPED,
                 **default_transitions,
-            ),
-            WAITING: dict(
-                cancel=CANCELLED,
-                start=STARTING,
+            },
+            RUNNING: {
+                "cancel": CANCELLED,
+                "fail_unknown": UNKNOWN,
                 **default_transitions,
-            ),
-            QUEUED: dict(
-                ready=WAITING,
-                cancel=CANCELLED,
-                start=STARTING,
-                schedule=SCHEDULED,
+            },
+            STARTING: {
+                "started": RUNNING,
+                "fail": FAILED,
+                "fail_unknown": UNKNOWN,
+                "cancel": CANCELLED,
+                # special case for when Tron gets into a state where it lost events for whatever reason
+                "success": SUCCEEDED,
+            },
+            UNKNOWN: {
+                "running": RUNNING,
+                "fail_unknown": UNKNOWN,
                 **default_transitions,
-            ),
-            SCHEDULED: dict(
-                ready=WAITING,
-                queue=QUEUED,
-                cancel=CANCELLED,
-                start=STARTING,
+            },
+            WAITING: {
+                "cancel": CANCELLED,
+                "start": STARTING,
                 **default_transitions,
-            ),
+            },
+            QUEUED: {
+                "ready": WAITING,
+                "cancel": CANCELLED,
+                "start": STARTING,
+                "schedule": SCHEDULED,
+                **default_transitions,
+            },
+            SCHEDULED: {
+                "ready": WAITING,
+                "queue": QUEUED,
+                "cancel": CANCELLED,
+                "start": STARTING,
+                **default_transitions,
+            },
         },
     )
 

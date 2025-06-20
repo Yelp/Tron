@@ -1,5 +1,6 @@
 astroid==2.13.3
 asynctest==0.12.0
+boto3-stubs==1.35.63
 botocore-stubs==1.38.19
 cfgv==2.0.1
 debugpy==1.8.1
@@ -31,9 +32,11 @@ toml==0.10.2
 tomli==2.0.1
 tomlkit==0.11.6
 types-awscrt==0.27.2
+types-boto3==1.0.2
 types-pytz==2024.2.0.20240913
 types-PyYAML==6.0.12
 types-requests==2.31.0.5
+types-s3transfer==0.13.0
 types-simplejson==3.19.0.20240310
 types-urllib3==1.26.25.14
 virtualenv==20.17.1
