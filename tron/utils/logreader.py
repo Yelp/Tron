@@ -8,18 +8,25 @@ from typing import List
 from typing import Optional
 from typing import Tuple
 
-import staticconf  # type: ignore
+import staticconf
 import yaml
 
 from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
 
 try:
-    from logreader.readers import S3LogsReader
+    from logreader.readers import S3LogsReader  # type: ignore[import-untyped]
 
     s3reader_available = True
 except ImportError:
     s3reader_available = False
+
+    class S3LogsReader:  # type: ignore[no-redef]  # stub class for internal-only package
+        def __init__(self, superregion: str):
+            raise ImportError("logreader (internal Yelp package) is not available - unable to display logs.")
+
+        def get_log_reader(self, log_name: str, start_datetime: datetime.datetime, end_datetime: datetime.datetime):
+            raise NotImplementedError("logreader (internal Yelp package) is not available - unable to display logs.")
 
 
 log = logging.getLogger(__name__)
@@ -129,7 +136,7 @@ def read_log_stream_for_action_run(
     if max_lines == USE_SRV_CONFIGS:
         config_watcher = get_config_watcher()
         config_watcher.reload_if_changed()
-        max_lines = staticconf.read("logging.max_lines_to_display", namespace=NAMESPACE)
+        max_lines = staticconf.read("logging.max_lines_to_display", namespace=NAMESPACE)  # type: ignore[attr-defined] # TODO: why can't mypy see that read() exists?
 
     try:
         superregion = get_superregion()
