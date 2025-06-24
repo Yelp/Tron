@@ -15,7 +15,6 @@ pyjwt==2.9.0               # required by okta-auth
 pyopenssl==23.2.0          # vault-tools dependency
 saml-helper==2.5.3         # required by okta-auth
 service-identity==24.2.0   # vault-tools dependency
-simplejson==3.19.2         # required by tron CLI
 smmap==5.0.2               # vault-tools dependency
 vault-tools==1.6.0         # used for API auth
 yelp-meteorite==2.1.1      # used by task-processing to emit metrics, clusterman-metrics dependency

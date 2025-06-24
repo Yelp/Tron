@@ -15,7 +15,10 @@ from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
 
 try:
-    from logreader.readers import S3LogsReader  # type: ignore[import-untyped]
+    # mypy: allow-unused-ignore
+    from logreader.readers import S3LogsReader  # type: ignore[import-not-found]  # internal-only package
+
+    # mypy: no-unused-ignore
 
     s3reader_available = True
 except ImportError:

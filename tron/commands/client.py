@@ -1,6 +1,7 @@
 """
 A command line http client used by tronview, tronctl, and tronfig
 """
+import json
 import logging
 import os
 import urllib.error
@@ -12,13 +13,6 @@ from typing import Dict
 import tron
 from tron.commands.authentication import get_auth_token
 from tron.config.schema import MASTER_NAMESPACE
-
-try:
-    import simplejson
-
-    assert simplejson  # Pyflakes
-except ImportError:
-    import json as simplejson  # type: ignore
 
 
 log = logging.getLogger(__name__)
@@ -56,7 +50,7 @@ def load_response_content(http_response):
         encoding = "utf8"
     content = http_response.read().decode(encoding)
     try:
-        return Response(None, None, simplejson.loads(content))
+        return Response(None, None, json.loads(content))
     except ValueError as e:
         log.error("Failed to decode response: %s, %s", e, content)
         return Response(DECODE_ERROR, str(e), content)
@@ -70,7 +64,7 @@ def build_http_error_response(exc):
             encoding = "utf8"
         content = content.decode(encoding)
         try:
-            content = simplejson.loads(content)
+            content = json.loads(content)
             content = content["error"]
         except ValueError:
             log.warning(
