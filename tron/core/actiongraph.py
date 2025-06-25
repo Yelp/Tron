@@ -1,6 +1,9 @@
 import logging
 from collections import namedtuple
 from typing import Mapping
+from typing import Sequence
+from typing import Set
+from typing import Union
 
 from tron.core.action import Action
 from tron.utils.timeutils import delta_total_seconds
@@ -12,7 +15,12 @@ Trigger = namedtuple("Trigger", ["name", "command"])
 class ActionGraph:
     """A directed graph of actions and their requirements for a specific job."""
 
-    def __init__(self, action_map: Mapping[str, Action], required_actions, required_triggers):
+    def __init__(
+        self,
+        action_map: Mapping[str, Action],
+        required_actions: Mapping[str, Set[str]],
+        required_triggers: Mapping[str, Set[str]],
+    ) -> None:
         self.action_map = action_map
         self.required_actions = required_actions
         self.required_triggers = required_triggers
@@ -21,7 +29,7 @@ class ActionGraph:
             self.all_triggers |= action_triggers
         self.all_triggers -= set(self.action_map)
 
-    def get_dependencies(self, action_name, include_triggers=False):
+    def get_dependencies(self, action_name: str, include_triggers: bool = False) -> Sequence[Union[Action, Trigger]]:
         """Given an Action's name return the Actions (and optionally, Triggers)
         required to run before that Action.
         """

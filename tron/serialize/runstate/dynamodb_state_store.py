@@ -9,7 +9,6 @@ import time
 from collections import defaultdict
 from collections import OrderedDict
 from typing import Any
-from typing import cast
 from typing import DefaultDict
 from typing import Dict
 from typing import List
@@ -47,7 +46,9 @@ T = TypeVar("T")
 
 
 class DynamoDBStateStore:
-    def __init__(self, name, dynamodb_region, stopping=False, max_transact_write_items=8) -> None:
+    def __init__(
+        self, name: str, dynamodb_region: str, stopping: bool = False, max_transact_write_items: int = 8
+    ) -> None:
         # Standard mode includes an exponential backoff by a base factor of 2 for a
         # maximum backoff time of 20 seconds (min(b*r^i, MAX_BACKOFF) where b is a
         # random number between 0 and 1 and r is the base factor of 2). This might
@@ -75,13 +76,13 @@ class DynamoDBStateStore:
         self.save_thread = threading.Thread(target=self._save_loop, args=(), daemon=True)
         self.save_thread.start()
 
-    def build_key(self, type, iden) -> str:
+    def build_key(self, type: str, iden: str) -> str:
         """
         It builds a unique partition key. The key could be objects with __str__ method.
         """
         return f"{type} {iden}"
 
-    def restore(self, keys, read_json: bool = False) -> dict:
+    def restore(self, keys: List[str], read_json: bool = False) -> Dict[str, Any]:
         """
         Fetch all under the same partition key(s).
         ret: <dict of key to states>
@@ -111,7 +112,7 @@ class DynamoDBStateStore:
         delay: int = min(base_delay_seconds * (2 ** (safe_attempt - 1)), max_delay_seconds)
         return delay
 
-    def _get_items(self, table_keys: list) -> object:
+    def _get_items(self, table_keys: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         items = []
         # let's avoid potentially mutating our input :)
         cand_keys_list = copy.copy(table_keys)
@@ -167,11 +168,11 @@ class DynamoDBStateStore:
             raise KeyError(msg)
         return items
 
-    def _get_first_partitions(self, keys: list):
+    def _get_first_partitions(self, keys: List[str]) -> List[Dict[str, Any]]:
         new_keys = [{"key": {"S": key}, "index": {"N": "0"}} for key in keys]
         return self._get_items(new_keys)
 
-    def _get_remaining_partitions(self, items: list, read_json: bool):
+    def _get_remaining_partitions(self, items: List, read_json: bool) -> List[Dict[str, Any]]:
         """Get items in the remaining partitions: N = 1 and beyond"""
         keys_for_remaining_items = []
         for item in items:
@@ -191,7 +192,9 @@ class DynamoDBStateStore:
             keys_for_remaining_items.extend(remaining_items)
         return self._get_items(keys_for_remaining_items)
 
-    def _merge_items(self, first_items, remaining_items, read_json=False) -> dict:
+    def _merge_items(
+        self, first_items: List[Dict[str, Any]], remaining_items: List[Dict[str, Any]], read_json: bool = False
+    ) -> Dict[str, Any]:
         """
         Helper to merge multi-partition data into a single entry. If read_json is
         False, we merge the pickle partitions - otherwise, we merge the json ones.
@@ -210,13 +213,13 @@ class DynamoDBStateStore:
         for item in first_items:
             key = item["key"]["S"]
             items[key].append(item)
-        for key, item in items.items():
-            item.sort(key=lambda x: int(x["index"]["N"]))
-            for val in item:
+        for key, key_items in items.items():
+            key_items.sort(key=lambda x: int(x["index"]["N"]))
+            for val in key_items:
                 if "val" in val:
                     raw_items[key] += bytes(val["val"]["B"])
             if read_json:
-                for json_val in item:
+                for json_val in key_items:
                     try:
                         json_items[key] += json_val["json_val"]["S"]
                     except Exception:
@@ -238,7 +241,7 @@ class DynamoDBStateStore:
             deserialized_items = {k: pickle.loads(v) for k, v in raw_items.items()}
         return deserialized_items
 
-    def save(self, key_value_pairs) -> None:
+    def save(self, key_value_pairs: List[Tuple[str, Optional[Dict[str, Any]]]]) -> None:
         """Add items to the save_queue to be later consumed by _consume_save_queue"""
         for key, val in key_value_pairs:
             while True:
@@ -309,10 +312,10 @@ class DynamoDBStateStore:
             json_key = key.split(" ")[0]
             if json_key == runstate.JOB_STATE:
                 job_data = Job.from_json(state)
-                return cast(Dict[str, Any], job_data)
+                return job_data
             elif json_key == runstate.JOB_RUN_STATE:
                 job_run_data = JobRun.from_json(state)
-                return cast(Dict[str, Any], job_run_data)
+                return job_run_data
             else:
                 raise ValueError(f"Unknown type: key {key}")
         except Exception:
@@ -362,7 +365,7 @@ class DynamoDBStateStore:
         prom_metrics.tron_dynamodb_partitions_histogram.observe(max_partitions)
 
         for index in range(max_partitions):
-            item = {
+            item: Dict[str, Any] = {  # TODO: replace this with a TypedDict
                 "Put": {
                     "Item": {
                         "key": {

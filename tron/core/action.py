@@ -4,6 +4,8 @@ import logging
 from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
+from typing import Any
+from typing import Dict
 from typing import List
 from typing import Optional
 from typing import Union
@@ -61,8 +63,10 @@ class ActionCommandConfig(Persistable):
         return ActionCommandConfig(**self.state_data)
 
     @staticmethod
-    def from_json(state_data: str):
-        """Deserialize a JSON string to an ActionCommandConfig instance."""
+    def from_json(
+        state_data: str,
+    ) -> Dict[str, Any]:  # TODO: use a TypedDict (or return an ActionCommandConfig instance)
+        """Deserialize a JSON string to an ActionCommandConfig dict."""
         try:
             json_data = json.loads(state_data)
             deserialized_data = {

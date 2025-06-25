@@ -3,6 +3,8 @@ import logging
 import os
 from io import StringIO
 from shlex import quote
+from typing import Any
+from typing import Dict
 from typing import Optional
 
 from tron.config import schema
@@ -208,7 +210,7 @@ class SubprocessActionRunnerFactory(Persistable):
         return not self == other
 
     @staticmethod
-    def from_json(state_data: str):
+    def from_json(state_data: str) -> Dict[str, Any]:
         try:
             json_data = json.loads(state_data)
             deserialized_data = {

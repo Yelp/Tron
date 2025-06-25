@@ -7,6 +7,8 @@ from collections import namedtuple
 from enum import Enum
 from typing import Any
 from typing import Dict
+from typing import Type
+from typing import TypeVar
 
 MASTER_NAMESPACE = "MASTER"
 
@@ -33,8 +35,10 @@ def config_object_factory(name, required=None, optional=None):
     config_class.required_keys = required
     config_class.optional_keys = optional
 
+    T = TypeVar("T", bound="config_class")  # i'm sorry.
+
     @classmethod
-    def from_dict(cls, data: Dict[str, Any]):
+    def from_dict(cls: Type[T], data: Dict[str, Any]) -> T:
         supported_keys = set(required + optional)
         filtered_data = {k: v for k, v in data.items() if k in supported_keys}
         return cls(**filtered_data)

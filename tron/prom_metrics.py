@@ -1,6 +1,7 @@
 import logging
 import time
 from contextlib import contextmanager
+from typing import Generator
 from typing import Optional
 
 from prometheus_client import Counter
@@ -134,7 +135,7 @@ def timer(
     log: logging.Logger,
     histogram_metric: Optional[Histogram] = None,
     gauge_metric: Optional[Gauge] = None,
-):
+) -> Generator[None, None, None]:
     """Context manager for timing operations with optional Prometheus metrics."""
     start_time = time.time()
     log.info(f"Starting {operation_name}...")
