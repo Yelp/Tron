@@ -41,7 +41,6 @@ class MasterControlProgram:
         self.context = command_context.CommandContext()
         self.state_watcher = statemanager.StateChangeWatcher()
         self.boot_time = boot_time
-        self.read_json = False
         current_time = time.strftime("%a, %d %b %Y %H:%M:%S", time.localtime(boot_time))
         log.info(f"Initialized. Tron started on {current_time}!")
 
@@ -131,7 +130,6 @@ class MasterControlProgram:
             (MesosClusterRepository.configure, "mesos_options"),
             (KubernetesClusterRepository.configure, "k8s_options"),
             (self.configure_eventbus, "eventbus_enabled"),
-            (self.set_read_json, "read_json"),
         ]
         master_config = config_container.get_master()
         apply_master_configuration(master_config_directives, master_config)
@@ -188,9 +186,6 @@ class MasterControlProgram:
     def set_context_base(self, command_context):
         self.context.base = command_context
 
-    def set_read_json(self, read_json):
-        self.read_json = read_json
-
     def configure_eventbus(self, enabled):
         if enabled:
             if not EventBus.instance:
@@ -218,7 +213,7 @@ class MasterControlProgram:
             gauge_metric=prom_metrics.tron_last_dynamodb_data_retrieval_duration_seconds_gauge,
         ):
             # restores the state of the jobs and their runs from DynamoDB
-            states = self.state_watcher.restore(self.jobs.get_names(), self.read_json)
+            states = self.state_watcher.restore(self.jobs.get_names())
 
         log.info("Applying retrieved state to Tron objects...")
 
