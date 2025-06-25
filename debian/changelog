@@ -1,3 +1,11 @@
+tron (3.7.2) jammy; urgency=medium
+
+  * 3.7.2 tagged with 'make release'
+    Commit: Merge pull request #1056 from Yelp/u/kkasp/rest-in-peace-
+    tronweb2  Delete tronweb2
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Wed, 25 Jun 2025 10:25:34 -0700
+
 tron (3.7.1) jammy; urgency=medium
 
   * 3.7.1 tagged with 'make release'
