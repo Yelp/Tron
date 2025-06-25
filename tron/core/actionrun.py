@@ -7,6 +7,8 @@ import logging
 import os
 from dataclasses import dataclass
 from dataclasses import fields
+from typing import Any
+from typing import Callable
 from typing import cast
 from typing import Dict
 from typing import List
@@ -212,7 +214,7 @@ class ActionRunAttempt(Persistable):
             raise
 
     @staticmethod
-    def from_json(state_data: str):
+    def from_json(state_data: str) -> Dict[str, Any]:  # TODO: use a TypedDict
         """Deserialize the ActionRunAttempt instance from a JSON string."""
         try:
             json_data = json.loads(state_data)
@@ -407,7 +409,7 @@ class ActionRun(Observable, Persistable):
         self.in_delay = None  # type: Optional[DelayedCall]
 
     @property
-    def state(self):
+    def state(self) -> str:
         return self.machine.state
 
     @property
@@ -542,7 +544,7 @@ class ActionRun(Observable, Persistable):
             run.transition_and_notify("fail_unknown")
         return run
 
-    def start(self, original_command=True) -> Optional[Union[bool, ActionCommand]]:
+    def start(self, original_command: bool = True) -> Optional[Union[bool, ActionCommand]]:
         """Start this ActionRun."""
         if self.in_delay is not None:
             log.warning(f"{self} cancelling suspend timer")
@@ -594,7 +596,7 @@ class ActionRun(Observable, Persistable):
         self.attempts.append(new_attempt)
         return new_attempt
 
-    def submit_command(self, attempt) -> Optional[Union[bool, ActionCommand]]:
+    def submit_command(self, attempt: ActionRunAttempt) -> Optional[Union[bool, ActionCommand]]:
         raise NotImplementedError()
 
     def stop(self):
@@ -606,7 +608,7 @@ class ActionRun(Observable, Persistable):
     def recover(self) -> Optional[ActionCommand]:
         raise NotImplementedError()
 
-    def _done(self, target, exit_status=0) -> Optional[bool]:
+    def _done(self, target: str, exit_status: Optional[int] = 0) -> Optional[bool]:
         if self.machine.check(target):
             if self.triggered_by:
                 EventBus.clear_subscriptions(self.__hash__())
@@ -657,7 +659,7 @@ class ActionRun(Observable, Persistable):
         self.in_delay = None
         self.start()
 
-    def restart(self, original_command=True) -> Optional[Union[bool, ActionCommand]]:
+    def restart(self, original_command: bool = True) -> Optional[Union[bool, ActionCommand]]:
         """Used by `fail` when action run has to be re-tried"""
         if self.retries_delay is not None:
             self.in_delay = reactor.callLater(  # type: ignore  # no twisted stubs
@@ -677,8 +679,15 @@ class ActionRun(Observable, Persistable):
         return self._done("fail", exit_status)
 
     def _exit_unsuccessful(
-        self, exit_status=None, retry_original_command=True, non_retryable_exit_codes=[]
+        self,
+        exit_status: Optional[int] = None,
+        retry_original_command: bool = True,
+        # TODO: delete this feature or refactor to not have a mutable default value
+        non_retryable_exit_codes: Optional[List[int]] = [],
     ) -> Optional[Union[bool, ActionCommand]]:
+        if non_retryable_exit_codes is None:
+            non_retryable_exit_codes = []
+
         if self.is_done:
             log.info(
                 f"{self} got exit code {exit_status} but already in terminal " f'state "{self.state}", not retrying',
@@ -787,7 +796,7 @@ class ActionRun(Observable, Persistable):
         }
 
     @staticmethod
-    def from_json(state_data: str):
+    def from_json(state_data: str) -> Dict[str, Any]:  # TODO: would be nice to have a TypedDict here
         """Deserialize the ActionRun instance from a JSON Dictionary."""
         try:
             json_data = json.loads(state_data)
@@ -953,7 +962,7 @@ class ActionRun(Observable, Persistable):
             last_attempt.exit_status = None
             last_attempt.end_time = None
 
-    def __getattr__(self, name: str):
+    def __getattr__(self, name: str) -> Union[Callable[[], Optional[bool]], bool]:
         """Support convenience properties for checking if this ActionRun is in
         a specific state (Ex: self.is_running would check if self.state is
         STATE_RUNNING) or for transitioning to a new state (ex: ready).
@@ -972,7 +981,7 @@ class ActionRun(Observable, Persistable):
     def __str__(self):
         return f"ActionRun: {self.id}"
 
-    def transition_and_notify(self, target) -> Optional[bool]:
+    def transition_and_notify(self, target: str) -> Optional[bool]:
         if self.machine.transition(target):
             self.notify(self.state)
             return True
@@ -1067,7 +1076,7 @@ class SSHActionRun(ActionRun, Observer):
 
         return self.do_recover(delay=0)
 
-    def do_recover(self, delay) -> Optional[Union[DelayedCall, Literal[True]]]:
+    def do_recover(self, delay: float) -> Optional[Union[DelayedCall, Literal[True]]]:
         recovery_command = f"{self.action_runner.exec_path}/recover_batch.py {self.action_runner.status_path}/{self.id}/status"  # type: ignore[union-attr]  # hopefully we can remove the Union with TRON-2304
         command_config = action.ActionCommandConfig(command=recovery_command)
         rendered_command = self.render_command(recovery_command)
@@ -1116,7 +1125,9 @@ class SSHActionRun(ActionRun, Observer):
                 recovery_action_command,
             )
 
-    def submit_recovery_command(self, recovery_run, recovery_action_command) -> Optional[Literal[True]]:
+    def submit_recovery_command(
+        self, recovery_run: "SSHActionRun", recovery_action_command: ActionCommand
+    ) -> Optional[Literal[True]]:
         log.info(
             f"Submitting recovery job with command {recovery_action_command.command} " f"to node {recovery_run.node}",
         )
@@ -1158,7 +1169,13 @@ class SSHActionRun(ActionRun, Observer):
 class MesosActionRun(ActionRun, Observer):
     """An ActionRun that executes the command on a Mesos cluster."""
 
-    def _create_mesos_task(self, mesos_cluster: MesosCluster, serializer, attempt, task_id=None) -> Optional[MesosTask]:
+    def _create_mesos_task(
+        self,
+        mesos_cluster: MesosCluster,
+        serializer: filehandler.OutputStreamSerializer,
+        attempt: ActionRunAttempt,
+        task_id: Optional[str] = None,
+    ) -> Optional[MesosTask]:
         command_config = attempt.command_config
         return mesos_cluster.create_task(
             action_run_id=self.id,
@@ -1500,20 +1517,24 @@ class KubernetesActionRun(ActionRun, Observer):
         return "\n".join(msgs)
 
     def _exit_unsuccessful(
-        self, exit_status=None, retry_original_command=True, non_retryable_exit_codes=[]
+        self,
+        exit_status: Optional[int] = None,
+        retry_original_command: bool = True,
+        # TODO: remove this feature or refactor so that we don't have this useless parameter on the subclass
+        non_retryable_exit_codes: Optional[List[int]] = None,
     ) -> Optional[Union[bool, ActionCommand]]:
 
         k8s_cluster = KubernetesClusterRepository.get_cluster()
-        non_retryable_exit_codes = [] if not k8s_cluster else k8s_cluster.non_retryable_exit_codes
+        real_non_retryable_exit_codes = [] if not k8s_cluster else k8s_cluster.non_retryable_exit_codes
 
         return super()._exit_unsuccessful(
             exit_status=exit_status,
             retry_original_command=retry_original_command,
-            non_retryable_exit_codes=non_retryable_exit_codes,
+            non_retryable_exit_codes=real_non_retryable_exit_codes,
         )
 
     def handle_action_command_state_change(
-        self, action_command: ActionCommand, event: str, event_data=None
+        self, action_command: ActionCommand, event: str, event_data: Optional[Any] = None
     ) -> Optional[Union[bool, ActionCommand]]:
         """
         Observe ActionCommand state changes and transition the ActionCommand state machine to a new state.

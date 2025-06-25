@@ -6,6 +6,8 @@ import json
 import logging
 import time
 from collections import deque
+from typing import Any
+from typing import Dict
 from typing import Optional
 
 import pytz
@@ -111,7 +113,7 @@ class JobRun(Observable, Observer, Persistable):
             raise
 
     @staticmethod
-    def from_json(state_data: str):
+    def from_json(state_data: str) -> Dict[str, Any]:  # TODO: make a TypedDict for this
         """Deserialize the JobRun instance from a JSON string."""
         try:
             json_data = json.loads(state_data)
@@ -299,7 +301,9 @@ class JobRun(Observable, Observer, Persistable):
 
         return started_runs
 
-    def handle_action_run_state_change(self, action_run: ActionRun, event, event_data=None):
+    def handle_action_run_state_change(
+        self, action_run: ActionRun, event: str, event_data: Optional[Any] = None
+    ) -> None:
         """Handle events triggered by JobRuns."""
         log.info(f"{self} got an event: {event}")
         metrics.meter(f"tron.actionrun.{event}")
@@ -307,14 +311,14 @@ class JobRun(Observable, Observer, Persistable):
         if event == ActionRun.NOTIFY_TRIGGER_READY:
             if self.is_scheduled or self.is_queued:
                 log.info(f"{self} triggers are satisfied but run not started yet")
-                return
+                return None
 
             started = self._start_action_runs()
             if any(started):
                 log.info(
                     f"{self} action runs triggered: " f"{', '.join(str(s) for s in started)}",
                 )
-            return
+            return None
 
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
@@ -324,10 +328,10 @@ class JobRun(Observable, Observer, Persistable):
         )
 
         if not action_run.is_done:
-            return
+            return None
 
         if action_run.is_skipped and self.action_runs.is_scheduled:
-            return
+            return None
 
         if not action_run.is_broken:
             started = self._start_action_runs()
@@ -335,11 +339,11 @@ class JobRun(Observable, Observer, Persistable):
                 log.info(
                     f"{self} action runs started: " f"{', '.join(str(s) for s in started)}",
                 )
-                return
+                return None
 
         if not self.action_runs.is_done:
             log.info(f"{self} still has running or waiting actions")
-            return
+            return None
 
         # If we can't make any progress, we're done
         cleanup_run: ActionRun = self.action_runs.cleanup_action_run
@@ -350,7 +354,7 @@ class JobRun(Observable, Observer, Persistable):
 
     handler = handle_action_run_state_change
 
-    def finalize(self):
+    def finalize(self) -> None:
         """The last step of a JobRun. Called when the cleanup action
         completes or if the job has no cleanup action, called once all action
         runs have reached a 'done' state.

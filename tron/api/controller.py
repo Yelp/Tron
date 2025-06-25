@@ -198,12 +198,12 @@ class ConfigController:
         self.mcp = mcp
         self.config_manager: ConfigManager = mcp.get_config_manager()
 
-    def _get_config_content(self, name) -> str:
+    def _get_config_content(self, name: str) -> str:
         if name not in self.config_manager:
             return self.DEFAULT_NAMED_CONFIG
         return self.config_manager.read_raw_config(name)
 
-    def read_config(self, name) -> ConfigResponse:
+    def read_config(self, name: str) -> ConfigResponse:
         config_content = self._get_config_content(name)
         config_hash = self.config_manager.get_hash(name)
         return {"config": config_content, "hash": config_hash}

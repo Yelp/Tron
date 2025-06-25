@@ -812,7 +812,7 @@ class ValidateJob(Validator):
     # TODO: extract common code to a util function
     def _validate_dependencies(
         self,
-        job,  # TODO: create TypedDict for this
+        job: Dict[str, Any],  # TODO: create TypedDict for this
         # TODO: setup UniqueNameDict for use with mypy so that the following line
         # is not a lie
         actions: Dict[str, ConfigAction],
@@ -820,7 +820,7 @@ class ValidateJob(Validator):
         current_action: Optional[ConfigAction] = None,
         stack: Optional[List[str]] = None,
         already_validated: Optional[Set[Tuple[str, str]]] = None,
-    ):
+    ) -> None:
         """Check for circular or misspelled dependencies."""
         # for large graphs, we can end up validating the same jobs/actions repeatedly
         # this is unnecessary and we can skip a ton of work simply by caching what we've
@@ -829,7 +829,7 @@ class ValidateJob(Validator):
         current_action = current_action or base_action
         validated = (job["name"], current_action.name)
         if validated in already_validated:
-            return
+            return None
         else:
             already_validated.add(validated)
 

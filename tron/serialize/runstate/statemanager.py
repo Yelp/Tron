@@ -5,6 +5,8 @@ import logging
 import sys
 import time
 from contextlib import contextmanager
+from typing import Any
+from typing import cast
 from typing import Dict
 from typing import List
 
@@ -105,7 +107,8 @@ class PersistentStateManager:
         self._buffer = buffer
         self._impl = persistence_impl
 
-    def restore(self, job_names, read_json: bool = False):
+    # TODO: get rid of the Any here - hopefully with a TypedDict
+    def restore(self, job_names: List[str], read_json: bool = False) -> Dict[str, Any]:
         """Return the most recent serialized state."""
         log.debug("Restoring state.")
 
@@ -134,7 +137,10 @@ class PersistentStateManager:
         }
         return state
 
-    def _restore_runs_for_job(self, job_name, job_state, read_json: bool = False):
+    # TODO: get rid of the Any here - hopefully with a TypedDict
+    def _restore_runs_for_job(
+        self, job_name: str, job_state: Dict[str, Any], read_json: bool = False
+    ) -> List[Dict[str, Any]]:
         """Restore the state for the runs of each job"""
         run_nums = job_state["run_nums"]
         keys = [jobrun.get_job_run_id(job_name, run_num) for run_num in run_nums]
@@ -155,7 +161,8 @@ class PersistentStateManager:
         keys = (self._impl.build_key(item_type, name) for name in names)
         return dict(zip(keys, names))
 
-    def _restore_dicts(self, item_type: str, items: List[str], read_json: bool = False) -> Dict[str, dict]:
+    # TODO: get rid of the Any here - hopefully with a TypedDict
+    def _restore_dicts(self, item_type: str, items: List[str], read_json: bool = False) -> Dict[str, Any]:
         """Return a dict mapping of the items name to its state data."""
         key_to_item_map = self._keys_for_items(item_type, items)
         key_to_state_map = self._impl.restore(key_to_item_map.keys(), read_json)
@@ -274,13 +281,17 @@ class StateChangeWatcher(observer.Observer):
         self._save_object(runstate.JOB_RUN_STATE, job_run)
 
     def delete_job_run(self, job_run):
-        self.state_manager.delete(runstate.JOB_RUN_STATE, job_run.name)
+        # HACK: this cast is nasty, but we should probably refactor things so that the default self.state_manager
+        # in not a NullStateManager
+        cast(PersistentStateManager, self.state_manager).delete(runstate.JOB_RUN_STATE, job_run.name)
 
     def save_frameworks(self, clusters):
         self._save_object(runstate.MESOS_STATE, clusters)
 
     def _save_object(self, state_type, obj):
-        self.state_manager.save(state_type, obj.name, obj.state_data)
+        # HACK: this cast is nasty, but we should probably refactor things so that the default self.state_manager
+        # in not a NullStateManager
+        cast(PersistentStateManager, self.state_manager).save(state_type, obj.name, obj.state_data)
 
     def shutdown(self):
         self.state_manager.enabled = False
@@ -289,5 +300,7 @@ class StateChangeWatcher(observer.Observer):
     def disabled(self):
         return self.state_manager.disabled()
 
-    def restore(self, jobs, read_json: bool = False):
-        return self.state_manager.restore(jobs, read_json)
+    def restore(self, jobs: List[str], read_json: bool = False) -> Dict[str, Any]:
+        # HACK: this cast is nasty, but we should probably refactor things so that the default self.state_manager
+        # in not a NullStateManager
+        return cast(PersistentStateManager, self.state_manager).restore(jobs, read_json)

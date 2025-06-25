@@ -60,7 +60,9 @@ def combine_volumes(
 
 
 class KubernetesTask(ActionCommand):
-    def __init__(self, action_run_id: str, task_config: KubernetesTaskConfig, serializer=None):
+    def __init__(
+        self, action_run_id: str, task_config: KubernetesTaskConfig, serializer: Optional[OutputStreamSerializer] = None
+    ) -> None:
         super().__init__(id=action_run_id, command=task_config.command, serializer=serializer)
 
         self.task_config = task_config
@@ -362,7 +364,7 @@ class KubernetesCluster:
             log.exception("Unhandled exception while attempting to instantiate k8s task_proc plugin")
             return None
 
-    def handle_next_event(self, _=None) -> None:
+    def handle_next_event(self, _: None = None) -> None:
         """
         Pops events off of the shared tron<->task_proc queue and processes them.
 
@@ -476,7 +478,7 @@ class KubernetesCluster:
         else:
             self.stop(fail_tasks=True)
 
-    def configure_tasks(self, default_volumes: Optional[List[ConfigVolume]]):
+    def configure_tasks(self, default_volumes: Optional[List[ConfigVolume]]) -> None:
         self.default_volumes = default_volumes
 
     def create_task(

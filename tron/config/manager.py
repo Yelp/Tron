@@ -41,7 +41,7 @@ def write_raw(path, content):
         )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
 
 
-def read_raw(path) -> str:
+def read_raw(path: str) -> str:
     with open(path) as fh:
         return fh.read()
 
@@ -107,7 +107,7 @@ class ConfigManager:
         name = name.replace(".", "_").replace(os.path.sep, "_")
         return os.path.join(self.config_path, "%s.yaml" % name)
 
-    def read_raw_config(self, name=schema.MASTER_NAMESPACE) -> str:
+    def read_raw_config(self, name: str = schema.MASTER_NAMESPACE) -> str:
         """Read the config file without converting to yaml."""
         filename = self.manifest.get_file_name(name)
         return read_raw(filename)
