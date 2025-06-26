@@ -1,3 +1,11 @@
+tron (3.7.3) jammy; urgency=medium
+
+  * 3.7.3 tagged with 'make release'
+    Commit: more gracefully handle errors during backfill monitoring
+    (#1062)
+
+ -- Matteo Piano <mpiano@yelp.com>  Thu, 26 Jun 2025 05:54:02 -0700
+
 tron (3.7.2) jammy; urgency=medium
 
   * 3.7.2 tagged with 'make release'
