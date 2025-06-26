@@ -5,6 +5,7 @@ import os
 import pprint
 import re
 import signal
+import sys
 from typing import List
 from typing import Optional
 from typing import Set
@@ -63,6 +64,7 @@ def confirm_backfill(job: str, date_strs: List[str]) -> bool:
 class BackfillRun:
     NOT_STARTED_STATE = "not started"
     SUCCESS_STATES = {ActionRun.SUCCEEDED, ActionRun.CANCELLED, ActionRun.SKIPPED}
+    MAX_SYNC_FAILURES = 5
 
     def __init__(self, tron_client: client.Client, job_id: client.TronObjectIdentifier, run_time: datetime.datetime):
         self.tron_client = tron_client
@@ -176,9 +178,17 @@ class BackfillRun:
 
         Returns the end state of the run.
         """
+        sync_failures = 0
         while self.run_state not in ActionRun.END_STATES:
             await asyncio.sleep(poll_intv_s)
-            await self.sync_state()
+            try:
+                await self.sync_state()
+                sync_failures = 0
+            except Exception as e:
+                print(f"Issue syncing state for '{self.run_name}': {e}", file=sys.stderr)
+                sync_failures += 1
+                if sync_failures > self.MAX_SYNC_FAILURES:
+                    raise
 
         print(f"Job run '{self.run_name}' for {self.run_time_str} finished with state: {self.run_state}")
         return self.run_state
