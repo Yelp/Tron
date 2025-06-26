@@ -4,31 +4,27 @@ view current state, event history and send commands to trond.
 """
 import collections
 import datetime
+import json
 import logging
 import traceback
 
 import staticconf
 from prometheus_client.twisted import MetricsResource as MetricsResourceProm
-
-from tron.config.static_config import get_config_watcher
-from tron.config.static_config import NAMESPACE
-
-try:
-    import simplejson as json
-
-    _silence_pyflakes = [json]
-except ImportError:
-    import json
-
-from twisted.web import http, resource, static, server
+from twisted.web import http
+from twisted.web import resource
+from twisted.web import server
+from twisted.web import static
 
 from tron import __version__
-from tron.api import adapter, controller
+from tron.api import adapter
+from tron.api import controller
 from tron.api import requestargs
 from tron.api.async_resource import AsyncResource
 from tron.api.auth import AuthorizationFilter
-from tron.metrics import view_all_metrics
+from tron.config.static_config import get_config_watcher
+from tron.config.static_config import NAMESPACE
 from tron.metrics import meter
+from tron.metrics import view_all_metrics
 from tron.utils import maybe_decode
 
 log = logging.getLogger(__name__)

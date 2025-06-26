@@ -22,8 +22,8 @@ from tron.utils.timeutils import delta_total_seconds
 class ReprAdapter:
     """Creates a dictionary from the given object for a set of rules."""
 
-    field_names = []
-    translated_field_names = []
+    field_names: List[str] = []
+    translated_field_names: List[str] = []
 
     def __init__(self, internal_obj):
         self._obj = internal_obj

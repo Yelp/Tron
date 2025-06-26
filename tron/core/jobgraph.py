@@ -1,5 +1,8 @@
 from collections import defaultdict
 from collections import namedtuple
+from typing import DefaultDict
+from typing import Dict
+from typing import List
 from typing import Optional
 
 from tron.config.config_parse import ConfigContainer
@@ -19,10 +22,10 @@ class JobGraph:
         """Build an adjacency list and a reverse adjacency list for the graph,
         and store all the actions as well as which actions belong to which job
         """
-        self.action_map = {}
-        self._actions_for_job = defaultdict(list)
-        self._adj_list = defaultdict(list)
-        self._rev_adj_list = defaultdict(list)
+        self.action_map: Dict[str, Action] = {}
+        self._actions_for_job: DefaultDict[str, List[str]] = defaultdict(list)
+        self._adj_list: DefaultDict[str, List[AdjListEntry]] = defaultdict(list)
+        self._rev_adj_list: DefaultDict[str, List[AdjListEntry]] = defaultdict(list)
 
         all_actions = set()
         for job_name, job_config in config_container.get_jobs().items():

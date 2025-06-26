@@ -2,6 +2,8 @@ import hashlib
 import logging
 import os
 from copy import deepcopy
+from typing import cast
+from typing import List
 from typing import Union
 
 from tron import yaml
@@ -180,7 +182,7 @@ class ConfigManager:
         name_mapping = self.get_config_name_mapping()
         return config_parse.ConfigContainer.create(name_mapping)
 
-    def get_hash(self, name) -> str:
+    def get_hash(self, name: str) -> str:
         """Return a hash of the configuration contents for name."""
         if name not in self:
             return self.DEFAULT_HASH
@@ -193,11 +195,14 @@ class ConfigManager:
             # TODO: consider storing the hash alongside the config so that we only calculate
             # hashes once?
             return hash_digest(
-                yaml.dump(
-                    self.get_config_name_mapping()[name],
-                    # ensure that the keys are always in a stable order
-                    sort_keys=True,
-                ),
+                cast(
+                    Union[str, bytes],
+                    yaml.dump(
+                        self.get_config_name_mapping()[name],
+                        # ensure that the keys are always in a stable order
+                        sort_keys=True,
+                    ),
+                )
             )
 
         # the config for any name should always be in our name mapping
@@ -208,8 +213,8 @@ class ConfigManager:
     def __contains__(self, name):
         return name in self.manifest
 
-    def get_namespaces(self) -> str:
-        return self.manifest.get_file_mapping().keys()
+    def get_namespaces(self) -> List[str]:
+        return list(self.manifest.get_file_mapping().keys())
 
 
 def create_new_config(path, master_content):

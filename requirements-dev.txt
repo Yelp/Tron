@@ -31,9 +31,11 @@ toml==0.10.2
 tomli==2.0.1
 tomlkit==0.11.6
 types-awscrt==0.27.2
+types-cachetools==5.5.0.20240820
+types-psutil==6.1.0.20241221
 types-pytz==2024.2.0.20240913
 types-PyYAML==6.0.12
 types-requests==2.31.0.5
-types-simplejson==3.19.0.20240310
+types-setuptools==75.8.0.20250110
 types-urllib3==1.26.25.14
 virtualenv==20.17.1
