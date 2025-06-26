@@ -7,8 +7,11 @@
 import functools
 import os.path
 import time
+from typing import Any
+from typing import Callable
 from typing import List
 from typing import Optional
+from typing import TypeVar
 from urllib.parse import quote
 
 from tron import actioncommand
@@ -18,6 +21,8 @@ from tron.serialize import filehandler
 from tron.utils import timeutils
 from tron.utils.logreader import read_log_stream_for_action_run
 from tron.utils.timeutils import delta_total_seconds
+
+R = TypeVar("R")
 
 
 class ReprAdapter:
@@ -48,16 +53,25 @@ def adapt_many(adapter_class, seq, *args, **kwargs):
     return [adapter_class(item, *args, **kwargs).get_repr() for item in seq if item is not None]
 
 
-def toggle_flag(flag_name):
+def toggle_flag(
+    flag_name: str,
+) -> Callable[  # the typing here is funky, this is a decorator factory that returns a decorator
+    # which takes a function with "one" argument (really, that argument is just self) and returns some type R
+    # where R is the return type of the decorated function
+    [Callable[[Any], R]],
+    # and that decorator returns another callable (since this is a decorator factory) that takes self (again, the Any)
+    # and returns None (if the flag is False) or R (if True)
+    Callable[[Any], Optional[R]],
+]:
     """Create a decorator which checks if flag_name is true before running
     the wrapped function. If False returns None.
     """
 
-    def wrap(f):
+    def wrap(f: Callable[[Any], R]) -> Callable[[Any], Optional[R]]:
         @functools.wraps(f)
-        def wrapper(self, *args, **kwargs):
+        def wrapper(self: Any) -> Optional[R]:
             if getattr(self, flag_name):
-                return f(self, *args, **kwargs)
+                return f(self)
             return None
 
         return wrapper
