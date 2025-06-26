@@ -1152,7 +1152,7 @@ class ConfigContainer:
             itertools.chain.from_iterable(config.jobs.items() for _, config in self.configs.items()),
         )
 
-    def get_master(self):
+    def get_master(self) -> TronConfig:
         return self.configs[MASTER_NAMESPACE]
 
     def get_node_names(self):

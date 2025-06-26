@@ -4,11 +4,17 @@ import logging
 import pprint
 import sys
 import time
+from argparse import Namespace
 from collections import defaultdict
 from enum import Enum
+from typing import Any
+from typing import Dict
+from typing import List
+from typing import Optional
 
 import pytimeparse  # type: ignore[import-untyped] # no stubs or py.typed marker; likely want to move off of this
 from pyrsistent import m
+from pyrsistent import PMap
 from pyrsistent import pmap
 from pysensu_yelp import send_event
 
@@ -25,6 +31,8 @@ log = logging.getLogger("check_tron_jobs")
 
 _run_interval = None
 
+_SKIP_SENSU_FAILURE_LOGGING = True  # TODO: make this not a global
+
 
 class State(Enum):
     SUCCEEDED = "succeeded"
@@ -36,7 +44,7 @@ class State(Enum):
     SKIPPED = "skipped"
 
 
-def parse_cli():
+def parse_cli() -> Namespace:
     parser = cmd_utils.build_option_parser()
     parser.add_argument(
         "--dry-run",
@@ -80,7 +88,13 @@ def _timestamp_to_shortdate(timestamp, separator="."):
     )
 
 
-def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_stderr=False):
+def compute_check_result_for_job_runs(
+    client: Client,
+    job: Dict[str, Any],
+    job_content: PMap[str, Any],
+    url_index: Dict[str, Any],
+    hide_stderr: bool = False,
+) -> Dict[str, Any]:
     cluster = client.cluster_name
     kwargs = {}
     if job_content is None:
@@ -116,7 +130,7 @@ def compute_check_result_for_job_runs(client, job, job_content, url_index, hide_
     )
 
     if last_state in (State.STUCK, State.FAILED, State.UNKNOWN):
-        if _skip_sensu_failure_logging:
+        if _SKIP_SENSU_FAILURE_LOGGING:
             job_run_url = "/".join(job_run_id.rsplit(".", 1))
             tronweb_url = f"http://y/tron-{get_superregion()}/#job/{job_run_url}"
             stderr_default = f"Please visit {tronweb_url} for stderr details."
@@ -325,7 +339,7 @@ def get_relevant_action(*, action_runs, last_state, actions_expected_runtime):
     return stuck_action_run_candidate or action_runs[-1]
 
 
-def guess_realert_every(job):
+def guess_realert_every(job: Dict[str, Any]) -> int:
     try:
         job_next_run = job.get("next_run", None)
         if job_next_run is None:
@@ -404,8 +418,10 @@ def sort_runs_by_interval(job_content, interval="day", until=None):
     return dict(run_buckets)
 
 
-def compute_check_result_for_job(client, job, url_index):
-    kwargs = m(
+def compute_check_result_for_job(
+    client: Client, job: Dict[str, Any], url_index: Dict[str, Any]
+) -> List[Dict[str, Any]]:
+    kwargs: PMap[str, Any] = m(
         name=f"check_tron_job.{job['name']}",
         source=client.cluster_name,
     )
@@ -415,7 +431,7 @@ def compute_check_result_for_job(client, job, url_index):
 
     # We want to prevent a monitoring config from setting the check_every
     # attribute, since one config should not dictate how often this script runs
-    sensu_kwargs = (
+    sensu_kwargs: PMap[str, Any] = (
         pmap(job["monitoring"])
         .discard(PRECIOUS_JOB_ATTR)
         .discard("check_every")
@@ -466,21 +482,21 @@ def compute_check_result_for_job(client, job, url_index):
     return [dict(kws) for kws in kwargs_list]
 
 
-def check_job(job, client, url_index):
+def check_job(job: Dict[str, Any], client: Client, url_index: Dict[str, Any]) -> Optional[List[Dict[str, Any]]]:
     if job.get("monitoring", {}) == {}:
         log.debug(f"Not checking {job['name']}, no monitoring metadata setup.")
-        return
-    if job.get("monitoring").get("team", None) is None:
+        return None
+    if job.get("monitoring", {}).get("team", None) is None:
         log.debug(f"Not checking {job['name']}, no team specified")
-        return
+        return None
     log.info(f"Checking {job['name']}")
     return compute_check_result_for_job(job=job, client=client, url_index=url_index)
 
 
-def check_job_result(job, client, url_index, dry_run):
+def check_job_result(job: Dict[str, Any], client: Client, url_index: Dict[str, Any], dry_run: bool) -> None:
     results = check_job(job, client, url_index)
     if not results:
-        return
+        return None
 
     for result in results:
         if dry_run:
@@ -495,7 +511,7 @@ def check_job_result(job, client, url_index, dry_run):
             send_event(**result)
 
 
-def main():
+def main() -> int:
     args = parse_cli()
     cmd_utils.setup_logging(args)
     cmd_utils.load_config(args)
@@ -505,8 +521,8 @@ def main():
     global _run_interval
     _run_interval = args.run_interval
 
-    global _skip_sensu_failure_logging
-    _skip_sensu_failure_logging = args.skip_sensu_failure_logging
+    global _SKIP_SENSU_FAILURE_LOGGING
+    _SKIP_SENSU_FAILURE_LOGGING = args.skip_sensu_failure_logging
 
     url_index = client.index()
     if args.job is None:

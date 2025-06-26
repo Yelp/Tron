@@ -35,19 +35,19 @@ class PersistenceManagerFactory:
     """Create a PersistentStateManager."""
 
     @classmethod
-    def from_config(cls, persistence_config):
+    def from_config(cls, persistence_config: schema.ConfigState) -> "PersistentStateManager":
         store_type = schema.StatePersistenceTypes(persistence_config.store_type)
         name = persistence_config.name
         buffer_size = persistence_config.buffer_size
         store = None
 
-        if store_type == schema.StatePersistenceTypes.shelve:
+        if store_type == schema.StatePersistenceTypes.shelve:  # type: ignore[attr-defined]  # mypy doesn't see our enums
             store = ShelveStateStore(name)
 
-        if store_type == schema.StatePersistenceTypes.yaml:
+        if store_type == schema.StatePersistenceTypes.yaml:  # type: ignore[attr-defined]  # mypy doesn't see our enums
             store = YamlStateStore(name)
 
-        if store_type == schema.StatePersistenceTypes.dynamodb:
+        if store_type == schema.StatePersistenceTypes.dynamodb:  # type: ignore[attr-defined]  # mypy doesn't see our enums
             table_name = persistence_config.table_name
             dynamodb_region = persistence_config.dynamodb_region
             max_transact_write_items = persistence_config.max_transact_write_items
@@ -239,7 +239,7 @@ class NullStateManager:
 class StateChangeWatcher(observer.Observer):
     """Observer of stateful objects."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.state_manager = NullStateManager
         self.config = None
 

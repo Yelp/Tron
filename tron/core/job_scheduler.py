@@ -20,7 +20,7 @@ class JobScheduler(Observer):
     x seconds into the future.
     """
 
-    def __init__(self, job: Job):
+    def __init__(self, job: Job) -> None:
         self.job = job
         self.watch(job)
 

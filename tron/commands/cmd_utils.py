@@ -143,7 +143,7 @@ def get_client_config():
     return {}
 
 
-def load_config(options):
+def load_config(options: argparse.Namespace) -> None:
     """Attempt to load a user specific configuration or a global config file
     and set any unset options based on values from the config. Finally fallback
     to DEFAULT_CONFIG for those settings.
@@ -189,7 +189,7 @@ def save_config(options):
     write_config(config)
 
 
-def setup_logging(options):
+def setup_logging(options: argparse.Namespace) -> None:
     if options.verbose is None:
         level = logging.CRITICAL
     elif options.verbose == 1:

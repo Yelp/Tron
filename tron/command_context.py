@@ -4,6 +4,10 @@ have variables that need to be rendered.
 import operator
 import re
 from functools import reduce
+from typing import Any
+from typing import Dict
+from typing import Optional
+from typing import Union
 
 from tron.utils import timeutils
 
@@ -42,7 +46,11 @@ class CommandContext:
         next.__getattr__(name)
     """
 
-    def __init__(self, base=None, next=None):
+    def __init__(
+        self,
+        base: Optional[Union[object, Dict[str, Any]]] = None,
+        next: Optional[Union[Dict[str, Any], "CommandContext"]] = None,
+    ) -> None:
         """
         base - Object to look for attributes in
         next - Next place to look for more pieces of context

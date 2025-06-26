@@ -4,6 +4,7 @@ import os
 from copy import deepcopy
 from typing import cast
 from typing import List
+from typing import Optional
 from typing import Union
 
 from tron import yaml
@@ -98,12 +99,12 @@ class ConfigManager:
 
     DEFAULT_HASH = hash_digest("")
 
-    def __init__(self, config_path, manifest=None):
+    def __init__(self, config_path: str, manifest: Optional[ManifestFile] = None) -> None:
         self.config_path = config_path
         self.manifest = manifest or ManifestFile(config_path)
         self.name_mapping = None
 
-    def build_file_path(self, name):
+    def build_file_path(self, name: str) -> str:
         name = name.replace(".", "_").replace(os.path.sep, "_")
         return os.path.join(self.config_path, "%s.yaml" % name)
 
@@ -176,7 +177,7 @@ class ConfigManager:
             self.name_mapping = {name: read(filename) for name, filename in seq}
         return self.name_mapping
 
-    def load(self):
+    def load(self) -> config_parse.ConfigContainer:
         """Return the fully constructed configuration."""
         log.info("Loading full config from %s" % self.config_path)
         name_mapping = self.get_config_name_mapping()

@@ -33,11 +33,11 @@ def apply_master_configuration(mapping, master_config):
 class MasterControlProgram:
     """Central state object for the Tron daemon."""
 
-    def __init__(self, working_dir, config_path, boot_time):
+    def __init__(self, working_dir: str, config_path: str, boot_time: float) -> None:
         super().__init__()
         self.jobs = JobCollection()
         self.working_dir = working_dir
-        self.config = manager.ConfigManager(config_path)
+        self.config: manager.ConfigManager = manager.ConfigManager(config_path)
         self.context = command_context.CommandContext()
         self.state_watcher = statemanager.StateChangeWatcher()
         self.boot_time = boot_time
@@ -202,7 +202,7 @@ class MasterControlProgram:
     def get_job_collection(self):
         return self.jobs
 
-    def get_config_manager(self):
+    def get_config_manager(self) -> manager.ConfigManager:
         return self.config
 
     def restore_state(self, action_runner):

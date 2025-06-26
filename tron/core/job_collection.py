@@ -1,4 +1,5 @@
 import logging
+from typing import KeysView
 
 from tron.core.job import Job
 from tron.utils import collections
@@ -10,7 +11,7 @@ log = logging.getLogger(__name__)
 class JobCollection:
     """A collection of jobs."""
 
-    def __init__(self):
+    def __init__(self) -> None:
         self.jobs = collections.MappingCollection("jobs")
         self.proxy = proxy.CollectionProxy(
             self.jobs.values,
@@ -82,7 +83,7 @@ class JobCollection:
     def get_by_name(self, name):
         return self.jobs.get(name)
 
-    def get_names(self):
+    def get_names(self) -> KeysView[str]:
         return self.jobs.keys()
 
     def get_jobs(self):
@@ -97,5 +98,5 @@ class JobCollection:
     def __getattr__(self, name):
         return self.proxy.perform(name)
 
-    def __contains__(self, name):
+    def __contains__(self, name: str) -> bool:
         return name in self.jobs

@@ -1,9 +1,14 @@
 #!/usr/bin/env python3.8
 import argparse
+import datetime
 import logging
 import os
 import sys
 import time
+from typing import Any
+from typing import Dict
+from typing import NoReturn
+from typing import Optional
 
 import pytz
 
@@ -18,7 +23,7 @@ DEFAULT_STALENESS_THRESHOLD = 1800
 log = logging.getLogger("check_tron_datastore_staleness")
 
 
-def get_last_run_time(job):
+def get_last_run_time(job: Dict[str, Any]) -> Optional[datetime.datetime]:
     """
     Get all sorted timestamps, and only count the actions that actually ran
     """
@@ -31,7 +36,7 @@ def get_last_run_time(job):
     return max(timestamps) if timestamps else None
 
 
-def parse_cli():
+def parse_cli() -> argparse.Namespace:
     parser = argparse.ArgumentParser()
     parser.add_argument(
         "-w",
@@ -64,11 +69,11 @@ def parse_cli():
     return args
 
 
-def read_config(args):
+def read_config(args: argparse.Namespace) -> schema.ConfigState:
     return manager.ConfigManager(args.config_path).load().get_master().state_persistence
 
 
-def main():
+def main() -> NoReturn:
     # Fetch configs. You can find the arguments in puppet.
     args = parse_cli()
     persistence_config = read_config(args)
@@ -76,7 +81,7 @@ def main():
     job_name = args.job_name
 
     # Alert for DynamoDB
-    if store_type == schema.StatePersistenceTypes.dynamodb:
+    if store_type == schema.StatePersistenceTypes.dynamodb:  # type: ignore[attr-defined]  # mypy doesn't see our enums
         # Fetch job state from dynamodb
         state_manager = PersistenceManagerFactory.from_config(persistence_config)
         try:
@@ -102,7 +107,7 @@ def main():
             logging.info(f"OK: DynamoDB is up to date. It's last updated at {last_run_time}")
             sys.exit(0)
     # Alert for BerkeleyDB
-    elif store_type == schema.StatePersistenceTypes.shelve:
+    elif store_type == schema.StatePersistenceTypes.shelve:  # type: ignore[attr-defined]  # mypy doesn't see our enums
         os.execl(
             "/usr/lib/nagios/plugins/check_file_age",
             "/nail/tron/tron_state",

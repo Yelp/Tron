@@ -4,10 +4,12 @@ Format and color output for tron commands.
 import contextlib
 from functools import partial
 from operator import itemgetter
+from typing import Any
 from typing import Callable
 from typing import Collection
 from typing import Dict
 from typing import List
+from typing import LiteralString
 from typing import Optional
 
 from tron.core import actionrun
@@ -97,7 +99,7 @@ class TableDisplay:
 
     header_color = "hgray"
 
-    def __init__(self, sort_index=0):
+    def __init__(self, sort_index: int = 0) -> None:
         self.out = []
         self.sort_index = sort_index
 
@@ -177,7 +179,7 @@ class TableDisplay:
         max_value_width = max(len(value) for value in column)
         return max(max_value_width + 1, default_width)
 
-    def format(self, data):
+    def format(self, data: List[Dict[str, Any]]) -> LiteralString:
         self.store_data(data)
         self.update_column_widths()
         self.banner()

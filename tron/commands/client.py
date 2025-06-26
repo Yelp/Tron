@@ -8,7 +8,11 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections import namedtuple
+from typing import Any
+from typing import Callable
 from typing import Dict
+from typing import List
+from typing import Optional
 
 import tron
 from tron.commands.authentication import get_auth_token
@@ -44,7 +48,7 @@ def build_url_request(uri, data, headers=None, method=None):
     return urllib.request.Request(uri, enc_data, headers=headers, method=method)
 
 
-def load_response_content(http_response):
+def load_response_content(http_response) -> Response:
     encoding = http_response.headers.get_content_charset()
     if encoding is None:
         encoding = "utf8"
@@ -56,7 +60,7 @@ def load_response_content(http_response):
         return Response(DECODE_ERROR, str(e), content)
 
 
-def build_http_error_response(exc):
+def build_http_error_response(exc: urllib.error.HTTPError) -> Response:
     content = exc.read() if hasattr(exc, "read") else None
     if content:
         encoding = exc.headers.get_content_charset()
@@ -73,7 +77,7 @@ def build_http_error_response(exc):
     return Response(exc.code, exc.msg, content)
 
 
-def request(uri, data=None, headers=None, method=None, user_attribution=False):
+def request(uri, data=None, headers=None, method=None, user_attribution=False) -> Response:
     log.info("Request to %s with %s", uri, data)
     headers = headers or default_headers
     if user_attribution:
@@ -91,7 +95,7 @@ def request(uri, data=None, headers=None, method=None, user_attribution=False):
     return load_response_content(response)
 
 
-def build_get_url(url, data=None):
+def build_get_url(url, data=None) -> str:
     if data:
         query_str = urllib.parse.urlencode(sorted(data.items()))
         return f"{url}?{query_str}"
@@ -110,7 +114,7 @@ def ensure_user_attribution(headers: Dict[str, str]) -> Dict[str, str]:
 class Client:
     """An HTTP client used to issue commands to the Tron API."""
 
-    def __init__(self, url_base, cluster_name=None, user_attribution=False):
+    def __init__(self, url_base: str, cluster_name: Optional[str] = None, user_attribution: bool = False) -> None:
         """Create a new client.
         url_base - A url with a schema, hostname and port
         """
@@ -146,21 +150,21 @@ class Client:
         request_data = dict(name=config_name)
         return self.http_get("/api/config", request_data)
 
-    def home(self):
+    def home(self) -> Dict[str, Any]:
         return self.http_get("/api/")
 
-    index = home
+    index: Callable[..., Dict[str, Any]] = home
 
-    def get_url(self, identifier):
+    def get_url(self, identifier: str) -> str:
         return get_object_type_from_identifier(self.index(), identifier).url
 
     def jobs(
         self,
-        include_job_runs=False,
-        include_action_runs=False,
-        include_action_graph=True,
-        include_node_pool=True,
-    ):
+        include_job_runs: bool = False,
+        include_action_runs: bool = False,
+        include_action_graph: bool = True,
+        include_node_pool: bool = True,
+    ) -> List[Dict[str, Any]]:
         params = {
             "include_job_runs": int(include_job_runs),
             "include_action_runs": int(include_action_runs),
@@ -176,14 +180,16 @@ class Client:
         }
         return self.http_get(job_url, params)
 
-    def job_runs(self, url, include_runs=True, include_graph=False):
+    def job_runs(
+        self, url: str, include_runs: bool = True, include_graph: bool = False
+    ) -> Dict[str, Any]:  # TODO: use a typeddict
         params = {
             "include_action_runs": int(include_runs),
             "include_action_graph": int(include_graph),
         }
         return self.http_get(url, params)
 
-    def action_runs(self, action_run_url, num_lines=0):
+    def action_runs(self, action_run_url: str, num_lines: int = 0) -> Dict[str, Any]:
         params = {
             "num_lines": num_lines,
             "include_stdout": 1,
@@ -244,7 +250,7 @@ def first(seq):
         return item
 
 
-def get_object_type_from_identifier(url_index, identifier):
+def get_object_type_from_identifier(url_index: Dict[str, Any], identifier: str) -> TronObjectIdentifier:
     """Given a string identifier, return a TronObjectIdentifier."""
     name_mapping = {
         "jobs": set(url_index["jobs"]),
