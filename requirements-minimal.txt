@@ -18,6 +18,7 @@ py-bcrypt
 pyasn1
 pyformance
 pymesos  # not sure why check-requirements is not picking this up from task_processing[mesos_executor]
+pyopenssl # vault-tools dependency, but mypy is picking up some code (that we don't use) that imports pyopenssl in Twisted here we are. we could add Twisted[tls], but while hacky - this feels a little more explicit
 pysensu-yelp
 PyStaticConfiguration
 pytimeparse

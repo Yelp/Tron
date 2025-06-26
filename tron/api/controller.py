@@ -7,6 +7,8 @@ from typing import TypedDict
 
 from tron import yaml
 from tron.config.manager import ConfigManager
+from tron.core.actionrun import ActionRun
+from tron.core.jobrun import JobRun
 from tron.eventbus import EventBus
 
 log = logging.getLogger(__name__)
@@ -59,7 +61,7 @@ class ActionRunController:
         "recover",
     }
 
-    def __init__(self, action_run, job_run):
+    def __init__(self, action_run: ActionRun, job_run: JobRun) -> None:
         self.action_run = action_run
         self.job_run = job_run
 

@@ -38,5 +38,5 @@ RUN apt-get -q update && \
 ARG PIP_INDEX_URL
 ENV PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.python.org/simple}
 
-RUN pip3 install --trusted-host 169.254.255.254 --index-url ${PIP_INDEX_URL} virtualenv==16.7.5
+RUN pip3 install --trusted-host 169.254.255.254 --index-url ${PIP_INDEX_URL} virtualenv==20.17.1
 WORKDIR /work
