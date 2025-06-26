@@ -101,20 +101,6 @@ def make_node_pools():
     }
 
 
-def make_mesos_options():
-    return schema.ConfigMesos(
-        master_address=None,
-        master_port=5050,
-        secret_file=None,
-        role="*",
-        principal="tron",
-        enabled=False,
-        default_volumes=(),
-        dockercfg_location=None,
-        offer_timeout=300,
-    )
-
-
 def make_k8s_options():
     return schema.ConfigKubernetes(enabled=False, non_retryable_exit_codes=(), default_volumes=())
 
@@ -162,7 +148,6 @@ def make_job(**kwargs):
     kwargs.setdefault("allow_overlap", False)
     kwargs.setdefault("time_zone", None)
     kwargs.setdefault("expected_runtime", datetime.timedelta(0, 3600))
-    kwargs.setdefault("use_k8s", False)
     return schema.ConfigJob(**kwargs)
 
 
@@ -243,31 +228,6 @@ def make_master_jobs():
             cleanup_action=None,
             expected_runtime=datetime.timedelta(1),
         ),
-        "MASTER.test_job_mesos": make_job(
-            name="MASTER.test_job_mesos",
-            node="NodePool",
-            schedule=schedule_parse.ConfigDailyScheduler(
-                original="00:00:00 ",
-                hour=0,
-                minute=0,
-                second=0,
-                days=set(),
-                jitter=None,
-            ),
-            actions={
-                "action_mesos": make_action(
-                    name="action_mesos",
-                    command="test_command_mesos",
-                    executor=schema.ExecutorTypes.mesos.value,
-                    cpus=0.1,
-                    mem=100,
-                    disk=600,
-                    docker_image="container:latest",
-                ),
-            },
-            cleanup_action=None,
-            expected_runtime=datetime.timedelta(1),
-        ),
         "MASTER.test_job_k8s": make_job(
             name="MASTER.test_job_k8s",
             node="NodePool",
@@ -335,7 +295,6 @@ def make_tron_config(
     nodes=None,
     node_pools=None,
     jobs=None,
-    mesos_options=None,
     k8s_options=None,
     read_json=False,
 ):
@@ -349,7 +308,6 @@ def make_tron_config(
         nodes=nodes or make_nodes(),
         node_pools=node_pools or make_node_pools(),
         jobs=jobs or make_master_jobs(),
-        mesos_options=mesos_options or make_mesos_options(),
         k8s_options=k8s_options or make_k8s_options(),
         read_json=read_json,
     )
@@ -420,22 +378,6 @@ class ConfigTestCase(TestCase):
                 actions=[dict(name="action", command="command")],
             ),
             dict(
-                name="test_job_mesos",
-                node="NodePool",
-                schedule="daily",
-                actions=[
-                    dict(
-                        name="action_mesos",
-                        executor="mesos",
-                        command="test_command_mesos",
-                        cpus=0.1,
-                        mem=100,
-                        disk=600,
-                        docker_image="container:latest",
-                    ),
-                ],
-            ),
-            dict(
                 name="test_job_k8s",
                 node="NodePool",
                 schedule="daily",
@@ -495,13 +437,11 @@ class ConfigTestCase(TestCase):
 
         assert test_config.command_context == expected.command_context
         assert test_config.ssh_options == expected.ssh_options
-        assert test_config.mesos_options == expected.mesos_options
         assert test_config.time_zone == expected.time_zone
         assert test_config.nodes == expected.nodes
         assert test_config.node_pools == expected.node_pools
         assert test_config.k8s_options == expected.k8s_options
-        assert test_config.read_json == expected.read_json
-        for key in ["0", "1", "2", "_actions_dict", "4", "_mesos"]:
+        for key in ["0", "1", "2", "_actions_dict", "4", "_k8s"]:
             job_name = f"MASTER.test_job{key}"
             assert job_name in test_config.jobs, f"{job_name} in test_config.jobs"
             assert job_name in expected.jobs, f"{job_name} in test_config.jobs"
@@ -656,7 +596,7 @@ class TestNamedConfig(TestCase):
         assert_in(expected_message, str(exception))
 
 
-class TestJobConfig(TestCase):
+class TestJobConfig:
     def test_no_actions(self):
         test_config = dict(
             jobs=[
@@ -876,7 +816,7 @@ class TestJobConfig(TestCase):
         )
         assert_in(expected_msg, str(exception))
 
-    def test_config_cleanup_requires(self):
+    def test_config_cleanup_requires(self, capfd):
         test_config = dict(
             jobs=[
                 dict(
@@ -892,13 +832,12 @@ class TestJobConfig(TestCase):
             **BASE_CONFIG,
         )
 
-        expected_msg = "Unknown keys in CleanupAction : requires"
-        exception = assert_raises(
-            ConfigError,
-            valid_config,
-            test_config,
-        )
+        expected_msg = "Unknown keys in CleanupAction : requires: removing them.\n"
+        output_config = valid_config(test_config)
+        exception, err = capfd.readouterr()
         assert_equal(expected_msg, str(exception))
+        # assert that "requires" key doesn't exist in the dictionary
+        assert "requires" not in output_config.jobs.get("MASTER.test_job0").cleanup_action
 
     def test_validate_job_no_actions(self):
         job_config = dict(
@@ -923,7 +862,7 @@ class TestJobConfig(TestCase):
         assert_in(expected_msg, str(exception))
 
 
-class TestValidSecretSource(TestCase):
+class TestValidSecretSource:
     def test_missing_secret_name(self):
         secret_env = dict(key="no_secret_name")
 
@@ -932,16 +871,17 @@ class TestValidSecretSource(TestCase):
 
         assert "missing options: secret" in str(missing_exc.value)
 
-    def test_validate_job_extra_secret_env(self):
+    def test_validate_job_extra_secret_env(self, capfd):
         secret_env = dict(
             secret_name="tron-secret-k8s-name-no--secret--name",
             key="no_secret_name",
             extra_key="unknown",
         )
-        with pytest.raises(ConfigError) as missing_exc:
-            config_parse.valid_secret_source(secret_env, NullConfigContext)
-
-        assert "Unknown keys in SecretSource : extra_key" in str(missing_exc.value)
+        output_config = config_parse.valid_secret_source(secret_env, NullConfigContext)
+        expected_msg = "Unknown keys in SecretSource : extra_key: removing them.\n"
+        exception, err = capfd.readouterr()
+        assert_equal(expected_msg, str(exception))
+        assert not hasattr(output_config, "extra_key")
 
     def test_valid_job_secret_env_success(self):
         secret_env = dict(
@@ -955,7 +895,7 @@ class TestValidSecretSource(TestCase):
         assert built_env == expected_env
 
 
-class TestNodeConfig(TestCase):
+class TestNodeConfig:
     def test_validate_node_pool(self):
         config_node_pool = valid_node_pool(
             dict(name="theName", nodes=["node1", "node2"]),
@@ -1053,16 +993,13 @@ class TestNodeConfig(TestCase):
         )
         assert_in(expected_msg, str(exception))
 
-    def test_invalid_named_update(self):
+    def test_invalid_named_update(self, capfd):
         test_config = dict(bozray=None)
-        expected_message = "Unknown keys in NamedConfigFragment : bozray"
-        exception = assert_raises(
-            ConfigError,
-            validate_fragment,
-            "foo",
-            test_config,
-        )
-        assert_in(expected_message, str(exception))
+        output_config = validate_fragment("foo", test_config)
+        expected_msg = "Unknown keys in NamedConfigFragment : bozray: removing them.\n"
+        exception, err = capfd.readouterr()
+        assert_equal(expected_msg, str(exception))
+        assert not hasattr(output_config, "bozray")
 
 
 class TestValidateJobs(TestCase):
@@ -1081,24 +1018,13 @@ class TestValidateJobs(TestCase):
                             expected_runtime="20m",
                         ),
                         dict(
-                            name="action_mesos",
+                            name="action_k8s",
                             command="command",
-                            executor="mesos",
+                            executor="kubernetes",
                             cpus=4,
                             mem=300,
                             disk=600,
-                            constraints=[
-                                dict(
-                                    attribute="pool",
-                                    operator="LIKE",
-                                    value="default",
-                                ),
-                            ],
                             docker_image="my_container:latest",
-                            docker_parameters=[
-                                dict(key="label", value="labelA"),
-                                dict(key="label", value="labelB"),
-                            ],
                             env=dict(USER="batch"),
                             extra_volumes=[
                                 dict(
@@ -1129,30 +1055,13 @@ class TestValidateJobs(TestCase):
                     "action": make_action(
                         expected_runtime=datetime.timedelta(0, 1200),
                     ),
-                    "action_mesos": make_action(
-                        name="action_mesos",
-                        executor=schema.ExecutorTypes.mesos.value,
+                    "action_k8s": make_action(
+                        name="action_k8s",
+                        executor=schema.ExecutorTypes.kubernetes.value,
                         cpus=4.0,
                         mem=300.0,
                         disk=600.0,
-                        constraints=(
-                            schema.ConfigConstraint(
-                                attribute="pool",
-                                operator="LIKE",
-                                value="default",
-                            ),
-                        ),
                         docker_image="my_container:latest",
-                        docker_parameters=(
-                            schema.ConfigParameter(
-                                key="label",
-                                value="labelA",
-                            ),
-                            schema.ConfigParameter(
-                                key="label",
-                                value="labelB",
-                            ),
-                        ),
                         env={"USER": "batch"},
                         extra_volumes=(
                             schema.ConfigVolume(
@@ -1182,6 +1091,31 @@ class TestValidateJobs(TestCase):
         )
         config_parse.validate_jobs(test_config, context)
         assert expected_jobs == test_config["jobs"]
+
+
+class TestValidKubernetesAction(TestCase):
+    def test_missing_docker_image(self):
+        config = dict(
+            name="test_missing",
+            command="echo hello",
+            executor="kubernetes",
+            cpus=0.2,
+            mem=150,
+            disk=450,
+        )
+        with pytest.raises(ConfigError):
+            config_parse.valid_action(config, NullConfigContext)
+
+    def test_cleanup_missing_docker_image(self):
+        config = dict(
+            command="echo hello",
+            executor="kubernetes",
+            cpus=0.2,
+            mem=150,
+            disk=450,
+        )
+        with pytest.raises(ConfigError):
+            config_parse.valid_action(config, NullConfigContext)
 
 
 class TestValidCleanupActionName(TestCase):
@@ -1336,7 +1270,6 @@ class TestConfigContainer(TestCase):
             "test_job_actions_dict",
             "test_job2",
             "test_job4",
-            "test_job_mesos",
             "test_job_k8s",
         ]
         assert_equal(set(job_names), set(expected))
@@ -1348,7 +1281,6 @@ class TestConfigContainer(TestCase):
             "test_job_actions_dict",
             "test_job2",
             "test_job4",
-            "test_job_mesos",
             "test_job_k8s",
         ]
         assert_equal(set(expected), set(self.container.get_jobs().keys()))
@@ -1515,31 +1447,6 @@ class TestValidateVolume(TestCase):
             config_parse.valid_volume.validate(config, self.context),
         )
 
-    def test_mesos_default_volumes(self):
-        mesos_options = {"master_address": "mesos_master"}
-        mesos_options["default_volumes"] = [
-            {
-                "container_path": "/nail/srv",
-                "host_path": "/tmp",
-                "mode": "RO",
-            },
-            {
-                "container_path": "/nail/srv",
-                "host_path": "/tmp",
-                "mode": "invalid",
-            },
-        ]
-
-        with pytest.raises(ConfigError):
-            config_parse.valid_mesos_options.validate(mesos_options, self.context)
-
-        # After we fix the error, expect error to go away.
-        mesos_options["default_volumes"][1]["mode"] = "RW"
-        assert config_parse.valid_mesos_options.validate(
-            mesos_options,
-            self.context,
-        )
-
     def test_k8s_default_volumes(self):
         k8s_options = {"kubeconfig_path": "some_path"}
         k8s_options["default_volumes"] = [
@@ -1585,19 +1492,31 @@ class TestValidSecretVolumeItem:
     @pytest.mark.parametrize(
         "config",
         [
-            {"path": "abc"},
-            {
-                "key": "abc",
-            },
             {
                 "key": "abc",
                 "path": "abc",
                 "extra_key": None,
             },
-            {"key": "abc", "path": "abc", "mode": "a"},
         ],
     )
-    def test_invalid(self, config):
+    def test_extra_keys(self, config, capfd):
+        output_config = config_parse.valid_secret_volume_item(config, NullConfigContext)
+        expected_msg = "Unknown keys in SecretVolumeItem : extra_key: removing them.\n"
+        exception, err = capfd.readouterr()
+        assert_equal(expected_msg, str(exception))
+        assert not hasattr(output_config, "extra_key")
+
+    @pytest.mark.parametrize(
+        "config",
+        [
+            {"path": "abc"},
+            {"key": "abc", "path": "abc", "mode": "a"},
+            {
+                "key": "abc",
+            },
+        ],
+    )
+    def test_invalid_missing_required(self, config):
         with pytest.raises(ConfigError):
             config_parse.valid_secret_volume_item(config, NullConfigContext)
 
