@@ -1,5 +1,6 @@
 """Utilities for working with collections."""
 import logging
+from typing import Iterable
 
 log = logging.getLogger(__name__)
 
@@ -20,15 +21,15 @@ class MappingCollection(dict):
 
     """
 
-    def __init__(self, item_name):
+    def __init__(self, item_name: str) -> None:
         dict.__init__(self)
         self.item_name = item_name
 
-    def filter_by_name(self, names):
+    def filter_by_name(self, names: Iterable[str]) -> None:
         for name in set(self) - set(names):
             self.remove(name)
 
-    def remove(self, name):
+    def remove(self, name: str) -> None:
         if name not in self:
             raise ValueError(f"{self.item_name} {name} unknown")
 

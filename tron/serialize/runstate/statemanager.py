@@ -8,7 +8,11 @@ from contextlib import contextmanager
 from typing import Any
 from typing import cast
 from typing import Dict
+from typing import Hashable
+from typing import Iterable
 from typing import List
+from typing import Optional
+from typing import Union
 
 from tron.config import schema
 from tron.core import job
@@ -16,7 +20,9 @@ from tron.core import jobrun
 from tron.mesos import MesosClusterRepository
 from tron.serialize import runstate
 from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
+from tron.serialize.runstate.shelvestore import ShelveKey
 from tron.serialize.runstate.shelvestore import ShelveStateStore
+from tron.serialize.runstate.yamlstore import YamlKey
 from tron.serialize.runstate.yamlstore import YamlStateStore
 from tron.utils import observer
 
@@ -39,7 +45,7 @@ class PersistenceManagerFactory:
         store_type = schema.StatePersistenceTypes(persistence_config.store_type)
         name = persistence_config.name
         buffer_size = persistence_config.buffer_size
-        store = None
+        store: Optional[Union[ShelveStateStore, YamlStateStore, DynamoDBStateStore]] = None
 
         if store_type == schema.StatePersistenceTypes.shelve:  # type: ignore[attr-defined]  # mypy doesn't see our enums
             store = ShelveStateStore(name)
@@ -54,7 +60,7 @@ class PersistenceManagerFactory:
             store = DynamoDBStateStore(table_name, dynamodb_region, max_transact_write_items=max_transact_write_items)
 
         buffer = StateSaveBuffer(buffer_size)
-        return PersistentStateManager(store, buffer)
+        return PersistentStateManager(store, buffer)  # type: ignore[arg-type]  # TODO: there's a crash here if store type is not in the enum
 
 
 class StateSaveBuffer:
@@ -62,12 +68,12 @@ class StateSaveBuffer:
     buffer size. This buffer will only store one state_data for each key.
     """
 
-    def __init__(self, buffer_size):
+    def __init__(self, buffer_size: int) -> None:
         self.buffer_size = buffer_size
-        self.buffer = {}
+        self.buffer: Dict[Hashable, Any] = {}
         self.counter = itertools.cycle(range(buffer_size))
 
-    def save(self, key, state_data):
+    def save(self, key: Hashable, state_data: Any) -> bool:
         """Save the state_data indexed by key and return True if the buffer
         is full.
         """
@@ -102,7 +108,9 @@ class PersistentStateManager:
 
     """
 
-    def __init__(self, persistence_impl, buffer):
+    def __init__(
+        self, persistence_impl: Union[DynamoDBStateStore, ShelveStateStore, YamlStateStore], buffer: StateSaveBuffer
+    ) -> None:
         self.enabled = True
         self._buffer = buffer
         self._impl = persistence_impl
@@ -156,7 +164,7 @@ class PersistentStateManager:
         runs.sort(key=lambda x: x["run_num"], reverse=True)
         return runs
 
-    def _keys_for_items(self, item_type, names):
+    def _keys_for_items(self, item_type: str, names: Iterable[str]) -> Dict[Union[str, YamlKey, ShelveKey], str]:
         """Returns a dict of item to the key for that item."""
         keys = (self._impl.build_key(item_type, name) for name in names)
         return dict(zip(keys, names))
@@ -165,7 +173,7 @@ class PersistentStateManager:
     def _restore_dicts(self, item_type: str, items: List[str], read_json: bool = False) -> Dict[str, Any]:
         """Return a dict mapping of the items name to its state data."""
         key_to_item_map = self._keys_for_items(item_type, items)
-        key_to_state_map = self._impl.restore(key_to_item_map.keys(), read_json)
+        key_to_state_map = self._impl.restore(key_to_item_map.keys(), read_json)  # type: ignore[call-arg, arg-type]  # we decided to not use anything that forced an interface here ;_;
         return {key_to_item_map[key]: state_data for key, state_data in key_to_state_map.items()}
 
     def delete(self, type_enum, name):

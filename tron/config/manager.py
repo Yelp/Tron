@@ -2,7 +2,10 @@ import hashlib
 import logging
 import os
 from copy import deepcopy
+from typing import Any
 from typing import cast
+from typing import Dict
+from typing import IO
 from typing import List
 from typing import Optional
 from typing import Union
@@ -18,24 +21,24 @@ from tron.utils import maybe_encode
 log = logging.getLogger(__name__)
 
 
-def from_string(content):
+def from_string(content: Union[IO[str], str]) -> Any:
     try:
         return yaml.safe_load(content)
     except yaml.yaml.error.YAMLError as e:
         raise ConfigError("Invalid config format: %s" % str(e))
 
 
-def write(path, content):
+def write(path: str, content: Any) -> None:
     with open(path, "w") as fh:
         yaml.dump(content, fh)
 
 
-def read(path):
+def read(path: str) -> Any:
     with open(path) as fh:
         return from_string(fh)
 
 
-def write_raw(path, content):
+def write_raw(path: str, content: Union[str, bytes]) -> None:
     with open(path, "w") as fh:
         fh.write(
             maybe_decode(content)
@@ -58,10 +61,10 @@ class ManifestFile:
 
     MANIFEST_FILENAME = "_manifest.yaml"
 
-    def __init__(self, path):
+    def __init__(self, path: str) -> None:
         self.filename = os.path.join(path, self.MANIFEST_FILENAME)
 
-    def create(self):
+    def create(self) -> None:
         if os.path.isfile(self.filename):
             msg = "Refusing to create manifest. File %s exists."
             log.info(msg % self.filename)
@@ -69,12 +72,12 @@ class ManifestFile:
 
         write(self.filename, {})
 
-    def add(self, name, filename):
+    def add(self, name: str, filename: str) -> None:
         manifest = read(self.filename)
         manifest[name] = filename
         write(self.filename, manifest)
 
-    def delete(self, name):
+    def delete(self, name: str) -> None:
         manifest = read(self.filename)
         if name not in manifest:
             msg = "Namespace %s does not exist in manifest, cannot delete."
@@ -84,13 +87,13 @@ class ManifestFile:
         del manifest[name]
         write(self.filename, manifest)
 
-    def get_file_mapping(self):
-        return read(self.filename)
+    def get_file_mapping(self) -> Dict[str, str]:
+        return cast(Dict[str, str], read(self.filename))  # the joys of duck typing
 
-    def get_file_name(self, name):
+    def get_file_name(self, name: str) -> Optional[str]:
         return self.get_file_mapping().get(name)
 
-    def __contains__(self, name):
+    def __contains__(self, name: str) -> bool:
         return name in self.get_file_mapping()
 
 
@@ -102,7 +105,7 @@ class ConfigManager:
     def __init__(self, config_path: str, manifest: Optional[ManifestFile] = None) -> None:
         self.config_path = config_path
         self.manifest = manifest or ManifestFile(config_path)
-        self.name_mapping = None
+        self.name_mapping: Optional[Dict[str, Any]] = None
 
     def build_file_path(self, name: str) -> str:
         name = name.replace(".", "_").replace(os.path.sep, "_")
@@ -111,7 +114,7 @@ class ConfigManager:
     def read_raw_config(self, name: str = schema.MASTER_NAMESPACE) -> str:
         """Read the config file without converting to yaml."""
         filename = self.manifest.get_file_name(name)
-        return read_raw(filename)
+        return read_raw(filename)  # type: ignore[arg-type] # TODO: possible crash here if get_file_name returns None
 
     def write_config(self, name: str, content: str) -> None:
         loaded_content = from_string(content)
@@ -142,8 +145,8 @@ class ConfigManager:
         self.manifest.delete(name)
         os.remove(filename)
 
-    def get_filename_from_manifest(self, name):
-        def create_filename():
+    def get_filename_from_manifest(self, name: str) -> str:
+        def create_filename() -> str:
             filename = self.build_file_path(name)
             self.manifest.add(name, filename)
             return filename
@@ -152,10 +155,10 @@ class ConfigManager:
 
     def validate_with_fragment(
         self,
-        name,
-        content,
-        should_validate_missing_dependency=True,
-    ):
+        name: str,
+        content: Any,
+        should_validate_missing_dependency: bool = True,
+    ) -> None:
         # NOTE: we deepcopy rather than swap values to keep this a pure function
         # get_config_name_mapping() returns a shared dict, so this would otherwise
         # actually update the mapping - which would be unwanted/need to be rolled-back
@@ -170,7 +173,7 @@ class ConfigManager:
         except ValueError as e:
             raise ConfigError(str(e))
 
-    def get_config_name_mapping(self):
+    def get_config_name_mapping(self) -> Dict[str, Any]:
         if self.name_mapping is None:
             log.info("Creating config mapping cache...")
             seq = self.manifest.get_file_mapping().items()

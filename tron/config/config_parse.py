@@ -14,10 +14,13 @@ import os
 from copy import deepcopy
 from typing import Any
 from typing import Dict
+from typing import Generator
 from typing import List
 from typing import Optional
 from typing import Set
 from typing import Tuple
+from typing import Type
+from typing import TypeVar
 from typing import Union
 from urllib.parse import urlparse
 
@@ -68,6 +71,7 @@ from tron.config.schema import NamedTronConfig
 from tron.config.schema import TronConfig
 
 log = logging.getLogger(__name__)
+CCT = TypeVar("CCT", bound="ConfigContainer")
 
 
 def build_format_string_validator(context_object):
@@ -1105,7 +1109,7 @@ def get_nodes_from_master_namespace(master):
     return set(itertools.chain(master.nodes, master.node_pools))
 
 
-def validate_config_mapping(config_mapping):
+def validate_config_mapping(config_mapping: Dict[str, Any]) -> Generator[Tuple[str, Any], None, None]:
     if MASTER_NAMESPACE not in config_mapping:
         msg = "A config mapping requires a %s namespace"
         raise ConfigError(msg % MASTER_NAMESPACE)
@@ -1137,7 +1141,7 @@ class ConfigContainer:
         return self.configs.items()
 
     @classmethod
-    def create(cls, config_mapping):
+    def create(cls: Type[CCT], config_mapping) -> CCT:
         return cls(dict(validate_config_mapping(config_mapping)))
 
     # TODO: DRY with get_jobs()

@@ -1,10 +1,21 @@
 """Utilities for creating classes that proxy function calls."""
+from typing import Any
+from typing import Callable
+from typing import Iterable
+from typing import List
+from typing import Literal
+from typing import Optional
+from typing import Tuple
 
 
 class CollectionProxy:
     """Proxy attribute lookups to a sequence of objects."""
 
-    def __init__(self, obj_list_getter, definition_list=None):
+    def __init__(
+        self,
+        obj_list_getter: Callable[[], Iterable[Any]],
+        definition_list: Optional[Iterable[Tuple[str, Callable[[Any], Any], bool]]] = None,
+    ) -> None:
         """See add() for a description of proxy definitions."""
         self.obj_list_getter = obj_list_getter
         self._defs = {}
@@ -42,25 +53,25 @@ class CollectionProxy:
         return func
 
 
-def func_proxy(name, func):
+def func_proxy(name: str, func: Callable[[Any], Any]) -> Tuple[str, Callable[[Any], Any], Literal[True]]:
     return name, func, True
 
 
-def attr_proxy(name, func):
+def attr_proxy(name: str, func: Callable[[Any], Any]) -> Tuple[str, Callable[[Any], Any], Literal[False]]:
     return name, func, False
 
 
 class AttributeProxy:
     """Proxy attribute lookups to another object."""
 
-    def __init__(self, dest_obj, attribute_list=None):
+    def __init__(self, dest_obj: Any, attribute_list: Optional[List[str]] = None):
         self._attributes = set(attribute_list or [])
         self.dest_obj = dest_obj
 
-    def add(self, attribute_name):
+    def add(self, attribute_name: str) -> None:
         self._attributes.add(attribute_name)
 
-    def perform(self, attribute_name):
+    def perform(self, attribute_name: str) -> Any:
         if attribute_name not in self._attributes:
             raise AttributeError(attribute_name)
 

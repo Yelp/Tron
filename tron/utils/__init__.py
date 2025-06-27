@@ -3,20 +3,21 @@ import fcntl
 import logging
 import os
 import signal
+from typing import Union
 
 log = logging.getLogger(__name__)
 
 
 # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
-def maybe_decode(maybe_string):
-    if type(maybe_string) is bytes:
+def maybe_decode(maybe_string: Union[str, bytes]) -> str:
+    if isinstance(maybe_string, bytes):
         return maybe_string.decode()
     return maybe_string
 
 
 # TODO: TRON-2293 maybe_encode is a relic of Python2->Python3 migration. Remove it.
-def maybe_encode(maybe_bytes):
-    if type(maybe_bytes) is not bytes:
+def maybe_encode(maybe_bytes: Union[str, bytes]) -> bytes:
+    if not isinstance(maybe_bytes, bytes):
         return maybe_bytes.encode()
     return maybe_bytes
 

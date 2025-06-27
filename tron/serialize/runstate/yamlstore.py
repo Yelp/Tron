@@ -7,6 +7,9 @@ buffer size (10+), and a low run_limit (< 10).
 import operator
 import os
 from collections import namedtuple
+from typing import Any
+from typing import Dict
+from typing import List
 
 from tron import yaml
 from tron.serialize import runstate
@@ -23,10 +26,10 @@ class YamlStateStore:
         self.filename = filename
         self.buffer = {}
 
-    def build_key(self, type, iden):
+    def build_key(self, type: str, iden: str) -> YamlKey:
         return YamlKey(TYPE_MAPPING[type], iden)
 
-    def restore(self, keys):
+    def restore(self, keys: List[YamlKey]) -> Dict[YamlKey, Any]:
         if not os.path.exists(self.filename):
             return {}
 
