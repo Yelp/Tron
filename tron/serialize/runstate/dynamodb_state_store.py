@@ -1,8 +1,10 @@
 import concurrent.futures
 import copy
+import json
 import logging
 import math
 import os
+import sys
 import threading
 import time
 from collections import defaultdict
@@ -176,37 +178,56 @@ class DynamoDBStateStore:
 
             remaining_items = [
                 {"key": {"S": str(item["key"]["S"])}, "index": {"N": str(i)}}
-                # we start from 1 since we already have the 0th partition from get_first_partitions KKASP: confirm?
+                # we start from 1 since we already have the 0th partition from get_first_partitions
                 for i in range(1, num_partitions)
             ]
             keys_for_remaining_items.extend(remaining_items)
         return self._get_items(keys_for_remaining_items)
 
     def _merge_items(self, first_items, remaining_items) -> dict:
-        """Helper to merge multi-partition data into a single entry."""
+        """
+        Reassembles partitioned data and calls the deserializer for each object.
+
+        DynamoDB items that exceed the OBJECT_SIZE limit are split into multiple
+        partitions and stored as separate items in the table. Each partition
+        shares the same primary key but has a unique sort key ('index').
+
+        This function prepares the raw data for final deserialization by:
+        1.  Grouping all fetched partitions by their primary key.
+        2.  For each key, sorting the partitions by their index and concatenating
+            their data into a single, complete JSON string.
+        3.  Passing this final JSON string to `_deserialize_item`, which
+            handles the conversion to a specific Python state object.
+        """
         items = defaultdict(list)
         json_items: DefaultDict[str, str] = defaultdict(str)
-        # item = job run, each job run can have multiple rows and each row is called a partition
-        # Merge all items based their keys and deserialize their values
+
         if remaining_items:
             first_items.extend(remaining_items)
         for item in first_items:
             key = item["key"]["S"]
             items[key].append(item)
+
+        # Concatenate all partitions for each key
         for key, item in items.items():
             item.sort(key=lambda x: int(x["index"]["N"]))
-            for json_val in item:
+            for partition_item in item:
                 try:
-                    json_items[key] += json_val["json_val"]["S"]
-                except Exception:
-                    # KKASP: what should we do here? If we can't read the json_val we are cooked
-                    log.exception(f"json_val not found for key {key}")
+                    json_items[key] += partition_item["json_val"]["S"]
+                except KeyError:
+                    log.critical(
+                        f"Partition item for key '{key}' at index {partition_item['index']['N']} is missing 'json_val'. Shutting down due to data corruption."
+                    )
+                    sys.exit(1)
+
+        # Deserialize the concatenated JSON strings into Python objects
         try:
             deserialized_items = {k: self._deserialize_item(k, val) for k, val in json_items.items()}
-        except Exception as e:
-            # KKASP: what should we do here? If we can't read the json_val we are cooked
-            log.exception(f"Error deserializing JSON items: {repr(e)}")
-            raise
+        except (json.JSONDecodeError, ValueError):
+            log.critical(
+                "Failed to deserialize concatenated JSON string. This indicates a truncated or malformed record. Shutting down due to data corruption."
+            )
+            sys.exit(1)
 
         return deserialized_items
 
@@ -307,7 +328,9 @@ class DynamoDBStateStore:
 
             self._consume_save_queue()
             if self.save_errors > 100:
-                log.error("too many dynamodb errors in a row, crashing")
+                log.critical(
+                    "More than 100 consecutive DynamoDB save errors. Shutting down to prevent divergence between in-memory and persisted state."
+                )
                 os.exit(1)
 
     def __setitem__(self, key: str, value: str) -> None:
