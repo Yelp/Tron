@@ -6,6 +6,7 @@ import difflib
 import logging
 import os
 import sys
+from typing import Optional
 
 import tron
 from tron import yaml
@@ -90,7 +91,7 @@ def tron_jobs_completer(prefix, **kwargs):
         )
 
 
-def build_option_parser(usage=None, epilog=None):
+def build_option_parser(usage: Optional[str] = None, epilog: Optional[str] = None) -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         usage=usage,
         epilog=epilog,

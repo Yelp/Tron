@@ -6,11 +6,15 @@ from functools import partial
 from operator import itemgetter
 from typing import Any
 from typing import Callable
+from typing import cast
 from typing import Collection
 from typing import Dict
+from typing import Generator
 from typing import List
-from typing import LiteralString
+from typing import Mapping
 from typing import Optional
+from typing import Type
+from typing import Union
 
 from tron.core import actionrun
 from tron.core import job
@@ -42,7 +46,7 @@ class Color:
 
     @classmethod
     @contextlib.contextmanager
-    def enable(cls):
+    def enable(cls) -> Generator[None, None, None]:
         old_val = cls.enabled
         try:
             cls.enabled = True
@@ -51,7 +55,7 @@ class Color:
             cls.enabled = old_val
 
     @classmethod
-    def set(cls, color_name, text):
+    def set(cls, color_name: Optional[str], text: str) -> str:
         if not cls.enabled or not color_name:
             return text
         return "{}{}{}".format(
@@ -61,7 +65,7 @@ class Color:
         )
 
     @classmethod
-    def toggle(cls, enable):
+    def toggle(cls, enable: bool) -> None:
         cls.enabled = enable
 
 
@@ -100,10 +104,10 @@ class TableDisplay:
     header_color = "hgray"
 
     def __init__(self, sort_index: int = 0) -> None:
-        self.out = []
+        self.out: List[str] = []
         self.sort_index = sort_index
 
-    def banner(self):
+    def banner(self) -> None:
         if not self.title:
             return
         title = self.title.capitalize()
@@ -111,67 +115,67 @@ class TableDisplay:
         if not self.rows():
             self.out.append("No %s\n" % title)
 
-    def header(self):
+    def header(self) -> None:
         row = [label.ljust(self.get_field_width(i)) for i, label in enumerate(self.columns)]
         self.out.append(Color.set(self.header_color, "".join(row)))
 
-    def footer(self):
+    def footer(self) -> None:
         pass
 
-    def color(self, col, field):
+    def color(self, col: int, field: str) -> None:
         return None
 
-    def sorted_fields(self, values):
+    def sorted_fields(self, values: Mapping[str, str]) -> List[str]:
         return [values[name] for name in self.fields]
 
-    def format_row(self, fields):
+    def format_row(self, fields: Mapping[str, str]) -> str:
         row = [
-            Color.set(self.color(i, value), self.trim_value(i, value))
+            Color.set(self.color(i, value), self.trim_value(i, value))  # type: ignore[func-returns-value]  # ... this should probably be refactored to not call Color.set here
             for i, value in enumerate(self.sorted_fields(fields))
         ]
         return Color.set(self.row_color(fields), "".join(row))
 
-    def get_field_width(self, field_idx):
+    def get_field_width(self, field_idx: int) -> int:
         return self.widths[field_idx]
 
-    def trim_value(self, field_idx, value):
+    def trim_value(self, field_idx: int, value: str) -> str:
         length = self.get_field_width(field_idx)
         value = self.format_value(field_idx, value)
         if len(value) > length:
             return (value[: length - 3] + "...").ljust(length)
         return value.ljust(length)
 
-    def format_value(self, field_idx, value):
+    def format_value(self, field_idx: int, value: str) -> str:
         return str(value)
 
-    def output(self):
+    def output(self) -> str:
         out = "\n".join(self.out)
         self.out = []
         return out
 
-    def post_row(self, row):
+    def post_row(self, row: Mapping[str, Any]) -> None:
         pass
 
-    def row_color(self, row):
+    def row_color(self, row: Mapping[str, Any]) -> Optional[str]:
         return None
 
-    def rows(self):
+    def rows(self) -> List[Mapping[str, Any]]:
         return sorted(
             self.data,
             key=itemgetter(self.fields[self.sort_index]),
             reverse=self.reversed,
         )
 
-    def store_data(self, data):
+    def store_data(self, data: List[Mapping[str, Any]]) -> None:
         self.data = data
 
-    def update_column_widths(self):
+    def update_column_widths(self) -> None:
         """Update column widths to fit the data."""
         for field_idx, field in enumerate(self.fields):
             if field in self.resize_fields:
                 self.widths[field_idx] = self.calculate_width(field_idx)
 
-    def calculate_width(self, field_idx):
+    def calculate_width(self, field_idx: int) -> int:
         default_width = self.widths[field_idx]
         column = [self.format_value(field_idx, row[self.fields[field_idx]]) for row in self.data]
         if not column:
@@ -179,8 +183,8 @@ class TableDisplay:
         max_value_width = max(len(value) for value in column)
         return max(max_value_width + 1, default_width)
 
-    def format(self, data: List[Dict[str, Any]]) -> LiteralString:
-        self.store_data(data)
+    def format(self, data: Union[Mapping[str, Any], List[Mapping[str, Any]]]) -> str:
+        self.store_data(data)  # type: ignore[arg-type]  # store_data violates LSP, but this is still safe since self.data ends up a List[Mapping[str, Any]] anyway
         self.update_column_widths()
         self.banner()
 
@@ -210,25 +214,28 @@ def add_color_for_state(state):
     return state
 
 
-def format_fields(display_obj, content):
+# TODO: refactor so that TableDisplay has a default for detail_labels so we can put the superclass here
+def format_fields(
+    display_obj: Type[Union["DisplayActionRuns", "DisplayJobRuns", "DisplayJobs"]], content: Mapping[str, Any]
+) -> str:
     """Format fields with some color."""
 
-    def add_color(field, field_value):
+    def add_color(field: str, field_value: str) -> str:
         if field not in display_obj.colors:
             return field_value
         return display_obj.colors[field](field_value)
 
-    def format_field(field):
-        formatter = field_display_mapping.get(field, lambda f, _: f)
+    def format_field(field: str) -> str:
+        formatter: Callable[[Any, Any], str] = field_display_mapping.get(field, lambda f, _: f)
         return formatter(content.get(field), content)
 
-    def build_field(label, field):
+    def build_field(label: str, field: str) -> str:
         return f"{label:<20}: {add_color(field, format_field(field))}"
 
     return "\n".join(build_field(*item) for item in display_obj.detail_labels)
 
 
-def format_job_details(job_content):
+def format_job_details(job_content: Mapping[str, Any]) -> str:
     details = format_fields(DisplayJobs, job_content)
     job_runs = DisplayJobRuns().format(job_content["runs"])
     actions = "\n\nList of Actions:\n%s" % "\n".join(
@@ -237,7 +244,7 @@ def format_job_details(job_content):
     return details + actions + "\n" + job_runs
 
 
-def format_action_run_details(content, stdout=True, stderr=True):
+def format_action_run_details(content: Mapping[str, Any], stdout: bool = True, stderr: bool = True) -> str:
     out = ["Requirements:"] + content["requirements"] + [""]
     if stdout:
         out.append("Stdout:\n%s\n" % "\n".join(content["stdout"]))
@@ -286,10 +293,10 @@ class DisplayJobRuns(TableDisplay):
 
         return super().format_value(field_idx, value)
 
-    def row_color(self, fields):
-        return "red" if fields["state"] == "FAIL" else "white"
+    def row_color(self, row: Mapping[str, Any]) -> Optional[str]:
+        return "red" if row["state"] == "FAIL" else "white"
 
-    def post_row(self, row):
+    def post_row(self, row: Mapping[str, Any]) -> None:
         start = row["start_time"] or "-"
         end = row["end_time"] or "-"
         duration = row["duration"][:-7] if row["duration"] else "-"
@@ -363,15 +370,15 @@ class DisplayActionRuns(TableDisplay):
         "command": partial(Color.set, "gray"),
     }
 
-    def __init__(self):
-        # Action runs need to be storted by start time, which is index 2
+    def __init__(self) -> None:
+        # Action runs need to be sorted by start time, which is index 2
         super().__init__(sort_index=2)
 
-    def banner(self):
+    def banner(self) -> None:
         self.out.append(format_fields(DisplayJobRuns, self.job_run))
         super().banner()
 
-    def format_value(self, field_idx, value):
+    def format_value(self, field_idx: int, value: str) -> str:
         if self.fields[field_idx] == "id":
             value = "." + value.rsplit(".", 1)[-1]
         if self.fields[field_idx] in ("start_time", "end_time"):
@@ -382,17 +389,17 @@ class DisplayActionRuns(TableDisplay):
 
         return super().format_value(field_idx, value)
 
-    def row_color(self, fields):
-        return "red" if fields["state"] == "FAIL" else "white"
+    def row_color(self, row: Mapping[str, Any]) -> str:
+        return "red" if row["state"] == "FAIL" else "white"
 
-    def store_data(self, data):
+    def store_data(self, data: Mapping[str, Any]) -> None:  # type: ignore[override]  # thankfully, the final self.data is still a List[Mapping[str, Any]]
         self.data = data["runs"]
         self.job_run = data
 
-    def rows(self):
+    def rows(self) -> List[Mapping[str, Any]]:
         # Action runs need a sort order that sorts by date
         # and that can handle situations where it is None, or
-        # othere weird things, so we str()
+        # other weird things, so we str()
         return sorted(
             self.data,
             key=lambda x: str(x[self.fields[self.sort_index]]),
@@ -400,39 +407,39 @@ class DisplayActionRuns(TableDisplay):
         )
 
 
-def display_node(source, _=None):
+def display_node(source: Mapping[str, Any], _: Optional[Mapping[str, Any]] = None) -> str:
     if not source:
         return ""
     return "{}@{}".format(source["username"], source["hostname"])
 
 
-def display_node_pool(source, _=None):
+def display_node_pool(source: Mapping[str, Any], _: Optional[Mapping[str, Any]] = None) -> str:
     if not source:
         return ""
     return "%s (%d node(s))" % (source["name"], len(source["nodes"]))
 
 
-def display_scheduler(source, _=None):
+def display_scheduler(source: Mapping[str, Any], _: Optional[Mapping[str, Any]] = None) -> str:
     if not source:
         return ""
     return "{} {}{}".format(source["type"], source["value"], source["jitter"])
 
 
-def display_state_delayed(_, obj):
+def display_state_delayed(_: Optional[Mapping[str, Any]], obj: Mapping[str, Any]) -> str:
     state = obj["state"]
     in_delay = obj["in_delay"]
     if in_delay:
         return f"{state} (retry delayed for {int(in_delay)}s)"
     else:
-        return state
+        return cast(str, state)
 
 
-field_display_mapping = {
+field_display_mapping: Dict[str, Callable[[Any, Any], str]] = {
     "node": display_node,
     "node_pool": display_node_pool,
     "scheduler": display_scheduler,
     "state_delayed": display_state_delayed,
-    "exit_status": lambda v, _: exitcode.EXIT_REASONS.get(v, v),
+    "exit_status": lambda v, _: exitcode.EXIT_REASONS.get(v, str(v)),
 }
 
 

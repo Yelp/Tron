@@ -8,9 +8,14 @@ from argparse import Namespace
 from collections import defaultdict
 from enum import Enum
 from typing import Any
+from typing import DefaultDict
 from typing import Dict
 from typing import List
+from typing import Literal
+from typing import Mapping
 from typing import Optional
+from typing import Sequence
+from typing import Tuple
 
 import pytimeparse  # type: ignore[import-untyped] # no stubs or py.typed marker; likely want to move off of this
 from pyrsistent import m
@@ -29,7 +34,7 @@ NUM_PRECIOUS = 7
 
 log = logging.getLogger("check_tron_jobs")
 
-_run_interval = None
+_RUN_INTERVAL = 300
 
 _SKIP_SENSU_FAILURE_LOGGING = True  # TODO: make this not a global
 
@@ -77,11 +82,11 @@ def parse_cli() -> Namespace:
     return args
 
 
-def _timestamp_to_timeobj(timestamp):
+def _timestamp_to_timeobj(timestamp: str) -> time.struct_time:
     return time.strptime(timestamp, "%Y-%m-%d %H:%M:%S")
 
 
-def _timestamp_to_shortdate(timestamp, separator="."):
+def _timestamp_to_shortdate(timestamp: str, separator: str = ".") -> str:
     return time.strftime(
         "%Y{0}%m{0}%d".format(separator),
         _timestamp_to_timeobj(timestamp),
@@ -91,12 +96,12 @@ def _timestamp_to_shortdate(timestamp, separator="."):
 def compute_check_result_for_job_runs(
     client: Client,
     job: Dict[str, Any],
-    job_content: PMap[str, Any],
+    job_content: Optional[Mapping[str, Any]],
     url_index: Dict[str, Any],
     hide_stderr: bool = False,
 ) -> Dict[str, Any]:
     cluster = client.cluster_name
-    kwargs = {}
+    kwargs: Dict[str, Any] = {}
     if job_content is None:
         kwargs["output"] = f"OK: {job['name']} was just added and hasn't run yet on {cluster}."
         kwargs["status"] = 0
@@ -200,20 +205,20 @@ def compute_check_result_for_job_runs(
     return kwargs
 
 
-def pretty_print_job(job_content):
+def pretty_print_job(job_content: Mapping[str, Any]) -> str:
     return display.format_job_details(job_content)
 
 
-def pretty_print_job_run(job_run):
+def pretty_print_job_run(job_run: Mapping[str, Any]) -> str:
     display_action = display.DisplayActionRuns()
     return display_action.format(job_run)
 
 
-def pretty_print_actions(action_run):
+def pretty_print_actions(action_run: Mapping[str, Any]) -> str:
     return display.format_action_run_details(action_run)
 
 
-def get_relevant_run_and_state(job_content):
+def get_relevant_run_and_state(job_content: Mapping[str, Any]) -> Tuple[Optional[Mapping[str, Any]], State]:
     # The order of job run to check is as follows:
     #   1. The scheduled but hasn't run one checked first
     #   2. Then currently running ones are always checked (in case an action is failed/unknown)
@@ -249,7 +254,7 @@ def get_relevant_run_and_state(job_content):
     return job_runs[0], State.NO_RUNS_TO_CHECK
 
 
-def is_action_failed_or_unknown(job_run):
+def is_action_failed_or_unknown(job_run: Mapping[str, Any]) -> State:
     for run in job_run.get("runs", []):
         if run.get("state", None) in ["failed", "unknown"]:
             return State(run.get("state"))
@@ -257,13 +262,13 @@ def is_action_failed_or_unknown(job_run):
 
 
 def is_job_stuck(
-    job_runs,
-    job_expected_runtime,
-    actions_expected_runtime,
-    allow_overlap,
-    queueing,
-):
-    next_run_time = None
+    job_runs: Sequence[Mapping[str, Any]],
+    job_expected_runtime: Optional[float],
+    actions_expected_runtime: Mapping[Optional[str], Optional[float]],
+    allow_overlap: bool,
+    queueing: bool,
+) -> Optional[Mapping[str, Any]]:
+    next_run_time: Optional[str] = None
     for job_run in job_runs:
         states_to_check = {"running", "waiting", "starting"}
         if job_run.get("state", "unknown") in states_to_check:
@@ -288,7 +293,7 @@ def is_job_stuck(
     return None
 
 
-def is_job_run_exceeding_expected_runtime(job_run, job_expected_runtime):
+def is_job_run_exceeding_expected_runtime(job_run: Mapping[str, Any], job_expected_runtime: Optional[float]) -> bool:
     states_to_check = {"running", "waiting", "starting"}
     if (
         job_expected_runtime is not None
@@ -305,22 +310,28 @@ def is_job_run_exceeding_expected_runtime(job_run, job_expected_runtime):
 
 
 def is_action_run_exceeding_expected_runtime(
-    action_run,
-    actions_expected_runtime,
-):
+    action_run: Mapping[str, Any],
+    actions_expected_runtime: Mapping[Optional[str], Optional[float]],
+) -> bool:
     states_to_check = ["running", "starting"]
     if action_run.get("state", "unknown") in states_to_check:
         action_name = action_run.get("action_name", None)
-        if action_name in actions_expected_runtime and actions_expected_runtime[action_name] is not None:
+        expected_runtime = actions_expected_runtime.get(action_name, None)
+        if action_name in actions_expected_runtime and expected_runtime is not None:
             duration_seconds = pytimeparse.parse(
                 action_run.get("duration", ""),
             )
-            if duration_seconds > actions_expected_runtime[action_name]:
+            if duration_seconds is not None and (duration_seconds > expected_runtime):
                 return True
     return False
 
 
-def get_relevant_action(*, action_runs, last_state, actions_expected_runtime):
+def get_relevant_action(
+    *,
+    action_runs: Sequence[Mapping[str, Any]],
+    last_state: State,
+    actions_expected_runtime: Mapping[Optional[str], Optional[float]],
+) -> Mapping[str, Any]:
     stuck_action_run_candidate = None
     for action_run in reversed(action_runs):
         action_state = action_run.get("state", "unknown")
@@ -358,14 +369,16 @@ def guess_realert_every(job: Dict[str, Any]) -> int:
         time_diff = time.mktime(_timestamp_to_timeobj(job_next_run)) - time.mktime(
             _timestamp_to_timeobj(job_previous_run)
         )
-        realert_every = max(int(time_diff / _run_interval), 1)
+        realert_every = max(int(time_diff / _RUN_INTERVAL), 1)
     except Exception as e:
         log.warning(f"guess_realert_every failed: {e}")
         return -1
     return realert_every
 
 
-def get_earliest_run_time_to_check(job_content, interval):
+def get_earliest_run_time_to_check(
+    job_content: Mapping[str, Any], interval: Literal["day", "hour", "minute", "second"] = "day"
+) -> Optional[float]:
     if not job_content["runs"]:
         return None
 
@@ -376,7 +389,11 @@ def get_earliest_run_time_to_check(job_content, interval):
     )
 
 
-def sort_runs_by_interval(job_content, interval="day", until=None):
+def sort_runs_by_interval(
+    job_content: Optional[Mapping[str, Any]],
+    interval: Literal["day", "hour", "minute", "second"] = "day",
+    until: Optional[float] = None,
+) -> Dict[str, List[Dict[str, Any]]]:
     """Sorts a job's runs by a time interval (day, hour, minute, or second),
     according to a job run's run time.
     """
@@ -388,7 +405,7 @@ def sort_runs_by_interval(job_content, interval="day", until=None):
     }
     fmt = interval_formats[interval]
 
-    run_buckets = defaultdict(list)
+    run_buckets: DefaultDict[str, List[Dict[str, Any]]] = defaultdict(list)
     if job_content is not None:
         if not until:
             until = time.time()  # can't set in default arg
@@ -427,11 +444,11 @@ def compute_check_result_for_job(
     )
     if "realert_every" not in kwargs:
         kwargs = kwargs.set("realert_every", guess_realert_every(job))
-    kwargs = kwargs.set("check_every", f"{_run_interval}s")
+    kwargs = kwargs.set("check_every", f"{_RUN_INTERVAL}s")
 
     # We want to prevent a monitoring config from setting the check_every
     # attribute, since one config should not dictate how often this script runs
-    sensu_kwargs: PMap[str, Any] = (
+    sensu_kwargs: Mapping[str, Any] = (
         pmap(job["monitoring"])
         .discard(PRECIOUS_JOB_ATTR)
         .discard("check_every")
@@ -518,8 +535,8 @@ def main() -> int:
     client = Client(args.server, args.cluster_name)
 
     error_code = 0
-    global _run_interval
-    _run_interval = args.run_interval
+    global _RUN_INTERVAL
+    _RUN_INTERVAL = args.run_interval
 
     global _SKIP_SENSU_FAILURE_LOGGING
     _SKIP_SENSU_FAILURE_LOGGING = args.skip_sensu_failure_logging

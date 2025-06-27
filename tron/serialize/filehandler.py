@@ -10,6 +10,7 @@ from collections import OrderedDict
 from subprocess import PIPE
 from subprocess import Popen
 from threading import RLock
+from typing import Generator
 from typing import List
 from typing import Optional
 
@@ -169,12 +170,12 @@ class FileHandleManager:
 class OutputStreamSerializer:
     """Manage writing to and reading from files in a directory hierarchy."""
 
-    def __init__(self, base_path):
+    def __init__(self, base_path: str) -> None:
         self.base_path = os.path.join(*base_path)
         if not os.path.exists(self.base_path):
             os.makedirs(self.base_path)
 
-    def full_path(self, filename):
+    def full_path(self, filename: str) -> str:
         return os.path.join(self.base_path, filename)
 
     # TODO: do not use subprocess
@@ -208,35 +209,35 @@ class OutputPath:
 
     __slots__ = ["base", "parts"]
 
-    def __init__(self, base=".", *path_parts):
+    def __init__(self, base: str = ".", *path_parts: str) -> None:
         self.base = base
         self.parts = list(path_parts or [])
 
-    def append(self, part):
+    def append(self, part: str) -> None:
         self.parts.append(part)
 
-    def __iter__(self):
+    def __iter__(self) -> Generator[str]:
         yield self.base
         yield from self.parts
 
-    def __str__(self):
+    def __str__(self) -> str:
         return os.path.join(*self)
 
-    def clone(self, *parts):
+    def clone(self, *parts: str) -> "OutputPath":
         """Return a new OutputPath object which has a base of the str value
         of this object.
         """
         return type(self)(str(self), *parts)
 
-    def delete(self):
+    def delete(self) -> None:
         """Remove the directory and its contents."""
         try:
             shutil.rmtree(str(self))
         except OSError as e:
             log.warning(f"Failed to delete {self}: {e}")
 
-    def __eq__(self, other):
+    def __eq__(self, other) -> bool:
         return self.base == other.base and self.parts == other.parts
 
-    def __ne__(self, other):
+    def __ne__(self, other) -> bool:
         return not self == other

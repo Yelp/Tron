@@ -173,7 +173,7 @@ class Client:
         }
         return self.http_get("/api/jobs", params).get("jobs")
 
-    def job(self, job_url, include_action_runs=False, count=0):
+    def job(self, job_url: str, include_action_runs: bool = False, count: int = 0) -> Dict[str, Any]:
         params = {
             "include_action_runs": int(include_action_runs),
             "num_runs": count,
@@ -250,7 +250,7 @@ def first(seq):
         return item
 
 
-def get_object_type_from_identifier(url_index: Dict[str, Any], identifier: str) -> TronObjectIdentifier:
+def get_object_type_from_identifier(url_index: Dict[str, Any], identifier: Optional[str]) -> TronObjectIdentifier:
     """Given a string identifier, return a TronObjectIdentifier."""
     name_mapping = {
         "jobs": set(url_index["jobs"]),

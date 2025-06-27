@@ -9,6 +9,7 @@ import os.path
 import time
 from typing import Any
 from typing import Callable
+from typing import Generator
 from typing import List
 from typing import Optional
 from typing import TypeVar
@@ -159,7 +160,7 @@ class ActionRunAdapter(RunAdapter):
         base_path = filehandler.OutputPath(path) if path else self._obj.output_path
         return filehandler.OutputStreamSerializer(base_path)
 
-    def _get_alternate_output_paths(self):
+    def _get_alternate_output_paths(self) -> Generator[str, None, None]:
         try:
             namespace, jobname, run_num, action = self._obj.id.split(".")
         except Exception:
