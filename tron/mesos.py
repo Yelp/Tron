@@ -8,7 +8,7 @@ from typing import Dict
 from urllib.parse import urlparse
 
 import requests
-import staticconf  # type: ignore # need to upgrade to get type stubs
+import staticconf
 from task_processing.runners.subscription import Subscription
 from task_processing.task_processor import TaskProcessor
 from twisted.internet.defer import logError

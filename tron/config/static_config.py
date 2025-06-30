@@ -1,6 +1,6 @@
 from functools import partial
 
-import staticconf  # type: ignore
+import staticconf
 from staticconf import config
 
 FILENAME = "/nail/srv/configs/tron.yaml"
