@@ -139,7 +139,7 @@ def read_log_stream_for_action_run(
     if max_lines == USE_SRV_CONFIGS:
         config_watcher = get_config_watcher()
         config_watcher.reload_if_changed()
-        max_lines = staticconf.read("logging.max_lines_to_display", namespace=NAMESPACE)  # type: ignore[attr-defined] # TODO: why can't mypy see that read() exists?
+        max_lines = staticconf.read("logging.max_lines_to_display", namespace=NAMESPACE)  # type: ignore[attr-defined]  # TODO: why can't mypy see that read() exists?
 
     try:
         superregion = get_superregion()

@@ -1,3 +1,44 @@
+tron (3.8.0) jammy; urgency=medium
+
+  * 3.8.0 tagged with 'make release'
+    Commit: Allow transitioning to success/fail from any terminal state
+    (#1057)  This is helpful when folks have handled failures outside of
+    Tron (or have done something outside of Tron that nominally means
+    that the Tron status is now incorrect) OR to work-around any
+    weirdness with Tron states (e.g., something funky happened in k8s
+    and Tron never saw the event)  NOTE: this PR changes a bunch of
+    extra files - but that"s just due to mypy following more code paths
+    after I typed the ActionRunController `__init__` so that I could go-
+    to-def in my editor :p Additionally, kkasp and I have occasionally
+    been runing into an state where `check-requirements` says a
+    mismatched version of `cryptography` is installed - I finally got
+    around to debugging this and realized this stems from our very hacky
+    extra_requirements_yelp.txt shenanigans: pyopenssl has lower/upper-
+    bounds on cryptography but, due to the ordering we install things
+    in, `check-requirements` might run before we"ve installed pyopenssl
+    and downgraded cryptography (and pass) or after (and fail)  The real
+    changes are confined to
+    `tron/core/action.py::ActionRun::STATE_MACHINE` (and a now-deleted
+    ActionRun tests that are no longer valid)
+
+ -- Luis Perez <luisp@yelp.com>  Mon, 30 Jun 2025 10:16:53 -0700
+
+tron (3.7.3) jammy; urgency=medium
+
+  * 3.7.3 tagged with 'make release'
+    Commit: more gracefully handle errors during backfill monitoring
+    (#1062)
+
+ -- Matteo Piano <mpiano@yelp.com>  Thu, 26 Jun 2025 05:54:02 -0700
+
+tron (3.7.2) jammy; urgency=medium
+
+  * 3.7.2 tagged with 'make release'
+    Commit: Merge pull request #1056 from Yelp/u/kkasp/rest-in-peace-
+    tronweb2  Delete tronweb2
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Wed, 25 Jun 2025 10:25:34 -0700
+
 tron (3.7.1) jammy; urgency=medium
 
   * 3.7.1 tagged with 'make release'

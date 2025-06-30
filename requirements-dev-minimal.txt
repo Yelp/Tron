@@ -9,6 +9,7 @@ pylint
 pytest
 pytest-asyncio
 requirements-tools
+types-boto3
 types-cachetools
 types-psutil
 types-pytz

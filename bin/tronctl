@@ -94,7 +94,7 @@ COMMAND_HELP = (
     ("stop", "action id", "Stop the action run (SIGTERM)"),
     ("kill", "action id", "Force kill the action run (SIGKILL)"),
     ("move", "job name", "Rename a job"),
-    ("publish", "action id", "Publish actionrun trigger to kick off downstream jobs"),
+    ("publish", "trigger id", "Publish actionrun trigger to kick off downstream jobs"),
     ("discard", "trigger id", "Discard existing actionrun trigger"),
     ("version", None, "Print tron client and server versions"),
 )

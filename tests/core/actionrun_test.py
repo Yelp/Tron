@@ -411,10 +411,6 @@ class TestActionRun:
             mock.call("ns.id.action_name.foo.bar"),
         ]
 
-    def test_success_bad_state(self):
-        self.action_run.cancel()
-        assert not self.action_run.success()
-
     def test_failure(self):
         self.action_run._exit_unsuccessful(1)
         assert not self.action_run.is_running
@@ -1920,7 +1916,7 @@ class TestKubernetesActionRun:
         )
 
     @mock.patch("tron.core.actionrun.filehandler", autospec=True)
-    @mock.patch("tron.core.actionrun.MesosClusterRepository", autospec=True)
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
     def test_recover_done_no_change(
         self,
         mock_cluster_repo,
@@ -1932,7 +1928,7 @@ class TestKubernetesActionRun:
         last_attempt.kubernetes_task_ic = "test-kubernetes-task-id"
 
         assert not mock_k8s_action_run.recover()
-        assert mock_cluster_repo.get_cluster.call_count == 0
+        assert mock_cluster_repo.get_cluster.call_count != 0
         assert mock_k8s_action_run.is_succeeded
 
     @mock.patch("tron.core.actionrun.filehandler", autospec=True)
