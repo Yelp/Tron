@@ -8,7 +8,7 @@ import signal
 import threading
 import time
 
-import ipdb
+import ipdb  # type: ignore[import-untyped] # no stubs or py.typed marker; maybe move to pdb?
 import pkg_resources
 from twisted.internet import defer
 from twisted.internet import reactor

@@ -3,6 +3,7 @@ Web Controllers for the API.
 """
 import logging
 from typing import Dict
+from typing import TYPE_CHECKING
 from typing import TypedDict
 
 from tron import yaml
@@ -10,6 +11,9 @@ from tron.config.manager import ConfigManager
 from tron.core.actionrun import ActionRun
 from tron.core.jobrun import JobRun
 from tron.eventbus import EventBus
+
+if TYPE_CHECKING:
+    from tron.mcp import MasterControlProgram
 
 log = logging.getLogger(__name__)
 
@@ -192,7 +196,7 @@ class ConfigController:
 
     DEFAULT_NAMED_CONFIG = "\njobs:\n"
 
-    def __init__(self, mcp):
+    def __init__(self, mcp: "MasterControlProgram") -> None:
         self.mcp = mcp
         self.config_manager: ConfigManager = mcp.get_config_manager()
 

@@ -14,12 +14,24 @@ import yaml
 from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
 
+# NOTE: this is an internal-only package, so we won't be able to typecheck against it with mypy
+# without these hacky inlined stubs
 try:
-    from logreader.readers import S3LogsReader
+    # mypy: allow-unused-ignore
+    from logreader.readers import S3LogsReader  # type: ignore[import-not-found]  # internal-only package
+
+    # mypy: no-unused-ignore
 
     s3reader_available = True
 except ImportError:
     s3reader_available = False
+
+    class S3LogsReader:  # type: ignore[no-redef]  # stub class for internal-only package
+        def __init__(self, superregion: str):
+            raise ImportError("logreader (internal Yelp package) is not available - unable to display logs.")
+
+        def get_log_reader(self, log_name: str, start_datetime: datetime.datetime, end_datetime: datetime.datetime):
+            raise NotImplementedError("logreader (internal Yelp package) is not available - unable to display logs.")
 
 
 log = logging.getLogger(__name__)

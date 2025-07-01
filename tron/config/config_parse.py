@@ -12,6 +12,7 @@ import itertools
 import logging
 import os
 from copy import deepcopy
+from typing import Any
 from typing import Dict
 from typing import List
 from typing import Optional
@@ -598,7 +599,7 @@ class ValidateAction(Validator):
         "retries": None,
         "retries_delay": None,
         "expected_runtime": datetime.timedelta(hours=24),
-        "executor": schema.ExecutorTypes.ssh.value,
+        "executor": schema.ExecutorTypes.ssh.value,  # type: ignore[attr-defined] # ExecutorTypes is an Enum
         "cpus": None,
         "mem": None,
         "disk": None,
@@ -693,7 +694,7 @@ class ValidateCleanupAction(Validator):
         "retries": None,
         "retries_delay": None,
         "expected_runtime": datetime.timedelta(hours=24),
-        "executor": schema.ExecutorTypes.ssh.value,
+        "executor": schema.ExecutorTypes.ssh.value,  # type: ignore[attr-defined] # ExecutorTypes is an Enum
         "cpus": None,
         "mem": None,
         "disk": None,
@@ -772,7 +773,7 @@ class ValidateJob(Validator):
     """Validate jobs."""
 
     config_class = ConfigJob
-    defaults = {
+    defaults: Dict[str, Any] = {
         "run_limit": 50,
         "all_nodes": False,
         "cleanup_action": None,

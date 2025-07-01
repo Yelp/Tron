@@ -52,7 +52,7 @@ class AuthorizationFilter:
             return AuthorizationOutcome(True, "Auth not enabled")
         token = (request.getHeader("Authorization") or "").strip()
         token = token.split()[-1] if token else ""  # removes "Bearer" prefix
-        url_path = request.path.decode()
+        url_path = request.path.decode() if request.path is not None else ""  # type: ignore[attr-defined] # mypy does not like what twisted is doing here
         auth_outcome = self._is_request_authorized_impl(
             # path and method are byte arrays in twisted
             path=url_path,
