@@ -14,6 +14,8 @@ import yaml
 from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
 
+# NOTE: this is an internal-only package, so we won't be able to typecheck against it with mypy
+# without these hacky inlined stubs
 try:
     # mypy: allow-unused-ignore
     from logreader.readers import S3LogsReader  # type: ignore[import-not-found]  # internal-only package
