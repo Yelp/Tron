@@ -2,7 +2,6 @@ import hashlib
 import logging
 import os
 from copy import deepcopy
-from typing import cast
 from typing import List
 from typing import Union
 
@@ -195,13 +194,10 @@ class ConfigManager:
             # TODO: consider storing the hash alongside the config so that we only calculate
             # hashes once?
             return hash_digest(
-                cast(
-                    Union[str, bytes],
-                    yaml.dump(
-                        self.get_config_name_mapping()[name],
-                        # ensure that the keys are always in a stable order
-                        sort_keys=True,
-                    ),
+                yaml.dump(
+                    self.get_config_name_mapping()[name],
+                    # ensure that the keys are always in a stable order
+                    sort_keys=True,
                 )
             )
 
