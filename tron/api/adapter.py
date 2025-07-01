@@ -8,6 +8,7 @@ import functools
 import os.path
 import time
 from typing import List
+from typing import Optional
 from urllib.parse import quote
 
 from tron import actioncommand
@@ -140,9 +141,9 @@ class ActionRunAdapter(RunAdapter):
         required = self.job_run.action_graph.get_dependencies(action_name)
         return [act.name for act in required]
 
-    def _get_serializer(self, path=None) -> filehandler.OutputStreamSerializer:
-        path = filehandler.OutputPath(path) if path else self._obj.output_path
-        return filehandler.OutputStreamSerializer(path)
+    def _get_serializer(self, path: Optional[str] = None) -> filehandler.OutputStreamSerializer:
+        base_path = filehandler.OutputPath(path) if path else self._obj.output_path
+        return filehandler.OutputStreamSerializer(base_path)
 
     def _get_alternate_output_paths(self):
         try:

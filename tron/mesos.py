@@ -444,7 +444,7 @@ class MesosCluster:
         self.runner.reconcile(task.get_config())
         task.report_resources()
 
-    def create_task(
+    def create_task(  # type: ignore[no-untyped-def]  # this file is not long for this world
         self,
         action_run_id,
         command,

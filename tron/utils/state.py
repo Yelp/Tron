@@ -1,5 +1,6 @@
 import logging
 from collections import defaultdict
+from typing import Mapping
 
 log = logging.getLogger(__name__)
 
@@ -17,7 +18,7 @@ class Machine:
         assert machine.states == new_machine.states
         return new_machine
 
-    def __init__(self, initial, **transitions):
+    def __init__(self, initial: str, **transitions: Mapping[str, str]) -> None:
         super().__init__()
         self.transitions = defaultdict(dict, transitions)
         self.transition_names = {

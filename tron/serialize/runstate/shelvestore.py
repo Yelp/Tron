@@ -4,6 +4,9 @@ import pickle
 import shelve
 import sys
 from io import BytesIO
+from typing import Any
+from typing import Dict
+from typing import List
 
 import bsddb3  # type: ignore
 
@@ -81,7 +84,7 @@ class ShelveStateStore:
         self.filename = filename
         self.shelve = Py2Shelf(self.filename)
 
-    def build_key(self, type, iden):
+    def build_key(self, type: str, iden: str) -> ShelveKey:
         return ShelveKey(type, iden)
 
     def save(self, key_value_pairs):
@@ -93,7 +96,7 @@ class ShelveStateStore:
                 self.shelve[shelve_key] = state_data
         self.shelve.sync()
 
-    def restore(self, keys, read_json: bool = False):
+    def restore(self, keys: List[ShelveKey], read_json: bool = False) -> Dict[ShelveKey, Any]:
         items = zip(
             keys,
             (self.shelve.get(str(key.key)) for key in keys),

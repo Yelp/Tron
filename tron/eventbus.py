@@ -121,7 +121,7 @@ class EventBus:
             log.error(f"can't publish {event!r}, must be dict")
             return False
 
-    def _discard(self, event) -> bool:
+    def _discard(self, event: str) -> bool:
         if not self._has_event(event):
             return False
         del self.event_log[event]
@@ -135,7 +135,7 @@ class EventBus:
         self.clear_subscription_queue.append(subscriber)
         log.debug(f"clearing subscriptions for {subscriber}")
 
-    def _has_event(self, event_id):
+    def _has_event(self, event_id: str) -> bool:
         return event_id in self.event_log
 
     def sync_load_log(self):
