@@ -1,3 +1,14 @@
+tron (3.8.1) jammy; urgency=medium
+
+  * 3.8.1 tagged with 'make release'
+    Commit: Enable disallow_untyped_decorators mypy option (#1064)  For
+    once, a small mypy PR :p  There was just a single untyped decorator
+    and I went ahead and wrote some inline comments "cause I don"t think
+    I"ll remember how to read this after this gets merged :deepfried-
+    loljpg:
+
+ -- Luis Perez <luisp@yelp.com>  Wed, 02 Jul 2025 10:14:27 -0700
+
 tron (3.8.0) jammy; urgency=medium
 
   * 3.8.0 tagged with 'make release'
