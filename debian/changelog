@@ -1,3 +1,12 @@
+tron (3.8.3) jammy; urgency=medium
+
+  * 3.8.3 tagged with 'make release'
+    Commit: Merge pull request #1066 from Yelp/jfong/TRON-2340-systemd-
+    sigterm-handling  TRON-2340: Update tron unit file to ensure proper
+    sigterm handling
+
+ -- Jen Patague <jfong@yelp.com>  Mon, 14 Jul 2025 13:51:48 -0700
+
 tron (3.8.2) jammy; urgency=medium
 
   * 3.8.2 tagged with 'make release'
