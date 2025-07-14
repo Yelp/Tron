@@ -1,3 +1,10 @@
+tron (3.8.2) jammy; urgency=medium
+
+  * 3.8.2 tagged with 'make release'
+    Commit: Released 3.8.1 via make release
+
+ -- Jen Patague <jfong@yelp.com>  Mon, 14 Jul 2025 12:42:31 -0700
+
 tron (3.8.1) jammy; urgency=medium
 
   * 3.8.1 tagged with 'make release'
