@@ -1,3 +1,16 @@
+tron (3.8.4) jammy; urgency=medium
+
+  * 3.8.4 tagged with 'make release'
+    Commit: Default sliders to show 50 items (#1067)  Defaulting to 10
+    doesn"t actually save any time since we"ve fetched all the data
+    anyway.  Let"s instead default to 50 since that should should be the
+    most common run_limit  This will make pages longer, but it will be
+    less confusing to folks when they get alerts for failed/unknown/etc
+    jobs that are past the visible runs with the previous slider
+    configuration.
+
+ -- Luis Perez <luisp@yelp.com>  Wed, 23 Jul 2025 14:10:18 -0700
+
 tron (3.8.3) jammy; urgency=medium
 
   * 3.8.3 tagged with 'make release'
