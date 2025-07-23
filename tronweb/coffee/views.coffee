@@ -246,7 +246,8 @@ class module.SliderView extends Backbone.View
 
     initialize: (options) ->
         options = options || {}
-        @displayCount = options.displayCount || 10
+        # NOTE: 50 is somewhat arbitrarily picked as the default value - that should be the most common run_limit
+        @displayCount = options.displayCount || 50
 
     tagName: "div"
 
