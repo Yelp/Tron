@@ -246,7 +246,8 @@ class module.SliderView extends Backbone.View
 
     initialize: (options) ->
         options = options || {}
-        @displayCount = options.displayCount || 10
+        # NOTE: this is allowed to be undefined on purpose - render() will set a value if so
+        @displayCount = options.displayCount
 
     tagName: "div"
 
@@ -269,6 +270,12 @@ class module.SliderView extends Backbone.View
         @$('#display-count').html(content)
 
     render: ->
+        # default sliders to show all items unless constructed with an explicit displayCount
+        # this is kinda silly, but we don't seem to have access to the model in initialize()
+        # (i.e., we can't default to the model length there - and this is the next best place)
+        if !@displayCount?
+            @displayCount = @model.length()
+
         @$el.html @template
         @updateDisplayCount(_.min([@model.length(), @displayCount]))
         module.makeSlider @$el,
