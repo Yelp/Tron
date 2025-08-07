@@ -177,6 +177,16 @@ class TimeSpecification:
             [],
             True,
         )
+
+        if self.monthdays and self.months:
+            month_max_days = []
+            for month in self.months:
+                month_max_days.append(calendar.monthrange(1972, month)[1])  # Use leap year as base to allow feb 29 jobs
+            max_days = max(month_max_days)
+            for day in self.monthdays:
+                if day != TOKEN_LAST and day > max_days:
+                    raise ValueError(f"Day {day} does not exist in month {month}")
+
         self.timezone = get_timezone(timezone)
 
     def next_day(self, first_day, year, month):
