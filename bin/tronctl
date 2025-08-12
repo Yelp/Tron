@@ -119,7 +119,7 @@ def parse_cli():
             ).completer = cmd_utils.tron_jobs_completer
 
         # HACK: this is slightly funky since we already add --verbose in cmd_utils.build_option_parser(),
-        # but that requires something like tronctl --verbose start JOB rathter than tronctl start -v JOB
+        # but that requires something like tronctl --verbose start JOB rather than tronctl start -v JOB
         cmd_parsers[cmd_name].add_argument(
             "-v",
             "--verbose",
