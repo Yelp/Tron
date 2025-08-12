@@ -191,7 +191,7 @@ def save_config(options):
 
 def setup_logging(options: argparse.Namespace) -> int:
     if options.verbose is None:
-        level = logging.CRITICAL
+        level = logging.ERROR
     elif options.verbose == 1:
         level = logging.WARNING
     elif options.verbose == 2:
