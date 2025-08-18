@@ -1,3 +1,42 @@
+tron (3.8.5) jammy; urgency=medium
+
+  * 3.8.5 tagged with 'make release'
+    Commit: TRON-2480: Fix tron systemd unit to retry indefinitely & add
+    minor delay between restarts (#1070)  We saw in
+    https://yelp.slack.com/archives/CA53K7S68/p1755111528654579 and
+    https://yelp.slack.com/archives/CA53K7S68/p1752625385958589?thread_t
+    s=1752624525.373959&cid=CA53K7S68 my change from #1066 to add the
+    `ExecStartPre` , combined with the default `RestartSec=0` and
+    `StartLimitBurst=5` meant that tron in a cluster that required some
+    time to perform the shutdown process would still see `trond` still
+    running and immediately run through the 5 allowed attempts, then
+    fail to restart unless retriggered by a timer or socket:  > Note
+    that units which are configured for Restart=, and which reach the
+    start limit are not attempted to be restarted anymore; however, they
+    may still be restarted manually or from a timer or socket at a later
+    point, after the interval has passed.  This PR now disables the
+    restart limits entirely by setting both `StartLimitBurst` and
+    `StartLimitIntervalSec` to 0, as per the docs: > interval is a time
+    span with the default unit of seconds, but other units may be
+    specified, see
+    [systemd.time(7)](https://www.freedesktop.org/software/systemd/man/l
+    atest/systemd.time.html#). The special value "infinity" can be used
+    to limit the total number of start attempts, even if they happen at
+    large time intervals. Defaults to DefaultStartLimitIntervalSec= in
+    manager configuration file, and may be set to 0 to disable any kind
+    of rate limiting.  (Note this indicates only setting
+    `StartLimitIntervalSec=0` is necessary to disable the rate limiting,
+    but chatgpt convinced me it makes it clearer to the reader if both
+    are set to 0, happy to undo this if we think we"ll be confused
+    later)  These settings seem to work on tron-infrastage after
+    modifying it to cause an artificial 60s delay when shutting down, as
+    we can see restarts are delayed 10s between the next attempt, and
+    eventually tron is able to start cleanly on its own with no user
+    intervention:
+    https://fluffy.yelpcorp.com/i/qnk5kPRNXsMPRbpLv32KvKDLFk1gl72p.html
+
+ -- Luis Perez <luisp@yelp.com>  Mon, 18 Aug 2025 09:22:27 -0700
+
 tron (3.8.4) jammy; urgency=medium
 
   * 3.8.4 tagged with 'make release'
