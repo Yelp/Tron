@@ -118,6 +118,16 @@ def parse_cli():
                 "id", nargs="*", help=id_help_text
             ).completer = cmd_utils.tron_jobs_completer
 
+        # HACK: this is slightly funky since we already add --verbose in cmd_utils.build_option_parser(),
+        # but that requires something like tronctl --verbose start JOB rather than tronctl start -v JOB
+        cmd_parsers[cmd_name].add_argument(
+            "-v",
+            "--verbose",
+            action="count",
+            help="Verbose logging",
+            default=None,
+        )
+
     # start
     cmd_parsers["start"].add_argument(
         "--run-date",
@@ -456,8 +466,12 @@ COMMANDS: Dict[str, Callable[[argparse.Namespace], Generator[bool, None, None]]]
 def main():
     """run tronctl"""
     args = parse_cli()
-    cmd_utils.setup_logging(args)
     cmd_utils.load_config(args)
+
+    # NOTE: we do this after load_configs() since load_config() may set some logging defaults that we want to override
+    desired_level = cmd_utils.setup_logging(args)
+    logging.getLogger().setLevel(desired_level)
+
     cmd = COMMANDS[args.command]
     try:
         for ret in cmd(args):

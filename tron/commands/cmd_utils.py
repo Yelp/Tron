@@ -189,9 +189,9 @@ def save_config(options):
     write_config(config)
 
 
-def setup_logging(options):
+def setup_logging(options: argparse.Namespace) -> int:
     if options.verbose is None:
-        level = logging.CRITICAL
+        level = logging.ERROR
     elif options.verbose == 1:
         level = logging.WARNING
     elif options.verbose == 2:
@@ -204,6 +204,8 @@ def setup_logging(options):
         format="%(name)s %(levelname)s %(message)s",
         stream=sys.stdout,
     )
+
+    return level
 
 
 def suggest_possibilities(word, possibilities, max_suggestions=6):

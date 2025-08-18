@@ -195,7 +195,6 @@ class Client:
         return self.request(build_get_url(url, data))
 
     def request(self, url, data=None):
-        log.info(f"Request: {self.url_base}, {url}, {data}")
         uri = urllib.parse.urljoin(self.url_base, url)
         response = request(uri, data, headers=self.headers)
         if response.error:
