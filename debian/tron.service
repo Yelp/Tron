@@ -1,6 +1,9 @@
 [Unit]
 Description=trond
 After=network.target
+# Attempt restarts indefinitely (If omitted, systemd attempts max 5x within StartLimitIntervalSec)
+StartLimitIntervalSec=0
+StartLimitBurst=0
 
 [Service]
 User=tron
@@ -12,6 +15,8 @@ ExecStopPost=/usr/bin/logger -t tron_exit_status "SERVICE_RESULT:${SERVICE_RESUL
 KillMode=process
 TimeoutStopSec=20
 Restart=always
+# Wait between restart attempts
+RestartSec=10
 LimitNOFILE=100000
 
 [Install]
