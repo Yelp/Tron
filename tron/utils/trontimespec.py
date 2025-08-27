@@ -258,6 +258,9 @@ class TimeSpecification:
             return start_date.day
 
         for month, year in self.next_month(start_date):
+            if year > datetime.MAXYEAR:
+                raise ValueError(f"Year {year} is out of range, cannot find match")
+
             first_day = get_first_day(month, year)
 
             for day in self.next_day(first_day, year, month):
