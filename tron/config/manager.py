@@ -2,8 +2,6 @@ import hashlib
 import logging
 import os
 from copy import deepcopy
-from typing import List
-from typing import Union
 
 from tron import yaml
 from tron.config import config_parse
@@ -45,7 +43,7 @@ def read_raw(path: str) -> str:
         return fh.read()
 
 
-def hash_digest(content: Union[str, bytes]) -> str:
+def hash_digest(content: str | bytes) -> str:
     return hashlib.sha1(
         maybe_encode(content)
     ).hexdigest()  # TODO: TRON-2293 maybe_encode is a relic of Python2->Python3 migration. Remove it.
@@ -209,7 +207,7 @@ class ConfigManager:
     def __contains__(self, name):
         return name in self.manifest
 
-    def get_namespaces(self) -> List[str]:
+    def get_namespaces(self) -> list[str]:
         return list(self.manifest.get_file_mapping().keys())
 
 

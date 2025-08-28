@@ -2,11 +2,8 @@ import datetime
 import json
 import logging
 import operator
+from collections.abc import Iterator
 from functools import lru_cache
-from typing import Iterator
-from typing import List
-from typing import Optional
-from typing import Tuple
 
 import staticconf
 import yaml
@@ -48,15 +45,13 @@ def get_superregion() -> str:
         return f.read().strip()
 
 
-def decompose_action_id(action_run_id: str, paasta_cluster: str) -> Tuple[str, str, str, str]:
+def decompose_action_id(action_run_id: str, paasta_cluster: str) -> tuple[str, str, str, str]:
     namespace, job_name, run_num, action = action_run_id.split(".")
     for ext in ["yaml", "yml"]:
         try:
             with open(f"/nail/etc/services/{namespace}/tron-{paasta_cluster}.{ext}") as f:
                 config = yaml.load(f, Loader=yaml.CSafeLoader)
-                service: Optional[str] = (
-                    config.get(job_name, {}).get("actions", {}).get(action, {}).get("service", None)
-                )
+                service: str | None = config.get(job_name, {}).get("actions", {}).get(action, {}).get("service", None)
                 if service:
                     return service, job_name, run_num, action
         except FileNotFoundError:
@@ -87,10 +82,10 @@ class PaaSTALogs:
         self.run_num = int(run_num)
         self.num_lines = 0
         self.malformed_lines = 0
-        self.output: List[Tuple[str, str]] = []
+        self.output: list[tuple[str, str]] = []
         self.truncated_output = False
 
-    def fetch(self, stream: Iterator[str], max_lines: Optional[int]) -> None:
+    def fetch(self, stream: Iterator[str], max_lines: int | None) -> None:
         for line in stream:
             if max_lines is not None and self.num_lines == max_lines:
                 self.truncated_output = True
@@ -118,7 +113,7 @@ class PaaSTALogs:
             ):
                 self.output.append((payload["timestamp"], payload["message"]))
 
-    def sorted_lines(self) -> List[str]:
+    def sorted_lines(self) -> list[str]:
         self.output.sort(key=operator.itemgetter(0))
         return [line for _, line in self.output]
 
@@ -126,11 +121,11 @@ class PaaSTALogs:
 def read_log_stream_for_action_run(
     action_run_id: str,
     component: str,
-    min_date: Optional[datetime.datetime],
-    max_date: Optional[datetime.datetime],
-    paasta_cluster: Optional[str],
-    max_lines: Optional[int] = USE_SRV_CONFIGS,
-) -> List[str]:
+    min_date: datetime.datetime | None,
+    max_date: datetime.datetime | None,
+    paasta_cluster: str | None,
+    max_lines: int | None = USE_SRV_CONFIGS,
+) -> list[str]:
     if min_date is None:
         return [f"{action_run_id} has not started yet."]
 
@@ -155,7 +150,7 @@ def read_log_stream_for_action_run(
 
     paasta_logs = PaaSTALogs(component, paasta_cluster, action_run_id)
     stream_name = paasta_logs.stream_name
-    end_date: Optional[datetime.date]
+    end_date: datetime.date | None
 
     # S3 reader accepts datetime objects and respects timezone information
     # if min_date and max_date timezone is missing, astimezone() will assume local timezone and convert it to UTC

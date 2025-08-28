@@ -2,8 +2,6 @@ import datetime
 import json
 import logging
 from typing import Any
-from typing import Dict
-from typing import Optional
 from typing import TypeVar
 
 from tron import command_context
@@ -81,19 +79,19 @@ class Job(Observable, Observer, Persistable):
         scheduler: GeneralScheduler,
         queueing: bool = True,
         all_nodes: bool = False,
-        monitoring: Optional[Dict[str, Any]] = None,
-        node_pool: Optional[NodePool] = None,
+        monitoring: dict[str, Any] | None = None,
+        node_pool: NodePool | None = None,
         enabled: bool = True,
-        action_graph: Optional[ActionGraph] = None,
-        run_collection: Optional[JobRunCollection] = None,
-        parent_context: Optional[command_context.CommandContext] = None,
-        output_path: Optional[filehandler.OutputPath] = None,
-        allow_overlap: Optional[bool] = None,
-        action_runner: Optional[SubprocessActionRunnerFactory] = None,
-        max_runtime: Optional[datetime.timedelta] = None,
-        time_zone: Optional[datetime.tzinfo] = None,
-        expected_runtime: Optional[datetime.timedelta] = None,
-        run_limit: Optional[int] = None,
+        action_graph: ActionGraph | None = None,
+        run_collection: JobRunCollection | None = None,
+        parent_context: command_context.CommandContext | None = None,
+        output_path: filehandler.OutputPath | None = None,
+        allow_overlap: bool | None = None,
+        action_runner: SubprocessActionRunnerFactory | None = None,
+        max_runtime: datetime.timedelta | None = None,
+        time_zone: datetime.tzinfo | None = None,
+        expected_runtime: datetime.timedelta | None = None,
+        run_limit: int | None = None,
     ):
         super().__init__()
         self.name = maybe_decode(
@@ -123,7 +121,7 @@ class Job(Observable, Observer, Persistable):
         log.info(f"{self} created")
 
     @staticmethod
-    def from_json(state_data: str) -> Dict[str, Any]:  # TODO: make a TypedDict for this
+    def from_json(state_data: str) -> dict[str, Any]:  # TODO: make a TypedDict for this
         """deserialize the JSON string to python objects."""
         # We store the following fields for jobs in DynamoDB: enabled and list of run numbers
         try:

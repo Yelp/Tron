@@ -1,8 +1,7 @@
 import logging
 import time
+from collections.abc import Generator
 from contextlib import contextmanager
-from typing import Generator
-from typing import Optional
 
 from prometheus_client import Counter
 from prometheus_client import Gauge
@@ -133,8 +132,8 @@ tron_last_startup_duration_seconds_gauge = Gauge(
 def timer(
     operation_name: str,
     log: logging.Logger,
-    histogram_metric: Optional[Histogram] = None,
-    gauge_metric: Optional[Gauge] = None,
+    histogram_metric: Histogram | None = None,
+    gauge_metric: Gauge | None = None,
 ) -> Generator[None, None, None]:
     """Context manager for timing operations with optional Prometheus metrics."""
     start_time = time.time()

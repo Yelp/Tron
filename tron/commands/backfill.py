@@ -6,9 +6,6 @@ import pprint
 import re
 import signal
 import sys
-from typing import List
-from typing import Optional
-from typing import Set
 from urllib.parse import urljoin
 
 from tron.commands import client
@@ -25,7 +22,7 @@ def get_date_range(
     start_date: datetime.datetime,
     end_date: datetime.datetime,
     descending: bool = False,
-) -> List[datetime.datetime]:
+) -> list[datetime.datetime]:
     dates = []
     delta = end_date - start_date
     for days_to_add in range(delta.days + 1):
@@ -35,7 +32,7 @@ def get_date_range(
     return dates
 
 
-def print_backfill_cmds(job: str, date_strs: List[str]) -> None:
+def print_backfill_cmds(job: str, date_strs: list[str]) -> None:
     print(f"Please run the following {len(date_strs)} commands:")
     print("")
     for date in date_strs:
@@ -44,7 +41,7 @@ def print_backfill_cmds(job: str, date_strs: List[str]) -> None:
     print("Note that many jobs operate on the previous day's data.")
 
 
-def confirm_backfill(job: str, date_strs: List[str]) -> bool:
+def confirm_backfill(job: str, date_strs: list[str]) -> bool:
     print(
         f"To backfill for the job '{job}', a job run will be created for each "
         f"of the following {len(date_strs)} dates:"
@@ -70,8 +67,8 @@ class BackfillRun:
         self.tron_client = tron_client
         self.job_id = job_id
         self.run_time = run_time
-        self.run_name: Optional[str] = None
-        self.run_id: Optional[client.TronObjectIdentifier] = None
+        self.run_name: str | None = None
+        self.run_id: client.TronObjectIdentifier | None = None
         self.run_state = BackfillRun.NOT_STARTED_STATE
 
     @property
@@ -88,7 +85,7 @@ class BackfillRun:
             await self.cancel()
         return self.run_state
 
-    async def create(self) -> Optional[str]:
+    async def create(self) -> str | None:
         """Creates job run for a specific date.
 
         Returns the name of the run, if it was created with no issues.
@@ -128,7 +125,7 @@ class BackfillRun:
 
         return self.run_name
 
-    async def get_run_id(self) -> Optional[client.TronObjectIdentifier]:
+    async def get_run_id(self) -> client.TronObjectIdentifier | None:
         if not self.run_id:
             loop = asyncio.get_event_loop()
             try:
@@ -232,10 +229,10 @@ class BackfillRun:
 async def run_backfill_for_date_range(
     server: str,
     job_name: str,
-    dates: List[datetime.datetime],
+    dates: list[datetime.datetime],
     max_parallel: int = DEFAULT_MAX_PARALLEL_RUNS,
     ignore_errors: bool = True,
-) -> List[BackfillRun]:
+) -> list[BackfillRun]:
     """Creates and watches job runs over a range of dates for a given job. At
     most, max_parallel runs can run in parallel to prevent resource exhaustion.
     """
@@ -257,13 +254,13 @@ async def run_backfill_for_date_range(
         raise ValueError(f"'{job_name}' is a {job_id.type.lower()}, not a job")
 
     backfill_runs = [BackfillRun(tron_client, job_id, run_time) for run_time in dates]
-    running: Set[asyncio.Future] = set()
+    running: set[asyncio.Future] = set()
     finished_cnt = 0
     all_successful = True
 
     # `current_task()` will always return a task here, but we need to account
     # for the None case for mypy
-    current_task = asyncio.Task.current_task()
+    current_task = asyncio.current_task()
     if current_task:
         loop.add_signal_handler(signal.SIGINT, current_task.cancel)
     try:
@@ -303,7 +300,7 @@ class DisplayBackfillRuns(display.TableDisplay):
     header_color = "hgray"
 
 
-def print_backfill_runs_table(runs: List[BackfillRun]) -> None:
+def print_backfill_runs_table(runs: list[BackfillRun]) -> None:
     """Prints backfill runs in a table"""
     with display.Color.enable():
         table = DisplayBackfillRuns().format(

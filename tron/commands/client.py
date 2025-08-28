@@ -8,7 +8,6 @@ import urllib.error
 import urllib.parse
 import urllib.request
 from collections import namedtuple
-from typing import Dict
 
 import tron
 from tron.commands.authentication import get_auth_token
@@ -99,7 +98,7 @@ def build_get_url(url, data=None):
         return url
 
 
-def ensure_user_attribution(headers: Dict[str, str]) -> Dict[str, str]:
+def ensure_user_attribution(headers: dict[str, str]) -> dict[str, str]:
     headers = headers.copy()
     if "User-Agent" not in headers:
         headers["User-Agent"] = USER_AGENT

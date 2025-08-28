@@ -4,8 +4,6 @@ import re
 import socket
 import time
 from typing import Any
-from typing import Dict
-from typing import Optional
 from urllib.parse import urlparse
 
 import requests
@@ -87,8 +85,8 @@ class MesosClusterRepository:
     secret = None
 
     name = "frameworks"
-    clusters: Dict[str, "MesosCluster"] = {}
-    state_data: Dict[str, Any] = {}
+    clusters: dict[str, "MesosCluster"] = {}
+    state_data: dict[str, Any] = {}
     state_watcher = None
 
     @classmethod
@@ -458,7 +456,7 @@ class MesosCluster:
         extra_volumes,
         serializer,
         task_id=None,
-    ) -> Optional[MesosTask]:
+    ) -> MesosTask | None:
         if not self.runner:
             return None
 

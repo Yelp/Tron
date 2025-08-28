@@ -2,11 +2,6 @@
 import calendar
 import itertools
 import re
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
-from typing import Union
 
 PREDEFINED_SCHEDULE = {
     "@yearly": "0 0 1 1 *",
@@ -33,7 +28,7 @@ class FieldParser:
     """Parse and validate a field in a crontab entry."""
 
     name: str = ""
-    bounds: Tuple[int, int] = (0, 0)
+    bounds: tuple[int, int] = (0, 0)
     range_pattern = re.compile(
         r"""
         (?P<min>\d+|\*)         # Initial value
@@ -46,20 +41,20 @@ class FieldParser:
     def normalize(self, source: str) -> str:
         return source.strip()
 
-    def get_groups(self, source: str) -> List[str]:
+    def get_groups(self, source: str) -> list[str]:
         return source.split(",")
 
-    def parse(self, source: str) -> Optional[Union[List[int], List[Union[int, str]]]]:
+    def parse(self, source: str) -> list[int] | list[int | str] | None:
         if source == "*":
             return None
 
-        groups: Set[Union[int, str]] = set(
+        groups: set[int | str] = set(
             itertools.chain.from_iterable(self.get_values(group) for group in self.get_groups(source))
         )
         has_last = "LAST" in groups
         if has_last:
             groups.remove("LAST")
-        sorted_groups: List[Union[int, str]] = sorted(groups, key=lambda x: (isinstance(x, str), x))
+        sorted_groups: list[int | str] = sorted(groups, key=lambda x: (isinstance(x, str), x))
         if has_last:
             sorted_groups.append("LAST")
 
@@ -71,7 +66,7 @@ class FieldParser:
             raise ValueError("Unknown expression: %s" % source)
         return match.groupdict()
 
-    def get_values(self, source: str) -> List[Union[int, str]]:
+    def get_values(self, source: str) -> list[int | str]:
         source = self.normalize(source)
         match_groups = self.get_match_groups(source)
         step = 1
@@ -81,7 +76,7 @@ class FieldParser:
             step = self.validate_bounds(match_groups["step"])
         return self.get_range(min_value, max_value, step)
 
-    def get_value_range(self, match_groups: dict) -> Tuple[int, int]:
+    def get_value_range(self, match_groups: dict) -> tuple[int, int]:
         if match_groups["min"] == "*":
             return self.bounds
 
@@ -93,7 +88,7 @@ class FieldParser:
 
         return min_value, min_value + 1
 
-    def get_range(self, min_value: int, max_value: int, step: int) -> List[Union[int, str]]:
+    def get_range(self, min_value: int, max_value: int, step: int) -> list[int | str]:
         if min_value < max_value:
             return list(range(min_value, max_value, step))
 
@@ -123,7 +118,7 @@ class MonthdayFieldParser(FieldParser):
     name = "monthdays"
     bounds = (1, 32)
 
-    def get_values(self, source: str) -> List[Union[int, str]]:
+    def get_values(self, source: str) -> list[int | str]:
         # Handle special case for last day of month
         source = self.normalize(source)
         if source == "L":

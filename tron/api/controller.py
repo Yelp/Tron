@@ -2,7 +2,6 @@
 Web Controllers for the API.
 """
 import logging
-from typing import Dict
 from typing import TYPE_CHECKING
 from typing import TypedDict
 
@@ -210,7 +209,7 @@ class ConfigController:
         config_hash = self.config_manager.get_hash(name)
         return {"config": config_content, "hash": config_hash}
 
-    def read_all_configs(self) -> Dict[str, ConfigResponse]:
+    def read_all_configs(self) -> dict[str, ConfigResponse]:
         configs = {}
 
         for service in self.config_manager.get_namespaces():

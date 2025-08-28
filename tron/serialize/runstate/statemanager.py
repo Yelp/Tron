@@ -7,8 +7,6 @@ import time
 from contextlib import contextmanager
 from typing import Any
 from typing import cast
-from typing import Dict
-from typing import List
 
 from tron.config import schema
 from tron.core import job
@@ -108,7 +106,7 @@ class PersistentStateManager:
         self._impl = persistence_impl
 
     # TODO: get rid of the Any here - hopefully with a TypedDict
-    def restore(self, job_names: List[str], read_json: bool = False) -> Dict[str, Any]:
+    def restore(self, job_names: list[str], read_json: bool = False) -> dict[str, Any]:
         """Return the most recent serialized state."""
         log.debug("Restoring state.")
 
@@ -139,8 +137,8 @@ class PersistentStateManager:
 
     # TODO: get rid of the Any here - hopefully with a TypedDict
     def _restore_runs_for_job(
-        self, job_name: str, job_state: Dict[str, Any], read_json: bool = False
-    ) -> List[Dict[str, Any]]:
+        self, job_name: str, job_state: dict[str, Any], read_json: bool = False
+    ) -> list[dict[str, Any]]:
         """Restore the state for the runs of each job"""
         run_nums = job_state["run_nums"]
         keys = [jobrun.get_job_run_id(job_name, run_num) for run_num in run_nums]
@@ -162,7 +160,7 @@ class PersistentStateManager:
         return dict(zip(keys, names))
 
     # TODO: get rid of the Any here - hopefully with a TypedDict
-    def _restore_dicts(self, item_type: str, items: List[str], read_json: bool = False) -> Dict[str, Any]:
+    def _restore_dicts(self, item_type: str, items: list[str], read_json: bool = False) -> dict[str, Any]:
         """Return a dict mapping of the items name to its state data."""
         key_to_item_map = self._keys_for_items(item_type, items)
         key_to_state_map = self._impl.restore(key_to_item_map.keys(), read_json)
@@ -300,7 +298,7 @@ class StateChangeWatcher(observer.Observer):
     def disabled(self):
         return self.state_manager.disabled()
 
-    def restore(self, jobs: List[str], read_json: bool = False) -> Dict[str, Any]:
+    def restore(self, jobs: list[str], read_json: bool = False) -> dict[str, Any]:
         # HACK: this cast is nasty, but we should probably refactor things so that the default self.state_manager
         # in not a NullStateManager
         return cast(PersistentStateManager, self.state_manager).restore(jobs, read_json)

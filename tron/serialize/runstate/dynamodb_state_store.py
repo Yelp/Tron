@@ -8,14 +8,10 @@ import threading
 import time
 from collections import defaultdict
 from collections import OrderedDict
+from collections.abc import Sequence
 from typing import Any
 from typing import DefaultDict
-from typing import Dict
-from typing import List
 from typing import Literal
-from typing import Optional
-from typing import Sequence
-from typing import Tuple
 from typing import TypeVar
 
 import boto3
@@ -82,7 +78,7 @@ class DynamoDBStateStore:
         """
         return f"{type} {iden}"
 
-    def restore(self, keys: List[str], read_json: bool = False) -> Dict[str, Any]:
+    def restore(self, keys: list[str], read_json: bool = False) -> dict[str, Any]:
         """
         Fetch all under the same partition key(s).
         ret: <dict of key to states>
@@ -95,7 +91,7 @@ class DynamoDBStateStore:
         vals = self._merge_items(first_items, remaining_items, read_json)
         return vals
 
-    def chunk_keys(self, keys: Sequence[T]) -> List[Sequence[T]]:
+    def chunk_keys(self, keys: Sequence[T]) -> list[Sequence[T]]:
         """Generates a list of chunks of keys to be used to read from DynamoDB"""
         # have a for loop here for all the key chunks we want to go over
         cand_keys_chunks = []
@@ -112,7 +108,7 @@ class DynamoDBStateStore:
         delay: int = min(base_delay_seconds * (2 ** (safe_attempt - 1)), max_delay_seconds)
         return delay
 
-    def _get_items(self, table_keys: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+    def _get_items(self, table_keys: list[dict[str, Any]]) -> list[dict[str, Any]]:
         items = []
         # let's avoid potentially mutating our input :)
         cand_keys_list = copy.copy(table_keys)
@@ -168,11 +164,11 @@ class DynamoDBStateStore:
             raise KeyError(msg)
         return items
 
-    def _get_first_partitions(self, keys: List[str]) -> List[Dict[str, Any]]:
+    def _get_first_partitions(self, keys: list[str]) -> list[dict[str, Any]]:
         new_keys = [{"key": {"S": key}, "index": {"N": "0"}} for key in keys]
         return self._get_items(new_keys)
 
-    def _get_remaining_partitions(self, items: List, read_json: bool) -> List[Dict[str, Any]]:
+    def _get_remaining_partitions(self, items: list, read_json: bool) -> list[dict[str, Any]]:
         """Get items in the remaining partitions: N = 1 and beyond"""
         keys_for_remaining_items = []
         for item in items:
@@ -193,8 +189,8 @@ class DynamoDBStateStore:
         return self._get_items(keys_for_remaining_items)
 
     def _merge_items(
-        self, first_items: List[Dict[str, Any]], remaining_items: List[Dict[str, Any]], read_json: bool = False
-    ) -> Dict[str, Any]:
+        self, first_items: list[dict[str, Any]], remaining_items: list[dict[str, Any]], read_json: bool = False
+    ) -> dict[str, Any]:
         """
         Helper to merge multi-partition data into a single entry. If read_json is
         False, we merge the pickle partitions - otherwise, we merge the json ones.
@@ -241,7 +237,7 @@ class DynamoDBStateStore:
             deserialized_items = {k: pickle.loads(v) for k, v in raw_items.items()}
         return deserialized_items
 
-    def save(self, key_value_pairs: List[Tuple[str, Optional[Dict[str, Any]]]]) -> None:
+    def save(self, key_value_pairs: list[tuple[str, dict[str, Any] | None]]) -> None:
         """Add items to the save_queue to be later consumed by _consume_save_queue"""
         for key, val in key_value_pairs:
             while True:
@@ -292,7 +288,7 @@ class DynamoDBStateStore:
         return key.split()[0]
 
     # TODO: TRON-2305 - In an ideal world, we wouldn't be passing around state/state_data dicts. It would be a lot nicer to have regular objects here
-    def _serialize_item(self, key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE], state: Dict[str, Any]) -> Optional[str]:  # type: ignore
+    def _serialize_item(self, key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE], state: dict[str, Any]) -> str | None:  # type: ignore
         try:
             if key == runstate.JOB_STATE:
                 log.info(f"Serializing Job: {state.get('job_name')}")
@@ -307,7 +303,7 @@ class DynamoDBStateStore:
             prom_metrics.json_serialization_errors_counter.inc()
             return None
 
-    def _deserialize_item(self, key: str, state: str) -> Dict[str, Any]:
+    def _deserialize_item(self, key: str, state: str) -> dict[str, Any]:
         try:
             json_key = key.split(" ")[0]
             if json_key == runstate.JOB_STATE:
@@ -339,7 +335,7 @@ class DynamoDBStateStore:
                 log.error("too many dynamodb errors in a row, crashing")
                 os.exit(1)
 
-    def __setitem__(self, key: str, value: Tuple[bytes, str]) -> None:
+    def __setitem__(self, key: str, value: tuple[bytes, str]) -> None:
         """
         Partition the item and write up to self.max_transact_write_items
         partitions atomically using TransactWriteItems.
@@ -365,7 +361,7 @@ class DynamoDBStateStore:
         prom_metrics.tron_dynamodb_partitions_histogram.observe(max_partitions)
 
         for index in range(max_partitions):
-            item: Dict[str, Any] = {  # TODO: replace this with a TypedDict
+            item: dict[str, Any] = {  # TODO: replace this with a TypedDict
                 "Put": {
                     "Item": {
                         "key": {
@@ -439,7 +435,7 @@ class DynamoDBStateStore:
                 delta=time.time() - start,
             )
 
-    def _get_num_of_partitions(self, key: str) -> Tuple[int, int]:
+    def _get_num_of_partitions(self, key: str) -> tuple[int, int]:
         """
         Return the number of partitions an item is divided into for both pickled and JSON data.
         """
