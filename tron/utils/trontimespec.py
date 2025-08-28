@@ -185,7 +185,7 @@ class TimeSpecification:
             max_days = max(month_max_days)
             for day in self.monthdays:
                 if day != TOKEN_LAST and day > max_days:
-                    raise ValueError(f"Day {day} does not exist in month {month}")
+                    raise ValueError(f"Day {day} does not exist in any specified month ({self.months})")
 
         self.timezone = get_timezone(timezone)
 
