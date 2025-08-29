@@ -11,8 +11,6 @@ ipdb
 ipython
 Jinja2>=3.1.2
 lockfile
-mock==3.0.5
-moto
 prometheus-client
 psutil
 py-bcrypt

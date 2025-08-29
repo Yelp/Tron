@@ -2,7 +2,7 @@ asynctest
 botocore-stubs
 debugpy
 flake8
-mock
+moto
 mypy
 pre-commit
 pytest
