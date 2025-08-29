@@ -1,5 +1,5 @@
---- a/debian/tron/opt/venvs/tron/lib/python3.8/site-packages/kubernetes/client/configuration.py
-+++ b/debian/tron/opt/venvs/tron/lib/python3.8/site-packages/kubernetes/client/configuration.py
+--- a/debian/tron/opt/venvs/tron/lib/python3.10/site-packages/kubernetes/client/configuration.py
++++ b/debian/tron/opt/venvs/tron/lib/python3.10/site-packages/kubernetes/client/configuration.py
 @@ -71,11 +71,11 @@
      """
 

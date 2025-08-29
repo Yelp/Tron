@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3.10
 """
 Write pid and stdout/stderr to a standard location before execing a command.
 """
@@ -10,8 +10,6 @@ import subprocess
 import sys
 import threading
 import time
-from typing import Dict
-from typing import Optional
 
 from tron import yaml
 
@@ -95,7 +93,7 @@ def build_environment(run_id, original_env=None):
     return new_env
 
 
-def build_labels(run_id: str, original_labels: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+def build_labels(run_id: str, original_labels: dict[str, str] | None = None) -> dict[str, str]:
     if original_labels is None:
         original_labels = dict()
 

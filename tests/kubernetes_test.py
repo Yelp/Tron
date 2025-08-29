@@ -1,5 +1,4 @@
 from typing import Any
-from typing import Dict
 from unittest import mock
 
 import pytest
@@ -66,7 +65,7 @@ def mock_event_factory(
     task_id: str,
     platform_type: str,
     message: str = None,
-    raw: Dict[str, Any] = None,
+    raw: dict[str, Any] = None,
     success: bool = False,
     terminal: bool = False,
 ) -> Event:

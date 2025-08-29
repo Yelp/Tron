@@ -4,8 +4,6 @@ import os
 from io import StringIO
 from shlex import quote
 from typing import Any
-from typing import Dict
-from typing import Optional
 
 from tron.config import schema
 from tron.serialize import filehandler
@@ -210,7 +208,7 @@ class SubprocessActionRunnerFactory(Persistable):
         return not self == other
 
     @staticmethod
-    def from_json(state_data: str) -> Dict[str, Any]:
+    def from_json(state_data: str) -> dict[str, Any]:
         try:
             json_data = json.loads(state_data)
             deserialized_data = {
@@ -223,7 +221,7 @@ class SubprocessActionRunnerFactory(Persistable):
             raise
 
     @staticmethod
-    def to_json(state_data: dict) -> Optional[str]:
+    def to_json(state_data: dict) -> str | None:
         try:
             return json.dumps(
                 {

@@ -14,9 +14,6 @@ import os
 import subprocess
 import sys
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from kubernetes.client import V1Pod
 from task_processing.plugins.kubernetes.kube_client import KubeClient
@@ -113,7 +110,7 @@ def parse_args():
     return args
 
 
-def fetch_pods(kubeconfig_path: str, kubecontext: Optional[str]) -> Dict[str, V1Pod]:
+def fetch_pods(kubeconfig_path: str, kubecontext: str | None) -> dict[str, V1Pod]:
     if kubecontext:
         # KubeClient only uses the environment variable
         os.environ["KUBECONTEXT"] = kubecontext
@@ -127,7 +124,7 @@ def fetch_pods(kubeconfig_path: str, kubecontext: Optional[str]) -> Dict[str, V1
     return {pod.metadata.name: pod for pod in completed_pod_list.items}
 
 
-def get_tron_state_from_api(tron_server: str, num_runs: int = 100) -> List[Dict[str, Dict[Any, Any]]]:
+def get_tron_state_from_api(tron_server: str, num_runs: int = 100) -> list[dict[str, dict[Any, Any]]]:
     if not tron_server:
         client_config = get_client_config()
         tron_server = client_config.get("server", "http://localhost:8089")
@@ -153,7 +150,7 @@ def get_tron_state_from_api(tron_server: str, num_runs: int = 100) -> List[Dict[
     return jobs
 
 
-def get_matching_pod(action_run: Dict[str, Any], pods: Dict[str, V1Pod]) -> Optional[V1Pod]:
+def get_matching_pod(action_run: dict[str, Any], pods: dict[str, V1Pod]) -> V1Pod | None:
     """Given a tron action_run, try to find the right pod that matches."""
     action_name = action_run["action_name"]
     job_name = action_run["job_name"]
@@ -184,7 +181,7 @@ def get_desired_state_from_pod(pod: V1Pod) -> str:
 
 
 def update_tron_from_pods(
-    jobs: List[Dict[str, Any]], pods: Dict[str, V1Pod], tronctl_wrapper: str = "tronctl", do_work: bool = False
+    jobs: list[dict[str, Any]], pods: dict[str, V1Pod], tronctl_wrapper: str = "tronctl", do_work: bool = False
 ):
     updated = []
     error = []

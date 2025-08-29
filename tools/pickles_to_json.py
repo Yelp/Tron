@@ -2,8 +2,6 @@ import argparse
 import math
 import os
 import pickle
-from typing import List
-from typing import Optional
 
 import boto3
 import requests
@@ -20,7 +18,7 @@ OBJECT_SIZE = 200_000
 
 
 def get_dynamodb_table(
-    aws_profile: Optional[str] = None, table: str = "infrastage-tron-state", region: str = "us-west-1"
+    aws_profile: str | None = None, table: str = "infrastage-tron-state", region: str = "us-west-1"
 ) -> ServiceResource:
     """
     Get the DynamoDB table resource.
@@ -33,7 +31,7 @@ def get_dynamodb_table(
     return session.resource("dynamodb", region_name=region).Table(table)
 
 
-def get_all_jobs(source_table: ServiceResource) -> List[str]:
+def get_all_jobs(source_table: ServiceResource) -> list[str]:
     """
     Scan the DynamoDB table and return a list of unique job keys.
     :param source_table: The DynamoDB table resource to scan.
@@ -44,7 +42,7 @@ def get_all_jobs(source_table: ServiceResource) -> List[str]:
     return list(unique_keys)
 
 
-def get_job_names(base_url: str) -> List[str]:
+def get_job_names(base_url: str) -> list[str]:
     """
     Get the list of job names from the Tron API.
     :param base_url: The base URL of the Tron API.
@@ -101,7 +99,7 @@ def dump_pickle_key(source_table: ServiceResource, key: str) -> None:
         raise
 
 
-def dump_pickle_keys(source_table: ServiceResource, keys: List[str]) -> None:
+def dump_pickle_keys(source_table: ServiceResource, keys: list[str]) -> None:
     """
     Load and print pickles for the given list of keys.
     :param source_table: The DynamoDB table resource.
@@ -128,7 +126,7 @@ def dump_json_key(source_table: ServiceResource, key: str) -> None:
         print(f"Key: {key} - Failed to load JSON: {e}")
 
 
-def dump_json_keys(source_table: ServiceResource, keys: List[str]) -> None:
+def dump_json_keys(source_table: ServiceResource, keys: list[str]) -> None:
     """
     Load and print JSON data for the given list of keys.
     :param source_table: The DynamoDB table resource.
@@ -139,7 +137,7 @@ def dump_json_keys(source_table: ServiceResource, keys: List[str]) -> None:
 
 
 # TODO: clean up old run history for valid jobs? something something look at job_state, then whitelist those runs instead of whitelisting entire jobs
-def delete_keys(source_table: ServiceResource, keys: List[str]) -> None:
+def delete_keys(source_table: ServiceResource, keys: list[str]) -> None:
     """
     Delete items with the given list of keys from the DynamoDB table.
     :param source_table: The DynamoDB table resource.
@@ -179,7 +177,7 @@ def get_num_partitions(source_table: ServiceResource, key: str) -> int:
     return max(num_partitions, num_json_val_partitions)
 
 
-def combine_json_partitions(source_table: ServiceResource, key: str) -> Optional[str]:
+def combine_json_partitions(source_table: ServiceResource, key: str) -> str | None:
     """
     Combine all partitions of a JSON item from DynamoDB.
     :param source_table: The DynamoDB table resource.
@@ -254,11 +252,11 @@ def convert_pickle_to_json_and_update_table(source_table: ServiceResource, key: 
 
 def convert_pickles_to_json_and_update_table(
     source_table: ServiceResource,
-    keys: List[str],
+    keys: list[str],
     dry_run: bool = True,
-    deprecated_keys_output: Optional[str] = None,
-    failed_keys_output: Optional[str] = None,
-    job_names: List[str] = [],
+    deprecated_keys_output: str | None = None,
+    failed_keys_output: str | None = None,
+    job_names: list[str] = [],
 ) -> None:
     """
     Convert pickled items in the DynamoDB table to JSON and update the entries.
@@ -324,7 +322,7 @@ def convert_pickles_to_json_and_update_table(
         print("Dry run complete. No changes were made to the DynamoDB table.")
 
 
-def scan_table(source_table: ServiceResource) -> List[dict]:
+def scan_table(source_table: ServiceResource) -> list[dict]:
     """
     Scan the DynamoDB table and return all items, handling pagination.
     :param source_table: The DynamoDB table resource to scan.

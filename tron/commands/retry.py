@@ -3,9 +3,6 @@ import asyncio
 import datetime
 import functools
 import random
-from typing import Dict
-from typing import List
-from typing import Optional
 from urllib.parse import urljoin
 
 import pytimeparse  # type:ignore
@@ -59,7 +56,7 @@ class RetryAction:
         self._elapsed = datetime.timedelta(seconds=0)
         self._triggers_done = False
         self._required_actions_done = False
-        self._retry_request_result: Optional[bool] = RetryAction.RETRY_NOT_ISSUED
+        self._retry_request_result: bool | None = RetryAction.RETRY_NOT_ISSUED
 
     @property
     def job_run_name(self) -> str:
@@ -95,7 +92,7 @@ class RetryAction:
         self.tron_client.action_runs(action_run_id.url, num_lines=0)  # verify action exists
         return action_run_id
 
-    def _get_required_action_indices(self) -> Dict[str, int]:
+    def _get_required_action_indices(self) -> dict[str, int]:
         job_run = self.tron_client.job_runs(self.job_run_id.url)
         required_actions = set()
         action_indices = {}
@@ -131,7 +128,7 @@ class RetryAction:
                 self._log(f"Required actions not yet succeeded: {remaining_required_actions}")
         return self._triggers_done and self._required_actions_done
 
-    async def check_trigger_statuses(self) -> Dict[str, bool]:
+    async def check_trigger_statuses(self) -> dict[str, bool]:
         action_run = await asyncio.get_event_loop().run_in_executor(
             None,
             functools.partial(
@@ -153,7 +150,7 @@ class RetryAction:
                 trigger_states[trigger] = len(maybe_state) == 1
         return trigger_states
 
-    async def check_required_actions_statuses(self) -> Dict[str, bool]:
+    async def check_required_actions_statuses(self) -> dict[str, bool]:
         action_runs = (
             await asyncio.get_event_loop().run_in_executor(
                 None,
@@ -232,10 +229,10 @@ class RetryAction:
 
 def retry_actions(
     tron_server: str,
-    full_action_names: List[str],
+    full_action_names: list[str],
     use_latest_command: bool = False,
     deps_timeout_s: int = RetryAction.NO_TIMEOUT,
-) -> List[RetryAction]:
+) -> list[RetryAction]:
     tron_client = client.Client(tron_server, user_attribution=True)
     r_actions = [RetryAction(tron_client, name, use_latest_command=use_latest_command) for name in full_action_names]
 
@@ -263,7 +260,7 @@ class DisplayRetries(display.TableDisplay):
     header_color = "hgray"
 
 
-def print_retries_table(retries: List[RetryAction]) -> None:
+def print_retries_table(retries: list[RetryAction]) -> None:
     """Prints retry runs in a table"""
     with display.Color.enable():
         table = DisplayRetries().format([dict(full_action_name=r.full_action_name, status=r.status) for r in retries])

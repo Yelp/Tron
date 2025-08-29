@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.8
+#!/usr/bin/env python3.10
 #
 # get_tron_metrics.py
 #   This script is designed to retrieve metrics from Tron via its API and send

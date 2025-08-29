@@ -7,8 +7,6 @@ import logging
 import time
 from collections import deque
 from typing import Any
-from typing import Dict
-from typing import Optional
 
 import pytz
 
@@ -60,11 +58,11 @@ class JobRun(Observable, Observer, Persistable):
         run_num: int,
         run_time: datetime.datetime,
         node: node.Node,
-        output_path: Optional[filehandler.OutputPath] = None,
-        base_context: Optional[command_context.CommandContext] = None,
-        action_runs: Optional[ActionRunCollection] = None,
-        action_graph: Optional[ActionGraph] = None,
-        manual: Optional[bool] = None,
+        output_path: filehandler.OutputPath | None = None,
+        base_context: command_context.CommandContext | None = None,
+        action_runs: ActionRunCollection | None = None,
+        action_graph: ActionGraph | None = None,
+        manual: bool | None = None,
     ):
         super().__init__()
         self.job_name = maybe_decode(
@@ -86,7 +84,7 @@ class JobRun(Observable, Observer, Persistable):
         self.context = command_context.build_context(self, base_context)
 
     @staticmethod
-    def to_json(state_data: dict) -> Optional[str]:
+    def to_json(state_data: dict) -> str | None:
         """Serialize the JobRun instance to a JSON string."""
         try:
             return json.dumps(
@@ -113,7 +111,7 @@ class JobRun(Observable, Observer, Persistable):
             raise
 
     @staticmethod
-    def from_json(state_data: str) -> Dict[str, Any]:  # TODO: make a TypedDict for this
+    def from_json(state_data: str) -> dict[str, Any]:  # TODO: make a TypedDict for this
         """Deserialize the JobRun instance from a JSON string."""
         try:
             json_data = json.loads(state_data)
@@ -301,9 +299,7 @@ class JobRun(Observable, Observer, Persistable):
 
         return started_runs
 
-    def handle_action_run_state_change(
-        self, action_run: ActionRun, event: str, event_data: Optional[Any] = None
-    ) -> None:
+    def handle_action_run_state_change(self, action_run: ActionRun, event: str, event_data: Any | None = None) -> None:
         """Handle events triggered by JobRuns."""
         log.info(f"{self} got an event: {event}")
         metrics.meter(f"tron.actionrun.{event}")
@@ -386,7 +382,7 @@ class JobRun(Observable, Observer, Persistable):
     def get_action_run(self, action_name):
         return self.action_runs.get(action_name)
 
-    def log_state_update(self, state: str, action_name: Optional[str] = None) -> None:
+    def log_state_update(self, state: str, action_name: str | None = None) -> None:
         if action_name is None:
             state = f"job_{state}"
         else:

@@ -60,10 +60,10 @@ coffee_%: docker_%
 	'
 
 test:
-	tox -e py38
+	tox -e py310
 
 test_in_docker_%: docker_%
-	$(DOCKER_RUN) tron-builder-$* python3.8 -m tox -vv -e py38
+	$(DOCKER_RUN) tron-builder-$* python3.10 -m tox -vv -e py310
 
 tox_%:
 	tox -e $*
@@ -78,13 +78,13 @@ itest_%: debitest_%
 	@echo "itest $* OK"
 
 dev:
-	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py38/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0
+	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py310/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0
 
 example_cluster:
 	tox -e example-cluster
 
 yelpy:
-	.tox/py38/bin/pip install -r yelp_package/extra_requirements_yelp.txt
+	.tox/py310/bin/pip install -r yelp_package/extra_requirements_yelp.txt
 
 
 # 1. Bump version at the top of this file
