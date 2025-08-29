@@ -1,5 +1,6 @@
 import concurrent.futures
 import copy
+import gzip
 import logging
 import math
 import pickle
@@ -214,15 +215,49 @@ class DynamoDBStateStore:
             for val in key_items:
                 if "val" in val:
                     raw_items[key] += bytes(val["val"]["B"])
+
+            # This is a bit messy but we need to handle both compressed binary data
+            # and uncompressed string data since we rolled out the JSON serialization
+            # in two phases. Newer items will have compressed binary data while
+            # older items will have uncompressed string data. This is temporary
+            # and will be removed once we've compressed all JSON.
             if read_json:
-                for json_val in key_items:
-                    try:
-                        json_items[key] += json_val["json_val"]["S"]
-                    except Exception:
-                        log.exception(f"json_val not found for key {key}")
-                        # fallback to pickled data if json_val fails to exist for any key
-                        # TODO: it would be nice if we can read the pickled data only for this failed key instead of all keys
-                        read_json = False
+                try:
+                    for key, key_items in items.items():
+                        # Shouldn't happen, but let's skip potentially bad data
+                        if not key_items:
+                            continue
+
+                        # Find first partition with json_val so that we can determine format
+                        first_part_with_json = next((p for p in key_items if "json_val" in p), None)
+
+                        # Again, this really shouldn't happen, but if somehow we have bad data let's just skip it
+                        if not first_part_with_json:
+                            continue
+
+                        json_val_content = first_part_with_json["json_val"]
+                        if "B" in json_val_content:  # Compressed binary format
+                            compressed_data = bytearray()
+                            for part in key_items:
+                                if "json_val" in part and "B" in part["json_val"]:
+                                    compressed_data += part["json_val"]["B"]
+                            if compressed_data:
+                                json_items[key] = gzip.decompress(compressed_data).decode("utf-8")
+                        elif "S" in json_val_content:  # Uncompressed string format
+                            uncompressed_data = ""
+                            for part in key_items:
+                                if "json_val" in part and "S" in part["json_val"]:
+                                    uncompressed_data += part["json_val"]["S"]
+                            if uncompressed_data:
+                                json_items[key] = uncompressed_data
+
+                    deserialized_items = {k: self._deserialize_item(k, v) for k, v in json_items.items() if v}
+
+                except Exception:
+                    log.exception("Critical error processing JSON items, falling back to pickled data for all keys.")
+                    read_json = False
+                    json_items.clear()
+
         if read_json:
             try:
                 log.info("read_json is enabled. Deserializing JSON items to restore them instead of pickled data.")
@@ -292,12 +327,16 @@ class DynamoDBStateStore:
         try:
             if key == runstate.JOB_STATE:
                 log.info(f"Serializing Job: {state.get('job_name')}")
-                return Job.to_json(state)
+                serialized_data = Job.to_json(state)
             elif key == runstate.JOB_RUN_STATE:
                 log.info(f"Serializing JobRun: {state.get('job_name')}.{state.get('run_num')}")
-                return JobRun.to_json(state)
+                serialized_data = JobRun.to_json(state)
             else:
                 raise ValueError(f"Unknown type: key {key}")
+
+            if serialized_data:
+                return gzip.compress(serialized_data.encode("utf-8"))
+            return None
         except Exception:
             log.exception(f"Serialization error for key {key}")
             prom_metrics.json_serialization_errors_counter.inc()
@@ -385,7 +424,7 @@ class DynamoDBStateStore:
 
             if json_val:
                 item["Put"]["Item"]["json_val"] = {
-                    "S": json_val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(json_val))]
+                    "B": json_val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(json_val))]
                 }
                 item["Put"]["Item"]["num_json_val_partitions"] = {
                     "N": str(num_json_val_partitions),
