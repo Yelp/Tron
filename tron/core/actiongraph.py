@@ -1,9 +1,7 @@
 import logging
 from collections import namedtuple
-from typing import Mapping
-from typing import Sequence
-from typing import Set
-from typing import Union
+from collections.abc import Mapping
+from collections.abc import Sequence
 
 from tron.core.action import Action
 from tron.utils.timeutils import delta_total_seconds
@@ -18,8 +16,8 @@ class ActionGraph:
     def __init__(
         self,
         action_map: Mapping[str, Action],
-        required_actions: Mapping[str, Set[str]],
-        required_triggers: Mapping[str, Set[str]],
+        required_actions: Mapping[str, set[str]],
+        required_triggers: Mapping[str, set[str]],
     ) -> None:
         self.action_map = action_map
         self.required_actions = required_actions
@@ -29,7 +27,7 @@ class ActionGraph:
             self.all_triggers |= action_triggers
         self.all_triggers -= set(self.action_map)
 
-    def get_dependencies(self, action_name: str, include_triggers: bool = False) -> Sequence[Union[Action, Trigger]]:
+    def get_dependencies(self, action_name: str, include_triggers: bool = False) -> Sequence[Action | Trigger]:
         """Given an Action's name return the Actions (and optionally, Triggers)
         required to run before that Action.
         """

@@ -13,12 +13,6 @@ import logging
 import os
 from copy import deepcopy
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Set
-from typing import Tuple
-from typing import Union
 from urllib.parse import urlparse
 
 import pytz
@@ -287,7 +281,7 @@ class ValidateSecretSource(Validator):
 valid_secret_source = ValidateSecretSource()
 
 
-def valid_permission_mode(value: Union[str, int], config_context: ConfigContext) -> str:
+def valid_permission_mode(value: str | int, config_context: ConfigContext) -> str:
     try:
         decimal_value = int(
             str(value), base=8
@@ -423,7 +417,7 @@ def _valid_when_unsatisfiable(value: str, config_context: ConfigContext) -> str:
     return value
 
 
-def _valid_topology_spread_label_selector(value: Dict[str, str], config_context: ConfigContext) -> Dict[str, str]:
+def _valid_topology_spread_label_selector(value: dict[str, str], config_context: ConfigContext) -> dict[str, str]:
     if not value:
         raise ConfigError("TopologySpreadConstraints must have a label_selector")
 
@@ -773,7 +767,7 @@ class ValidateJob(Validator):
     """Validate jobs."""
 
     config_class = ConfigJob
-    defaults: Dict[str, Any] = {
+    defaults: dict[str, Any] = {
         "run_limit": 50,
         "all_nodes": False,
         "cleanup_action": None,
@@ -812,14 +806,14 @@ class ValidateJob(Validator):
     # TODO: extract common code to a util function
     def _validate_dependencies(
         self,
-        job: Dict[str, Any],  # TODO: create TypedDict for this
+        job: dict[str, Any],  # TODO: create TypedDict for this
         # TODO: setup UniqueNameDict for use with mypy so that the following line
         # is not a lie
-        actions: Dict[str, ConfigAction],
+        actions: dict[str, ConfigAction],
         base_action: ConfigAction,
-        current_action: Optional[ConfigAction] = None,
-        stack: Optional[List[str]] = None,
-        already_validated: Optional[Set[Tuple[str, str]]] = None,
+        current_action: ConfigAction | None = None,
+        stack: list[str] | None = None,
+        already_validated: set[tuple[str, str]] | None = None,
     ) -> None:
         """Check for circular or misspelled dependencies."""
         # for large graphs, we can end up validating the same jobs/actions repeatedly

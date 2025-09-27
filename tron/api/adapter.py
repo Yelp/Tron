@@ -7,10 +7,8 @@
 import functools
 import os.path
 import time
+from collections.abc import Callable
 from typing import Any
-from typing import Callable
-from typing import List
-from typing import Optional
 from typing import TypeVar
 from urllib.parse import quote
 
@@ -28,8 +26,8 @@ R = TypeVar("R")
 class ReprAdapter:
     """Creates a dictionary from the given object for a set of rules."""
 
-    field_names: List[str] = []
-    translated_field_names: List[str] = []
+    field_names: list[str] = []
+    translated_field_names: list[str] = []
 
     def __init__(self, internal_obj):
         self._obj = internal_obj
@@ -61,15 +59,15 @@ def toggle_flag(
     [Callable[[Any], R]],
     # and that decorator returns another callable (since this is a decorator factory) that takes self (again, the Any)
     # and returns None (if the flag is False) or R (if True)
-    Callable[[Any], Optional[R]],
+    Callable[[Any], R | None],
 ]:
     """Create a decorator which checks if flag_name is true before running
     the wrapped function. If False returns None.
     """
 
-    def wrap(f: Callable[[Any], R]) -> Callable[[Any], Optional[R]]:
+    def wrap(f: Callable[[Any], R]) -> Callable[[Any], R | None]:
         @functools.wraps(f)
-        def wrapper(self: Any) -> Optional[R]:
+        def wrapper(self: Any) -> R | None:
             if getattr(self, flag_name):
                 return f(self)
             return None
@@ -155,7 +153,7 @@ class ActionRunAdapter(RunAdapter):
         required = self.job_run.action_graph.get_dependencies(action_name)
         return [act.name for act in required]
 
-    def _get_serializer(self, path: Optional[str] = None) -> filehandler.OutputStreamSerializer:
+    def _get_serializer(self, path: str | None = None) -> filehandler.OutputStreamSerializer:
         base_path = filehandler.OutputPath(path) if path else self._obj.output_path
         return filehandler.OutputStreamSerializer(base_path)
 
@@ -181,14 +179,14 @@ class ActionRunAdapter(RunAdapter):
                 yield formatted_alt_path
 
     @toggle_flag("include_meta")
-    def get_meta(self) -> List[str]:
+    def get_meta(self) -> list[str]:
         if not isinstance(self._obj, KubernetesActionRun):
             return ["When this action is migrated to Kubernetes, this will contain Tron/task_processing output."]
 
         # We're reusing the "old" (i.e., SSH/Mesos) logging files for task_processing output since
         # that won't make it into anything but Splunk
         filename = actioncommand.ActionCommand.STDERR
-        output: List[str] = self._get_serializer().tail(filename, self.max_lines)
+        output: list[str] = self._get_serializer().tail(filename, self.max_lines)
         if not output:
             for alt_path in self._get_alternate_output_paths():
                 output = self._get_serializer(alt_path).tail(filename, self.max_lines)
@@ -197,7 +195,7 @@ class ActionRunAdapter(RunAdapter):
         return output
 
     @toggle_flag("include_stdout")
-    def get_stdout(self) -> List[str]:
+    def get_stdout(self) -> list[str]:
         if isinstance(self._obj, KubernetesActionRun):
             # it's possible that we have a job that logs to the samestream as another job on a
             # different master (e.g., 1 job in pnw-devc and another in norcal-devc), so we
@@ -239,7 +237,7 @@ class ActionRunAdapter(RunAdapter):
         return output
 
     @toggle_flag("include_stderr")
-    def get_stderr(self) -> List[str]:
+    def get_stderr(self) -> list[str]:
         if isinstance(self._obj, KubernetesActionRun):
             # it's possible that we have a job that logs to the samestream as another job on a
             # different master (e.g., 1 job in pnw-devc and another in norcal-devc), so we

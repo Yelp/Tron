@@ -5,10 +5,6 @@ from dataclasses import dataclass
 from dataclasses import field
 from dataclasses import fields
 from typing import Any
-from typing import Dict
-from typing import List
-from typing import Optional
-from typing import Union
 
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
@@ -32,28 +28,28 @@ class ActionCommandConfig(Persistable):
     """A configurable data object for one try of an Action."""
 
     command: str
-    cpus: Optional[float] = None
-    mem: Optional[float] = None
-    disk: Optional[float] = None
-    cap_add: List[str] = field(default_factory=list)
-    cap_drop: List[str] = field(default_factory=list)
+    cpus: float | None = None
+    mem: float | None = None
+    disk: float | None = None
+    cap_add: list[str] = field(default_factory=list)
+    cap_drop: list[str] = field(default_factory=list)
     constraints: set = field(default_factory=set)
-    docker_image: Optional[str] = None
+    docker_image: str | None = None
     docker_parameters: set = field(default_factory=set)
     env: dict = field(default_factory=dict)
     secret_env: dict = field(default_factory=dict)
-    secret_volumes: List[ConfigSecretVolume] = field(default_factory=list)
-    projected_sa_volumes: List[ConfigProjectedSAVolume] = field(default_factory=list)
+    secret_volumes: list[ConfigSecretVolume] = field(default_factory=list)
+    projected_sa_volumes: list[ConfigProjectedSAVolume] = field(default_factory=list)
     field_selector_env: dict = field(default_factory=dict)
     extra_volumes: set = field(default_factory=set)
     node_selectors: dict = field(default_factory=dict)
-    node_affinities: List[ConfigNodeAffinity] = field(default_factory=list)
-    topology_spread_constraints: List[ConfigTopologySpreadConstraints] = field(default_factory=list)
+    node_affinities: list[ConfigNodeAffinity] = field(default_factory=list)
+    topology_spread_constraints: list[ConfigTopologySpreadConstraints] = field(default_factory=list)
     labels: dict = field(default_factory=dict)
     idempotent: bool = False
     annotations: dict = field(default_factory=dict)
-    service_account_name: Optional[str] = None
-    ports: List[int] = field(default_factory=list)
+    service_account_name: str | None = None
+    ports: list[int] = field(default_factory=list)
 
     @property
     def state_data(self):
@@ -65,7 +61,7 @@ class ActionCommandConfig(Persistable):
     @staticmethod
     def from_json(
         state_data: str,
-    ) -> Dict[str, Any]:  # TODO: use a TypedDict (or return an ActionCommandConfig instance)
+    ) -> dict[str, Any]:  # TODO: use a TypedDict (or return an ActionCommandConfig instance)
         """Deserialize a JSON string to an ActionCommandConfig dict."""
         try:
             json_data = json.loads(state_data)
@@ -185,14 +181,14 @@ class Action:
     name: str
     command_config: ActionCommandConfig
     node_pool: str
-    retries: Optional[int] = None
-    retries_delay: Optional[datetime.timedelta] = None
-    expected_runtime: Optional[datetime.timedelta] = None
-    executor: Optional[str] = None
-    trigger_downstreams: Optional[Union[bool, dict]] = None
-    triggered_by: Optional[set] = None
-    on_upstream_rerun: Optional[str] = None
-    trigger_timeout: Optional[datetime.timedelta] = None
+    retries: int | None = None
+    retries_delay: datetime.timedelta | None = None
+    expected_runtime: datetime.timedelta | None = None
+    executor: str | None = None
+    trigger_downstreams: bool | dict | None = None
+    triggered_by: set | None = None
+    on_upstream_rerun: str | None = None
+    trigger_timeout: datetime.timedelta | None = None
     idempotent: bool = False
 
     @property

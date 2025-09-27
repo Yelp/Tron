@@ -3,7 +3,6 @@ import os
 import re
 from functools import lru_cache
 from typing import NamedTuple
-from typing import Optional
 
 import cachetools.func
 import requests
@@ -68,7 +67,7 @@ class AuthorizationFilter:
         path: str,
         token: str,
         method: str,
-        service: Optional[str],
+        service: str | None,
     ) -> AuthorizationOutcome:
         """Check if API request is authorized
 
@@ -107,7 +106,7 @@ class AuthorizationFilter:
         return AuthorizationOutcome(True, reason)
 
     @staticmethod
-    def _extract_service_from_path(path: str) -> Optional[str]:
+    def _extract_service_from_path(path: str) -> str | None:
         """If a request path contains a service name, extract it.
 
         Example:

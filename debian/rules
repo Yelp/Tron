@@ -22,11 +22,11 @@ override_dh_virtualenv:
 	dh_virtualenv --index-url $(PIP_INDEX_URL) \
 	            --extra-pip-arg  --trusted-host=169.254.255.254 \
 	            --extra-pip-arg  --only-binary=cryptography \
-                --python=/usr/bin/python3.8 \
+                --python=/usr/bin/python3.10 \
                 --preinstall cython==0.29.36 \
                 --preinstall pip==24.3.1 \
                 --preinstall setuptools==65.5.1
 	@echo patching k8s client lib for configuration class
-	patch debian/tron/opt/venvs/tron/lib/python3.8/site-packages/kubernetes/client/configuration.py contrib/patch-config-loggers.diff
+	patch debian/tron/opt/venvs/tron/lib/python3.10/site-packages/kubernetes/client/configuration.py contrib/patch-config-loggers.diff
 override_dh_installinit:
 	dh_installinit --noscripts

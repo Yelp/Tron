@@ -5,7 +5,6 @@ import signal
 import time
 from collections import defaultdict
 from collections import deque
-from typing import Optional
 
 from twisted.internet import reactor
 
@@ -148,7 +147,7 @@ class EventBus:
     def sync_save_log(self, reason: str) -> bool:
         started = time.time()
         new_file = os.path.join(self.log_dir, f"{int(started)}.pickle")
-        previous_file: Optional[str] = os.path.realpath(os.path.join(self.log_dir, "current"))
+        previous_file: str | None = os.path.realpath(os.path.join(self.log_dir, "current"))
         # if we're starting  a fresh Tron server, there won't be a current symlink
         # and the above line will give us the path to what will eventually be the current
         # symlink...which is undesirable since we clean up whatever this points to :p

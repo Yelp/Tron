@@ -5,8 +5,6 @@ import shelve
 import sys
 from io import BytesIO
 from typing import Any
-from typing import Dict
-from typing import List
 
 import bsddb3  # type: ignore
 
@@ -96,7 +94,7 @@ class ShelveStateStore:
                 self.shelve[shelve_key] = state_data
         self.shelve.sync()
 
-    def restore(self, keys: List[ShelveKey], read_json: bool = False) -> Dict[ShelveKey, Any]:
+    def restore(self, keys: list[ShelveKey], read_json: bool = False) -> dict[ShelveKey, Any]:
         items = zip(
             keys,
             (self.shelve.get(str(key.key)) for key in keys),

@@ -24,8 +24,8 @@ RUN apt-get -q update && \
         libyaml-dev \
         libssl-dev \
         libffi-dev \
-        python3.8-dev \
-        python3.8-distutils \
+        python3.10-dev \
+        python3.10-distutils \
         python3-pip \
         rust-all \
         tox \

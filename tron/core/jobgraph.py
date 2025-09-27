@@ -1,9 +1,6 @@
 from collections import defaultdict
 from collections import namedtuple
 from typing import DefaultDict
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from tron.config.config_parse import ConfigContainer
 from tron.core.action import Action
@@ -18,14 +15,14 @@ class JobGraph:
     cross-job dependencies (aka triggers)
     """
 
-    def __init__(self, config_container: ConfigContainer, should_validate_missing_dependency: Optional[bool] = False):
+    def __init__(self, config_container: ConfigContainer, should_validate_missing_dependency: bool | None = False):
         """Build an adjacency list and a reverse adjacency list for the graph,
         and store all the actions as well as which actions belong to which job
         """
-        self.action_map: Dict[str, Action] = {}
-        self._actions_for_job: DefaultDict[str, List[str]] = defaultdict(list)
-        self._adj_list: DefaultDict[str, List[AdjListEntry]] = defaultdict(list)
-        self._rev_adj_list: DefaultDict[str, List[AdjListEntry]] = defaultdict(list)
+        self.action_map: dict[str, Action] = {}
+        self._actions_for_job: DefaultDict[str, list[str]] = defaultdict(list)
+        self._adj_list: DefaultDict[str, list[AdjListEntry]] = defaultdict(list)
+        self._rev_adj_list: DefaultDict[str, list[AdjListEntry]] = defaultdict(list)
 
         all_actions = set()
         for job_name, job_config in config_container.get_jobs().items():

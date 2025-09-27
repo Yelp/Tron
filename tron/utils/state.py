@@ -1,6 +1,6 @@
 import logging
 from collections import defaultdict
-from typing import Mapping
+from collections.abc import Mapping
 
 log = logging.getLogger(__name__)
 
