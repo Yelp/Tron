@@ -1,3 +1,18 @@
+tron (3.8.6) jammy; urgency=medium
+
+  * 3.8.6 tagged with 'make release'
+    Commit: Add another disk eviction substring (#1074)  We"re also
+    seeing messages that look like: `Pod ephemeral local storage usage
+    exceeds the total limit of containers 1Gi.` which don"t trigger the
+    existing check.  This adds "ephemeral local storage" as another
+    trigger without removing the existing one.  I"m not quite sure how
+    k8s decides which message to use without reading through the k8s
+    code further, but it appears that both cases are possible:
+    https://github.com/kubernetes/kubernetes/blob/350481c4747da5c2ad4f24
+    e71e7edaabbd4cfe2e/pkg/kubelet/eviction/helpers.go#L53-L57
+
+ -- Luis Perez <luisp@yelp.com>  Mon, 03 Nov 2025 09:56:04 -0800
+
 tron (3.8.5) jammy; urgency=medium
 
   * 3.8.5 tagged with 'make release'
