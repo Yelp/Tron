@@ -34,6 +34,7 @@ from tron.commands.backfill import print_backfill_runs_table
 from tron.commands.backfill import run_backfill_for_date_range
 from tron.commands.client import RequestError
 from tron.commands.client import TronObjectIdentifier
+from tron.commands.cmd_utils import COLOR_YELLOW
 from tron.commands.cmd_utils import ExitCode
 from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
@@ -251,6 +252,46 @@ def request(url: str, data: Dict[str, Any], headers=None, method=None) -> bool:
 
 def event_publish(args):
     for event in args.id:
+        # trying to publish a job run/action run id will likely print multiple warnings
+        # since the conditions are somewhat overlapping - only print the first one
+        warning_printed = False
+        split_event = event.split(".")
+        # first, let's try to catch folks trying to publish a job run or action run id as a trigger
+        # these will look something like NAMESPACE.JOB_NAME.RUN_NUMBER or NAMESPACE.JOB_NAME.RUN_NUMBER.ACTION_NAME
+        # i.e., if the 3rd element is an integer, it's one of these
+        if len(split_event) >= 3:
+            try:
+                int(split_event[2])
+                print(
+                    warning_output(
+                        f"\nWarning: the event id '{event}' looks like a job run or action run id rather than a trigger id!",
+                        color=COLOR_YELLOW,
+                    )
+                )
+                print(
+                    warning_output(
+                        "This is almost certainly incorrect and you want something like `tronctl publish $SERVICE.$JOB_NAME.$ACTION_NAME.$TRIGGER_NAME.$TRIGGER_VALUE",
+                        color=COLOR_YELLOW,
+                    )
+                )
+                warning_printed = True
+            except ValueError:
+                pass
+
+        if len(split_event) != 5 and not warning_printed:
+            print(
+                warning_output(
+                    f"\nWarning: '{event}' is too {'long' if len(split_event) > 5 else 'short'} and does not match the expected trigger format!",
+                    color=COLOR_YELLOW,
+                )
+            )
+            print(
+                warning_output(
+                    "This is almost certainly incorrect and you want something like `tronctl publish $SERVICE.$JOB_NAME.$ACTION_NAME.$TRIGGER_NAME.$TRIGGER_VALUE",
+                    color=COLOR_YELLOW,
+                )
+            )
+
         yield request(
             urljoin(args.server, "/api/events"),
             dict(command="publish", event=event),
