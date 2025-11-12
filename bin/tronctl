@@ -270,7 +270,7 @@ def event_publish(args):
                 )
                 print(
                     warning_output(
-                        "This is almost certainly incorrect and you want something like `tronctl publish $SERVICE.$JOB_NAME.$ACTION_NAME.$TRIGGER_NAME.$TRIGGER_VALUE",
+                        "This is almost certainly incorrect and you want something like `tronctl publish $SERVICE.$JOB_NAME.$ACTION_NAME.$TRIGGER_NAME.$TRIGGER_VALUE`",
                         color=COLOR_YELLOW,
                     )
                 )
@@ -287,7 +287,7 @@ def event_publish(args):
             )
             print(
                 warning_output(
-                    "This is almost certainly incorrect and you want something like `tronctl publish $SERVICE.$JOB_NAME.$ACTION_NAME.$TRIGGER_NAME.$TRIGGER_VALUE",
+                    "This is almost certainly incorrect and you want something like `tronctl publish $SERVICE.$JOB_NAME.$ACTION_NAME.$TRIGGER_NAME.$TRIGGER_VALUE`",
                     color=COLOR_YELLOW,
                 )
             )
