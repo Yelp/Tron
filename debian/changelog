@@ -1,3 +1,21 @@
+tron (3.8.8) jammy; urgency=medium
+
+  * 3.8.8 tagged with 'make release'
+    Commit: Try to warn folks about incorrect `tronctl publish` usage
+    (#1076)  It"s absurdly easy to use this incorrectly (especially if
+    you"ve been woken up by a page ;p) - so let"s try to warn folks if
+    they"re potentially using `tronctl publish` incorrectly  afaik, the
+    usual mistakes here are to use a job/action id (detectable by the
+    run number) OR to use a too long/short trigger id (either from copy-
+    pasting too much or too little)  I"ve opted to not error out when
+    this happens since I"m somewhat sure that it"s possible to manually
+    construct triggers that don"t match this format and depend on those
+    triggers in soaconfigs. If anyone with more time wants to vibe-code
+    something to verify this (and maybe even add some validation to the
+    tronfig schema ;)), then we can always error out immediately
+
+ -- Luis Perez <luisp@yelp.com>  Thu, 20 Nov 2025 12:01:45 -0800
+
 tron (3.8.7) jammy; urgency=medium
 
   * 3.8.7 tagged with 'make release'
