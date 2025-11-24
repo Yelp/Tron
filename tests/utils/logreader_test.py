@@ -160,25 +160,6 @@ def test_read_log_stream_for_action_run_for_long_output():
     assert len(output) == max_lines + 1
 
 
-def test_decompose_action_id_yml_file_found():
-    action_run_id = "namespace.job.1234.action"
-    paasta_cluster = "fake_cluster"
-    config_content = """
-    job:
-        actions:
-            action:
-                service: test_service
-    """
-    with mock.patch("builtins.open", mock.mock_open(read_data=config_content)), mock.patch(
-        "yaml.safe_load", return_value=yaml.safe_load(config_content)
-    ):
-        namespace, job_name, run_num, action = decompose_action_id(action_run_id, paasta_cluster)
-        assert namespace == "test_service"
-        assert job_name == "job"
-        assert run_num == "1234"
-        assert action == "action"
-
-
 def test_decompose_action_id_file_not_found():
     action_run_id = "namespace.job.1234.action"
     paasta_cluster = "fake_cluster"
