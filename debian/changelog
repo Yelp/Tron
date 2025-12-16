@@ -1,3 +1,64 @@
+tron (3.8.9) jammy; urgency=medium
+
+  * 3.8.9 tagged with 'make release'
+    Commit: Assume we"ll only see yaml files in logreader.py (#1077)  If
+    someone is using a .yml file - they"ve already gone horribly off-
+    track :p
+
+ -- Luis Perez <luisp@yelp.com>  Mon, 24 Nov 2025 13:42:34 -0800
+
+tron (3.8.8) jammy; urgency=medium
+
+  * 3.8.8 tagged with 'make release'
+    Commit: Try to warn folks about incorrect `tronctl publish` usage
+    (#1076)  It"s absurdly easy to use this incorrectly (especially if
+    you"ve been woken up by a page ;p) - so let"s try to warn folks if
+    they"re potentially using `tronctl publish` incorrectly  afaik, the
+    usual mistakes here are to use a job/action id (detectable by the
+    run number) OR to use a too long/short trigger id (either from copy-
+    pasting too much or too little)  I"ve opted to not error out when
+    this happens since I"m somewhat sure that it"s possible to manually
+    construct triggers that don"t match this format and depend on those
+    triggers in soaconfigs. If anyone with more time wants to vibe-code
+    something to verify this (and maybe even add some validation to the
+    tronfig schema ;)), then we can always error out immediately
+
+ -- Luis Perez <luisp@yelp.com>  Thu, 20 Nov 2025 12:01:45 -0800
+
+tron (3.8.7) jammy; urgency=medium
+
+  * 3.8.7 tagged with 'make release'
+    Commit: Lightly refactor skip-and-publish (and add some more output)
+    (#1075)  The current output is pretty minimal and doesn"t help us
+    (or users) debug particularly efficiently whenever something isn"t
+    working as expected.  Output now looks something like: ``` Skipping
+    compute-infra-test-service.always_fail.5.fail... ActionRun: compute-
+    infra-test-service.always_fail.5.fail now in state skipped
+    Successfully skipped compute-infra-test-service.always_fail.5.fail.
+    Fetching triggers to publish for compute-infra-test-
+    service.always_fail.5.fail...  Triggers to publish:     * compute-
+    infra-test-service.always_fail.fail.shortdate.2025-11-15  Publishing
+    trigger compute-infra-test-service.always_fail.fail.shortdate.2025-
+    11-15... OK ```  I"ve lightly refactored this since I don"t really
+    know why I inlined all this logic in 2021 and it was bothering me.
+
+ -- Luis Perez <luisp@yelp.com>  Wed, 12 Nov 2025 06:46:31 -0800
+
+tron (3.8.6) jammy; urgency=medium
+
+  * 3.8.6 tagged with 'make release'
+    Commit: Add another disk eviction substring (#1074)  We"re also
+    seeing messages that look like: `Pod ephemeral local storage usage
+    exceeds the total limit of containers 1Gi.` which don"t trigger the
+    existing check.  This adds "ephemeral local storage" as another
+    trigger without removing the existing one.  I"m not quite sure how
+    k8s decides which message to use without reading through the k8s
+    code further, but it appears that both cases are possible:
+    https://github.com/kubernetes/kubernetes/blob/350481c4747da5c2ad4f24
+    e71e7edaabbd4cfe2e/pkg/kubelet/eviction/helpers.go#L53-L57
+
+ -- Luis Perez <luisp@yelp.com>  Mon, 03 Nov 2025 09:56:04 -0800
+
 tron (3.8.5) jammy; urgency=medium
 
   * 3.8.5 tagged with 'make release'

@@ -47,23 +47,26 @@ def get_superregion() -> str:
 
 def decompose_action_id(action_run_id: str, paasta_cluster: str) -> tuple[str, str, str, str]:
     namespace, job_name, run_num, action = action_run_id.split(".")
-    for ext in ["yaml", "yml"]:
-        try:
-            with open(f"/nail/etc/services/{namespace}/tron-{paasta_cluster}.{ext}") as f:
-                config = yaml.load(f, Loader=yaml.CSafeLoader)
-                service: str | None = config.get(job_name, {}).get("actions", {}).get(action, {}).get("service", None)
-                if service:
-                    return service, job_name, run_num, action
-        except FileNotFoundError:
-            log.warning(f"yelp-soaconfig file tron-{paasta_cluster}.{ext} not found for action_run_id {action_run_id}.")
-        except yaml.YAMLError:
-            log.exception(
-                f"Error parsing YAML file tron-{paasta_cluster}.yaml for {action_run_id} - will default to using current namespace:"
-            )
-        except Exception:
-            log.exception(
-                f"Error reading service for {action_run_id} from file tron-{paasta_cluster}.yaml - will default to using current namespace:"
-            )
+    # NOTE: some services use an unfortunate feature that allows an action to use another service's
+    # image - thus we need to read from soaconfigs to determine the "real" service name since we're
+    # not passing this information down to tron atm
+    try:
+        with open(f"/nail/etc/services/{namespace}/tron-{paasta_cluster}.yaml") as f:
+            config = yaml.load(f, Loader=yaml.CSafeLoader)
+            service: str | None = config.get(job_name, {}).get("actions", {}).get(action, {}).get("service", None)
+            if service:
+                return service, job_name, run_num, action
+    except FileNotFoundError:
+        # afaict, this should only be possible if the service is getting deleted and we haven't run setup_tron_namespace yet
+        log.warning(f"yelp-soaconfig file tron-{paasta_cluster}.yaml not found for action_run_id {action_run_id}.")
+    except yaml.YAMLError:
+        log.exception(
+            f"Error parsing YAML file tron-{paasta_cluster}.yaml for {action_run_id} - will default to using current namespace:"
+        )
+    except Exception:
+        log.exception(
+            f"Error reading service for {action_run_id} from file tron-{paasta_cluster}.yaml - will default to using current namespace:"
+        )
 
     return namespace, job_name, run_num, action
 

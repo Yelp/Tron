@@ -208,7 +208,11 @@ class KubernetesTask(ActionCommand):
                             pod_status_message = pod_status.get("message", "").lower()
 
                             # pod killed due to ephemeral storage eviction
-                            if pod_status_reason == "Evicted" and "ephemeral storage" in pod_status_message:
+                            # XXX: if we need to handle more messages, we should probably regex this instead :p
+                            if pod_status_reason == "Evicted" and (
+                                "ephemeral storage" in pod_status_message
+                                or "ephemeral local storage" in pod_status_message
+                            ):
                                 exit_code = exitcode.EXIT_KUBERNETES_EPHEMERAL_STORAGE_EVICTION
                                 self.log.warning(
                                     f"Tronjob failed due to ephemeral storage eviction: {pod_status_message}"

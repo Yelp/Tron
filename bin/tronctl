@@ -30,6 +30,8 @@ from tron.commands.backfill import print_backfill_cmds
 from tron.commands.backfill import print_backfill_runs_table
 from tron.commands.backfill import run_backfill_for_date_range
 from tron.commands.client import RequestError
+from tron.commands.client import TronObjectIdentifier
+from tron.commands.cmd_utils import COLOR_YELLOW
 from tron.commands.cmd_utils import ExitCode
 from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
@@ -247,6 +249,46 @@ def request(url: str, data: dict[str, Any], headers=None, method=None) -> bool:
 
 def event_publish(args):
     for event in args.id:
+        # trying to publish a job run/action run id will likely print multiple warnings
+        # since the conditions are somewhat overlapping - only print the first one
+        warning_printed = False
+        split_event = event.split(".")
+        # first, let's try to catch folks trying to publish a job run or action run id as a trigger
+        # these will look something like NAMESPACE.JOB_NAME.RUN_NUMBER or NAMESPACE.JOB_NAME.RUN_NUMBER.ACTION_NAME
+        # i.e., if the 3rd element is an integer, it's one of these
+        if len(split_event) >= 3:
+            try:
+                int(split_event[2])
+                print(
+                    warning_output(
+                        f"\nWarning: the event id '{event}' looks like a job run or action run id rather than a trigger id!",
+                        color=COLOR_YELLOW,
+                    )
+                )
+                print(
+                    warning_output(
+                        "This is almost certainly incorrect and you want something like `tronctl publish $SERVICE.$JOB_NAME.$ACTION_NAME.$TRIGGER_NAME.$TRIGGER_VALUE`",
+                        color=COLOR_YELLOW,
+                    )
+                )
+                warning_printed = True
+            except ValueError:
+                pass
+
+        if len(split_event) != 5 and not warning_printed:
+            print(
+                warning_output(
+                    f"\nWarning: '{event}' is too {'long' if len(split_event) > 5 else 'short'} and does not match the expected trigger format!",
+                    color=COLOR_YELLOW,
+                )
+            )
+            print(
+                warning_output(
+                    "This is almost certainly incorrect and you want something like `tronctl publish $SERVICE.$JOB_NAME.$ACTION_NAME.$TRIGGER_NAME.$TRIGGER_VALUE`",
+                    color=COLOR_YELLOW,
+                )
+            )
+
         yield request(
             urljoin(args.server, "/api/events"),
             dict(command="publish", event=event),
@@ -289,6 +331,49 @@ def _get_triggers_for_action(server: str, action_identifier: str) -> tuple[str, 
     return tuple(f"{namespace}.{job_name}.{action_name}.{trigger}" for trigger in triggers if trigger)
 
 
+def skip_and_publish(server: str, tron_id: TronObjectIdentifier, identifier: str) -> bool:
+    all_success = True
+    print(f"Skipping {identifier}...")
+    if request(
+        url=urljoin(server, tron_id.url),
+        data={"command": "skip"},
+    ):
+        print(f"Successfully skipped {identifier}.")
+        print(f"\nFetching triggers to publish for {identifier}...")
+        # a single action can have 0..N triggers to publish and these can be arbitrarily named, so we need to
+        # query the API and figure out what triggers exist
+        triggers = _get_triggers_for_action(server=server, action_identifier=identifier)
+        if triggers is None:
+            print(f"\nEncountered error getting triggers to publish for {identifier}!")
+            return False
+        elif not triggers:
+            print(f"{identifier} has no triggers to publish - just skipping instead.")
+            # TODO: should we check this up-front and refuse to skip if there are no triggers that will be
+            # published rather than carry on under the assumption that the user copy-pasted/typo'd the identifier?
+            return True
+
+        else:
+            # TODO: this loop should use event_publish(), but we'd need to refactor how the CLI works and stop passing
+            # around the full set of args everywhere to do so
+            print("\nTriggers to publish:")
+            print("\n".join(f"    * {trigger}" for trigger in triggers) + "\n")
+            for trigger in triggers:
+                print(f"Publishing trigger {trigger}...")
+                if not request(
+                    url=urljoin(server, "/api/events"),
+                    data={"command": "publish", "event": trigger},
+                ):
+                    print(
+                        f"Failed to publish trigger {trigger} - you may want to retry this command or manually publish the trigger!"
+                    )
+                    all_success = False
+    else:
+        print(f"\nFailed to skip {identifier}!")
+        return False
+
+    return all_success
+
+
 def control_objects(args: argparse.Namespace):
     tron_client = client.Client(args.server, user_attribution=True)
     url_index = tron_client.index()
@@ -312,32 +397,7 @@ def control_objects(args: argparse.Namespace):
             # this command is more of a pseudo-command - skip and publish are handled in two different resources
             # and changing the API would be painful, so instead we call skip + publish separately from the client
             # (i.e., this file) to implement this functionality
-            if request(
-                url=urljoin(args.server, tron_id.url),
-                data={"command": "skip"},
-            ):
-                # a single action can have 0..N triggers to publish and these can be arbitrarily named, so we need to
-                # query the API and figure out what triggers exist
-                triggers = _get_triggers_for_action(server=args.server, action_identifier=identifier)
-                if triggers is None:
-                    print("Encountered error getting triggers to publish.")
-                    yield False
-                elif not triggers:
-                    print(f"{identifier} has no triggers to publish.")
-                    # TODO: should we check this up-front and refuse to skip if there are no triggers that will be
-                    # published rather than carry on under the assumption that the user copy-pasted/typo'd the identifier?
-                    yield True
-                else:
-                    # TODO: this loop should use event_publish(), but we'd need to refactor how the CLI works and stop passing
-                    # around the full set of args everywhere to do so
-                    for trigger in triggers:
-                        yield request(
-                            url=urljoin(args.server, "/api/events"),
-                            data={"command": "publish", "event": trigger},
-                        )
-            else:
-                print(f"Unable to skip {identifier}.")
-                yield False
+            yield skip_and_publish(args.server, tron_id, identifier)
 
         else:
             data = dict(command=args.command)
