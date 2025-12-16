@@ -30,7 +30,7 @@ from tron.serialize import runstate
 #
 # In testing I could get away with 201_000 for both partitions so this should be enough overhead
 # to contain other attributes like object name and number of partitions.
-OBJECT_SIZE = 200_000  # TODO: TRON-2240 - consider swapping back to 400_000 now that we've removed pickles
+OBJECT_SIZE = 150_000  # TODO: TRON-2240 - consider swapping back to 400_000 now that we've removed pickles
 MAX_SAVE_QUEUE = 500
 # This is distinct from the number of retries in the retry_config as this is used for handling unprocessed
 # keys outside the bounds of something like retrying on a ThrottlingException. We need this limit to avoid

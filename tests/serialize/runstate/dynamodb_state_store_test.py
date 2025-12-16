@@ -125,7 +125,7 @@ def large_object():
         "runs": [],
         "cleanup_run": None,
         "manual": False,
-        "large_data": [i for i in range(10000)],
+        "large_data": [i for i in range(1_000_000)],
     }
 
 
