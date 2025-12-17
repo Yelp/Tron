@@ -87,7 +87,7 @@ class TestPersistentStateManager(TestCase):
         with mock.patch.object(self.manager, "_restore_dicts", autospec=True,) as mock_restore_dicts, mock.patch.object(
             self.manager,
             "_restore_runs_for_job",
-            autospect=True,
+            autospec=True,
         ) as mock_restore_runs:
             mock_restore_dicts.side_effect = [
                 # _restore_dicts for JOB_STATE

@@ -2,13 +2,10 @@
 Format and color output for tron commands.
 """
 import contextlib
+from collections.abc import Callable
+from collections.abc import Collection
 from functools import partial
 from operator import itemgetter
-from typing import Callable
-from typing import Collection
-from typing import Dict
-from typing import List
-from typing import Optional
 
 from tron.core import actionrun
 from tron.core import job
@@ -87,11 +84,11 @@ class TableDisplay:
         Footer
     """
 
-    columns: List[str] = []
-    fields: List[str] = []
-    widths: List[int] = []
-    colors: Dict[str, Callable[[str], str]] = {}
-    title: Optional[str] = None
+    columns: list[str] = []
+    fields: list[str] = []
+    widths: list[int] = []
+    colors: dict[str, Callable[[str], str]] = {}
+    title: str | None = None
     resize_fields: Collection[str] = set()
     reversed = False
 

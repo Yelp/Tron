@@ -1,6 +1,5 @@
 import os
 from typing import cast
-from typing import Optional
 
 from tron.commands.cmd_utils import get_client_config
 
@@ -9,7 +8,7 @@ try:
     from okta_auth import get_and_cache_jwt_default  # type: ignore # library lacks py.typed marker
 except ImportError:
 
-    def get_instance_oidc_identity_token(role: str, ecosystem: Optional[str] = None) -> str:
+    def get_instance_oidc_identity_token(role: str, ecosystem: str | None = None) -> str:
         return ""
 
     def get_and_cache_jwt_default(client_id: str, refreshable: bool = False, force: bool = False) -> str:

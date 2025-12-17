@@ -1,4 +1,3 @@
-from typing import Dict
 from unittest import mock
 
 import pytest
@@ -11,7 +10,7 @@ from tools.sync_tron_state_from_k8s import get_tron_state_from_api
 from tools.sync_tron_state_from_k8s import update_tron_from_pods
 
 
-def create_mock_pod(name: str, phase: str, labels: Dict[str, str], creation_timestamp: str):
+def create_mock_pod(name: str, phase: str, labels: dict[str, str], creation_timestamp: str):
     metadata = V1ObjectMeta(name=name, creation_timestamp=creation_timestamp, labels=labels)
     status = V1PodStatus(phase=phase)
     return V1Pod(metadata=metadata, status=status)

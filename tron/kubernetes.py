@@ -1,9 +1,7 @@
 import logging
+from collections.abc import Collection
 from logging import Logger
 from typing import cast
-from typing import Collection
-from typing import Dict
-from typing import List
 from typing import Optional
 from typing import TYPE_CHECKING
 
@@ -48,7 +46,7 @@ log = logging.getLogger(__name__)
 def combine_volumes(
     defaults: Collection[ConfigVolume],
     overrides: Collection[ConfigVolume],
-) -> List[ConfigVolume]:
+) -> list[ConfigVolume]:
     """Helper to reconcile lists of volume mounts.
 
     If any volumes have the same container path, the one in overrides wins.
@@ -61,7 +59,7 @@ def combine_volumes(
 
 class KubernetesTask(ActionCommand):
     def __init__(
-        self, action_run_id: str, task_config: KubernetesTaskConfig, serializer: Optional[OutputStreamSerializer] = None
+        self, action_run_id: str, task_config: KubernetesTaskConfig, serializer: OutputStreamSerializer | None = None
     ) -> None:
         super().__init__(id=action_run_id, command=task_config.command, serializer=serializer)
 
@@ -292,16 +290,16 @@ class KubernetesCluster:
         self,
         kubeconfig_path: str,
         enabled: bool = True,
-        default_volumes: Optional[List[ConfigVolume]] = None,
-        pod_launch_timeout: Optional[int] = None,
-        watcher_kubeconfig_paths: Optional[List[str]] = None,
-        non_retryable_exit_codes: Optional[List[int]] = [],
+        default_volumes: list[ConfigVolume] | None = None,
+        pod_launch_timeout: int | None = None,
+        watcher_kubeconfig_paths: list[str] | None = None,
+        non_retryable_exit_codes: list[int] | None = [],
     ):
         # general k8s config
         self.kubeconfig_path = kubeconfig_path
         self.enabled = enabled
         self.non_retryable_exit_codes = non_retryable_exit_codes
-        self.default_volumes: Optional[List[ConfigVolume]] = default_volumes or []
+        self.default_volumes: list[ConfigVolume] | None = default_volumes or []
         self.pod_launch_timeout = pod_launch_timeout or DEFAULT_POD_LAUNCH_TIMEOUT_S
         self.watcher_kubeconfig_paths = watcher_kubeconfig_paths or []
         # creating a task_proc executor has a couple steps:
@@ -312,7 +310,7 @@ class KubernetesCluster:
         # in this constructor
         self.processor = TaskProcessor()
         self.processor.load_plugin(provider_module="task_processing.plugins.kubernetes")
-        self.runner: Optional[Subscription] = None
+        self.runner: Subscription | None = None
 
         # queue to to use for tron<->task_proc communication - will hold k8s events seen
         # by task_processing and held for tron to process.
@@ -320,10 +318,10 @@ class KubernetesCluster:
         # this will hold the current event to process (retrieved from the PyDeferredQueue above)
         # which we will eventually wrap with some callbacks to actually process using the Twisted
         # reactor started as part of tron's startup process
-        self.deferred: Optional[Deferred] = None
+        self.deferred: Deferred | None = None
 
         # map from k8s pod names to the task that said pod corresponds to
-        self.tasks: Dict[str, KubernetesTask] = {}
+        self.tasks: dict[str, KubernetesTask] = {}
 
         # actually create the executor/runner, as mentioned above.
         self.connect()
@@ -336,7 +334,7 @@ class KubernetesCluster:
         self.runner = self.get_runner(kubeconfig_path=self.kubeconfig_path, queue=self.queue)
         self.handle_next_event()
 
-    def get_runner(self, kubeconfig_path: str, queue: PyDeferredQueue) -> Optional[Subscription]:
+    def get_runner(self, kubeconfig_path: str, queue: PyDeferredQueue) -> Subscription | None:
         """
         Gets or creates an instance of our Kubernetes task_processing plugin.
         """
@@ -482,7 +480,7 @@ class KubernetesCluster:
         else:
             self.stop(fail_tasks=True)
 
-    def configure_tasks(self, default_volumes: Optional[List[ConfigVolume]]) -> None:
+    def configure_tasks(self, default_volumes: list[ConfigVolume] | None) -> None:
         self.default_volumes = default_volumes
 
     def create_task(
@@ -490,27 +488,27 @@ class KubernetesCluster:
         action_run_id: str,
         serializer: OutputStreamSerializer,
         command: str,
-        cpus: Optional[float],
-        mem: Optional[float],
-        disk: Optional[float],
+        cpus: float | None,
+        mem: float | None,
+        disk: float | None,
         docker_image: str,
-        env: Dict[str, str],
-        secret_env: Dict[str, ConfigSecretSource],
+        env: dict[str, str],
+        secret_env: dict[str, ConfigSecretSource],
         secret_volumes: Collection[ConfigSecretVolume],
         projected_sa_volumes: Collection[ConfigProjectedSAVolume],
-        field_selector_env: Dict[str, ConfigFieldSelectorSource],
+        field_selector_env: dict[str, ConfigFieldSelectorSource],
         volumes: Collection[ConfigVolume],
         cap_add: Collection[str],
         cap_drop: Collection[str],
-        node_selectors: Dict[str, str],
-        node_affinities: List[ConfigNodeAffinity],
-        topology_spread_constraints: List[ConfigTopologySpreadConstraints],
-        pod_labels: Dict[str, str],
-        pod_annotations: Dict[str, str],
-        service_account_name: Optional[str],
-        ports: List[int],
-        task_id: Optional[str] = None,
-    ) -> Optional[KubernetesTask]:
+        node_selectors: dict[str, str],
+        node_affinities: list[ConfigNodeAffinity],
+        topology_spread_constraints: list[ConfigTopologySpreadConstraints],
+        pod_labels: dict[str, str],
+        pod_annotations: dict[str, str],
+        service_account_name: str | None,
+        ports: list[int],
+        task_id: str | None = None,
+    ) -> KubernetesTask | None:
         """
         Given the execution parameters for a task, create a KubernetesTask that encapsulate those parameters.
 
@@ -639,15 +637,15 @@ class KubernetesCluster:
 class KubernetesClusterRepository:
     # Kubernetes config
     kubernetes_enabled: bool = False
-    kubernetes_non_retryable_exit_codes: Optional[List[int]] = []
-    kubeconfig_path: Optional[str] = None
-    pod_launch_timeout: Optional[int] = None
-    default_volumes: Optional[List[ConfigVolume]] = None
-    watcher_kubeconfig_paths: Optional[List[str]] = None
-    non_retryable_exit_codes: Optional[List[int]] = None
+    kubernetes_non_retryable_exit_codes: list[int] | None = []
+    kubeconfig_path: str | None = None
+    pod_launch_timeout: int | None = None
+    default_volumes: list[ConfigVolume] | None = None
+    watcher_kubeconfig_paths: list[str] | None = None
+    non_retryable_exit_codes: list[int] | None = None
 
     # metadata config
-    clusters: Dict[str, KubernetesCluster] = {}
+    clusters: dict[str, KubernetesCluster] = {}
 
     # state management config
     state_data = {}  # type: ignore  # not used yet
@@ -658,7 +656,7 @@ class KubernetesClusterRepository:
         cls.state_watcher = observer
 
     @classmethod
-    def get_cluster(cls, kubeconfig_path: Optional[str] = None) -> Optional[KubernetesCluster]:
+    def get_cluster(cls, kubeconfig_path: str | None = None) -> KubernetesCluster | None:
         if kubeconfig_path is None:
             if cls.kubeconfig_path is None:
                 return None

@@ -11,12 +11,9 @@ import logging
 import pprint
 import sys
 from collections import defaultdict
+from collections.abc import Callable
+from collections.abc import Generator
 from typing import Any
-from typing import Callable
-from typing import Dict
-from typing import Generator
-from typing import Optional
-from typing import Tuple
 from urllib.parse import urljoin
 
 import argcomplete  # type: ignore
@@ -240,7 +237,7 @@ def parse_cli():
     return args
 
 
-def request(url: str, data: Dict[str, Any], headers=None, method=None) -> bool:
+def request(url: str, data: dict[str, Any], headers=None, method=None) -> bool:
     # We want every tronctl request to be attributable
     response = client.request(url, data=data, headers=headers, method=method, user_attribution=True)
     if response.error:
@@ -306,7 +303,7 @@ def event_discard(args):
         )
 
 
-def _get_triggers_for_action(server: str, action_identifier: str) -> Optional[Tuple[str, ...]]:
+def _get_triggers_for_action(server: str, action_identifier: str) -> tuple[str, ...] | None:
     try:
         namespace, job_name, run_number, action_name = action_identifier.split(".")
     except ValueError:
@@ -512,7 +509,7 @@ def tron_version(args):
     yield True
 
 
-COMMANDS: Dict[str, Callable[[argparse.Namespace], Generator[bool, None, None]]] = defaultdict(
+COMMANDS: dict[str, Callable[[argparse.Namespace], Generator[bool, None, None]]] = defaultdict(
     lambda: control_objects,
     publish=event_publish,
     discard=event_discard,

@@ -11,7 +11,6 @@ ipdb
 ipython
 Jinja2>=3.1.2
 lockfile
-moto
 prometheus-client
 psutil
 py-bcrypt

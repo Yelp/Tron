@@ -4,8 +4,8 @@ from unittest import mock
 import boto3
 import pytest
 import staticconf.testing
-from moto import mock_dynamodb2
-from moto.dynamodb2.responses import dynamo_json_dump
+from moto import mock_dynamodb
+from moto.dynamodb.responses import dynamo_json_dump
 
 from testifycompat import assert_equal
 from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
@@ -61,10 +61,10 @@ def mock_transact_write_items(self):
 @pytest.fixture(autouse=True)
 def store():
     with mock.patch(
-        "moto.dynamodb2.responses.DynamoHandler.transact_write_items",
+        "moto.dynamodb.responses.DynamoHandler.transact_write_items",
         new=mock_transact_write_items,
         create=True,
-    ), mock_dynamodb2():
+    ), mock_dynamodb():
         dynamodb = boto3.resource("dynamodb", region_name="us-west-2")
         table_name = "tmp"
         store = DynamoDBStateStore(table_name, "us-west-2", stopping=True)
