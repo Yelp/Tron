@@ -27,7 +27,7 @@ ipdb==0.13.2
 ipython==8.10.0
 ipython-genutils==0.2.0
 jedi==0.16.0
-Jinja2==3.1.2
+Jinja2==3.1.6
 jmespath==0.9.4
 kubernetes==26.1.0
 lockfile==0.12.2
