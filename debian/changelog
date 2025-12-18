@@ -1,3 +1,14 @@
+tron (3.9.0) jammy; urgency=medium
+
+  * 3.9.0 tagged with 'make release'
+    Commit: Upgrade Tron to Python 3.10 - TRON-2435 (#1071)  * Upgrade
+    Tron to Python 3.10  * Upgrade zope.interface to a compatible python
+    3.10 version  * Moved moto to requirements dev instead and removed
+    mock from minimal  * lowering object_size for more room  * Update
+    classifier and path in itest
+
+ -- Eman Elsabban <emanelsabban@yelp.com>  Thu, 18 Dec 2025 06:24:50 -0800
+
 tron (3.8.9) jammy; urgency=medium
 
   * 3.8.9 tagged with 'make release'
