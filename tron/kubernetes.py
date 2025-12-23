@@ -183,7 +183,10 @@ class KubernetesTask(ActionCommand):
                         self.log.error(f"Event with missing state: {raw_object}")
                     else:
                         state_termination_metadata = main_container_state.get("terminated", {}) or {}
-                        last_state_termination_metadata = main_container_last_state.get("terminated", {}) or {}
+                        # Assume the current state is the 'last' state if last state does not exist
+                        last_state_termination_metadata = (
+                            main_container_last_state.get("terminated", {}) or state_termination_metadata
+                        )
                         if k8s_type == "finished":
                             # this is kinda wild: we're seeing that a kubelet will sometimes fail to start a container (usually
                             # due to what appear to be race conditions like those mentioned in
