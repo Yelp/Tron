@@ -232,6 +232,25 @@ def test_handle_event_spot_interruption_exit(mock_kubernetes_task):
     assert mock_kubernetes_task.is_failed
     assert mock_kubernetes_task.is_done
 
+    # Test again, but with no lastState
+    raw_event_data["status"]["containerStatuses"][0]["state"]["terminated"] = raw_event_data["status"][
+        "containerStatuses"
+    ][0]["lastState"]["terminated"]
+    raw_event_data["status"]["containerStatuses"][0]["lastState"] = {}
+
+    mock_kubernetes_task.handle_event(
+        mock_event_factory(
+            task_id=mock_kubernetes_task.get_kubernetes_id(),
+            raw=raw_event_data,
+            platform_type="killed",
+            terminal=True,
+            success=False,
+        )
+    )
+    assert mock_kubernetes_task.exit_status == exitcode.EXIT_KUBERNETES_SPOT_INTERRUPTION
+    assert mock_kubernetes_task.is_failed
+    assert mock_kubernetes_task.is_done
+
 
 def test_handle_event_node_scaledown_exit(mock_kubernetes_task):
     mock_kubernetes_task.started()
