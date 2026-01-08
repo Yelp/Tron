@@ -4,7 +4,7 @@ botocore-stubs==1.38.19
 cfgv==2.0.1
 debugpy==1.8.1
 distlib==0.3.6
-filelock==3.4.1
+filelock==3.20.1
 flake8==5.0.4
 identify==2.5.5
 iniconfig==1.1.1
