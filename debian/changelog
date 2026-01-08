@@ -1,3 +1,12 @@
+tron (3.9.1) jammy; urgency=medium
+
+  * 3.9.1 tagged with 'make release'
+    Commit: Merge pull request #1084 from Yelp/jfong/TRON-2546-fix-spot-
+    terminatioons-not-ooms  TRON-2546: Fix spot termination
+    identification in current k8s version
+
+ -- Jen Patague <jfong@yelp.com>  Thu, 08 Jan 2026 09:58:32 -0800
+
 tron (3.9.0) jammy; urgency=medium
 
   * 3.9.0 tagged with 'make release'
