@@ -3,6 +3,7 @@ import datetime
 import pytz
 
 from testifycompat import assert_equal
+from testifycompat import assert_raises
 from testifycompat import run
 from testifycompat import TestCase
 from tron.utils import trontimespec
@@ -157,6 +158,31 @@ class TestTimeSpecification(TestCase):
         # Next run time should be 2AM
         next_time = time_spec.get_match(start)
         assert next_time.hour == 2
+
+
+class TestTimeSpecificationValidation(TestCase):
+    def test_invalid_monthday_for_specified_months(self):
+        # Test day 31 in February (should raise ValueError)
+        assert_raises(ValueError, trontimespec.TimeSpecification, monthdays=[31], months=[2])
+
+    def test_invalid_monthday_for_multiple_months(self):
+        # Test day 31 in February & April (should raise ValueError)
+        assert_raises(ValueError, trontimespec.TimeSpecification, monthdays=[31], months=[2, 4])
+
+    def test_valid_monthday_skips_invalid_months(self):
+        # Test day 30 in Jan/Feb - should be valid (cron behavior)
+        # This should NOT raise an error since January has 30+ days
+        time_spec = trontimespec.TimeSpecification(monthdays=[30], months=[1, 2])
+        assert time_spec.monthdays == [30]
+        assert time_spec.months == [1, 2]
+
+    def test_weekdays_and_monthdays_conflict(self):
+        # Test that providing both weekdays and monthdays raises ValueError
+        assert_raises(ValueError, trontimespec.TimeSpecification, weekdays=[1, 2], monthdays=[15, 20])
+
+    def test_timestr_and_time_components_conflict(self):
+        # Test that providing both timestr and h/m/s raises ValueError
+        assert_raises(ValueError, trontimespec.TimeSpecification, timestr="12:30", hours=[10])
 
 
 if __name__ == "__main__":
