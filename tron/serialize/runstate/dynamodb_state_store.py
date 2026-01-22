@@ -2,8 +2,8 @@ import concurrent.futures
 import copy
 import logging
 import math
-import os
 import pickle
+import sys
 import threading
 import time
 from collections import defaultdict
@@ -255,7 +255,7 @@ class DynamoDBStateStore:
                         self.save_queue[key] = (val, json_val)
                 break
 
-    def _consume_save_queue(self):
+    def _consume_save_queue(self) -> None:
         """Consume the save_queue and save the items to dynamodb"""
         qlen = len(self.save_queue)
         saved = 0
@@ -319,7 +319,7 @@ class DynamoDBStateStore:
             prom_metrics.json_deserialization_errors_counter.inc()
             raise
 
-    def _save_loop(self):
+    def _save_loop(self) -> None:
         while True:
             if self.stopping:
                 self._consume_save_queue()
@@ -333,7 +333,7 @@ class DynamoDBStateStore:
             self._consume_save_queue()
             if self.save_errors > 100:
                 log.error("too many dynamodb errors in a row, crashing")
-                os.exit(1)
+                sys.exit(1)
 
     def __setitem__(self, key: str, value: tuple[bytes, str]) -> None:
         """
