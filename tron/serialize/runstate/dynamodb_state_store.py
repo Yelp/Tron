@@ -207,69 +207,60 @@ class DynamoDBStateStore:
         # Merge all items based their keys and deserialize their values
         if remaining_items:
             first_items.extend(remaining_items)
+
         for item in first_items:
             key = item["key"]["S"]
             items[key].append(item)
+
+        # Always build raw_items (pickle) for fallback. This is a known safe format if there
+        # are issues with compressed JSON. Re-organizing this has a small perf hit on
+        # restores (extra loop through items), but I think it's worth it for code clarity,
+        # especially as we move to removing pickles entirely.
         for key, key_items in items.items():
             key_items.sort(key=lambda x: int(x["index"]["N"]))
             for val in key_items:
                 if "val" in val:
                     raw_items[key] += bytes(val["val"]["B"])
 
-            # This is a bit messy but we need to handle both compressed binary data
-            # and uncompressed string data since we rolled out the JSON serialization
-            # in two phases. Newer items will have compressed binary data while
-            # older items will have uncompressed string data. This is temporary
-            # and will be removed once we've compressed all JSON.
-            if read_json:
-                try:
-                    for key, key_items in items.items():
-                        # Shouldn't happen, but let's skip potentially bad data
-                        if not key_items:
-                            continue
-
-                        # Find first partition with json_val so that we can determine format
-                        first_part_with_json = next((p for p in key_items if "json_val" in p), None)
-
-                        # Again, this really shouldn't happen, but if somehow we have bad data let's just skip it
-                        if not first_part_with_json:
-                            continue
-
-                        json_val_content = first_part_with_json["json_val"]
-                        if "B" in json_val_content:  # Compressed binary format
-                            compressed_data = bytearray()
-                            for part in key_items:
-                                if "json_val" in part and "B" in part["json_val"]:
-                                    compressed_data += part["json_val"]["B"]
-                            if compressed_data:
-                                json_items[key] = gzip.decompress(compressed_data).decode("utf-8")
-                        elif "S" in json_val_content:  # Uncompressed string format
-                            uncompressed_data = ""
-                            for part in key_items:
-                                if "json_val" in part and "S" in part["json_val"]:
-                                    uncompressed_data += part["json_val"]["S"]
-                            if uncompressed_data:
-                                json_items[key] = uncompressed_data
-
-                    deserialized_items = {k: self._deserialize_item(k, v) for k, v in json_items.items() if v}
-
-                except Exception:
-                    log.exception("Critical error processing JSON items, falling back to pickled data for all keys.")
-                    read_json = False
-                    json_items.clear()
-
+        # This is a bit messy but we need to handle both compressed binary data
+        # and uncompressed string data since we rolled out the JSON serialization
+        # in two phases. Newer items will have compressed binary data while
+        # older items will have uncompressed string data. This is temporary
+        # and will be removed once we've compressed all JSON.
         if read_json:
             try:
-                log.info("read_json is enabled. Deserializing JSON items to restore them instead of pickled data.")
-                deserialized_items = {k: self._deserialize_item(k, val) for k, val in json_items.items()}
-            except Exception as e:
-                log.exception(f"Error deserializing JSON items: {repr(e)}")
-                # if reading from json failed we want to try reading the pickled data instead
+                for key, key_items in items.items():
+                    if not key_items:
+                        continue
+
+                    first_part_with_json = next((p for p in key_items if "json_val" in p), None)
+                    if not first_part_with_json:
+                        raise ValueError(f"No json_val found for key {key}")
+
+                    json_val_content = first_part_with_json["json_val"]
+
+                    if "B" in json_val_content:  # Compressed binary
+                        compressed_data = bytearray()
+                        for part in key_items:
+                            if "json_val" in part and "B" in part["json_val"]:
+                                compressed_data += part["json_val"]["B"]
+                        json_items[key] = gzip.decompress(compressed_data).decode("utf-8")
+
+                    elif "S" in json_val_content:  # Uncompressed string
+                        for part in key_items:
+                            if "json_val" in part and "S" in part["json_val"]:
+                                json_items[key] += part["json_val"]["S"]
+
+                deserialized_items = {k: self._deserialize_item(k, v) for k, v in json_items.items()}
+
+            except Exception:
+                log.exception("Error processing JSON items, falling back to pickled data")
                 read_json = False
 
         if not read_json:
-            log.info("read_json is disabled. Deserializing pickled items to restore them.")
+            log.info("Deserializing pickled items")
             deserialized_items = {k: pickle.loads(v) for k, v in raw_items.items()}
+
         return deserialized_items
 
     def save(self, key_value_pairs: list[tuple[str, dict[str, Any] | None]]) -> None:
@@ -295,6 +286,7 @@ class DynamoDBStateStore:
         qlen = len(self.save_queue)
         saved = 0
         start = time.time()
+
         for _ in range(qlen):
             try:
                 with self.save_lock:
@@ -307,10 +299,27 @@ class DynamoDBStateStore:
                 # reset errors count if we can successfully save
                 saved += 1
             except Exception as e:
-                error = "tron_dynamodb_save_failure: failed to save key " f'"{key}" to dynamodb:\n{repr(e)}'
-                log.error(error)
+                log.error(f'tron_dynamodb_save_failure: failed to save key "{key}" to dynamodb:\n{repr(e)}')
+
+                # Extract job name from key for metrics labeling
+                #
+                # job_state keys:     "job_state billing.snapshot_daily"
+                #   parts[1] = "billing.snapshot_daily"
+                #
+                # job_run_state keys: "job_run_state billing.snapshot_daily.74"
+                #   parts[1] = "billing.snapshot_daily.74"
+                #   parts[1].rsplit(".", 1)[0] = "billing.snapshot_daily"
+                key_type = self.get_type_from_key(key)
+                parts = key.split()
+                job_name = parts[1].rsplit(".", 1)[0] if key_type == "job_run_state" else parts[1]
+                prom_metrics.tron_dynamodb_save_errors_counter.labels(
+                    key_type=key_type,
+                    job_name=job_name,
+                ).inc()
+
                 with self.save_lock:
                     self.save_queue[key] = (val, json_val)
+
         duration = time.time() - start
         log.info(f"saved {saved} items in {duration}s")
 
@@ -318,6 +327,8 @@ class DynamoDBStateStore:
             self.save_errors += 1
         else:
             self.save_errors = 0
+
+        prom_metrics.tron_dynamodb_consecutive_save_errors_gauge.set(self.save_errors)
 
     def get_type_from_key(self, key: str) -> str:
         return key.split()[0]
