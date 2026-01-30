@@ -203,8 +203,7 @@ class DynamoDBStateStore:
         items = defaultdict(list)
         raw_items: DefaultDict[str, bytearray] = defaultdict(bytearray)
         json_items: DefaultDict[str, str] = defaultdict(str)
-        # item = job run, each job run can have multiple rows and each row is called a partition
-        # Merge all items based their keys and deserialize their values
+
         if remaining_items:
             first_items.extend(remaining_items)
 
@@ -269,7 +268,6 @@ class DynamoDBStateStore:
                 read_json = False
 
         if not read_json:
-            log.info("Deserializing pickled items")
             deserialized_items = {k: pickle.loads(v) for k, v in raw_items.items()}
 
         return deserialized_items
