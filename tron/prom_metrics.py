@@ -135,7 +135,6 @@ tron_dynamodb_consecutive_save_errors_gauge = Gauge(
 tron_dynamodb_save_errors_counter = Counter(
     "tron_dynamodb_save_errors_total",
     "Total DynamoDB save errors",
-    ["key_type", "job_name"],
 )
 
 

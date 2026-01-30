@@ -5,6 +5,7 @@ from unittest import mock
 import boto3
 import pytest
 import staticconf.testing
+from boto3.dynamodb.types import Binary
 from moto import mock_dynamodb
 from moto.dynamodb.responses import dynamo_json_dump
 
