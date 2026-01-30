@@ -1,5 +1,6 @@
 import concurrent.futures
 import copy
+import gzip
 import logging
 import math
 import pickle
@@ -202,39 +203,73 @@ class DynamoDBStateStore:
         items = defaultdict(list)
         raw_items: DefaultDict[str, bytearray] = defaultdict(bytearray)
         json_items: DefaultDict[str, str] = defaultdict(str)
-        # item = job run, each job run can have multiple rows and each row is called a partition
-        # Merge all items based their keys and deserialize their values
+
         if remaining_items:
             first_items.extend(remaining_items)
+
         for item in first_items:
             key = item["key"]["S"]
             items[key].append(item)
-        for key, key_items in items.items():
+
+        # Sort all partitions upfront
+        for key_items in items.values():
             key_items.sort(key=lambda x: int(x["index"]["N"]))
+
+        # Build pickle items
+        #
+        # This is a known safe format if there are issues with compressed JSON.
+        # Re-organizing this has a small perf hit on restores (extra loop
+        # through items), but I think it's worth it for code clarity, especially
+        # as we move to removing pickles entirely.
+        for key, key_items in items.items():
             for val in key_items:
                 if "val" in val:
                     raw_items[key] += bytes(val["val"]["B"])
-            if read_json:
-                for json_val in key_items:
-                    try:
-                        json_items[key] += json_val["json_val"]["S"]
-                    except Exception:
-                        log.exception(f"json_val not found for key {key}")
-                        # fallback to pickled data if json_val fails to exist for any key
-                        # TODO: it would be nice if we can read the pickled data only for this failed key instead of all keys
-                        read_json = False
+
+        # Build JSON items
+        #
+        # This is a bit messy but we need to handle both compressed binary data
+        # and uncompressed string data since we rolled out the JSON serialization
+        # in two phases. Newer items will have compressed binary data while
+        # older items will have uncompressed string data. This is temporary
+        # and will be removed once we've compressed all JSON.
         if read_json:
             try:
-                log.info("read_json is enabled. Deserializing JSON items to restore them instead of pickled data.")
-                deserialized_items = {k: self._deserialize_item(k, val) for k, val in json_items.items()}
-            except Exception as e:
-                log.exception(f"Error deserializing JSON items: {repr(e)}")
-                # if reading from json failed we want to try reading the pickled data instead
+                for key, key_items in items.items():
+                    if not key_items:
+                        continue
+
+                    first_part_with_json = next((p for p in key_items if "json_val" in p), None)
+                    if not first_part_with_json:
+                        raise ValueError(f"No json_val found for key {key}")
+
+                    json_val_content = first_part_with_json["json_val"]
+
+                    if "B" in json_val_content:  # Compressed binary
+                        compressed_data = bytearray()
+                        for part in key_items:
+                            if "json_val" in part and "B" in part["json_val"]:
+                                compressed_data += part["json_val"]["B"]
+                        try:
+                            json_items[key] = gzip.decompress(compressed_data).decode("utf-8")
+                        except Exception:
+                            log.exception(f"Failed to decompress JSON data for key {key}, falling back to pickle")
+                            raise
+
+                    elif "S" in json_val_content:  # Uncompressed string
+                        for part in key_items:
+                            if "json_val" in part and "S" in part["json_val"]:
+                                json_items[key] += part["json_val"]["S"]
+
+                deserialized_items = {k: self._deserialize_item(k, v) for k, v in json_items.items()}
+
+            except Exception:
+                log.exception("Error processing JSON items, falling back to pickled data")
                 read_json = False
 
         if not read_json:
-            log.info("read_json is disabled. Deserializing pickled items to restore them.")
             deserialized_items = {k: pickle.loads(v) for k, v in raw_items.items()}
+
         return deserialized_items
 
     def save(self, key_value_pairs: list[tuple[str, dict[str, Any] | None]]) -> None:
@@ -260,6 +295,7 @@ class DynamoDBStateStore:
         qlen = len(self.save_queue)
         saved = 0
         start = time.time()
+
         for _ in range(qlen):
             try:
                 with self.save_lock:
@@ -272,10 +308,12 @@ class DynamoDBStateStore:
                 # reset errors count if we can successfully save
                 saved += 1
             except Exception as e:
-                error = "tron_dynamodb_save_failure: failed to save key " f'"{key}" to dynamodb:\n{repr(e)}'
-                log.error(error)
+                log.error(f'tron_dynamodb_save_failure: failed to save key "{key}" to dynamodb:\n{repr(e)}')
+                prom_metrics.tron_dynamodb_save_errors_counter.inc()
+
                 with self.save_lock:
                     self.save_queue[key] = (val, json_val)
+
         duration = time.time() - start
         log.info(f"saved {saved} items in {duration}s")
 
@@ -284,20 +322,24 @@ class DynamoDBStateStore:
         else:
             self.save_errors = 0
 
+        prom_metrics.tron_dynamodb_consecutive_save_errors_gauge.set(self.save_errors)
+
     def get_type_from_key(self, key: str) -> str:
         return key.split()[0]
 
     # TODO: TRON-2305 - In an ideal world, we wouldn't be passing around state/state_data dicts. It would be a lot nicer to have regular objects here
-    def _serialize_item(self, key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE], state: dict[str, Any]) -> str | None:  # type: ignore
+    def _serialize_item(self, key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE], state: dict[str, Any]) -> bytes | None:  # type: ignore
         try:
             if key == runstate.JOB_STATE:
-                log.info(f"Serializing Job: {state.get('job_name')}")
-                return Job.to_json(state)
+                serialized_data = Job.to_json(state)
             elif key == runstate.JOB_RUN_STATE:
-                log.info(f"Serializing JobRun: {state.get('job_name')}.{state.get('run_num')}")
-                return JobRun.to_json(state)
+                serialized_data = JobRun.to_json(state)
             else:
                 raise ValueError(f"Unknown type: key {key}")
+
+            if serialized_data:
+                return gzip.compress(serialized_data.encode("utf-8"))
+            return None
         except Exception:
             log.exception(f"Serialization error for key {key}")
             prom_metrics.json_serialization_errors_counter.inc()
@@ -335,7 +377,7 @@ class DynamoDBStateStore:
                 log.error("too many dynamodb errors in a row, crashing")
                 sys.exit(1)
 
-    def __setitem__(self, key: str, value: tuple[bytes, str]) -> None:
+    def __setitem__(self, key: str, value: tuple[bytes, bytes | None]) -> None:
         """
         Partition the item and write up to self.max_transact_write_items
         partitions atomically using TransactWriteItems.
@@ -385,7 +427,7 @@ class DynamoDBStateStore:
 
             if json_val:
                 item["Put"]["Item"]["json_val"] = {
-                    "S": json_val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(json_val))]
+                    "B": json_val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(json_val))]
                 }
                 item["Put"]["Item"]["num_json_val_partitions"] = {
                     "N": str(num_json_val_partitions),

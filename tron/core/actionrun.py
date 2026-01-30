@@ -183,7 +183,7 @@ class ActionRunAttempt(Persistable):
         return state_data
 
     @staticmethod
-    def to_json(state_data: dict) -> str | None:
+    def to_json(state_data: dict) -> str:
         """Serialize the ActionRunAttempt instance to a JSON string."""
         try:
             return json.dumps(
@@ -846,7 +846,7 @@ class ActionRun(Observable, Persistable):
         return deserialized_data
 
     @staticmethod
-    def to_json(state_data: dict) -> str | None:
+    def to_json(state_data: dict) -> str:
         """Serialize the ActionRun instance to a JSON string."""
 
         action_runner = state_data.get("action_runner")
