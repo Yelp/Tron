@@ -212,16 +212,23 @@ class DynamoDBStateStore:
             key = item["key"]["S"]
             items[key].append(item)
 
-        # Always build raw_items (pickle) for fallback. This is a known safe format if there
-        # are issues with compressed JSON. Re-organizing this has a small perf hit on
-        # restores (extra loop through items), but I think it's worth it for code clarity,
-        # especially as we move to removing pickles entirely.
-        for key, key_items in items.items():
+        # Sort all partitions upfront
+        for key_items in items.values():
             key_items.sort(key=lambda x: int(x["index"]["N"]))
+
+        # Build pickle items
+        #
+        # This is a known safe format if there are issues with compressed JSON.
+        # Re-organizing this has a small perf hit on restores (extra loop
+        # through items), but I think it's worth it for code clarity, especially
+        # as we move to removing pickles entirely.
+        for key, key_items in items.items():
             for val in key_items:
                 if "val" in val:
                     raw_items[key] += bytes(val["val"]["B"])
 
+        # Build JSON items
+        #
         # This is a bit messy but we need to handle both compressed binary data
         # and uncompressed string data since we rolled out the JSON serialization
         # in two phases. Newer items will have compressed binary data while
@@ -244,7 +251,11 @@ class DynamoDBStateStore:
                         for part in key_items:
                             if "json_val" in part and "B" in part["json_val"]:
                                 compressed_data += part["json_val"]["B"]
-                        json_items[key] = gzip.decompress(compressed_data).decode("utf-8")
+                        try:
+                            json_items[key] = gzip.decompress(compressed_data).decode("utf-8")
+                        except Exception:
+                            log.exception(f"Failed to decompress JSON data for key {key}, falling back to pickle")
+                            raise
 
                     elif "S" in json_val_content:  # Uncompressed string
                         for part in key_items:
@@ -300,22 +311,7 @@ class DynamoDBStateStore:
                 saved += 1
             except Exception as e:
                 log.error(f'tron_dynamodb_save_failure: failed to save key "{key}" to dynamodb:\n{repr(e)}')
-
-                # Extract job name from key for metrics labeling
-                #
-                # job_state keys:     "job_state billing.snapshot_daily"
-                #   parts[1] = "billing.snapshot_daily"
-                #
-                # job_run_state keys: "job_run_state billing.snapshot_daily.74"
-                #   parts[1] = "billing.snapshot_daily.74"
-                #   parts[1].rsplit(".", 1)[0] = "billing.snapshot_daily"
-                key_type = self.get_type_from_key(key)
-                parts = key.split()
-                job_name = parts[1].rsplit(".", 1)[0] if key_type == "job_run_state" else parts[1]
-                prom_metrics.tron_dynamodb_save_errors_counter.labels(
-                    key_type=key_type,
-                    job_name=job_name,
-                ).inc()
+                prom_metrics.tron_dynamodb_save_errors_counter.inc()
 
                 with self.save_lock:
                     self.save_queue[key] = (val, json_val)
@@ -334,13 +330,11 @@ class DynamoDBStateStore:
         return key.split()[0]
 
     # TODO: TRON-2305 - In an ideal world, we wouldn't be passing around state/state_data dicts. It would be a lot nicer to have regular objects here
-    def _serialize_item(self, key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE], state: dict[str, Any]) -> str | None:  # type: ignore
+    def _serialize_item(self, key: Literal[runstate.JOB_STATE, runstate.JOB_RUN_STATE], state: dict[str, Any]) -> bytes | None:  # type: ignore
         try:
             if key == runstate.JOB_STATE:
-                log.info(f"Serializing Job: {state.get('job_name')}")
                 serialized_data = Job.to_json(state)
             elif key == runstate.JOB_RUN_STATE:
-                log.info(f"Serializing JobRun: {state.get('job_name')}.{state.get('run_num')}")
                 serialized_data = JobRun.to_json(state)
             else:
                 raise ValueError(f"Unknown type: key {key}")
@@ -385,7 +379,7 @@ class DynamoDBStateStore:
                 log.error("too many dynamodb errors in a row, crashing")
                 sys.exit(1)
 
-    def __setitem__(self, key: str, value: tuple[bytes, str]) -> None:
+    def __setitem__(self, key: str, value: tuple[bytes, bytes | None]) -> None:
         """
         Partition the item and write up to self.max_transact_write_items
         partitions atomically using TransactWriteItems.

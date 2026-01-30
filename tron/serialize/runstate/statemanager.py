@@ -110,12 +110,12 @@ class PersistentStateManager:
         """Return the most recent serialized state."""
         log.debug("Restoring state.")
 
-        # First, restore the jobs themselves
+        log.info(f"Restoring {len(job_names)} jobs (read_json={read_json})")
         jobs = self._restore_dicts(runstate.JOB_STATE, job_names, read_json)
         # jobs should be a dictionary that contains  job name and number of runs
         # {'MASTER.k8s': {'run_nums':[0], 'enabled': True}, 'MASTER.cits_test_frequent_1': {'run_nums': [1,0], 'enabled': True}}
 
-        # Second, restore the runs for each of the jobs restored above
+        log.info(f"Restoring JobRun state for {len(job_names)} jobs (read_json={read_json})")
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             # start the threads and mark each future with it's job name
             # this is useful so that we can index the job name later to add the runs to the jobs dictionary
