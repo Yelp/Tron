@@ -41,7 +41,7 @@ flowchart LR
 ### Execution Backends
 
 - **Kubernetes**: Primary execution backend
-- **SSH**: Legacy backend for remote command execution
+- **SSH**: Legacy backend for remote command execution, do not extend
 - **Mesos**: Deprecated, do not extend
 
 ## Project Structure
