@@ -340,7 +340,7 @@ class TestDynamoDBStateStore:
             "tron.config.static_config.build_configuration_watcher", autospec=True
         ):
             vals = store.restore(keys)
-        assert vals == {keys[1]: small_object}
+        assert vals == {"job_run_state four": small_object}
 
     @pytest.mark.parametrize(
         "test_object, side_effects, expected_save_errors, expected_queue_length",
