@@ -83,4 +83,8 @@ Tox manages the virtualenv in `.tox/py310/`. Use `make test` for the full suite,
 ### Do not modify
 
 - `tron/mesos.py` — Deprecated
+- `tron/ssh.py` - Deprecated
+- `tron/node.py` - Deprecated
+
+
 - DynamoDB schema without approval
