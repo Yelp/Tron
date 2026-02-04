@@ -76,9 +76,17 @@ Tox manages the virtualenv in `.tox/py310/`. Use `make test` for the full suite,
 - Reverting changes that add new persisted fields is NOT safe
 - Writes batch 8 partitions at a time; large jobs needing more can be partially written if a later batch fails
 
-**Config schema changes:**
-- New config params get written to MASTER.yaml on disk
-- Reverting code that added a param requires manual config cleanup on servers
+**Job/action schema changes** require updates in two repos:
+- Tron: `tron/config/schema.py`, `tron/core/action.py` (including `from_json`/`to_json`)
+- PaaSTA: `paasta_tools/cli/schemas/tron_schema.json`, `paasta_tools/tron_tools.py`
+- Plus: tests in both repos, and any code that consumes the new field
+
+**MASTER config changes**:
+- `tron/config/schema.py` — Add field to config object
+- `tron/config/config_parse.py` — Add default value and validator
+- Plus: tests, and any code that consumes the new config value
+
+Reverting config changes is risky: new params get written to MASTER.yaml on disk, so reverting code requires manual config cleanup on servers.
 
 ### Do not modify
 
