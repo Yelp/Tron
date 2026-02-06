@@ -33,13 +33,16 @@ def build_mock_job():
         ),
     }
     runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
-    return mock.create_autospec(
+    mock_job = mock.create_autospec(
         job.Job,
         action_graph=action_graph,
         output_path=mock.Mock(),
         context=mock.Mock(),
         action_runner=runner,
     )
+    # Add time_zone attribute for new code
+    mock_job.time_zone = None
+    return mock_job
 
 
 class TestJobRun:
@@ -1039,3 +1042,168 @@ class TestJobRunStateTransitions:
         assert job_run.state == actionrun.ActionRun.STARTING
         job_run.get_action_run("after_foo").cancel()
         assert job_run.state == actionrun.ActionRun.CANCELLED
+
+
+class TestJobRunTimezoneSerialization(TestCase):
+    """Test that JobRun correctly serializes and deserializes timezone information."""
+
+    def test_job_run_stores_timezone(self):
+        """Test that JobRun stores timezone when created."""
+        run_time = pytz.timezone('UTC').localize(datetime.datetime(2024, 2, 10, 1, 0, 0))
+        mock_node = mock.create_autospec(node.Node)
+
+        job_run = jobrun.JobRun(
+            job_name='test.job',
+            run_num=1,
+            run_time=run_time,
+            node=mock_node,
+            time_zone='UTC',
+        )
+
+        assert_equal(job_run.time_zone, 'UTC')
+
+    def test_state_data_includes_timezone(self):
+        """Test that state_data includes timezone field."""
+        run_time = pytz.timezone('UTC').localize(datetime.datetime(2024, 2, 10, 1, 0, 0))
+        mock_node = mock.create_autospec(node.Node)
+        mock_node.get_name.return_value = 'localhost'
+
+        job_run = jobrun.JobRun(
+            job_name='test.job',
+            run_num=1,
+            run_time=run_time,
+            node=mock_node,
+            time_zone='America/Los_Angeles',
+        )
+
+        # Set action_runs after initialization to avoid the setter logic
+        mock_action_runs = mock.Mock(
+            state_data=[],
+            cleanup_action_state_data=None,
+            action_runs_with_cleanup=[],
+        )
+        job_run._action_runs = mock_action_runs
+        job_run.action_runs_proxy = mock.Mock()
+
+        state = job_run.state_data
+        assert_equal(state['time_zone'], 'America/Los_Angeles')
+
+    def test_to_json_with_explicit_timezone(self):
+        """Test that to_json uses explicit timezone field."""
+        run_time = pytz.timezone('UTC').localize(datetime.datetime(2024, 2, 10, 1, 0, 0))
+
+        state_data = {
+            'job_name': 'test.job',
+            'run_num': 1,
+            'run_time': run_time,
+            'time_zone': 'America/Los_Angeles',
+            'node_name': 'localhost',
+            'runs': [],
+            'cleanup_run': None,
+            'manual': False,
+        }
+
+        json_str = jobrun.JobRun.to_json(state_data)
+        data = json.loads(json_str)
+
+        # Should use explicit timezone, not run_time's timezone
+        assert_equal(data['time_zone'], 'America/Los_Angeles')
+
+    def test_to_json_fallback_to_run_time_tzinfo(self):
+        """Test that to_json falls back to run_time.tzinfo for backwards compat."""
+        run_time = pytz.timezone('UTC').localize(datetime.datetime(2024, 2, 10, 1, 0, 0))
+
+        # Old-style state_data without explicit time_zone field
+        state_data = {
+            'job_name': 'test.job',
+            'run_num': 1,
+            'run_time': run_time,
+            'node_name': 'localhost',
+            'runs': [],
+            'cleanup_run': None,
+            'manual': False,
+        }
+
+        json_str = jobrun.JobRun.to_json(state_data)
+        data = json.loads(json_str)
+
+        # Should extract from run_time.tzinfo
+        assert_equal(data['time_zone'], 'UTC')
+
+    def test_from_json_with_timezone(self):
+        """Test that from_json correctly deserializes timezone."""
+        json_str = json.dumps({
+            'job_name': 'test.job',
+            'run_num': 1,
+            'run_time': '2024-02-10T01:00:00+00:00',
+            'time_zone': 'America/Los_Angeles',
+            'node_name': 'localhost',
+            'runs': [],
+            'cleanup_run': None,
+            'manual': False,
+        })
+
+        state_data = jobrun.JobRun.from_json(json_str)
+
+        assert_equal(state_data['time_zone'], 'America/Los_Angeles')
+        # run_time should be converted to the specified timezone
+        assert_equal(state_data['run_time'].tzinfo.zone, 'America/Los_Angeles')
+
+    def test_from_json_without_timezone_backwards_compat(self):
+        """Test that from_json handles old data without timezone field."""
+        json_str = json.dumps({
+            'job_name': 'test.job',
+            'run_num': 1,
+            'run_time': '2024-02-10T01:00:00+00:00',
+            # No time_zone field (old data)
+            'node_name': 'localhost',
+            'runs': [],
+            'cleanup_run': None,
+            'manual': False,
+        })
+
+        # Should not crash
+        state_data = jobrun.JobRun.from_json(json_str)
+
+        assert_equal(state_data['time_zone'], None)
+        # run_time should keep its original timezone (UTC)
+        assert state_data['run_time'].tzinfo is not None
+        assert_equal(state_data['run_time'].utcoffset(), datetime.timedelta(0))
+
+    def test_for_job_extracts_timezone(self):
+        """Test that for_job() extracts timezone from job."""
+        mock_job = build_mock_job()
+        mock_job.get_name.return_value = 'test.job'
+        mock_job.time_zone = pytz.timezone('America/Los_Angeles')
+
+        run_time = pytz.timezone('UTC').localize(datetime.datetime(2024, 2, 10, 1, 0, 0))
+        mock_node = mock.create_autospec(node.Node)
+
+        job_run = jobrun.JobRun.for_job(
+            mock_job,
+            run_num=1,
+            run_time=run_time,
+            node=mock_node,
+            manual=False,
+        )
+
+        assert_equal(job_run.time_zone, 'America/Los_Angeles')
+
+    def test_for_job_handles_none_timezone(self):
+        """Test that for_job() handles jobs without timezone."""
+        mock_job = build_mock_job()
+        mock_job.get_name.return_value = 'test.job'
+        mock_job.time_zone = None
+
+        run_time = datetime.datetime(2024, 2, 10, 1, 0, 0)
+        mock_node = mock.create_autospec(node.Node)
+
+        job_run = jobrun.JobRun.for_job(
+            mock_job,
+            run_num=1,
+            run_time=run_time,
+            node=mock_node,
+            manual=False,
+        )
+
+        assert_equal(job_run.time_zone, None)

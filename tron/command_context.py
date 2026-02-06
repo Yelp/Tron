@@ -5,6 +5,8 @@ import operator
 import re
 from functools import reduce
 
+import pytz
+
 from tron.utils import timeutils
 
 
@@ -149,6 +151,17 @@ class JobRunContext:
            want to do arbitrary deltas here.
         """
         run_time = self.job_run.run_time
+
+        # If we have an explicit timezone stored in the JobRun, convert run_time to that timezone
+        # before calculating date-based values like {shortdate}. This ensures that UTC jobs
+        # calculate shortdate in UTC, PST jobs in PST, etc.
+        # For backwards compatibility with old JobRuns that don't have time_zone attribute,
+        # we use getattr with a default of None.
+        job_run_tz = getattr(self.job_run, 'time_zone', None)
+        if job_run_tz and run_time and run_time.tzinfo is not None:
+            tz = pytz.timezone(job_run_tz)
+            run_time = run_time.astimezone(tz)
+
         time_value = timeutils.DateArithmetic.parse(name, run_time)
         if time_value:
             return time_value

@@ -63,6 +63,7 @@ class JobRun(Observable, Observer, Persistable):
         action_runs: ActionRunCollection | None = None,
         action_graph: ActionGraph | None = None,
         manual: bool | None = None,
+        time_zone: str | None = None,
     ):
         super().__init__()
         self.job_name = maybe_decode(
@@ -71,6 +72,7 @@ class JobRun(Observable, Observer, Persistable):
         self.run_num = run_num
         self.run_time = run_time
         self.node = node
+        self.time_zone = time_zone
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(str(self.run_num))
         self.action_runs_proxy = None
@@ -87,16 +89,19 @@ class JobRun(Observable, Observer, Persistable):
     def to_json(state_data: dict) -> str | None:
         """Serialize the JobRun instance to a JSON string."""
         try:
+            # Prefer explicit time_zone field, fallback to extracting from run_time.tzinfo
+            time_zone = state_data.get("time_zone")
+            if not time_zone and state_data.get("run_time"):
+                run_time = state_data["run_time"]
+                if run_time.tzinfo:
+                    time_zone = run_time.tzinfo.zone
+
             return json.dumps(
                 {
                     "job_name": state_data["job_name"],
                     "run_num": state_data["run_num"],
                     "run_time": state_data["run_time"].isoformat() if state_data["run_time"] else None,
-                    "time_zone": (
-                        state_data["run_time"].tzinfo.zone
-                        if state_data["run_time"] and state_data["run_time"].tzinfo
-                        else None
-                    ),
+                    "time_zone": time_zone,
                     "node_name": state_data["node_name"],
                     "runs": [ActionRun.to_json(run) for run in state_data["runs"]],
                     "cleanup_run": ActionRun.to_json(state_data["cleanup_run"]) if state_data["cleanup_run"] else None,
@@ -118,8 +123,10 @@ class JobRun(Observable, Observer, Persistable):
             raw_run_time = json_data["run_time"]
             if raw_run_time:
                 run_time = datetime.datetime.fromisoformat(raw_run_time)
-                if json_data["time_zone"]:
-                    tz = pytz.timezone(json_data["time_zone"])
+                # Use .get() for backwards compatibility with old data
+                time_zone_str = json_data.get("time_zone")
+                if time_zone_str:
+                    tz = pytz.timezone(time_zone_str)
                     if run_time.tzinfo is None:
                         # if runtime is timezone naive (i.e has no tz information) then localize it
                         # otherwise we would get a ValueError if we attempt to localize a datetime object that has tz info
@@ -137,7 +144,7 @@ class JobRun(Observable, Observer, Persistable):
                 "runs": [ActionRun.from_json(run) for run in json_data["runs"]],
                 "cleanup_run": ActionRun.from_json(json_data["cleanup_run"]) if json_data["cleanup_run"] else None,
                 "run_time": run_time,
-                "time_zone": json_data["time_zone"],
+                "time_zone": json_data.get("time_zone"),
             }
         except Exception:
             log.exception("Error deserializing JobRun from JSON")
@@ -165,6 +172,7 @@ class JobRun(Observable, Observer, Persistable):
             base_context=job.context,
             action_graph=job.action_graph,
             manual=manual,
+            time_zone=job.time_zone.zone if job.time_zone else None,
         )
 
         # We do this at creation to ensure each JobRun is counted once, regardless of when it actually executes.
@@ -200,6 +208,7 @@ class JobRun(Observable, Observer, Persistable):
             manual=state_data.get("manual", False),
             output_path=output_path,
             base_context=context,
+            time_zone=state_data.get("time_zone"),
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
             job_run,
@@ -216,6 +225,7 @@ class JobRun(Observable, Observer, Persistable):
             "job_name": self.job_name,
             "run_num": self.run_num,
             "run_time": self.run_time,
+            "time_zone": self.time_zone,
             "node_name": self.node.get_name() if self.node else None,
             "runs": self.action_runs.state_data,
             "cleanup_run": self.action_runs.cleanup_action_state_data,

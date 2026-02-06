@@ -1,6 +1,8 @@
 import datetime
 from unittest import mock
 
+import pytz
+
 from testifycompat import assert_equal
 from testifycompat import assert_raises
 from testifycompat import run
@@ -234,6 +236,96 @@ class TestFiller(TestCase):
         context = command_context.JobRunContext(self.filler)
         todays_date = datetime.date.today().strftime("%Y-%m-%d")
         assert_equal(context["shortdate"], todays_date)
+
+
+class TestJobRunContextTimezone(TestCase):
+    """Test that JobRunContext correctly handles timezone when calculating shortdate."""
+
+    def test_shortdate_with_utc_timezone(self):
+        """Test that a UTC JobRun calculates shortdate in UTC."""
+        # Create a run_time at 01:00 AM UTC on 2024-02-10
+        utc_tz = pytz.timezone('UTC')
+        run_time = utc_tz.localize(datetime.datetime(2024, 2, 10, 1, 0, 0))
+
+        # Create a mock JobRun with UTC timezone
+        mock_job_run = mock.Mock()
+        mock_job_run.run_time = run_time
+        mock_job_run.time_zone = 'UTC'
+        mock_job_run.id = 'test.job.1'
+
+        context = command_context.JobRunContext(mock_job_run)
+
+        # Should calculate shortdate in UTC (2024-02-10)
+        assert_equal(context["shortdate"], "2024-02-10")
+
+    def test_shortdate_with_pst_timezone(self):
+        """Test that a PST JobRun calculates shortdate in PST."""
+        # Create a run_time at 01:00 AM UTC on 2024-02-10
+        # This is 2024-02-09 17:00 PST
+        utc_tz = pytz.timezone('UTC')
+        run_time = utc_tz.localize(datetime.datetime(2024, 2, 10, 1, 0, 0))
+
+        # Create a mock JobRun with PST timezone
+        mock_job_run = mock.Mock()
+        mock_job_run.run_time = run_time
+        mock_job_run.time_zone = 'America/Los_Angeles'
+        mock_job_run.id = 'test.job.1'
+
+        context = command_context.JobRunContext(mock_job_run)
+
+        # Should calculate shortdate in PST (2024-02-09)
+        assert_equal(context["shortdate"], "2024-02-09")
+
+    def test_shortdate_without_timezone_backwards_compat(self):
+        """Test that old JobRuns without time_zone attribute still work."""
+        # Create a run_time at 01:00 AM UTC on 2024-02-10
+        utc_tz = pytz.timezone('UTC')
+        run_time = utc_tz.localize(datetime.datetime(2024, 2, 10, 1, 0, 0))
+
+        # Create a mock JobRun without time_zone attribute (old JobRuns)
+        mock_job_run = mock.Mock()
+        mock_job_run.run_time = run_time
+        # Remove time_zone attribute to simulate old JobRuns
+        del mock_job_run.time_zone
+        mock_job_run.id = 'test.job.1'
+
+        context = command_context.JobRunContext(mock_job_run)
+
+        # Should use run_time's timezone as-is (2024-02-10)
+        assert_equal(context["shortdate"], "2024-02-10")
+
+    def test_shortdate_with_timezone_naive_run_time(self):
+        """Test that timezone-naive run_time works (no conversion needed)."""
+        # Create a timezone-naive run_time
+        run_time = datetime.datetime(2024, 2, 10, 1, 0, 0)
+
+        # Create a mock JobRun with UTC timezone
+        mock_job_run = mock.Mock()
+        mock_job_run.run_time = run_time
+        mock_job_run.time_zone = 'UTC'
+        mock_job_run.id = 'test.job.1'
+
+        context = command_context.JobRunContext(mock_job_run)
+
+        # Should not crash, should use run_time as-is
+        assert_equal(context["shortdate"], "2024-02-10")
+
+    def test_shortdate_minus_one_with_timezone(self):
+        """Test that shortdate-1 arithmetic works correctly with timezone conversion."""
+        # Create a run_time at 01:00 AM UTC on 2024-02-10
+        utc_tz = pytz.timezone('UTC')
+        run_time = utc_tz.localize(datetime.datetime(2024, 2, 10, 1, 0, 0))
+
+        # Create a mock JobRun with PST timezone
+        mock_job_run = mock.Mock()
+        mock_job_run.run_time = run_time
+        mock_job_run.time_zone = 'America/Los_Angeles'
+        mock_job_run.id = 'test.job.1'
+
+        context = command_context.JobRunContext(mock_job_run)
+
+        # Should calculate shortdate-1 in PST (2024-02-09 - 1 = 2024-02-08)
+        assert_equal(context["shortdate-1"], "2024-02-08")
 
 
 if __name__ == "__main__":
