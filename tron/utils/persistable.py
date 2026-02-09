@@ -6,7 +6,7 @@ from typing import Any
 class Persistable(ABC):
     @staticmethod
     @abstractmethod
-    def to_json(state_data: dict[Any, Any]) -> str | None:
+    def to_json(state_data: dict[Any, Any]) -> str:
         pass
 
     @staticmethod

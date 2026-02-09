@@ -108,17 +108,14 @@ class PersistentStateManager:
     # TODO: get rid of the Any here - hopefully with a TypedDict
     def restore(self, job_names: list[str], read_json: bool = False) -> dict[str, Any]:
         """Return the most recent serialized state."""
-        log.debug("Restoring state.")
-
-        # First, restore the jobs themselves
+        log.info(f"Restoring {len(job_names)} jobs (read_json={read_json})")
         jobs = self._restore_dicts(runstate.JOB_STATE, job_names, read_json)
-        # jobs should be a dictionary that contains  job name and number of runs
-        # {'MASTER.k8s': {'run_nums':[0], 'enabled': True}, 'MASTER.cits_test_frequent_1': {'run_nums': [1,0], 'enabled': True}}
+        # jobs is a dict of job name -> job state
+        # e.g. {'MASTER.k8s': {'run_nums': [0], 'enabled': True}}
 
-        # Second, restore the runs for each of the jobs restored above
+        log.info(f"Restoring JobRun state for {len(jobs)} jobs (read_json={read_json})")
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
-            # start the threads and mark each future with it's job name
-            # this is useful so that we can index the job name later to add the runs to the jobs dictionary
+            # Map each future to its job name so we can associate results later
             results = {
                 executor.submit(self._restore_runs_for_job, job_name, job_state, read_json): job_name
                 for job_name, job_state in jobs.items()

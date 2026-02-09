@@ -84,7 +84,7 @@ class JobRun(Observable, Observer, Persistable):
         self.context = command_context.build_context(self, base_context)
 
     @staticmethod
-    def to_json(state_data: dict) -> str | None:
+    def to_json(state_data: dict) -> str:
         """Serialize the JobRun instance to a JSON string."""
         try:
             return json.dumps(

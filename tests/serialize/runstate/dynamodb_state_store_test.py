@@ -1,13 +1,15 @@
+import gzip
 import json
+import pickle
 from unittest import mock
 
 import boto3
 import pytest
 import staticconf.testing
+from boto3.dynamodb.types import Binary
 from moto import mock_dynamodb
 from moto.dynamodb.responses import dynamo_json_dump
 
-from testifycompat import assert_equal
 from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
 from tron.serialize.runstate.dynamodb_state_store import MAX_UNPROCESSED_KEYS_RETRIES
 
@@ -125,14 +127,14 @@ def large_object():
         "runs": [],
         "cleanup_run": None,
         "manual": False,
-        "large_data": [i for i in range(1_000_000)],
+        "large_data": [i for i in range(200_000)],
     }
 
 
-@pytest.mark.usefixtures("store", "small_object", "large_object")
+@pytest.mark.usefixtures("store")
 class TestDynamoDBStateStore:
     @pytest.mark.parametrize("read_json", [False, True])
-    def test_save(self, store, small_object, large_object, read_json):
+    def test_save(self, store, small_object, read_json):
         key_value_pairs = [
             (
                 store.build_key("job_state", "two"),
@@ -156,17 +158,156 @@ class TestDynamoDBStateStore:
         with mock_configuration, mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
             "tron.config.static_config.build_configuration_watcher", autospec=True
         ):
-            vals = store.restore(keys)
+            vals = store.restore(keys, read_json=read_json)
         for key, value in key_value_pairs:
-            assert_equal(vals[key], value)
+            assert vals[key] == value
 
         for key in keys:
             item = store.table.get_item(Key={"key": key, "index": 0})
             assert "Item" in item
             assert "json_val" in item["Item"]
-            assert_equal(json.loads(item["Item"]["json_val"]), small_object)
 
-    def test_delete_if_val_is_none(self, store, small_object, large_object):
+            compressed_val = item["Item"]["json_val"]
+            assert isinstance(compressed_val, Binary)
+
+            decompressed_json = gzip.decompress(compressed_val.value)
+            assert json.loads(decompressed_json) == small_object
+
+    def test_save_multi_partition_object(self, store, large_object):
+        key_value_pairs = [
+            (
+                store.build_key("job_state", "two"),
+                large_object,
+            ),
+        ]
+        store.save(key_value_pairs)
+        store._consume_save_queue()
+
+        assert store.save_errors == 0
+        keys = [store.build_key("job_state", "two")]
+
+        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore(keys)
+        for key, value in key_value_pairs:
+            assert vals[key] == value
+
+    @pytest.mark.parametrize("read_json", [False, True])
+    def test_restore(self, store, small_object, read_json):
+        keys = [store.build_key("job_state", i) for i in range(3)]
+        value = small_object
+        pairs = zip(keys, (value for i in range(len(keys))))
+        store.save(pairs)
+        store._consume_save_queue()
+
+        assert store.save_errors == 0
+        mock_config = {"read_json.enable": read_json}
+        mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
+        with mock_configuration, mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore(keys)
+        for key in keys:
+            assert vals[key] == small_object
+
+    @pytest.mark.parametrize("read_json", [False, True])
+    def test_restore_multi_partition_object(self, store, large_object, read_json):
+        keys = [store.build_key("job_state", i) for i in range(3)]
+        value = large_object
+        pairs = zip(keys, (value for i in range(len(keys))))
+        store.save(pairs)
+        store._consume_save_queue()
+
+        assert store.save_errors == 0
+
+        for key in keys:
+            num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
+            assert num_json_val_partitions > 1
+            assert num_partitions > 1
+
+        mock_config = {"read_json.enable": read_json}
+        mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
+        with mock_configuration, mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore(keys)
+        for key in keys:
+            assert vals[key] == large_object
+
+    @pytest.mark.parametrize("read_json", [False, True])
+    def test_restore_legacy_uncompressed_json(self, store, small_object, read_json):
+        key = store.build_key("job_run_state", "legacy_job.1")
+        json_val = json.dumps(small_object)
+        store.table.put_item(
+            Item={
+                "key": key,
+                "index": 0,
+                "val": pickle.dumps(small_object),
+                "json_val": json_val,
+                "num_partitions": 1,
+                "num_json_val_partitions": 1,
+            }
+        )
+        restored = store.restore([key], read_json=read_json)
+        assert key in restored
+        assert restored[key] == small_object
+
+    def test_fallback_to_pickle_on_json_error(self, store, small_object):
+        # TODO: TRON-2240 - Remove once we delete pickles as there will be no fallback path
+        key = store.build_key("job_run_state", "a_job.1")
+
+        store.save([(key, small_object)])
+        store._consume_save_queue()
+
+        error_message = "Simulating a JSON deserialization error"
+        with mock.patch(
+            "tron.serialize.runstate.dynamodb_state_store.DynamoDBStateStore._deserialize_item",
+            side_effect=Exception(error_message),
+            autospec=True,
+        ) as mock_deserialize:
+            restored_vals = store.restore([key], read_json=True)
+
+        mock_deserialize.assert_called_once()
+        assert key in restored_vals
+        assert restored_vals[key] == small_object
+
+    def test_delete_item(self, store, small_object):
+        keys = [store.build_key("job_state", i) for i in range(3)]
+        pairs = list(zip(keys, (small_object for _ in range(len(keys)))))
+
+        store.save(pairs)
+        store._consume_save_queue()
+
+        for key, _ in pairs:
+            store._delete_item(key)
+
+        for key, _ in pairs:
+            num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
+            assert num_partitions == 0
+            assert num_json_val_partitions == 0
+
+    def test_delete_multi_partition_item(self, store, large_object):
+        keys = [store.build_key("job_state", i) for i in range(3)]
+        pairs = list(zip(keys, (large_object for _ in range(len(keys)))))
+
+        store.save(pairs)
+        store._consume_save_queue()
+
+        for key, _ in pairs:
+            num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
+            assert num_partitions > 1
+            assert num_json_val_partitions > 1
+
+        for key, _ in pairs:
+            store._delete_item(key)
+
+        for key, _ in pairs:
+            num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
+            assert num_partitions == 0
+            assert num_json_val_partitions == 0
+
+    def test_delete_if_val_is_none(self, store, small_object):
         key_value_pairs = [
             (
                 store.build_key("job_state", "two"),
@@ -199,101 +340,7 @@ class TestDynamoDBStateStore:
             "tron.config.static_config.build_configuration_watcher", autospec=True
         ):
             vals = store.restore(keys)
-        assert vals == {keys[1]: small_object}
-
-    def test_save_more_than_4KB(self, store, small_object, large_object):
-        key_value_pairs = [
-            (
-                store.build_key("job_state", "two"),
-                large_object,
-            ),
-        ]
-        store.save(key_value_pairs)
-        store._consume_save_queue()
-
-        assert store.save_errors == 0
-        keys = [store.build_key("job_state", "two")]
-
-        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True
-        ):
-            vals = store.restore(keys)
-        for key, value in key_value_pairs:
-            assert_equal(vals[key], value)
-
-    @pytest.mark.parametrize("read_json", [False, True])
-    def test_restore_more_than_4KB(self, store, small_object, large_object, read_json):
-        keys = [store.build_key("job_state", i) for i in range(3)]
-        value = large_object
-        pairs = zip(keys, (value for i in range(len(keys))))
-        store.save(pairs)
-        store._consume_save_queue()
-
-        assert store.save_errors == 0
-
-        mock_config = {"read_json.enable": read_json}
-        mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
-        with mock_configuration, mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True
-        ):
-            vals = store.restore(keys)
-        for key in keys:
-            assert_equal(vals[key], large_object)
-
-    @pytest.mark.parametrize("read_json", [False, True])
-    def test_restore(self, store, small_object, large_object, read_json):
-        keys = [store.build_key("job_state", i) for i in range(3)]
-        value = small_object
-        pairs = zip(keys, (value for i in range(len(keys))))
-        store.save(pairs)
-        store._consume_save_queue()
-
-        assert store.save_errors == 0
-        mock_config = {"read_json.enable": read_json}
-        mock_configuration = staticconf.testing.MockConfiguration(mock_config, namespace="tron")
-        with mock_configuration, mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True
-        ):
-            vals = store.restore(keys)
-        for key in keys:
-            assert_equal(vals[key], small_object)
-
-    def test_delete_item(self, store, small_object, large_object):
-        keys = [store.build_key("job_state", i) for i in range(3)]
-        value = large_object
-        pairs = list(zip(keys, (value for i in range(len(keys)))))
-        store.save(pairs)
-        store._consume_save_queue()
-
-        for key, value in pairs:
-            store._delete_item(key)
-        for key, value in pairs:
-            num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
-            assert_equal(num_partitions, 0)
-            assert_equal(num_json_val_partitions, 0)
-
-    def test_delete_item_with_json_partitions(self, store, small_object, large_object):
-        key = store.build_key("job_state", "test_job")
-        value = large_object
-
-        store.save([(key, value)])
-        store._consume_save_queue()
-
-        num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
-        assert num_partitions > 0
-        assert num_json_val_partitions > 0
-
-        store._delete_item(key)
-
-        num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
-        assert_equal(num_partitions, 0)
-        assert_equal(num_json_val_partitions, 0)
-
-        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True
-        ):
-            vals = store.restore([key])
-        assert key not in vals
+        assert vals == {"job_run_state four": small_object}
 
     @pytest.mark.parametrize(
         "test_object, side_effects, expected_save_errors, expected_queue_length",
@@ -345,7 +392,7 @@ class TestDynamoDBStateStore:
     )
     def test_calculate_backoff_delay(self, store, attempt, expected_delay):
         delay = store._calculate_backoff_delay(attempt)
-        assert_equal(delay, expected_delay)
+        assert delay == expected_delay
 
     def test_retry_reading(self, store):
         unprocessed_value = {
@@ -370,7 +417,7 @@ class TestDynamoDBStateStore:
         assert mock_batch_get_item.call_count == MAX_UNPROCESSED_KEYS_RETRIES
         assert mock_sleep.call_count == MAX_UNPROCESSED_KEYS_RETRIES
 
-    def test_restore_exception_propagation(self, store, small_object):
+    def test_restore_exception_propagation(self, store):
         # This test is to ensure that restore propagates exceptions upwards: see DAR-2328
         keys = [store.build_key("job_state", i) for i in range(3)]
 

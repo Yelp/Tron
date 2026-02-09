@@ -148,7 +148,7 @@ class StringBufferStore:
 
 
 # TODO: TRON-2304 - Cleanup NoActionRunnerFactory
-class NoActionRunnerFactory(Persistable):
+class NoActionRunnerFactory:
     """Action runner factory that does not wrap the action run command."""
 
     @classmethod
@@ -221,7 +221,7 @@ class SubprocessActionRunnerFactory(Persistable):
             raise
 
     @staticmethod
-    def to_json(state_data: dict) -> str | None:
+    def to_json(state_data: dict) -> str:
         try:
             return json.dumps(
                 {

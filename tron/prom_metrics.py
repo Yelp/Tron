@@ -127,6 +127,16 @@ tron_last_startup_duration_seconds_gauge = Gauge(
     "tron_last_startup_duration_seconds", "Duration of the most recent total Tron startup process"
 )
 
+tron_dynamodb_consecutive_save_errors_gauge = Gauge(
+    "tron_dynamodb_consecutive_save_errors",
+    "Consecutive save loop iterations with errors",
+)
+
+tron_dynamodb_save_errors_counter = Counter(
+    "tron_dynamodb_save_errors_total",
+    "Total DynamoDB save errors",
+)
+
 
 @contextmanager
 def timer(
