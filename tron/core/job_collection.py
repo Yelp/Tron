@@ -43,8 +43,15 @@ class JobCollection:
         # NOTE: as this is a generator expression, we will only go through job configs
         # and build a scheduler for them once something iterates over us (i.e, once
         # `self.state_watcher.watch_all()` is called)
-        seq = (factory.build(config) for config in job_configs.values() if reconfigure_filter(config))
-        return map_to_job_and_schedule(filter(self.add, seq))
+        def safe_build(config):
+            try:
+                return factory.build(config)
+            except (ValueError, Exception) as e:
+                log.error(f"Failed to build job '{config.name}': {e}. Skipping job.")
+                return None
+
+        seq = (safe_build(config) for config in job_configs.values() if reconfigure_filter(config))
+        return map_to_job_and_schedule(filter(self.add, filter(lambda x: x is not None, seq)))
 
     def add(self, job_scheduler):
         return self.jobs.add(job_scheduler, self.update)
