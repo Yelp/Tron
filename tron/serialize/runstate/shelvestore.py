@@ -94,7 +94,7 @@ class ShelveStateStore:
                 self.shelve[shelve_key] = state_data
         self.shelve.sync()
 
-    def restore(self, keys: list[ShelveKey], read_json: bool = False) -> dict[ShelveKey, Any]:
+    def restore(self, keys: list[ShelveKey]) -> dict[ShelveKey, Any]:
         items = zip(
             keys,
             (self.shelve.get(str(key.key)) for key in keys),
