@@ -3,6 +3,10 @@ import gzip
 import math
 import os
 import sys
+import threading
+import time
+from concurrent.futures import as_completed
+from concurrent.futures import ThreadPoolExecutor
 
 import boto3
 from boto3.resources.base import ServiceResource
@@ -16,6 +20,12 @@ from tron.serialize import runstate
 # for each version.
 OBJECT_SIZE = 150_000
 
+# DynamoDB TransactWriteItems supports up to 100 items per call. We use 25
+# which comfortably fits under the 4MB request size limit (25 × 150KB = 3.75MB
+# worst case). This is sufficient to handle our largest items (~20 partitions
+# uncompressed) in a single atomic transaction after compression.
+MAX_TRANSACT_WRITE_ITEMS = 25
+
 
 def get_dynamodb_table(
     aws_profile: str | None = None, table: str = "infrastage-tron-state", region: str = "us-west-1"
@@ -24,20 +34,32 @@ def get_dynamodb_table(
     return session.resource("dynamodb", region_name=region).Table(table)
 
 
-def scan_table(source_table: ServiceResource) -> list[dict]:
-    items = []
-    response = source_table.scan()
-    items.extend(response.get("Items", []))
+def get_dynamodb_client(
+    aws_profile: str | None = None,
+    region: str = "us-west-1",
+):
+    session = boto3.Session(profile_name=aws_profile) if aws_profile else boto3.Session()
+    return session.client("dynamodb", region_name=region)
+
+
+def scan_keys(source_table: ServiceResource) -> set[str]:
+    """Streaming scan that only projects the key attribute and collects unique partition keys.
+
+    Never stores full items in memory — only the 'key' strings.
+    """
+    unique_keys: set[str] = set()
+    scan_kwargs = {
+        "ProjectionExpression": "#k",
+        "ExpressionAttributeNames": {"#k": "key"},
+    }
+    response = source_table.scan(**scan_kwargs)
+    for item in response.get("Items", []):
+        unique_keys.add(item.get("key", "Unknown Key"))
     while "LastEvaluatedKey" in response:
-        response = source_table.scan(ExclusiveStartKey=response["LastEvaluatedKey"])
-        items.extend(response.get("Items", []))
-    return items
-
-
-def get_all_keys(source_table: ServiceResource) -> list[str]:
-    items = scan_table(source_table)
-    unique_keys = {item.get("key", "Unknown Key") for item in items}
-    return list(unique_keys)
+        response = source_table.scan(ExclusiveStartKey=response["LastEvaluatedKey"], **scan_kwargs)
+        for item in response.get("Items", []):
+            unique_keys.add(item.get("key", "Unknown Key"))
+    return unique_keys
 
 
 def resolve_keys(args, parser, source_table: ServiceResource) -> list[str]:
@@ -45,10 +67,10 @@ def resolve_keys(args, parser, source_table: ServiceResource) -> list[str]:
         parser.error("You must provide either --keys, --keys-file, or --all.")
 
     if args.all:
-        print("Scanning table for all keys...")
-        keys = get_all_keys(source_table)
-        print(f"Found {len(keys)} unique keys.")
-        return keys
+        print("Scanning table for all keys (keys-only projection)...")
+        keys_set = scan_keys(source_table)
+        print(f"Found {len(keys_set)} unique keys.")
+        return list(keys_set)
 
     keys = []
     if args.keys:
@@ -108,14 +130,17 @@ def classify_item(item: dict) -> str:
         return "no_data"
 
 
-def compress_json_for_key(source_table: ServiceResource, key: str, dry_run: bool = True) -> str:
+def compress_json_for_key(
+    source_table: ServiceResource, client, table_name: str, key: str, dry_run: bool = True
+) -> str:
     """Compress uncompressed JSON for a single key.
 
-    Reads all json_val partitions, gzip-compresses the combined JSON, and writes the compressed
-    data back. If compression reduces the number of partitions, the excess partitions have their
-    json_val attribute removed.
+    Reads all json_val partitions via get_item (ConsistentRead), gzip-compresses the combined JSON,
+    and writes the compressed data back using TransactWriteItems with ConditionExpressions to guard
+    against concurrent trond writes.
 
-    Returns a status string: "compressed", "already_compressed", "no_json", "skipped", or raises on error.
+    Returns a status string: "compressed", "already_compressed", "no_json", "skipped",
+    "concurrent_update", or raises on error (including throttle exhaustion).
     """
     response = source_table.get_item(Key={"key": key, "index": 0}, ConsistentRead=True)
     if "Item" not in response:
@@ -133,7 +158,7 @@ def compress_json_for_key(source_table: ServiceResource, key: str, dry_run: bool
         print(f"  SKIP (already compressed): {key}")
         return "already_compressed"
 
-    # It's an uncompressed string — collect all partitions
+    # It's an uncompressed string — collect all partitions via get_item
     num_json_partitions = int(item_0.get("num_json_val_partitions", 1))
     combined_json = ""
     for index in range(num_json_partitions):
@@ -149,7 +174,7 @@ def compress_json_for_key(source_table: ServiceResource, key: str, dry_run: bool
             raise Exception(f"No 'json_val' in partition {index} for key {key}")
         combined_json += partition_item["json_val"]
 
-    # Validate JSON round-trips
+    # Validate JSON round-trips before compressing
     state_type = key.split()[0]
     if state_type == runstate.JOB_STATE:
         Job.from_json(combined_json)
@@ -174,20 +199,100 @@ def compress_json_for_key(source_table: ServiceResource, key: str, dry_run: bool
             f"{num_json_partitions} partitions -> {num_compressed_partitions} partitions)"
         )
     else:
-        # Write compressed data
+        # Build TransactWriteItems with conditional expressions.
+        # Conditions on partition 0 ensure the item is still uncompressed and has the same
+        # number of partitions we read — if trond wrote concurrently the condition fails.
+        transact_items = []
         for i in range(num_compressed_partitions):
             chunk = compressed[i * OBJECT_SIZE : (i + 1) * OBJECT_SIZE]
-            source_table.update_item(
-                Key={"key": key, "index": i},
-                UpdateExpression="SET json_val = :json, num_json_val_partitions = :n",
-                ExpressionAttributeValues={":json": chunk, ":n": num_compressed_partitions},
-            )
-        # Clean up excess partitions if compressed has fewer than uncompressed
+            update = {
+                "Update": {
+                    "TableName": table_name,
+                    "Key": {
+                        "key": {"S": key},
+                        "index": {"N": str(i)},
+                    },
+                    "UpdateExpression": "SET json_val = :json, num_json_val_partitions = :n",
+                    "ExpressionAttributeValues": {
+                        ":json": {"B": chunk},
+                        ":n": {"N": str(num_compressed_partitions)},
+                    },
+                },
+            }
+            if i == 0:
+                # Condition on partition 0: item must still be uncompressed with expected partition count
+                update["Update"]["ConditionExpression"] = (
+                    "attribute_exists(json_val) "
+                    "AND attribute_type(json_val, :string_type) "
+                    "AND num_json_val_partitions = :expected_partitions"
+                )
+                update["Update"]["ExpressionAttributeValues"][":string_type"] = {"S": "S"}
+                update["Update"]["ExpressionAttributeValues"][":expected_partitions"] = {"N": str(num_json_partitions)}
+            transact_items.append(update)
+
+        # Clean up excess partitions (REMOVE json_val where compressed needs fewer partitions)
         for i in range(num_compressed_partitions, num_json_partitions):
-            source_table.update_item(
-                Key={"key": key, "index": i},
-                UpdateExpression="REMOVE json_val",
+            transact_items.append(
+                {
+                    "Update": {
+                        "TableName": table_name,
+                        "Key": {
+                            "key": {"S": key},
+                            "index": {"N": str(i)},
+                        },
+                        "UpdateExpression": "REMOVE json_val",
+                    },
+                }
             )
+
+        if len(transact_items) > MAX_TRANSACT_WRITE_ITEMS:
+            raise Exception(
+                f"Compression requires {len(transact_items)} transaction items for key {key}, "
+                f"exceeding single-transaction limit of {MAX_TRANSACT_WRITE_ITEMS}. "
+                f"({num_json_partitions} uncompressed partitions, "
+                f"{num_compressed_partitions} compressed partitions)"
+            )
+        if compressed_size > 3_500_000:
+            raise Exception(
+                f"Compressed data too large ({compressed_size:,} bytes) for key {key} — "
+                f"risks exceeding 4MB TransactWriteItems request limit."
+            )
+
+        # Single atomic transaction — all updates and removes in one call. We retry
+        # on ThrottlingException with exponential backoff on top of boto3's built-in
+        # retries. During testing we are getting throttled almost immediately (on hot
+        # keys) and quickly exhausting the default retry budget. This slows things
+        # down a lot but allows the process to complete without manual intervention
+        # or re-runs.
+        max_retries = 5
+        for attempt in range(max_retries + 1):
+            try:
+                client.transact_write_items(TransactItems=transact_items)
+                break
+            except client.exceptions.TransactionCanceledException as e:
+                reasons = e.response.get("CancellationReasons", [])
+                if any(r.get("Code") in ("ConditionalCheckFailed", "TransactionConflict") for r in reasons):
+                    print(f"  SKIPPED (concurrent update detected): {key}")
+                    return "concurrent_update"
+                # Check if cancellation was due to throttling
+                if any(r.get("Code") == "ThrottlingError" for r in reasons):
+                    if attempt < max_retries:
+                        wait = 2**attempt
+                        print(f"  THROTTLED (attempt {attempt + 1}/{max_retries + 1}, retrying in {wait}s): {key}")
+                        time.sleep(wait)
+                    continue
+                raise
+            except Exception as e:
+                if "ThrottlingException" in str(e) or "Throughput exceeds" in str(e):
+                    if attempt < max_retries:
+                        wait = 2**attempt
+                        print(f"  THROTTLED (attempt {attempt + 1}/{max_retries + 1}, retrying in {wait}s): {key}")
+                        time.sleep(wait)
+                    continue
+                raise
+        else:
+            raise Exception(f"Throttled after {max_retries + 1} attempts")
+
         print(
             f"  COMPRESSED: {key} "
             f"({original_size:,} bytes -> {compressed_size:,} bytes, {ratio:.1f}% reduction, "
@@ -197,8 +302,74 @@ def compress_json_for_key(source_table: ServiceResource, key: str, dry_run: bool
     return "compressed"
 
 
+def verify_compressed_json_for_key(source_table: ServiceResource, key: str) -> bool:
+    """Re-read all compressed JSON partitions, gunzip, and validate via from_json.
+
+    Returns True if verification succeeds, False otherwise. Prints the reason on failure.
+    """
+    response = source_table.get_item(Key={"key": key, "index": 0}, ConsistentRead=True)
+    if "Item" not in response:
+        print(f"  VERIFY FAIL (no item found): {key}")
+        return False
+
+    item_0 = response["Item"]
+
+    if "json_val" not in item_0:
+        print(f"  VERIFY FAIL (no json_val): {key}")
+        return False
+
+    if not is_compressed(item_0["json_val"]):
+        print(f"  VERIFY FAIL (json_val is not compressed): {key}")
+        return False
+
+    num_json_partitions = int(item_0.get("num_json_val_partitions", 1))
+
+    # Reassemble compressed bytes from all partitions
+    compressed_data = bytearray()
+    for index in range(num_json_partitions):
+        if index == 0:
+            partition_item = item_0
+        else:
+            resp = source_table.get_item(Key={"key": key, "index": index}, ConsistentRead=True)
+            if "Item" not in resp:
+                print(f"  VERIFY FAIL (missing partition {index}): {key}")
+                return False
+            partition_item = resp["Item"]
+
+        if "json_val" not in partition_item:
+            print(f"  VERIFY FAIL (no json_val in partition {index}): {key}")
+            return False
+
+        compressed_data += get_json_val_bytes(partition_item["json_val"])
+
+    # Decompress
+    try:
+        json_str = gzip.decompress(bytes(compressed_data)).decode("utf-8")
+    except Exception as e:
+        print(f"  VERIFY FAIL (gunzip failed: {e}): {key}")
+        return False
+
+    # Validate via from_json
+    state_type = key.split()[0]
+    try:
+        if state_type == runstate.JOB_STATE:
+            Job.from_json(json_str)
+        elif state_type == runstate.JOB_RUN_STATE:
+            JobRun.from_json(json_str)
+        else:
+            print(f"  VERIFY FAIL (unknown state type '{state_type}'): {key}")
+            return False
+    except Exception as e:
+        print(f"  VERIFY FAIL (from_json failed: {e}): {key}")
+        return False
+
+    return True
+
+
 def delete_pickle_for_key(source_table: ServiceResource, key: str, dry_run: bool = True) -> str:
     """Delete pickle data (val, num_partitions) for a single key.
+
+    Verifies compressed JSON can be fully decoded and parsed before deleting.
 
     Returns a status string: "deleted", "refused", "no_pickle", "skipped", or raises on error.
     """
@@ -209,7 +380,7 @@ def delete_pickle_for_key(source_table: ServiceResource, key: str, dry_run: bool
 
     item_0 = response["Item"]
 
-    # Some extra safety checks to avoid deleting pickles if we don't have valid compressed JSON
+    # Safety checks
     if "json_val" not in item_0:
         print(f"  REFUSE (no json_val at all): {key}")
         return "refused"
@@ -221,6 +392,11 @@ def delete_pickle_for_key(source_table: ServiceResource, key: str, dry_run: bool
     if "val" not in item_0:
         print(f"  SKIP (no pickle data to delete): {key}")
         return "no_pickle"
+
+    # Verify compressed JSON is valid before deleting pickle
+    if not verify_compressed_json_for_key(source_table, key):
+        print(f"  REFUSE (compressed JSON verification failed): {key}")
+        return "refused"
 
     num_partitions = int(item_0.get("num_partitions", 1))
     num_json_partitions = int(item_0.get("num_json_val_partitions", 1))
@@ -241,25 +417,69 @@ def delete_pickle_for_key(source_table: ServiceResource, key: str, dry_run: bool
     return "deleted"
 
 
-def cmd_compress(args, source_table: ServiceResource, keys: list[str]) -> None:
+def cmd_compress(args, source_table: ServiceResource, client, table_name: str, keys: list[str]) -> None:
     dry_run = not args.execute
+    workers = args.workers
     total = len(keys)
-    counts = {"compressed": 0, "already_compressed": 0, "no_json": 0, "skipped": 0, "failed": 0}
+    counts = {
+        "compressed": 0,
+        "already_compressed": 0,
+        "no_json": 0,
+        "skipped": 0,
+        "concurrent_update": 0,
+        "failed": 0,
+    }
     failed_keys = []
+    lock = threading.Lock()
+    completed = [0]  # mutable counter for progress
 
     mode = "DRY RUN" if dry_run else "EXECUTING"
-    print(f"\n=== Compress JSON ({mode}) ===")
+    print(f"\n=== Compress JSON ({mode}, {workers} workers) ===")
     print(f"Processing {total} keys...\n")
 
-    for i, key in enumerate(sorted(keys), 1):
-        print(f"[{i}/{total}] {key}")
+    # Pre-create one Table resource per worker thread. The high-level
+    # resource is not thread-safe, so each worker gets its own, but we
+    # create them once upfront instead of per-key.
+    thread_tables = [get_dynamodb_table(args.aws_profile, args.table_name, args.table_region) for _ in range(workers)]
+    # Map thread IDs to table resources as workers claim them.
+    thread_local = threading.local()
+
+    def get_thread_table() -> ServiceResource:
+        if not hasattr(thread_local, "table"):
+            with lock:
+                thread_local.table = thread_tables.pop()
+        return thread_local.table
+
+    def process_key(key: str) -> None:
+        thread_table = get_thread_table()
         try:
-            result = compress_json_for_key(source_table, key, dry_run=dry_run)
-            counts[result] += 1
+            result = compress_json_for_key(thread_table, client, table_name, key, dry_run=dry_run)
         except Exception as e:
-            print(f"  FAILED: {e}")
-            counts["failed"] += 1
-            failed_keys.append(key)
+            result = "failed"
+            with lock:
+                failed_keys.append(key)
+            print(f"  FAILED ({key}): {e}")
+
+        with lock:
+            counts[result] += 1
+            completed[0] += 1
+            if completed[0] % 500 == 0 or completed[0] == total:
+                print(f"  Progress: {completed[0]}/{total} keys processed")
+
+    sorted_keys = sorted(keys)
+    with ThreadPoolExecutor(max_workers=workers) as pool:
+        futures = {pool.submit(process_key, key): key for key in sorted_keys}
+        for future in as_completed(futures):
+            # Exceptions are already handled inside process_key, but catch
+            # anything truly unexpected so one bad future doesn't kill the pool.
+            try:
+                future.result()
+            except Exception as e:
+                key = futures[future]
+                print(f"  UNEXPECTED ERROR ({key}): {e}")
+                with lock:
+                    counts["failed"] += 1
+                    failed_keys.append(key)
 
     print("\n=== Summary ===")
     print(f"Total keys:           {total}")
@@ -267,6 +487,7 @@ def cmd_compress(args, source_table: ServiceResource, keys: list[str]) -> None:
     print(f"Already compressed:   {counts['already_compressed']}")
     print(f"No JSON (pickle-only):{counts['no_json']}")
     print(f"Skipped:              {counts['skipped']}")
+    print(f"Concurrent updates:   {counts['concurrent_update']}")
     print(f"Failed:               {counts['failed']}")
 
     if dry_run:
@@ -332,24 +553,28 @@ def cmd_delete_pickles(args, source_table: ServiceResource, keys: list[str]) -> 
 
 def cmd_status(args, source_table: ServiceResource) -> None:
     print(f"\n=== Status: {args.table_name} ({args.table_region}) ===")
-    print("Scanning table...")
+    print("Scanning partition-0 items...")
 
-    items = scan_table(source_table)
-
-    # Group items by key and find partition 0 for each
-    keys_items: dict[str, dict] = {}
-    for item in items:
-        key = item.get("key", "Unknown Key")
-        index = int(item.get("index", 0))
-        if index == 0:
-            keys_items[key] = item
-
-    total = len(keys_items)
     counts = {"compressed": 0, "uncompressed": 0, "pickle_only": 0, "no_data": 0}
+    total = 0
 
-    for key, item in sorted(keys_items.items()):
-        classification = classify_item(item)
-        counts[classification] += 1
+    # Streaming scan filtered to partition 0 only, projecting just the attributes
+    # needed for classification. This avoids per-key get_item calls.
+    scan_kwargs = {
+        "FilterExpression": "#idx = :zero",
+        "ProjectionExpression": "#k, #idx, json_val, val",
+        "ExpressionAttributeNames": {"#k": "key", "#idx": "index"},
+        "ExpressionAttributeValues": {":zero": 0},
+    }
+    response = source_table.scan(**scan_kwargs)
+    for item in response.get("Items", []):
+        total += 1
+        counts[classify_item(item)] += 1
+    while "LastEvaluatedKey" in response:
+        response = source_table.scan(ExclusiveStartKey=response["LastEvaluatedKey"], **scan_kwargs)
+        for item in response.get("Items", []):
+            total += 1
+            counts[classify_item(item)] += 1
 
     print(f"\nTotal unique keys: {total:,}\n")
     for label, count_key in [
@@ -387,9 +612,9 @@ def main():
         description="Compress JSON and delete pickle data in Tron's DynamoDB state store.",
         epilog="""
 Sub-commands:
-  compress          Compress uncompressed JSON ("S" type) to gzip-compressed binary ("B" type).
-  delete-pickles    Remove pickle data (val, num_partitions) from items that have compressed JSON.
-  status            Report the state of all keys in the table.
+  compress              Compress uncompressed JSON ("S" type) to gzip-compressed binary ("B" type).
+  delete-pickles        Remove pickle data (val, num_partitions) from items that have compressed JSON.
+  status                Report the state of all keys in the table.
 
 Examples:
   Check status of a table:
@@ -432,6 +657,12 @@ Examples:
         help="Actually perform the compression. Dry-run by default.",
     )
     compress_parser.add_argument(
+        "--workers",
+        type=int,
+        default=8,
+        help="Number of concurrent workers (default: 8). Increase for faster throughput; decrease if throttling is excessive.",
+    )
+    compress_parser.add_argument(
         "--failed-keys-output",
         required=False,
         help="Output file to write keys that failed compression. One key per line.",
@@ -469,12 +700,13 @@ Examples:
 
     args = parser.parse_args()
     source_table = get_dynamodb_table(args.aws_profile, args.table_name, args.table_region)
+    client = get_dynamodb_client(args.aws_profile, args.table_region)
 
     if args.action == "status":
         cmd_status(args, source_table)
     elif args.action == "compress":
         keys = resolve_keys(args, parser, source_table)
-        cmd_compress(args, source_table, keys)
+        cmd_compress(args, source_table, client, args.table_name, keys)
     elif args.action == "delete-pickles":
         keys = resolve_keys(args, parser, source_table)
         cmd_delete_pickles(args, source_table, keys)
