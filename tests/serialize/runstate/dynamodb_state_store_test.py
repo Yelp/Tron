@@ -412,3 +412,70 @@ class TestDynamoDBStateStore:
                 ), mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True):
                     store.restore(keys)
                 assert str(exec_info.value) == "mocked exception"
+
+    def test_serialization_failure_preserves_existing_row(self, store, small_object):
+        """When json serialization fails, the existing DynamoDB row should not be deleted."""
+        key = store.build_key("job_run_state", "preserve_me")
+
+        store.save([(key, small_object)])
+        store._consume_save_queue()
+        assert store.save_errors == 0
+
+        new_val = {**small_object, "run_num": 999}
+        with mock.patch.object(store, "_serialize_item", return_value=None):
+            store.save([(key, new_val)])
+
+        # The save() call above already called _serialize_item (which returned None),
+        # so the queue has (new_val, None). _consume_save_queue should retry and still fail.
+        with mock.patch.object(store, "_serialize_item", return_value=None):
+            store._consume_save_queue()
+
+        # The item should be requeued
+        assert len(store.save_queue) == 1
+        assert store.save_errors == 1
+
+        # The original key should still be intact
+        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore([key])
+        assert vals[key] == small_object
+
+    def test_serialization_retry_succeeds(self, store, small_object):
+        """When initial json_val is None but retry succeeds, the item should be saved normally."""
+        key = store.build_key("job_run_state", "retry_ok")
+
+        with mock.patch.object(store, "_serialize_item", return_value=None):
+            store.save([(key, small_object)])
+
+        queued_val, queued_json = store.save_queue[key]
+        assert queued_val == small_object
+        assert queued_json is None
+
+        # This time it should succeed
+        store._consume_save_queue()
+
+        assert len(store.save_queue) == 0
+        assert store.save_errors == 0
+
+        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
+            "tron.config.static_config.build_configuration_watcher", autospec=True
+        ):
+            vals = store.restore([key])
+        assert vals[key] == small_object
+
+    def test_delete_sentinel_proceeds_with_deletion(self, store, small_object):
+        """When val is None the row should be deleted."""
+        key = store.build_key("job_run_state", "delete_me")
+
+        store.save([(key, small_object)])
+        store._consume_save_queue()
+        assert store.save_errors == 0
+
+        store.save([(key, None)])
+        store._consume_save_queue()
+        assert store.save_errors == 0
+
+        num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
+        assert num_partitions == 0
+        assert num_json_val_partitions == 0

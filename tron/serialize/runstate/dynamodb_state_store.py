@@ -263,6 +263,23 @@ class DynamoDBStateStore:
             try:
                 with self.save_lock:
                     key, (val, json_val) = self.save_queue.popitem(last=False)
+
+                # If val is non-None but json_val is None, serialization failed.
+                # Re-attempt serialization and requeue on failure since we don't
+                # want any pickle-only items these days.
+                if val is not None and json_val is None:
+                    state_type = self.get_type_from_key(key)
+                    json_val = self._serialize_item(state_type, val)
+                    if json_val is None:
+                        log.error(
+                            f'tron_dynamodb_save_failure: json serialization failed for key "{key}", '
+                            f"preserving existing row and requeuing"
+                        )
+                        prom_metrics.tron_dynamodb_save_errors_counter.inc()
+                        with self.save_lock:
+                            self.save_queue[key] = (val, None)
+                        continue
+
                 # Remove all previous data with the same partition key
                 # TODO: only remove excess partitions if new data has fewer
                 self._delete_item(key)
