@@ -1896,7 +1896,10 @@ class TestKubernetesActionRun:
                 node_selectors=mock_k8s_action_run.command_config.node_selectors,
                 node_affinities=mock_k8s_action_run.command_config.node_affinities,
                 topology_spread_constraints=mock_k8s_action_run.command_config.topology_spread_constraints,
-                pod_labels=mock_k8s_action_run.command_config.labels,
+                pod_labels={
+                    "tron.yelp.com/run_num": "42",
+                    "tron.yelp.com/attempt_number": "0",
+                },
                 pod_annotations=mock_k8s_action_run.command_config.annotations,
                 service_account_name=mock_k8s_action_run.command_config.service_account_name,
                 ports=mock_k8s_action_run.command_config.ports,
@@ -2034,3 +2037,55 @@ class TestKubernetesActionRun:
         mock_k8s_action_run._exit_unsuccessful(13)
 
         assert mock_k8s_action_run.retries_remaining == 4
+
+    @mock.patch("tron.core.actionrun.filehandler", autospec=True)
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
+    def test_submit_command_first_attempt_labels(self, mock_cluster_repo, mock_filehandler, mock_k8s_action_run):
+        with mock.patch.object(mock_k8s_action_run, "watch", autospec=True):
+            new_attempt = mock_k8s_action_run.create_attempt()
+            mock_k8s_action_run.submit_command(new_attempt)
+
+            create_task_kwargs = mock_cluster_repo.get_cluster.return_value.create_task.call_args[1]
+            assert create_task_kwargs["pod_labels"]["tron.yelp.com/attempt_number"] == "0"
+
+    @mock.patch("tron.core.actionrun.filehandler", autospec=True)
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
+    def test_submit_command_retry_attempt_labels(self, mock_cluster_repo, mock_filehandler, mock_k8s_action_run):
+        mock_k8s_action_run.attempts = [
+            ActionRunAttempt(
+                command_config=mock_k8s_action_run.command_config,
+                rendered_command="mock_command",
+            ),
+            ActionRunAttempt(
+                command_config=mock_k8s_action_run.command_config,
+                rendered_command="mock_command",
+            ),
+        ]
+        with mock.patch.object(mock_k8s_action_run, "watch", autospec=True):
+            new_attempt = mock_k8s_action_run.create_attempt()
+            mock_k8s_action_run.submit_command(new_attempt)
+
+            create_task_kwargs = mock_cluster_repo.get_cluster.return_value.create_task.call_args[1]
+            assert create_task_kwargs["pod_labels"]["tron.yelp.com/attempt_number"] == "2"
+
+    @mock.patch("tron.core.actionrun.filehandler", autospec=True)
+    @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
+    def test_recover_retry_attempt_labels(self, mock_cluster_repo, mock_filehandler, mock_k8s_action_run):
+        mock_k8s_action_run.attempts = [
+            ActionRunAttempt(
+                command_config=mock_k8s_action_run.command_config,
+                rendered_command="mock_command",
+            ),
+            ActionRunAttempt(
+                command_config=mock_k8s_action_run.command_config,
+                rendered_command="mock_command",
+            ),
+        ]
+        mock_k8s_action_run.machine.state = ActionRun.UNKNOWN
+        last_attempt = mock_k8s_action_run.create_attempt()
+        last_attempt.kubernetes_task_id = "test-k8s-task-id"
+        with mock.patch.object(mock_k8s_action_run, "watch", autospec=True):
+            assert mock_k8s_action_run.recover()
+
+            create_task_kwargs = mock_cluster_repo.get_cluster.return_value.create_task.call_args[1]
+            assert create_task_kwargs["pod_labels"]["tron.yelp.com/attempt_number"] == "2"

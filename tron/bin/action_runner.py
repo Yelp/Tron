@@ -93,9 +93,13 @@ def build_environment(run_id, original_env=None):
     return new_env
 
 
-def build_labels(run_id: str, original_labels: dict[str, str] | None = None) -> dict[str, str]:
+def build_labels(
+    run_id: str,
+    original_labels: dict[str, str] | None = None,
+    attempt_number: int | None = None,
+) -> dict[str, str]:
     if original_labels is None:
-        original_labels = dict()
+        original_labels = {}
 
     try:
         # reminder: the format here is "namespace.job.run_num.action"
@@ -107,6 +111,8 @@ def build_labels(run_id: str, original_labels: dict[str, str] | None = None) -> 
 
     new_labels = dict(original_labels)
     new_labels["tron.yelp.com/run_num"] = run_num
+    if attempt_number is not None:
+        new_labels["tron.yelp.com/attempt_number"] = str(attempt_number)
 
     return new_labels
 

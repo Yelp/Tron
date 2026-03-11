@@ -18,9 +18,10 @@ class TestStatusFile(TestCase):
 
     def test_get_content(self):
         command, proc, run_id = "do this", mock.Mock(), "Job.test.1"
-        with mock.patch("tron.bin.action_runner.time.time", autospec=True) as faketime, mock.patch(
-            "tron.bin.action_runner.os.getpid", autospec=True
-        ) as fakepid:
+        with (
+            mock.patch("tron.bin.action_runner.time.time", autospec=True) as faketime,
+            mock.patch("tron.bin.action_runner.os.getpid", autospec=True) as fakepid,
+        ):
             faketime.return_value = 0
             fakepid.return_value = 2
             content = self.status_file.get_content(
@@ -45,13 +46,12 @@ class TestRegister(TestCase):
 
     @setup_teardown
     def patch_sys(self):
-        with mock.patch("tron.bin.action_runner.os.path.isdir", autospec=True) as self.mock_isdir, mock.patch(
-            "tron.bin.action_runner.os.makedirs", autospec=True
-        ) as self.mock_makedirs, mock.patch(
-            "tron.bin.action_runner.os.access", autospec=True
-        ) as self.mock_access, mock.patch(
-            "tron.bin.action_runner.StatusFile", autospec=True
-        ) as self.mock_status_file:
+        with (
+            mock.patch("tron.bin.action_runner.os.path.isdir", autospec=True) as self.mock_isdir,
+            mock.patch("tron.bin.action_runner.os.makedirs", autospec=True) as self.mock_makedirs,
+            mock.patch("tron.bin.action_runner.os.access", autospec=True) as self.mock_access,
+            mock.patch("tron.bin.action_runner.StatusFile", autospec=True) as self.mock_status_file,
+        ):
             self.output_path = "/bogus/path/does/not/exist"
             self.command = "command"
             self.run_id = "Job.test.1"
@@ -187,3 +187,34 @@ class TestBuildLabels:
         assert labels == {
             "tron.yelp.com/run_num": "10",
         }
+
+    def test_build_labels_with_attempt_number_zero(self):
+        labels = action_runner.build_labels("MASTER.foo.10.bar", attempt_number=0)
+
+        assert labels == {
+            "tron.yelp.com/run_num": "10",
+            "tron.yelp.com/attempt_number": "0",
+        }
+
+    def test_build_labels_with_attempt_number_retry(self):
+        labels = action_runner.build_labels("MASTER.foo.10.bar", attempt_number=2)
+
+        assert labels == {
+            "tron.yelp.com/run_num": "10",
+            "tron.yelp.com/attempt_number": "2",
+        }
+
+    def test_build_labels_with_attempt_number_and_original_labels(self):
+        current_labels = {"LABEL1": "value_1"}
+        labels = action_runner.build_labels("MASTER.foo.10.bar", current_labels, attempt_number=1)
+
+        assert labels == {
+            "tron.yelp.com/run_num": "10",
+            "tron.yelp.com/attempt_number": "1",
+            "LABEL1": "value_1",
+        }
+
+    def test_build_labels_without_attempt_number_omits_label(self):
+        labels = action_runner.build_labels("MASTER.foo.10.bar")
+
+        assert "tron.yelp.com/attempt_number" not in labels

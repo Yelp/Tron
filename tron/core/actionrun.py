@@ -1,5 +1,5 @@
 """
- tron.core.actionrun
+tron.core.actionrun
 """
 import datetime
 import json
@@ -55,7 +55,10 @@ if TYPE_CHECKING:
 log = logging.getLogger(__name__)
 MAX_RECOVER_TRIES = 5
 INITIAL_RECOVER_DELAY = 3
-KUBERNETES_ACTIONRUN_EXECUTORS: set[str] = {ExecutorTypes.kubernetes.value, ExecutorTypes.spark.value}  # type: ignore # mypy can't seem to inspect this enum
+KUBERNETES_ACTIONRUN_EXECUTORS: set[str] = {
+    ExecutorTypes.kubernetes.value,
+    ExecutorTypes.spark.value,
+}  # type: ignore # mypy can't seem to inspect this enum
 
 
 class ActionRunFactory:
@@ -809,7 +812,9 @@ class ActionRun(Observable, Persistable):
         }
 
     @staticmethod
-    def from_json(state_data: str) -> dict[str, Any]:  # TODO: would be nice to have a TypedDict here
+    def from_json(
+        state_data: str,
+    ) -> dict[str, Any]:  # TODO: would be nice to have a TypedDict here
         """Deserialize the ActionRun instance from a JSON Dictionary."""
         try:
             json_data = json.loads(state_data)
@@ -1371,7 +1376,11 @@ class KubernetesActionRun(ActionRun, Observer):
                 node_selectors=attempt.command_config.node_selectors,
                 node_affinities=attempt.command_config.node_affinities,
                 topology_spread_constraints=attempt.command_config.topology_spread_constraints,
-                pod_labels=build_labels(run_id=self.id, original_labels=attempt.command_config.labels),
+                pod_labels=build_labels(
+                    run_id=self.id,
+                    original_labels=attempt.command_config.labels,
+                    attempt_number=len(self.attempts) - 1,
+                ),
                 pod_annotations=attempt.command_config.annotations,
                 service_account_name=attempt.command_config.service_account_name,
                 ports=attempt.command_config.ports,
@@ -1459,7 +1468,11 @@ class KubernetesActionRun(ActionRun, Observer):
                 node_selectors=last_attempt.command_config.node_selectors,
                 node_affinities=last_attempt.command_config.node_affinities,
                 topology_spread_constraints=last_attempt.command_config.topology_spread_constraints,
-                pod_labels=build_labels(run_id=self.id, original_labels=last_attempt.command_config.labels),
+                pod_labels=build_labels(
+                    run_id=self.id,
+                    original_labels=last_attempt.command_config.labels,
+                    attempt_number=len(self.attempts) - 1,
+                ),
                 pod_annotations=last_attempt.command_config.annotations,
                 service_account_name=last_attempt.command_config.service_account_name,
                 ports=last_attempt.command_config.ports,
