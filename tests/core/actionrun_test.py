@@ -962,7 +962,6 @@ class TestSSHActionRunRecover:
 
 
 class TestActionRunStateRestore:
-
     now = datetime.datetime(2012, 3, 14, 15, 19)
 
     @pytest.fixture(autouse=True)
@@ -1638,7 +1637,7 @@ class TestMesosActionRun:
                 constraints=[["an attr", "an op", "a val"]],
                 docker_parameters=[{"key": "init", "value": "true"}],
                 **self.other_task_kwargs,
-            ), mock_get_cluster.return_value.create_task.calls
+            )
             task = mock_get_cluster.return_value.create_task.return_value
             mock_get_cluster.return_value.recover.assert_called_once_with(task)
             mock_watch.assert_called_once_with(task)
@@ -1901,7 +1900,7 @@ class TestKubernetesActionRun:
                 pod_annotations=mock_k8s_action_run.command_config.annotations,
                 service_account_name=mock_k8s_action_run.command_config.service_account_name,
                 ports=mock_k8s_action_run.command_config.ports,
-            ), mock_get_cluster.return_value.create_task.calls
+            )
             task = mock_get_cluster.return_value.create_task.return_value
             mock_get_cluster.return_value.recover.assert_called_once_with(task)
             mock_watch.assert_called_once_with(task)
