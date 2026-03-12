@@ -58,7 +58,7 @@ INITIAL_RECOVER_DELAY = 3
 KUBERNETES_ACTIONRUN_EXECUTORS: set[str] = {
     ExecutorTypes.kubernetes.value,
     ExecutorTypes.spark.value,
-}  # type: ignore # mypy can't seem to inspect this enum
+}
 
 
 class ActionRunFactory:
