@@ -11,7 +11,6 @@ from collections import defaultdict
 from collections import OrderedDict
 from collections.abc import Sequence
 from typing import Any
-from typing import DefaultDict
 from typing import Literal
 from typing import TypeVar
 
@@ -79,7 +78,7 @@ class DynamoDBStateStore:
         """
         return f"{type} {iden}"
 
-    def restore(self, keys: list[str], read_json: bool = False) -> dict[str, Any]:
+    def restore(self, keys: list[str]) -> dict[str, Any]:
         """
         Fetch all under the same partition key(s).
         ret: <dict of key to states>
@@ -88,8 +87,8 @@ class DynamoDBStateStore:
         # job_state job_name --> high level info about the job: enabled, run_nums
         # job_run_state job_run_name --> high level info about the job run
         first_items = self._get_first_partitions(keys)
-        remaining_items = self._get_remaining_partitions(first_items, read_json)
-        vals = self._merge_items(first_items, remaining_items, read_json)
+        remaining_items = self._get_remaining_partitions(first_items)
+        vals = self._merge_items(first_items, remaining_items)
         return vals
 
     def chunk_keys(self, keys: Sequence[T]) -> list[Sequence[T]]:
@@ -169,108 +168,53 @@ class DynamoDBStateStore:
         new_keys = [{"key": {"S": key}, "index": {"N": "0"}} for key in keys]
         return self._get_items(new_keys)
 
-    def _get_remaining_partitions(self, items: list, read_json: bool) -> list[dict[str, Any]]:
+    def _get_remaining_partitions(self, items: list) -> list[dict[str, Any]]:
         """Get items in the remaining partitions: N = 1 and beyond"""
         keys_for_remaining_items = []
         for item in items:
-            max_partitions = int(item["num_partitions"]["N"])
-            if read_json and "num_json_val_partitions" in item:
-                max_partitions = max(max_partitions, int(item["num_json_val_partitions"]["N"]))
+            num_partitions = int(item["num_json_val_partitions"]["N"])
 
-            prom_metrics.tron_dynamodb_partitions_histogram.observe(max_partitions)
+            prom_metrics.tron_dynamodb_partitions_histogram.observe(num_partitions)
 
+            # We already have the 0th partition, so fetch partitions 1 through num_partitions-1
             remaining_items = [
-                {"key": {"S": str(item["key"]["S"])}, "index": {"N": str(i)}}
-                # we start from 1 since we already have the 0th partition and we get the rest of the partitions
-                # based on the max number of partitions, whether that number is the partitions for the pickled objects
-                # or the partitions for the json data
-                for i in range(1, max_partitions)
+                {"key": {"S": str(item["key"]["S"])}, "index": {"N": str(i)}} for i in range(1, num_partitions)
             ]
             keys_for_remaining_items.extend(remaining_items)
         return self._get_items(keys_for_remaining_items)
 
-    def _merge_items(
-        self, first_items: list[dict[str, Any]], remaining_items: list[dict[str, Any]], read_json: bool = False
-    ) -> dict[str, Any]:
+    def _merge_items(self, first_items: list[dict[str, Any]], remaining_items: list[dict[str, Any]]) -> dict[str, Any]:
         """
-        Helper to merge multi-partition data into a single entry. If read_json is
-        False, we merge the pickle partitions - otherwise, we merge the json ones.
-
-
-        NOTE: if an exception is raised while merging JSON, we'll automatically
-        fallback to the pickled data.
+        Helper to merge multi-partition compressed JSON data into a single entry
+        and deserialize it.
         """
-        items = defaultdict(list)
-        raw_items: DefaultDict[str, bytearray] = defaultdict(bytearray)
-        json_items: DefaultDict[str, str] = defaultdict(str)
+        partitions_by_key = defaultdict(list)
 
         if remaining_items:
             first_items.extend(remaining_items)
 
         for item in first_items:
             key = item["key"]["S"]
-            items[key].append(item)
+            partitions_by_key[key].append(item)
 
         # Sort all partitions upfront
-        for key_items in items.values():
+        for key_items in partitions_by_key.values():
             key_items.sort(key=lambda x: int(x["index"]["N"]))
 
-        # Build pickle items
-        #
-        # This is a known safe format if there are issues with compressed JSON.
-        # Re-organizing this has a small perf hit on restores (extra loop
-        # through items), but I think it's worth it for code clarity, especially
-        # as we move to removing pickles entirely.
-        for key, key_items in items.items():
-            for val in key_items:
-                if "val" in val:
-                    raw_items[key] += bytes(val["val"]["B"])
+        # Reassemble compressed JSON partitions and decompress
+        json_items: dict[str, str] = {}
+        for key, key_items in partitions_by_key.items():
+            compressed_data = bytearray()
+            for part in key_items:
+                if "json_val" in part and "B" in part["json_val"]:
+                    compressed_data += part["json_val"]["B"]
 
-        # Build JSON items
-        #
-        # This is a bit messy but we need to handle both compressed binary data
-        # and uncompressed string data since we rolled out the JSON serialization
-        # in two phases. Newer items will have compressed binary data while
-        # older items will have uncompressed string data. This is temporary
-        # and will be removed once we've compressed all JSON.
-        if read_json:
-            try:
-                for key, key_items in items.items():
-                    if not key_items:
-                        continue
+            if not compressed_data:
+                raise ValueError(f"No compressed json_val found for key {key}")
 
-                    first_part_with_json = next((p for p in key_items if "json_val" in p), None)
-                    if not first_part_with_json:
-                        raise ValueError(f"No json_val found for key {key}")
+            json_items[key] = gzip.decompress(compressed_data).decode("utf-8")
 
-                    json_val_content = first_part_with_json["json_val"]
-
-                    if "B" in json_val_content:  # Compressed binary
-                        compressed_data = bytearray()
-                        for part in key_items:
-                            if "json_val" in part and "B" in part["json_val"]:
-                                compressed_data += part["json_val"]["B"]
-                        try:
-                            json_items[key] = gzip.decompress(compressed_data).decode("utf-8")
-                        except Exception:
-                            log.exception(f"Failed to decompress JSON data for key {key}, falling back to pickle")
-                            raise
-
-                    elif "S" in json_val_content:  # Uncompressed string
-                        for part in key_items:
-                            if "json_val" in part and "S" in part["json_val"]:
-                                json_items[key] += part["json_val"]["S"]
-
-                deserialized_items = {k: self._deserialize_item(k, v) for k, v in json_items.items()}
-
-            except Exception:
-                log.exception("Error processing JSON items, falling back to pickled data")
-                read_json = False
-
-        if not read_json:
-            deserialized_items = {k: pickle.loads(v) for k, v in raw_items.items()}
-
-        return deserialized_items
+        return {k: self._deserialize_item(k, v) for k, v in json_items.items()}
 
     def save(self, key_value_pairs: list[tuple[str, dict[str, Any] | None]]) -> None:
         """Add items to the save_queue to be later consumed by _consume_save_queue"""
@@ -300,6 +244,23 @@ class DynamoDBStateStore:
             try:
                 with self.save_lock:
                     key, (val, json_val) = self.save_queue.popitem(last=False)
+
+                # If val is non-None but json_val is None, serialization failed.
+                # Re-attempt serialization and requeue on failure since we don't
+                # want any pickle-only items these days.
+                if val is not None and json_val is None:
+                    state_type = self.get_type_from_key(key)
+                    json_val = self._serialize_item(state_type, val)
+                    if json_val is None:
+                        log.error(
+                            f'tron_dynamodb_save_failure: json serialization failed for key "{key}", '
+                            f"preserving existing row and requeuing"
+                        )
+                        prom_metrics.tron_dynamodb_save_errors_counter.inc()
+                        with self.save_lock:
+                            self.save_queue[key] = (val, None)
+                        continue
+
                 # Remove all previous data with the same partition key
                 # TODO: only remove excess partitions if new data has fewer
                 self._delete_item(key)
