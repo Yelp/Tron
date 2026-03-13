@@ -239,21 +239,6 @@ class TestDynamoDBStateStore:
         for key in keys:
             assert vals[key] == large_object
 
-    def test_restore_legacy_uncompressed_json(self, store, small_object):
-        key = store.build_key("job_run_state", "legacy_job.1")
-        json_val = json.dumps(small_object)
-        store.table.put_item(
-            Item={
-                "key": key,
-                "index": 0,
-                "json_val": json_val,
-                "num_json_val_partitions": 1,
-            }
-        )
-        restored = store.restore([key])
-        assert key in restored
-        assert restored[key] == small_object
-
     def test_delete_item(self, store, small_object):
         keys = [store.build_key("job_state", i) for i in range(3)]
         pairs = list(zip(keys, (small_object for _ in range(len(keys)))))

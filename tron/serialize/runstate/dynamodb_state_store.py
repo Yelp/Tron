@@ -11,7 +11,6 @@ from collections import defaultdict
 from collections import OrderedDict
 from collections.abc import Sequence
 from typing import Any
-from typing import DefaultDict
 from typing import Literal
 from typing import TypeVar
 
@@ -189,51 +188,33 @@ class DynamoDBStateStore:
         Helper to merge multi-partition compressed JSON data into a single entry
         and deserialize it.
         """
-        items = defaultdict(list)
-        json_items: DefaultDict[str, str] = defaultdict(str)
+        partitions_by_key = defaultdict(list)
 
         if remaining_items:
             first_items.extend(remaining_items)
 
         for item in first_items:
             key = item["key"]["S"]
-            items[key].append(item)
+            partitions_by_key[key].append(item)
 
         # Sort all partitions upfront
-        for key_items in items.values():
+        for key_items in partitions_by_key.values():
             key_items.sort(key=lambda x: int(x["index"]["N"]))
 
-        # Build JSON items
-        #
-        # This is a bit messy but we need to handle both compressed binary data
-        # and uncompressed string data since we rolled out the JSON serialization
-        # in two phases. Newer items will have compressed binary data while
-        # older items will have uncompressed string data. This is temporary
-        # and will be removed once we've compressed all JSON.
-        for key, key_items in items.items():
-            if not key_items:
-                continue
+        # Reassemble compressed JSON partitions and decompress
+        json_items: dict[str, str] = {}
+        for key, key_items in partitions_by_key.items():
+            compressed_data = bytearray()
+            for part in key_items:
+                if "json_val" in part and "B" in part["json_val"]:
+                    compressed_data += part["json_val"]["B"]
 
-            first_part_with_json = next((p for p in key_items if "json_val" in p), None)
-            if not first_part_with_json:
-                raise ValueError(f"No json_val found for key {key}")
+            if not compressed_data:
+                raise ValueError(f"No compressed json_val found for key {key}")
 
-            json_val_content = first_part_with_json["json_val"]
+            json_items[key] = gzip.decompress(compressed_data).decode("utf-8")
 
-            if "B" in json_val_content:  # Compressed binary
-                compressed_data = bytearray()
-                for part in key_items:
-                    if "json_val" in part and "B" in part["json_val"]:
-                        compressed_data += part["json_val"]["B"]
-                json_items[key] = gzip.decompress(compressed_data).decode("utf-8")
-
-            elif "S" in json_val_content:  # Uncompressed string (legacy)
-                for part in key_items:
-                    if "json_val" in part and "S" in part["json_val"]:
-                        json_items[key] += part["json_val"]["S"]
-
-        deserialized_items = {k: self._deserialize_item(k, v) for k, v in json_items.items()}
-        return deserialized_items
+        return {k: self._deserialize_item(k, v) for k, v in json_items.items()}
 
     def save(self, key_value_pairs: list[tuple[str, dict[str, Any] | None]]) -> None:
         """Add items to the save_queue to be later consumed by _consume_save_queue"""
