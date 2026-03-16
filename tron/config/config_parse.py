@@ -84,7 +84,7 @@ def build_format_string_validator(context_object):
         except (KeyError, ValueError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
             raise ConfigError(error_msg % (e, config_context.path, value))
-        except (TypeError) as e:
+        except TypeError as e:
             error_msg = "Wrong command format %s: %s at %s"
             raise ConfigError(error_msg % (value, e, config_context.path))
 
@@ -593,7 +593,7 @@ class ValidateAction(Validator):
         "retries": None,
         "retries_delay": None,
         "expected_runtime": datetime.timedelta(hours=24),
-        "executor": schema.ExecutorTypes.ssh.value,  # type: ignore[attr-defined] # ExecutorTypes is an Enum
+        "executor": schema.ExecutorTypes.ssh.value,
         "cpus": None,
         "mem": None,
         "disk": None,
@@ -688,7 +688,7 @@ class ValidateCleanupAction(Validator):
         "retries": None,
         "retries_delay": None,
         "expected_runtime": datetime.timedelta(hours=24),
-        "executor": schema.ExecutorTypes.ssh.value,  # type: ignore[attr-defined] # ExecutorTypes is an Enum
+        "executor": schema.ExecutorTypes.ssh.value,
         "cpus": None,
         "mem": None,
         "disk": None,
