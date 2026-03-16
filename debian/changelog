@@ -1,3 +1,11 @@
+tron (3.10.0) jammy; urgency=medium
+
+  * 3.10.0 tagged with 'make release'
+    Commit: Merge pull request #1096 from Yelp/u/kkasp/unlearn-how-to-
+    read-pickles  U/kkasp/unlearn how to read pickles
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Mon, 16 Mar 2026 09:03:19 -0700
+
 tron (3.9.3) jammy; urgency=medium
 
   * 3.9.3 tagged with 'make release'
