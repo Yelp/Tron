@@ -106,18 +106,18 @@ class PersistentStateManager:
         self._impl = persistence_impl
 
     # TODO: get rid of the Any here - hopefully with a TypedDict
-    def restore(self, job_names: list[str], read_json: bool = False) -> dict[str, Any]:
+    def restore(self, job_names: list[str]) -> dict[str, Any]:
         """Return the most recent serialized state."""
-        log.info(f"Restoring {len(job_names)} jobs (read_json={read_json})")
-        jobs = self._restore_dicts(runstate.JOB_STATE, job_names, read_json)
+        log.info(f"Restoring {len(job_names)} jobs")
+        jobs = self._restore_dicts(runstate.JOB_STATE, job_names)
         # jobs is a dict of job name -> job state
         # e.g. {'MASTER.k8s': {'run_nums': [0], 'enabled': True}}
 
-        log.info(f"Restoring JobRun state for {len(jobs)} jobs (read_json={read_json})")
+        log.info(f"Restoring JobRun state for {len(jobs)} jobs")
         with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
             # Map each future to its job name so we can associate results later
             results = {
-                executor.submit(self._restore_runs_for_job, job_name, job_state, read_json): job_name
+                executor.submit(self._restore_runs_for_job, job_name, job_state): job_name
                 for job_name, job_state in jobs.items()
             }
             for result in concurrent.futures.as_completed(results):
@@ -133,13 +133,11 @@ class PersistentStateManager:
         return state
 
     # TODO: get rid of the Any here - hopefully with a TypedDict
-    def _restore_runs_for_job(
-        self, job_name: str, job_state: dict[str, Any], read_json: bool = False
-    ) -> list[dict[str, Any]]:
+    def _restore_runs_for_job(self, job_name: str, job_state: dict[str, Any]) -> list[dict[str, Any]]:
         """Restore the state for the runs of each job"""
         run_nums = job_state["run_nums"]
         keys = [jobrun.get_job_run_id(job_name, run_num) for run_num in run_nums]
-        job_runs_restored_states = self._restore_dicts(runstate.JOB_RUN_STATE, keys, read_json)
+        job_runs_restored_states = self._restore_dicts(runstate.JOB_RUN_STATE, keys)
         all_job_runs = copy.copy(job_runs_restored_states)
         for run_id, state in all_job_runs.items():
             if state == {}:
@@ -157,10 +155,10 @@ class PersistentStateManager:
         return dict(zip(keys, names))
 
     # TODO: get rid of the Any here - hopefully with a TypedDict
-    def _restore_dicts(self, item_type: str, items: list[str], read_json: bool = False) -> dict[str, Any]:
+    def _restore_dicts(self, item_type: str, items: list[str]) -> dict[str, Any]:
         """Return a dict mapping of the items name to its state data."""
         key_to_item_map = self._keys_for_items(item_type, items)
-        key_to_state_map = self._impl.restore(key_to_item_map.keys(), read_json)
+        key_to_state_map = self._impl.restore(key_to_item_map.keys())
         return {key_to_item_map[key]: state_data for key, state_data in key_to_state_map.items()}
 
     def delete(self, type_enum, name):
@@ -295,7 +293,7 @@ class StateChangeWatcher(observer.Observer):
     def disabled(self):
         return self.state_manager.disabled()
 
-    def restore(self, jobs: list[str], read_json: bool = False) -> dict[str, Any]:
+    def restore(self, jobs: list[str]) -> dict[str, Any]:
         # HACK: this cast is nasty, but we should probably refactor things so that the default self.state_manager
         # in not a NullStateManager
-        return cast(PersistentStateManager, self.state_manager).restore(jobs, read_json)
+        return cast(PersistentStateManager, self.state_manager).restore(jobs)

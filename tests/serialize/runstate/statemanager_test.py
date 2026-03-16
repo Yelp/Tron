@@ -70,7 +70,6 @@ class TestPersistentStateManager(TestCase):
         self.store.build_key.side_effect = lambda t, i: f"{t}{i}"
         self.buffer = StateSaveBuffer(1)
         self.manager = PersistentStateManager(self.store, self.buffer)
-        self.read_json = False
 
     def test__init__(self):
         assert_equal(self.manager._impl, self.store)
@@ -99,7 +98,7 @@ class TestPersistentStateManager(TestCase):
 
             restored_state = self.manager.restore(job_names)
             assert mock_restore_dicts.call_args_list == [
-                mock.call(runstate.JOB_STATE, job_names, self.read_json),
+                mock.call(runstate.JOB_STATE, job_names),
             ]
             assert len(mock_restore_runs.call_args_list) == 2
             assert restored_state == {
@@ -121,9 +120,7 @@ class TestPersistentStateManager(TestCase):
             ]
             runs = self.manager._restore_runs_for_job("job_a", job_state)
 
-            assert mock_restore_dicts.call_args_list == [
-                mock.call(runstate.JOB_RUN_STATE, ["job_a.2", "job_a.3"], self.read_json)
-            ]
+            assert mock_restore_dicts.call_args_list == [mock.call(runstate.JOB_RUN_STATE, ["job_a.2", "job_a.3"])]
             assert runs == [{"job_name": "job_a", "run_num": 3}, {"job_name": "job_a", "run_num": 2}]
 
     def test_restore_runs_for_job_one_missing(self):
@@ -137,7 +134,7 @@ class TestPersistentStateManager(TestCase):
             runs = self.manager._restore_runs_for_job("job_a", job_state)
 
             assert mock_restore_dicts.call_args_list == [
-                mock.call(runstate.JOB_RUN_STATE, ["job_a.2", "job_a.3"], self.read_json),
+                mock.call(runstate.JOB_RUN_STATE, ["job_a.2", "job_a.3"]),
             ]
             assert runs == [{"job_name": "job_a", "run_num": 3}]
 
@@ -221,7 +218,6 @@ class TestStateChangeWatcher(TestCase):
         self.watcher = StateChangeWatcher()
         self.state_manager = mock.create_autospec(PersistentStateManager)
         self.watcher.state_manager = self.state_manager
-        self.read_json = False
 
     def test_update_from_config_no_change(self):
         self.watcher.config = state_config = mock.Mock()
@@ -267,7 +263,7 @@ class TestStateChangeWatcher(TestCase):
     def test_restore(self):
         jobs = mock.Mock()
         self.watcher.restore(jobs)
-        self.watcher.state_manager.restore.assert_called_with(jobs, self.read_json)
+        self.watcher.state_manager.restore.assert_called_with(jobs)
 
     def test_handler_mesos_change(self):
         self.watcher.handler(
