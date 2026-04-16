@@ -8,6 +8,7 @@ export default defineConfig({
   build: {
     outDir: "../tronweb2",
     emptyOutDir: true,
+    chunkSizeWarningLimit: 600,
     rollupOptions: {
       output: {
         manualChunks: {
