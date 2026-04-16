@@ -282,7 +282,7 @@ export function ActionGraph({ actions, actionStates, onNodeClick }: ActionGraphP
       cy.destroy();
       cyRef.current = null;
     };
-  }, [actions, actionStates, buildGraph]);
+  }, [actions, actionStates, isDark, buildGraph]);
 
   // Search filter
   useEffect(() => {
@@ -357,7 +357,7 @@ export function ActionGraph({ actions, actionStates, onNodeClick }: ActionGraphP
     return () => {
       cy.destroy();
     };
-  }, [isFullscreen, buildGraph, search]);
+  }, [isFullscreen, isDark, buildGraph, search]);
 
   // Unique states for legend
   const activeStates = new Set<ActionState>();
