@@ -54,5 +54,4 @@ debian/tron.prerm.debhelper
 debian/tron.substvars
 
 # tronweb2
-tronweb2/*
-!tronweb2/.gitkeep
+tronweb2/
