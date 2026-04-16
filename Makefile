@@ -64,7 +64,6 @@ tronweb2:
 	cd tronweb-src && npm i && npm run build
 
 test:
-	mkdir -p tronweb2
 	tox -e py310
 
 test_in_docker_%: docker_%
