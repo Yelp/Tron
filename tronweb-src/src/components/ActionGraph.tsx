@@ -47,8 +47,19 @@ export function ActionGraph({ actions, actionStates, onNodeClick }: ActionGraphP
   const fullscreenTooltipRef = useRef<HTMLDivElement>(null);
   const [search, setSearch] = useState("");
   const [isFullscreen, setIsFullscreen] = useState(false);
+  const [isDark, setIsDark] = useState(
+    () => typeof document !== "undefined" && document.documentElement.classList.contains("dark")
+  );
 
-  const isDark = typeof document !== "undefined" && document.documentElement.classList.contains("dark");
+  useEffect(() => {
+    if (typeof document === "undefined") return;
+    const root = document.documentElement;
+    const update = () => setIsDark(root.classList.contains("dark"));
+    update();
+    const observer = new MutationObserver(update);
+    observer.observe(root, { attributes: true, attributeFilter: ["class"] });
+    return () => observer.disconnect();
+  }, []);
 
   // Build lookup for action states/commands
   const stateMap = useRef(new Map<string, ActionRunGraphEntry>()).current;
