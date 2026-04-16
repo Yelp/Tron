@@ -30,7 +30,7 @@ setup(
     packages=find_packages(
         exclude=["tests.*", "tests", "example-cluster"],
     )
-    + ["tronweb", "tronweb2"],
+    + ["tronweb"],
     scripts=glob.glob("bin/*") + glob.glob("tron/bin/*.py"),
     include_package_data=True,
     long_description="""
