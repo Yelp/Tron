@@ -198,10 +198,10 @@ export function ActionGraph({ actions, actionStates, onNodeClick }: ActionGraphP
           : null;
 
         tooltip.innerHTML = `
-          <div class="font-semibold text-sm mb-1 break-all">${name}</div>
+          <div class="font-semibold text-sm mb-1 break-all">${escapeHtml(name)}</div>
           <div class="flex items-center gap-2 mb-1">
             <span class="inline-block w-2.5 h-2.5 rounded-full" style="background:${(isDark ? stateStylesDark : stateStyles)[state]?.border ?? '#999'}"></span>
-            <span class="text-xs">${stateStyles[state]?.label ?? state}</span>
+            <span class="text-xs">${escapeHtml(stateStyles[state]?.label ?? state)}</span>
             ${duration ? `<span class="text-xs text-muted-foreground ml-1">(${duration})</span>` : ""}
           </div>
           ${command ? `<code class="text-xs block mt-1 p-1 rounded bg-black/10 dark:bg-white/10 break-all max-h-16 overflow-hidden">${escapeHtml(command.slice(0, 200))}${command.length > 200 ? "..." : ""}</code>` : ""}
