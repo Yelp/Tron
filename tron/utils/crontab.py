@@ -162,7 +162,7 @@ weekday_parser = WeekdayFieldParser()
 
 # TODO: support L (for dow), W, #
 def parse_crontab(line: str) -> dict:
-    line = convert_predefined(line)
+    line = convert_predefined(line.strip())
     minutes, hours, dom, months, dow = line.split(None, 4)
 
     return {
@@ -170,6 +170,6 @@ def parse_crontab(line: str) -> dict:
         "hours": hour_parser.parse(hours),
         "monthdays": monthday_parser.parse(dom),
         "months": month_parser.parse(months),
-        "weekdays": weekday_parser.parse(dow),
+        "weekdays": weekday_parser.parse(dow.strip()),
         "ordinals": None,
     }
