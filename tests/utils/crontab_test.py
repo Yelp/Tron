@@ -151,6 +151,28 @@ class TestInvalidInputs(TestCase):
         with assert_raises(ValueError):
             self.parser.parse("61")
 
+    def test_trailing_garbage_rejected(self):
+        with assert_raises(ValueError):
+            self.parser.parse("5kevin")
+
+    def test_trailing_text_after_range_rejected(self):
+        with assert_raises(ValueError):
+            self.parser.parse("5-10x")
+
+    def test_trailing_text_after_step_rejected(self):
+        with assert_raises(ValueError):
+            self.parser.parse("*/10abc")
+
+
+class TestInvalidCrontabLines(TestCase):
+    def test_garbage_in_fields(self):
+        with assert_raises(ValueError):
+            crontab.parse_crontab("0 5kevin * * *")
+
+    def test_all_fields_with_garbage(self):
+        with assert_raises(ValueError):
+            crontab.parse_crontab("0sdsvb 5kevin *df *jyfiuyf *")
+
 
 class TestBoundaryValues(TestCase):
     @setup

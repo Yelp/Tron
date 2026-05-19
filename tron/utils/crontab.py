@@ -23,7 +23,6 @@ def convert_predefined(line: str) -> str:
     return PREDEFINED_SCHEDULE[line]
 
 
-# TODO: TRON-1761 - Fix cron validation. The pattern is not working as expected.
 class FieldParser:
     """Parse and validate a field in a crontab entry."""
 
@@ -34,6 +33,7 @@ class FieldParser:
         (?P<min>\d+|\*)         # Initial value
         (?:-(?P<max>\d+))?      # Optional max upper bound
         (?:/(?P<step>\d+))?     # Optional step increment
+        $
         """,
         re.VERBOSE,
     )
