@@ -291,6 +291,8 @@ def valid_cron_scheduler(config, config_context):
     """Parse a cron schedule."""
     try:
         crontab_kwargs = crontab.parse_crontab(config.value)
+        if crontab_kwargs["monthdays"] is not None and crontab_kwargs["weekdays"] is not None:
+            raise ValueError("cannot supply both monthdays and weekdays")
         return ConfigCronScheduler(
             original=config.value,
             jitter=config.jitter,

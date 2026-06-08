@@ -95,6 +95,9 @@ class TestValidCronScheduler(TestCase):
     def test_invalid_config(self):
         assert_raises(ConfigError, self.validate, "* * *")
 
+    def test_monthdays_and_weekdays_rejected(self):
+        assert_raises(ConfigError, self.validate, "10 14 15-21 * 5")
+
 
 class TestValidDailyScheduler(TestCase):
     def validate(self, config):
