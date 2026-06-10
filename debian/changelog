@@ -1,3 +1,11 @@
+tron (3.10.1) jammy; urgency=medium
+
+  * 3.10.1 tagged with 'make release'
+    Commit: Merge pull request #1100 from Yelp/u/sidtuladhar/TRON-1761
+    Fix cron validation to reject trailing garbage in fields
+
+ -- Sid Tuladhar <sidtuladhar@yelp.com>  Wed, 10 Jun 2026 06:37:10 -0700
+
 tron (3.10.0) jammy; urgency=medium
 
   * 3.10.0 tagged with 'make release'
