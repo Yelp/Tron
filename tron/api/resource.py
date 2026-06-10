@@ -6,6 +6,7 @@ import collections
 import datetime
 import json
 import logging
+import os
 import traceback
 
 import staticconf
@@ -533,6 +534,8 @@ class RootResource(resource.Resource):
         self.mcp = mcp
         self.putChild(b"api", ApiRootResource(self.mcp))
         self.putChild(b"web", static.File(web_path))
+        web2_path = os.path.join(os.path.dirname(web_path), "tronweb2")
+        self.putChild(b"tronweb", static.File(web2_path))
         self.putChild(b"", self)
 
     def render_GET(self, request):
