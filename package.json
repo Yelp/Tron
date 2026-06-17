@@ -26,7 +26,7 @@
         "axe-core": "4.7.0"
     },
     "engines": {
-        "node-version-shim": "10.x",
-        "node": ">=10"
+        "node-version-shim": "24.x",
+        "node": ">=24"
     }
 }
