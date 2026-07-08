@@ -33,6 +33,7 @@ from tron.commands.client import RequestError
 from tron.commands.client import TronObjectIdentifier
 from tron.commands.cmd_utils import COLOR_YELLOW
 from tron.commands.cmd_utils import ExitCode
+from tron.commands.cmd_utils import parse_date
 from tron.commands.cmd_utils import suggest_possibilities
 from tron.commands.cmd_utils import tron_jobs_completer
 from tron.commands.cmd_utils import warning_output
@@ -99,10 +100,6 @@ COMMAND_HELP = (
 )
 
 log = logging.getLogger("tronctl")
-
-
-def parse_date(date_string):
-    return datetime.datetime.strptime(date_string, "%Y-%m-%d")
 
 
 def parse_cli():
