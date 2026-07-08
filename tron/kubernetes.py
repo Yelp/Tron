@@ -32,7 +32,7 @@ if TYPE_CHECKING:
     from tron.serialize.runstate.statemanager import StateChangeWatcher
 
 DEFAULT_POD_LAUNCH_TIMEOUT_S = 300  # arbitrary number, same as Mesos offer timeout of yore
-DEFAULT_DISK_LIMIT = 1024.0  # arbitrary, same as what was chosen for Mesos-based Tronjobs
+DEFAULT_DISK_LIMIT = 4096.0  # arbitrary, same as what was chosen for Mesos-based Tronjobs
 
 KUBERNETES_TASK_LOG_FORMAT = "%(asctime)s %(name)s %(levelname)s %(message)s"
 KUBERNETES_TASK_OUTPUT_LOGGER = "tron.kubernetes.task_output"
