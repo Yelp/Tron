@@ -1,5 +1,13 @@
-#!/usr/bin/env python3
-"""List Tron jobs whose schedule fires at or under a given frequency threshold."""
+"""
+List Tron jobs whose schedule fires at or under a given frequency threshold.
+
+The script takes two arguments:
+
+--minutes: The threshold in minutes (inclusive)
+--repo: path to yelpsoa-configs (the script goes through all tron-*.yaml files under the repo)
+
+both arguments are required.
+"""
 import argparse
 import glob
 import os
@@ -69,13 +77,11 @@ def cron_frequency_minutes(cron_expr):
         return 1440  # fires once per day
 
     # Minimum gap between consecutive fires (wrapping midnight)
-    gaps = []
-    for i in range(len(fire_times)):
-        next_time = fire_times[(i + 1) % len(fire_times)]
-        curr_time = fire_times[i]
-        gap = (next_time - curr_time) % 1440
-        if gap > 0:
-            gaps.append(gap)
+    gaps = [
+        gap
+        for i in range(len(fire_times))
+        if (gap := (fire_times[(i + 1) % len(fire_times)] - fire_times[i]) % 1440) > 0
+    ]
 
     return min(gaps) if gaps else 1440
 
@@ -98,16 +104,16 @@ def normalize_schedule(schedule):
             return ("groc", None, raw)
 
     if isinstance(schedule, dict):
-        raw = str(schedule)
         stype = schedule.get("type", "")
         if stype == "cron":
-            return ("cron", schedule.get("value", ""), raw)
+            value = schedule.get("value", "")
+            return ("cron", value, f"cron {value}")
         elif stype == "daily":
-            return ("daily", None, raw)
+            return ("daily", None, str(schedule))
         elif "start_time" in schedule:
-            return ("daily", None, raw)
+            return ("daily", None, str(schedule))
         else:
-            return ("groc", None, raw)
+            return ("groc", None, str(schedule))
 
     return ("groc", None, str(schedule))
 
@@ -142,7 +148,7 @@ def main():
     parser.add_argument(
         "--repo",
         required=True,
-        help="Path to yelpsoa-configs checkout root (the directory containing service subdirectories)",
+        help="Path to yelpsoa-configs root (the directory containing service subdirectories)",
     )
     args = parser.parse_args()
 
@@ -182,6 +188,13 @@ def main():
                 if freq is not None and freq <= args.minutes:
                     _, _, raw = normalize_schedule(schedule)
                     results.append((freq, service, key, raw))
+
+    seen = {}
+    for freq, service, job_name, raw in results:
+        dedup_key = (service, job_name)
+        if dedup_key not in seen or freq < seen[dedup_key][0]:
+            seen[dedup_key] = (freq, raw)
+    results = [(freq, svc, job, raw) for (svc, job), (freq, raw) in seen.items()]
 
     results.sort(key=lambda r: (r[0], r[1], r[2]))
 
