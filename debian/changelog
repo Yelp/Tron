@@ -3,6 +3,13 @@ tron (3.10.2) jammy; urgency=medium
   * 3.10.2 tagged with 'make release'
     Commit: Released 3.10.2 via make release
 
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Fri, 17 Jul 2026 12:39:57 -0700
+
+tron (3.10.2) jammy; urgency=medium
+
+  * 3.10.2 tagged with 'make release'
+    Commit: Released 3.10.2 via make release
+
  -- Charles Peacock Arguelles <cpeacock@yelp.com>  Fri, 17 Jul 2026 09:35:11 -0700
 
 tron (3.10.2) jammy; urgency=medium
