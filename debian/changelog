@@ -1,6 +1,13 @@
 tron (3.10.2) jammy; urgency=medium
 
   * 3.10.2 tagged with 'make release'
+    Commit: Released 3.10.2 via make release
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Fri, 17 Jul 2026 09:32:32 -0700
+
+tron (3.10.2) jammy; urgency=medium
+
+  * 3.10.2 tagged with 'make release'
     Commit: Merge pull request #1103 from Yelp/TRON-
     2629_cpeacock_increase_default_k8s_disk_size  Increase default k8s
     disk size from 1024 to 4096MiB
