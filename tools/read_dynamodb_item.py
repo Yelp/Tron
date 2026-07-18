@@ -76,7 +76,6 @@ def fetch_all_partitions(client, table_name: str, key: str) -> list[dict]:
     if num_partitions > 1:
         remaining_keys = [{"key": {"S": key}, "index": {"N": str(i)}} for i in range(1, num_partitions)]
 
-        # Chunk into batches of 100 (DynamoDB BatchGetItem limit)
         for chunk_start in range(0, len(remaining_keys), 100):
             chunk = remaining_keys[chunk_start : chunk_start + 100]
             unprocessed = chunk
@@ -106,7 +105,7 @@ def reassemble_json(partitions: list[dict]) -> str:
 
 
 def print_metadata(partitions: list[dict], key: str) -> None:
-    """Print partition metadata without the full payload."""
+    """Print partition metadata instead of full payload"""
     if not partitions:
         print(f"No item found for key: {key}", file=sys.stderr)
         sys.exit(1)
