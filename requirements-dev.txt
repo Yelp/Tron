@@ -30,6 +30,7 @@ tomli==2.0.1
 types-awscrt==0.27.2
 types-boto3==1.0.2
 types-cachetools==5.5.0.20240820
+types-croniter==6.2.2.20260518
 types-psutil==6.1.0.20241221
 types-pytz==2024.2.0.20240913
 types-PyYAML==6.0.12

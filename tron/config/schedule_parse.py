@@ -6,10 +6,11 @@ import datetime
 import re
 from collections import namedtuple
 
+from croniter import croniter
+
 from tron.config import config_utils
 from tron.config import ConfigError
 from tron.config import schema
-from tron.utils import crontab
 
 ConfigGenericSchedule = schema.config_object_factory(
     "ConfigGenericSchedule",
@@ -24,7 +25,7 @@ ConfigGrocScheduler = namedtuple(
 
 ConfigCronScheduler = namedtuple(
     "ConfigCronScheduler",
-    "original minutes hours monthdays months weekdays ordinals jitter",
+    "original jitter",
 )
 
 ConfigDailyScheduler = namedtuple(
@@ -289,18 +290,14 @@ def parse_groc_expression(config, config_context):
 
 def valid_cron_scheduler(config, config_context):
     """Parse a cron schedule."""
-    try:
-        crontab_kwargs = crontab.parse_crontab(config.value)
-        if crontab_kwargs["monthdays"] is not None and crontab_kwargs["weekdays"] is not None:
-            raise ValueError("cannot supply both monthdays and weekdays")
-        return ConfigCronScheduler(
-            original=config.value,
-            jitter=config.jitter,
-            **crontab_kwargs,
-        )
-    except ValueError as e:
+    expression = re.sub(r"\s*,\s*", ",", config.value.strip())
+    if not croniter.is_valid(expression):
         msg = "Invalid cron scheduler %s: %s"
-        raise ConfigError(msg % (config_context.path, e))
+        raise ConfigError(msg % (config_context.path, expression))
+    return ConfigCronScheduler(
+        original=expression,
+        jitter=config.jitter,
+    )
 
 
 schedulers = {

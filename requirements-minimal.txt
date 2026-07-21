@@ -2,6 +2,7 @@ addict  # not sure why check-requirements is not picking this up from task_proce
 argcomplete
 boto3
 bsddb3
+croniter
 cryptography
 dataclasses
 ecdsa>=0.13.3
