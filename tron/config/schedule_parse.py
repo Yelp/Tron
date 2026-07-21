@@ -291,7 +291,7 @@ def parse_groc_expression(config, config_context):
 def valid_cron_scheduler(config, config_context):
     """Parse a cron schedule."""
     expression = re.sub(r"\s*,\s*", ",", config.value.strip())
-    if not croniter.is_valid(expression):
+    if not croniter.is_valid(expression, hash_id="validation_placeholder"):
         msg = "Invalid cron scheduler %s: %s"
         raise ConfigError(msg % (config_context.path, expression))
     return ConfigCronScheduler(

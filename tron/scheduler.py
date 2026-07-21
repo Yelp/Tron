@@ -31,7 +31,7 @@ from tron.utils import trontimespec
 log = logging.getLogger(__name__)
 
 
-def scheduler_from_config(config, time_zone):
+def scheduler_from_config(config, time_zone, job_name=None):
     """A factory for creating a scheduler from a configuration object."""
     if isinstance(config, schedule_parse.ConfigGrocScheduler):
         return GeneralScheduler(
@@ -51,6 +51,7 @@ def scheduler_from_config(config, time_zone):
             cron_expression=config.original,
             time_zone=time_zone,
             jitter=config.jitter,
+            hash_id=job_name,
         )
 
     if isinstance(config, schedule_parse.ConfigDailyScheduler):
@@ -84,10 +85,11 @@ class CronScheduler:
 
     schedule_on_complete = False
 
-    def __init__(self, cron_expression, time_zone=None, jitter=None):
+    def __init__(self, cron_expression, time_zone=None, jitter=None, hash_id=None):
         self.cron_expression = cron_expression
         self.time_zone = time_zone
         self.jitter = jitter
+        self.hash_id = hash_id
 
     def next_run_time(self, start_time):
         if not start_time:
@@ -98,7 +100,7 @@ class CronScheduler:
             else:
                 start_time = start_time.astimezone(self.time_zone)
 
-        it = croniter(self.cron_expression, start_time)
+        it = croniter(self.cron_expression, start_time, hash_id=self.hash_id)
         return it.get_next(datetime.datetime) + get_jitter(self.jitter)
 
     def __str__(self):
