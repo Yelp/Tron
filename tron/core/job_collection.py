@@ -30,9 +30,9 @@ class JobCollection:
 
         def map_to_job_and_schedule(job_schedulers):
             for job_scheduler in job_schedulers:
+                yield job_scheduler.get_job()
                 if reconfigure:
                     job_scheduler.schedule()
-                yield job_scheduler.get_job()
 
         def reconfigure_filter(config):
             if not reconfigure or not namespace_to_reconfigure:
