@@ -7,8 +7,7 @@ Example:
 
 Checking a job's state:
 
-AWS_PROFILE=devc python3 tools/read_dynamodb_item.py --table infrastage-tron-state --region us-west-1 --type job_state --name compute-i
-nfra-test-service.test_partitions
+AWS_PROFILE=devc python3 tools/read_dynamodb_item.py --table infrastage-tron-state --region us-west-1 --type job_state --name compute-infra-test-service.test_partitions
 
 Example_Output:
 
@@ -53,10 +52,10 @@ def build_key(state_type: str, name: str) -> str:
     return f"{state_type} {name}"
 
 
-def get_client(table_name: str, region: str):
+def get_client(region: str):
     retry_config = Config(retries={"max_attempts": 5, "mode": "standard"})
     client = boto3.client("dynamodb", region_name=region, config=retry_config)
-    return client, table_name
+    return client
 
 
 def fetch_all_partitions(client, table_name: str, key: str) -> list[dict]:
@@ -137,6 +136,7 @@ def main():
     )
     parser.add_argument("--table", required=True, help="DynamoDB table name")
     parser.add_argument("--region", required=True, help="AWS region (e.g. us-west-2)")
+    group = parser.add_mutually_exclusive_group()
     parser.add_argument(
         "--type",
         required=True,
@@ -148,12 +148,12 @@ def main():
         required=True,
         help="Identifier (e.g. MASTER.my_job for job_state, MASTER.my_job.42 for job_run_state)",
     )
-    parser.add_argument(
+    group.add_argument(
         "--raw",
         action="store_true",
         help="Dump decompressed JSON without deserializing through Tron's from_json",
     )
-    parser.add_argument(
+    group.add_argument(
         "--metadata",
         action="store_true",
         help="Show only partition metadata (count, sizes) without the payload",
@@ -161,7 +161,8 @@ def main():
     args = parser.parse_args()
 
     key = build_key(args.type, args.name)
-    client, table_name = get_client(args.table, args.region)
+    client = get_client(args.region)
+    table_name = args.table
 
     partitions = fetch_all_partitions(client, table_name, key)
     if not partitions:
@@ -175,8 +176,7 @@ def main():
     raw_json = reassemble_json(partitions)
 
     if args.raw:
-        parsed = json.loads(raw_json)
-        print(json.dumps(parsed, indent=2, default=str))
+        print(raw_json)
         return
 
     # Deserialize through Tron's from_json for a structured view
