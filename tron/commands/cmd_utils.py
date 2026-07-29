@@ -212,10 +212,10 @@ def setup_logging(options: argparse.Namespace) -> int:
 
 def parse_date(date_string: str, allow_datetime: bool = False) -> datetime.datetime:
     if allow_datetime:
-        formats = ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d")
+        formats = ["%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d"]
         hint = "YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS"
     else:
-        formats = ("%Y-%m-%d",)
+        formats = ["%Y-%m-%d"]
         hint = "YYYY-MM-DD"
 
     for fmt in formats:
