@@ -228,9 +228,9 @@ class TestDynamoDBStateStore:
         assert store.save_errors == 0
 
         for key in keys:
+            # Now that we are not writing pickles, we only perform assertions on num_json_val_partitions. I keep num_partitions for visibility of changes.
             num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
             assert num_json_val_partitions > 1
-            assert num_partitions > 1
 
         with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
             "tron.config.static_config.build_configuration_watcher", autospec=True
@@ -262,8 +262,8 @@ class TestDynamoDBStateStore:
         store._consume_save_queue()
 
         for key, _ in pairs:
+            # Not writing pickles, same case as test_restore_multi_partition_object where we only assert on num_json_val_partitions.
             num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
-            assert num_partitions > 1
             assert num_json_val_partitions > 1
 
         for key, _ in pairs:
@@ -271,7 +271,6 @@ class TestDynamoDBStateStore:
 
         for key, _ in pairs:
             num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
-            assert num_partitions == 0
             assert num_json_val_partitions == 0
 
     def test_delete_if_val_is_none(self, store, small_object):

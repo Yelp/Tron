@@ -3,7 +3,6 @@ import copy
 import gzip
 import logging
 import math
-import pickle
 import sys
 import threading
 import time
@@ -24,13 +23,8 @@ from tron.core.jobrun import JobRun
 from tron.metrics import timer
 from tron.serialize import runstate
 
-# Max DynamoDB object size is 400KB. Since we save two copies of the object (pickled and JSON),
-# we need to consider this max size applies to the entire item, so we use a max size of 200KB
-# for each version.
-#
-# In testing I could get away with 201_000 for both partitions so this should be enough overhead
-# to contain other attributes like object name and number of partitions.
-OBJECT_SIZE = 150_000  # TODO: TRON-2240 - consider swapping back to 400_000 now that we've removed pickles
+# Max DynamoDB object size is 400KB.
+OBJECT_SIZE = 150_000  # TODO: TRON-2240 - consider swapping back to 400_000 now that we don't write pickles.
 MAX_SAVE_QUEUE = 500
 # This is distinct from the number of retries in the retry_config as this is used for handling unprocessed
 # keys outside the bounds of something like retrying on a ThrottlingException. We need this limit to avoid
@@ -264,8 +258,8 @@ class DynamoDBStateStore:
                 # Remove all previous data with the same partition key
                 # TODO: only remove excess partitions if new data has fewer
                 self._delete_item(key)
-                if val is not None:
-                    self[key] = (pickle.dumps(val), json_val)
+                if json_val is not None:
+                    self[key] = json_val
                 # reset errors count if we can successfully save
                 saved += 1
             except Exception as e:
@@ -338,13 +332,13 @@ class DynamoDBStateStore:
                 log.error("too many dynamodb errors in a row, crashing")
                 sys.exit(1)
 
-    def __setitem__(self, key: str, value: tuple[bytes, bytes | None]) -> None:
+    def __setitem__(self, key: str, value: bytes) -> None:
         """
         Partition the item and write up to self.max_transact_write_items
         partitions atomically using TransactWriteItems.
 
-        The function examines the size of pickled_val and json_val,
-        splitting them into multiple segments based on OBJECT_SIZE,
+        The function examines the size of a json_val,
+        and splits it into multiple segments based on OBJECT_SIZE,
         storing each segment under the same partition key.
 
         It relies on the boto3/botocore retry_config to handle
@@ -355,12 +349,11 @@ class DynamoDBStateStore:
         """
         start = time.time()
 
-        pickled_val, json_val = value
-        num_partitions = math.ceil(len(pickled_val) / OBJECT_SIZE)
+        json_val = value
         num_json_val_partitions = math.ceil(len(json_val) / OBJECT_SIZE) if json_val else 0
         items = []
 
-        max_partitions = max(num_partitions, num_json_val_partitions)
+        max_partitions = num_json_val_partitions
         prom_metrics.tron_dynamodb_partitions_histogram.observe(max_partitions)
 
         for index in range(max_partitions):
@@ -373,26 +366,16 @@ class DynamoDBStateStore:
                         "index": {
                             "N": str(index),
                         },
-                        "val": {
-                            "B": pickled_val[
-                                index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(pickled_val))
-                            ],
+                        "json_val": {
+                            "B": json_val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(json_val))],
                         },
-                        "num_partitions": {
-                            "N": str(num_partitions),
+                        "num_json_val_partitions": {
+                            "N": str(num_json_val_partitions),
                         },
                     },
                     "TableName": self.name,
                 },
             }
-
-            if json_val:
-                item["Put"]["Item"]["json_val"] = {
-                    "B": json_val[index * OBJECT_SIZE : min(index * OBJECT_SIZE + OBJECT_SIZE, len(json_val))]
-                }
-                item["Put"]["Item"]["num_json_val_partitions"] = {
-                    "N": str(num_json_val_partitions),
-                }
 
             items.append(item)
 
