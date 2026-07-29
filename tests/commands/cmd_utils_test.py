@@ -21,8 +21,17 @@ from tron.commands import cmd_utils
         ("2026-07-08T12:50:30", datetime.datetime(2026, 7, 8, 12, 50, 30)),
     ],
 )
-def test_parse_date_valid(date_string, expected):
-    assert cmd_utils.parse_date(date_string) == expected
+def test_parse_date_valid_with_datetime(date_string, expected):
+    assert cmd_utils.parse_date(date_string, allow_datetime=True) == expected
+
+
+def test_parse_date_valid_date_only():
+    assert cmd_utils.parse_date("2026-07-08") == datetime.datetime(2026, 7, 8)
+
+
+def test_parse_date_rejects_datetime_when_not_allowed():
+    with pytest.raises(ValueError, match="Try: YYYY-MM-DD."):
+        cmd_utils.parse_date("2026-07-08T12:50:30")
 
 
 def test_parse_date_invalid():

@@ -210,15 +210,20 @@ def setup_logging(options: argparse.Namespace) -> int:
     return level
 
 
-def parse_date(date_string: str) -> datetime.datetime:
-    for fmt in ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d"):
+def parse_date(date_string: str, allow_datetime: bool = False) -> datetime.datetime:
+    if allow_datetime:
+        formats = ("%Y-%m-%dT%H:%M:%S", "%Y-%m-%d %H:%M:%S", "%Y-%m-%dT%H:%M", "%Y-%m-%d %H:%M", "%Y-%m-%d")
+        hint = "YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS"
+    else:
+        formats = ("%Y-%m-%d",)
+        hint = "YYYY-MM-DD"
+
+    for fmt in formats:
         try:
             return datetime.datetime.strptime(date_string, fmt)
         except ValueError:
             continue
-    raise ValueError(
-        f"Unable to parse date '{date_string}'. Try a common format such as YYYY-MM-DD or YYYY-MM-DDTHH:MM:SS."
-    )
+    raise ValueError(f"Unable to parse date '{date_string}'. Try: {hint}.")
 
 
 def suggest_possibilities(word, possibilities, max_suggestions=6):

@@ -13,6 +13,7 @@ import sys
 from collections import defaultdict
 from collections.abc import Callable
 from collections.abc import Generator
+from functools import partial
 from typing import Any
 from urllib.parse import urljoin
 
@@ -127,7 +128,7 @@ def parse_cli():
     # start
     cmd_parsers["start"].add_argument(
         "--run-date",
-        type=parse_date,
+        type=partial(parse_date, allow_datetime=True),
         dest="run_date",
         help="What the run-date should be set to",
     )
@@ -137,13 +138,13 @@ def parse_cli():
     mutex_dates_group = backfill_parser.add_mutually_exclusive_group(required=True)
     mutex_dates_group.add_argument(
         "--start-date",
-        type=parse_date,
+        type=partial(parse_date, allow_datetime=False),
         dest="start_date",
         help="First run-date to backfill",
     )
     backfill_parser.add_argument(
         "--end-date",
-        type=parse_date,
+        type=partial(parse_date, allow_datetime=False),
         dest="end_date",
         help=(
             "Last run-date to backfill (note: many jobs operate on date-1), "
