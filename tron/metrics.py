@@ -1,17 +1,22 @@
+import threading
+
 from pyformance.meters import Counter  # type: ignore
 from pyformance.meters import Histogram
 from pyformance.meters import Meter
 from pyformance.meters import SimpleGauge
 from pyformance.meters import Timer
 
+
 all_metrics = {}  # type: ignore
+all_metrics_lock = threading.Lock()
 
 
 def get_metric(metric_type, name, dimensions, default):
     global all_metrics
     dimensions = tuple(sorted(dimensions.items())) if dimensions else ()
     key = (metric_type, name, dimensions)
-    return all_metrics.setdefault(key, default)
+    with all_metrics_lock:
+        return all_metrics.setdefault(key, default)
 
 
 def timer(name, delta, dimensions=None):
@@ -86,8 +91,10 @@ metrics_to_viewers = {
 
 
 def view_all_metrics():
+    with all_metrics_lock:
+        all_metrics_copy = all_metrics.copy()
     all_data = {metric_type: [] for metric_type in metrics_to_viewers}
-    for (metric_type, name, dims), metric in all_metrics.items():
+    for (metric_type, name, dims), metric in all_metrics_copy.items():
         data = {"name": name, **metrics_to_viewers[metric_type](metric)}
         if dims:
             data.update({"dimensions": dict(dims)})
