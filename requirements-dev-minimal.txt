@@ -10,6 +10,7 @@ pytest-asyncio
 requirements-tools
 types-boto3
 types-cachetools
+types-croniter
 types-psutil
 types-pytz
 types-PyYAML

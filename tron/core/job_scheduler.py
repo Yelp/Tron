@@ -253,7 +253,7 @@ class JobSchedulerFactory:
         log.debug(f"Building new job scheduler {job_config.name}")
         output_path = filehandler.OutputPath(self.output_stream_dir)
         time_zone = job_config.time_zone or self.time_zone
-        scheduler = scheduler_from_config(job_config.schedule, time_zone)
+        scheduler = scheduler_from_config(job_config.schedule, time_zone, job_config.name)
         action_graph = self.job_graph.get_action_graph_for_job(job_config.name)
         job = Job.from_config(
             job_config=job_config,

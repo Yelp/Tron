@@ -22,6 +22,8 @@ import datetime
 import logging
 import random
 
+from croniter import croniter
+
 from tron.config import schedule_parse
 from tron.utils import timeutils
 from tron.utils import trontimespec
@@ -29,7 +31,7 @@ from tron.utils import trontimespec
 log = logging.getLogger(__name__)
 
 
-def scheduler_from_config(config, time_zone):
+def scheduler_from_config(config, time_zone, job_name=None):
     """A factory for creating a scheduler from a configuration object."""
     if isinstance(config, schedule_parse.ConfigGrocScheduler):
         return GeneralScheduler(
@@ -45,18 +47,11 @@ def scheduler_from_config(config, time_zone):
         )
 
     if isinstance(config, schedule_parse.ConfigCronScheduler):
-        return GeneralScheduler(
+        return CronScheduler(
+            cron_expression=config.original,
             time_zone=time_zone,
-            minutes=config.minutes,
-            hours=config.hours,
-            monthdays=config.monthdays,
-            months=config.months,
-            weekdays=config.weekdays,
-            ordinals=config.ordinals,
-            seconds=[0],
-            name="cron",
-            original=config.original,
             jitter=config.jitter,
+            hash_id=job_name,
         )
 
     if isinstance(config, schedule_parse.ConfigDailyScheduler):
@@ -83,6 +78,67 @@ def get_jitter_str(time_delta):
     if not time_delta:
         return ""
     return " (+/- %s)" % time_delta
+
+
+class CronScheduler:
+    """Scheduler which uses croniter for standard cron expressions."""
+
+    schedule_on_complete = False
+
+    def __init__(self, cron_expression, time_zone=None, jitter=None, hash_id=None):
+        self.cron_expression = cron_expression
+        self.time_zone = time_zone
+        self.jitter = jitter
+        self.hash_id = hash_id
+
+    def next_run_time(self, start_time):
+        if not start_time:
+            start_time = timeutils.current_time(tz=self.time_zone)
+        elif self.time_zone:
+            if start_time.tzinfo is None or start_time.tzinfo.utcoffset(start_time) is None:
+                start_time = trontimespec.naive_as_timezone(start_time, self.time_zone)
+            else:
+                start_time = start_time.astimezone(self.time_zone)
+
+        caller_tzinfo = start_time.tzinfo
+
+        if self.time_zone:
+            # Compute in naive local time so croniter doesn't see both
+            # occurrences of an ambiguous wall-clock hour during fall-back.
+            start_time = trontimespec.to_timezone(start_time, self.time_zone).replace(tzinfo=None)
+
+        it = croniter(self.cron_expression, start_time, hash_id=self.hash_id)
+        result = it.get_next(datetime.datetime)
+
+        if self.time_zone:
+            # Re-localize with Tron's DST policy (pick first occurrence for
+            # ambiguous times, skip non-existent times on spring-forward).
+            result = trontimespec.naive_as_timezone(result, self.time_zone)
+            result = trontimespec.to_timezone(result, caller_tzinfo)
+
+        return result + get_jitter(self.jitter)
+
+    def __str__(self):
+        return f"cron {self.cron_expression}{get_jitter_str(self.jitter)}"
+
+    def __eq__(self, other):
+        return (
+            hasattr(other, "cron_expression")
+            and self.cron_expression == other.cron_expression
+            and self.time_zone == other.time_zone
+        )
+
+    def __ne__(self, other):
+        return not self == other
+
+    def get_jitter(self):
+        return self.jitter
+
+    def get_name(self):
+        return "cron"
+
+    def get_value(self):
+        return self.cron_expression
 
 
 class GeneralScheduler:
