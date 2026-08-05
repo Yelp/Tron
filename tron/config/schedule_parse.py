@@ -7,6 +7,7 @@ import re
 from collections import namedtuple
 
 from croniter import croniter
+from croniter.croniter import CroniterBadDateError
 
 from tron.config import config_utils
 from tron.config import ConfigError
@@ -294,6 +295,11 @@ def valid_cron_scheduler(config, config_context):
     if not croniter.is_valid(expression, hash_id="validation_placeholder"):
         msg = "Invalid cron scheduler %s: %s"
         raise ConfigError(msg % (config_context.path, expression))
+    try:
+        croniter(expression, hash_id="validation_placeholder").get_next()
+    except CroniterBadDateError:
+        msg = "Cron expression %s at %s will never match a valid date"
+        raise ConfigError(msg % (expression, config_context.path))
     return ConfigCronScheduler(
         original=expression,
         jitter=config.jitter,

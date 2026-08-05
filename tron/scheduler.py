@@ -100,8 +100,23 @@ class CronScheduler:
             else:
                 start_time = start_time.astimezone(self.time_zone)
 
+        caller_tzinfo = start_time.tzinfo
+
+        if self.time_zone:
+            # Compute in naive local time so croniter doesn't see both
+            # occurrences of an ambiguous wall-clock hour during fall-back.
+            start_time = trontimespec.to_timezone(start_time, self.time_zone).replace(tzinfo=None)
+
         it = croniter(self.cron_expression, start_time, hash_id=self.hash_id)
-        return it.get_next(datetime.datetime) + get_jitter(self.jitter)
+        result = it.get_next(datetime.datetime)
+
+        if self.time_zone:
+            # Re-localize with Tron's DST policy (pick first occurrence for
+            # ambiguous times, skip non-existent times on spring-forward).
+            result = trontimespec.naive_as_timezone(result, self.time_zone)
+            result = trontimespec.to_timezone(result, caller_tzinfo)
+
+        return result + get_jitter(self.jitter)
 
     def __str__(self):
         return f"cron {self.cron_expression}{get_jitter_str(self.jitter)}"

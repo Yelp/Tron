@@ -97,6 +97,9 @@ class TestValidCronScheduler(TestCase):
     def test_invalid_config(self):
         assert_raises(ConfigError, self.validate, "* * *")
 
+    def test_impossible_date_rejected(self):
+        assert_raises(ConfigError, self.validate, "0 0 30 2 *")
+
 
 class TestValidDailyScheduler(TestCase):
     def validate(self, config):
