@@ -31,6 +31,16 @@ class TestJobCollection(TestCase):
             job_scheduler.schedule.assert_called_with()
             job_scheduler.get_job.assert_called_with()
 
+    def test_map_to_job_and_schedule(self):
+        autospec_method(self.collection.jobs.filter_by_name)
+        autospec_method(self.collection.add)
+        factory = mock.create_autospec(JobSchedulerFactory)
+        job_configs = {"a": mock.Mock(), "b": mock.Mock()}
+        generator = self.collection.update_from_config(job_configs, factory, True)
+        next(generator)
+        job_schedulers = [call[1][0] for call in self.collection.add.mock_calls[::2]]
+        job_schedulers[0].schedule.assert_not_called()
+
     def test_update_from_config_reconfigure_one_namespace(self):
         autospec_method(self.collection.jobs.filter_by_name)
         autospec_method(self.collection.add)

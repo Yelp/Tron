@@ -1,3 +1,12 @@
+tron (3.10.3) jammy; urgency=medium
+
+  * 3.10.3 tagged with 'make release'
+    Commit: Merge pull request #1109 from Yelp/TRON-2673-
+    first_run_of_a_new_job_is_never_persisted_to_DynamoDB  First run of
+    a new job is never persisted to dynamodb
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Wed, 29 Jul 2026 08:30:12 -0700
+
 tron (3.10.2) jammy; urgency=medium
 
   * 3.10.2 tagged with 'make release'
