@@ -87,6 +87,7 @@ class JobCollection:
                     result.result()
                 except Exception:
                     log.exception(f"Unable to restore state for {results[result]} - exiting")
+                    raise
 
     def get_by_name(self, name):
         return self.jobs.get(name)
