@@ -1,3 +1,4 @@
+import concurrent.futures
 import logging
 
 from tron.core.job import Job
@@ -75,9 +76,18 @@ class JobCollection:
         state for each run. As we load the state, we will also schedule the next
         runs for each job
         """
-        for name, state in job_state_data.items():
-            self.jobs[name].restore_state(state, config_action_runner)
-        log.info(f"Loaded state for {len(job_state_data)} jobs")
+
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            results = {
+                executor.submit(self.jobs[name].restore_state, state, config_action_runner): name
+                for name, state in job_state_data.items()
+            }
+            for result in concurrent.futures.as_completed(results):
+                try:
+                    result.result()
+                except Exception:
+                    log.exception(f"Unable to restore state for {results[result]} - exiting")
+                    raise
 
     def get_by_name(self, name):
         return self.jobs.get(name)

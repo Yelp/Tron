@@ -3,6 +3,7 @@ import copy
 import itertools
 import logging
 import sys
+import threading
 import time
 from contextlib import contextmanager
 from typing import Any
@@ -104,6 +105,7 @@ class PersistentStateManager:
         self.enabled = True
         self._buffer = buffer
         self._impl = persistence_impl
+        self._lock = threading.RLock()
 
     # TODO: get rid of the Any here - hopefully with a TypedDict
     def restore(self, job_names: list[str]) -> dict[str, Any]:
@@ -170,24 +172,26 @@ class PersistentStateManager:
         """Persist an items state."""
         key = self._impl.build_key(type_enum, name)
         log.debug("Buffering state save for: %s", key)
-        if self._buffer.save(key, state_data):
-            if not self.enabled:
-                log.debug(f"State manager disabled, not persisting {key}")
-                return
-            self._save_from_buffer()
+        with self._lock:
+            if self._buffer.save(key, state_data):
+                if not self.enabled:
+                    log.debug(f"State manager disabled, not persisting {key}")
+                    return
+                self._save_from_buffer()
 
     def _save_from_buffer(self):
-        key_state_pairs = list(self._buffer)
-        if not key_state_pairs:
-            return
+        with self._lock:
+            key_state_pairs = list(self._buffer)
+            if not key_state_pairs:
+                return
 
-        with self._timeit():
-            try:
-                self._impl.save(key_state_pairs)
-            except Exception as e:
-                msg = f"Error while saving: {repr(e)}"
-                log.warning(msg)
-                raise PersistenceStoreError(msg)
+            with self._timeit():
+                try:
+                    self._impl.save(key_state_pairs)
+                except Exception as e:
+                    msg = f"Error while saving: {repr(e)}"
+                    log.warning(msg)
+                    raise PersistenceStoreError(msg)
 
     def cleanup(self):
         self._save_from_buffer()
