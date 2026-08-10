@@ -290,11 +290,15 @@ Long form::
 Cron
 ^^^^
 
-Schedule a job using cron syntax.  Tron supports predefined schedules, ranges,
-and lists for each field. It supports the *L* in day of month field only (which
-schedules the job on the last day of the month). Only one of the day fields
-(day of month and day of week) can have a value.
+Schedule a job using cron syntax, powered by
+`croniter <https://github.com/pallets-eco/croniter>`_. Tron supports the full
+range of cron expressions including ranges, lists, steps, predefined schedules
+(``@daily``, ``@hourly``, etc.), month/weekday names, ``L`` (last day of
+month), and ``#`` for Nth weekday of month (e.g. ``MON#1`` for the first
+Monday).
 
+Both day-of-month and day-of-week may be specified simultaneously (interpreted
+as a union, per POSIX cron), though this is rarely what you want.
 
 Short form::
 
@@ -304,15 +308,48 @@ Short form::
 
     schedule: "cron 0 3-6 * * *"    # Every hour between 3am and 6am
 
+::
+
+    schedule: "cron 30 4 L * *"     # The last day of the month at 4:30am
+
+::
+
+    schedule: "cron 0 9 * * MON#1"  # The first Monday of every month at 9am
+
+::
+
+    schedule: "cron 0 9 * * L5"     # The last Friday of every month at 9am
+
 Long form::
 
-    schedule:                       # long form
+    schedule:
         type: "cron"
-        value: "30 4 L * *"         # The last day of the month at 4:30am
+        value: "30 4 L * *"
+
+Hashed expressions
+""""""""""""""""""
+
+Croniter supports Jenkins-style ``H`` (hashed) expressions for distributing
+jobs evenly without manual coordination. The hash is seeded by the job name,
+so the resolved time is consistent across restarts but different across jobs.
+
+::
+
+    schedule: "cron H H * * *"        # Daily at a consistent but distributed time
+    schedule: "cron H/15 * * * *"     # Every 15 minutes, offset per job
+    schedule: "cron H H(0-5) * * *"   # Daily between 00:00 and 05:59, hashed per job
+
+This is useful when many jobs share the same logical schedule (e.g. "daily")
+but you don't want them all firing at midnight.
 
 
 Complex
 ^^^^^^^
+
+.. warning::
+
+    We plan to remove this style of schedule in the near future.
+    You should now be able to express all these sorts of schedules with cron syntax.
 
 More powerful version of the daily scheduler based on the one used by Google
 App Engine's cron library. To use this scheduler, use a string in this format

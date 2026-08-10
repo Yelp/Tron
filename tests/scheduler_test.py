@@ -2,7 +2,9 @@ import calendar
 import datetime
 from unittest import mock
 
+import pytest
 import pytz
+from croniter.croniter import CroniterBadDateError
 
 from testifycompat import assert_equal
 from testifycompat import assert_gt
@@ -46,6 +48,15 @@ class TestSchedulerFromConfig(TestCase):
             start_time = next_time
 
         assert_equal(str(sched), "daily 17:32 MWF")
+
+
+class TestCronSchedulerImpossibleDate(TestCase):
+    def test_impossible_date_raises_instead_of_infinite_loop(self):
+        """Feb 30 can never match. Croniter must raise rather than loop forever."""
+        sched = scheduler.CronScheduler(cron_expression="0 0 30 2 *")
+        start_time = datetime.datetime(2024, 1, 1)
+        with pytest.raises(CroniterBadDateError):
+            sched.next_run_time(start_time)
 
 
 class GeneralSchedulerTestCase(testingutils.MockTimeTestCase):

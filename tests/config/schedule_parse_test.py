@@ -88,15 +88,17 @@ class TestValidCronScheduler(TestCase):
 
     def test_valid_config(self):
         config = self.validate("5 0 L * *")
-        assert_equal(config.minutes, [5])
-        assert_equal(config.months, None)
-        assert_equal(config.monthdays, ["LAST"])
+        assert_equal(config.original, "5 0 L * *")
+
+    def test_valid_config_with_both_dom_and_dow(self):
+        config = self.validate("10 14 15-21 * 5")
+        assert_equal(config.original, "10 14 15-21 * 5")
 
     def test_invalid_config(self):
         assert_raises(ConfigError, self.validate, "* * *")
 
-    def test_monthdays_and_weekdays_rejected(self):
-        assert_raises(ConfigError, self.validate, "10 14 15-21 * 5")
+    def test_impossible_date_rejected(self):
+        assert_raises(ConfigError, self.validate, "0 0 30 2 *")
 
 
 class TestValidDailyScheduler(TestCase):
