@@ -31,6 +31,7 @@ MAX_SAVE_QUEUE = 500
 # infinite loops in the case where a key is truly unprocessable. We allow for more retries than it should
 # ever take to avoid failing restores due to transient issues.
 MAX_UNPROCESSED_KEYS_RETRIES = 30
+UNPROCESSED_KEYS_IMMEDIATE_RETRIES = 3
 log = logging.getLogger(__name__)
 T = TypeVar("T")
 
@@ -144,13 +145,16 @@ class DynamoDBStateStore:
                 # We use _calculate_backoff_delay to get a delay that increases exponentially
                 # with each retry. These retry attempts are distinct from the boto3 retry_config
                 # and are used specifically to handle unprocessed keys.
+                # NOTE: We don't sleep for the first 3 attempts to speed up the initial restore.
                 attempts += 1
-                delay = self._calculate_backoff_delay(attempts)
+                delay = 0
+                if attempts > UNPROCESSED_KEYS_IMMEDIATE_RETRIES:
+                    delay = self._calculate_backoff_delay(attempts - UNPROCESSED_KEYS_IMMEDIATE_RETRIES)
+                    time.sleep(delay)
                 log.warning(
                     f"Attempt {attempts}/{MAX_UNPROCESSED_KEYS_RETRIES} - "
                     f"Retrying {len(cand_keys_list)} unprocessed keys after {delay}s delay."
                 )
-                time.sleep(delay)
         if cand_keys_list:
             msg = f"tron_dynamodb_restore_failure: failed to retrieve items with keys \n{cand_keys_list}\n from dynamodb after {MAX_UNPROCESSED_KEYS_RETRIES} retries."
             log.error(msg)

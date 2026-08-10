@@ -10,6 +10,7 @@ from moto.dynamodb.responses import dynamo_json_dump
 
 from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
 from tron.serialize.runstate.dynamodb_state_store import MAX_UNPROCESSED_KEYS_RETRIES
+from tron.serialize.runstate.dynamodb_state_store import UNPROCESSED_KEYS_IMMEDIATE_RETRIES
 
 
 def mock_transact_write_items(self):
@@ -379,9 +380,10 @@ class TestDynamoDBStateStore:
             return_value=unprocessed_value,
         ) as mock_batch_get_item, mock.patch("time.sleep") as mock_sleep, pytest.raises(Exception) as exec_info:
             store.restore(keys)
+
         assert "failed to retrieve items with keys" in str(exec_info.value)
         assert mock_batch_get_item.call_count == MAX_UNPROCESSED_KEYS_RETRIES
-        assert mock_sleep.call_count == MAX_UNPROCESSED_KEYS_RETRIES
+        assert mock_sleep.call_count == (MAX_UNPROCESSED_KEYS_RETRIES - UNPROCESSED_KEYS_IMMEDIATE_RETRIES)
 
     def test_restore_exception_propagation(self, store):
         # This test is to ensure that restore propagates exceptions upwards: see DAR-2328
