@@ -1,3 +1,51 @@
+tron (3.10.4) jammy; urgency=medium
+
+  * 3.10.4 tagged with 'make release'
+    Commit: Merge pull request #1112 from Yelp/TRON-
+    2240_remove_pickles_and_other_cleanup  Remove pickle writes to
+    DynamoDB
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Mon, 10 Aug 2026 09:31:51 -0700
+
+tron (3.10.3) jammy; urgency=medium
+
+  * 3.10.3 tagged with 'make release'
+    Commit: Merge pull request #1109 from Yelp/TRON-2673-
+    first_run_of_a_new_job_is_never_persisted_to_DynamoDB  First run of
+    a new job is never persisted to dynamodb
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Wed, 29 Jul 2026 08:30:12 -0700
+
+tron (3.10.2) jammy; urgency=medium
+
+  * 3.10.2 tagged with 'make release'
+    Commit: Released 3.10.2 via make release
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Fri, 17 Jul 2026 12:39:57 -0700
+
+tron (3.10.2) jammy; urgency=medium
+
+  * 3.10.2 tagged with 'make release'
+    Commit: Released 3.10.2 via make release
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Fri, 17 Jul 2026 09:35:11 -0700
+
+tron (3.10.2) jammy; urgency=medium
+
+  * 3.10.2 tagged with 'make release'
+    Commit: Released 3.10.2 via make release
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Fri, 17 Jul 2026 09:32:32 -0700
+
+tron (3.10.2) jammy; urgency=medium
+
+  * 3.10.2 tagged with 'make release'
+    Commit: Merge pull request #1103 from Yelp/TRON-
+    2629_cpeacock_increase_default_k8s_disk_size  Increase default k8s
+    disk size from 1024 to 4096MiB
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Fri, 17 Jul 2026 09:27:56 -0700
+
 tron (3.10.1) jammy; urgency=medium
 
   * 3.10.1 tagged with 'make release'
