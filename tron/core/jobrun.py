@@ -364,12 +364,19 @@ class JobRun(Observable, Observer, Persistable):
             prom_metrics.tron_job_runs_completed_counter.labels(outcome="success").inc()
             log.info(f"{self} succeeded")
 
+        # Here we check if the JobRun has a max_runtime timer, if so, we cancel it via CallLater.cancel()
+        # Twisted docs mention that attempting to cancel an already cancelled timer will raise an AlreadyCancelledError, which is why we check if timer is active first.
+        if hasattr(self, "max_runtime_timer") and self.max_runtime_timer.active():
+            self.max_runtime_timer.cancel()
+
         # Notify Job that this JobRun is complete
         self.notify(self.NOTIFY_DONE)
         self.log_state_update(state=self.state)
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
+        if hasattr(self, "max_runtime_timer") and self.max_runtime_timer.active():
+            self.max_runtime_timer.cancel()
         log.info(f"{self} removed")
         self.notify(self.NOTIFY_REMOVED)
         self.clear_observers()
