@@ -1,3 +1,12 @@
+tron (3.10.4) jammy; urgency=medium
+
+  * 3.10.4 tagged with 'make release'
+    Commit: Merge pull request #1112 from Yelp/TRON-
+    2240_remove_pickles_and_other_cleanup  Remove pickle writes to
+    DynamoDB
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Mon, 10 Aug 2026 09:31:51 -0700
+
 tron (3.10.3) jammy; urgency=medium
 
   * 3.10.3 tagged with 'make release'
