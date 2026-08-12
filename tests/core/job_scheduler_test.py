@@ -221,6 +221,98 @@ class TestJobSchedulerSchedule(TestCase):
             mock_schedule.assert_called_once_with()
 
 
+class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
+    """Tests for max_runtime timer scheduling and restoration."""
+
+    now = datetime.datetime(2012, 3, 14, 15, 9, 20)
+
+    @setup
+    def setup_job(self):
+        self.scheduler = mock.Mock()
+        run_collection = mock.Mock(has_pending=False)
+        node_pool = mock.Mock()
+        self.job = job.Job(
+            "jobname",
+            self.scheduler,
+            run_collection=run_collection,
+            node_pool=node_pool,
+        )
+        self.job.max_runtime = datetime.timedelta(days=7)
+        self.job_scheduler = JobScheduler(self.job)
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_manual_start_schedules_termination(self, reactor):
+        manual_run = mock.Mock()
+        self.job.build_new_runs = mock.Mock(return_value=[manual_run])
+        self.job_scheduler.manual_start()
+        reactor.callLater.assert_called_with(
+            7 * 24 * 3600,
+            manual_run.stop,
+        )
+        assert manual_run.max_runtime_timer == reactor.callLater.return_value
+
+    def _make_restored_run(self, start_time=None, end_time=None):
+        run = mock.Mock()
+        run._action_runs = []
+        run.start_time = start_time
+        run.end_time = end_time
+        return run
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_expired_run_schedules_immediate_stop(self, reactor):
+        """A run whose max_runtime has already elapsed gets an immediate deferred stop."""
+        expired_run = self._make_restored_run(
+            start_time=self.now - datetime.timedelta(days=10),
+        )
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[expired_run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        reactor.callLater.assert_any_call(0, expired_run.stop)
+        assert expired_run.max_runtime_timer == reactor.callLater.return_value
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_remaining_duration(self, reactor):
+        """A run with time remaining gets a timer for the remaining duration."""
+        running_run = self._make_restored_run(
+            start_time=self.now - datetime.timedelta(days=2),
+        )
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[running_run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        expected_remaining = (7 - 2) * 24 * 3600.0
+        reactor.callLater.assert_any_call(expected_remaining, running_run.stop)
+        assert running_run.max_runtime_timer == reactor.callLater.return_value
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_skips_completed_runs(self, reactor):
+        """Runs that already have an end_time don't get a timer."""
+        completed_run = self._make_restored_run(
+            start_time=self.now - datetime.timedelta(days=2),
+            end_time=self.now - datetime.timedelta(days=1),
+        )
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[completed_run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == completed_run.stop)
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_skips_waiting_runs(self, reactor):
+        """Runs that haven't started (no start_time) don't get a timer."""
+        waiting_run = self._make_restored_run()
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[waiting_run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == waiting_run.stop)
+
+
 class TestJobSchedulerOther(TestCase):
     """Test other JobScheduler functions"""
 
