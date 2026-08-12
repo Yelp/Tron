@@ -302,15 +302,15 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
         assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == completed_run.stop)
 
     @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
-    def test_restore_state_skips_waiting_runs(self, reactor):
-        """Runs that haven't started (no start_time) don't get a timer."""
-        waiting_run = self._make_restored_run()
-        self.job.get_job_runs_from_state = mock.Mock(return_value=[waiting_run])
+    def test_restore_state_skips_unstarted_runs(self, reactor):
+        """Scheduled/queued runs (no start_time) don't get a timer."""
+        unstarted_run = self._make_restored_run()
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[unstarted_run])
         self.job.runs.get_scheduled = mock.Mock(return_value=[])
 
         self.job_scheduler.restore_state({}, mock.Mock())
 
-        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == waiting_run.stop)
+        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == unstarted_run.stop)
 
 
 class TestJobSchedulerOther(TestCase):
