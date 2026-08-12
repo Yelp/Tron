@@ -158,7 +158,7 @@ def make_job(**kwargs):
     kwargs.setdefault("run_limit", 50)
     kwargs.setdefault("all_nodes", False)
     kwargs.setdefault("cleanup_action", make_cleanup_action())
-    kwargs.setdefault("max_runtime", datetime.timedelta(hours=36))
+    kwargs.setdefault("max_runtime", datetime.timedelta(days=7))
     kwargs.setdefault("allow_overlap", False)
     kwargs.setdefault("time_zone", None)
     kwargs.setdefault("expected_runtime", datetime.timedelta(0, 3600))
