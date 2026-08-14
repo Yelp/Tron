@@ -8,7 +8,7 @@ from pyformance.meters import Timer
 
 
 all_metrics = {}  # type: ignore
-all_metrics_lock = threading.Lock()
+all_metrics_lock = threading.RLock()
 
 
 def get_metric(metric_type, name, dimensions, default):
@@ -20,28 +20,33 @@ def get_metric(metric_type, name, dimensions, default):
 
 
 def timer(name, delta, dimensions=None):
-    timer = get_metric("timer", name, dimensions, Timer())
-    timer._update(delta)
+    with all_metrics_lock:
+        timer = get_metric("timer", name, dimensions, Timer())
+        timer._update(delta)
 
 
 def count(name, inc=1, dimensions=None):
-    counter = get_metric("counter", name, dimensions, Counter())
-    counter.inc(inc)
+    with all_metrics_lock:
+        counter = get_metric("counter", name, dimensions, Counter())
+        counter.inc(inc)
 
 
 def meter(name, dimensions=None):
-    meter = get_metric("meter", name, dimensions, Meter())
-    meter.mark()
+    with all_metrics_lock:
+        meter = get_metric("meter", name, dimensions, Meter())
+        meter.mark()
 
 
 def gauge(name, value, dimensions=None):
-    gauge = get_metric("gauge", name, dimensions, SimpleGauge())
-    gauge.set_value(value)
+    with all_metrics_lock:
+        gauge = get_metric("gauge", name, dimensions, SimpleGauge())
+        gauge.set_value(value)
 
 
 def histogram(name, value, dimensions=None):
-    histogram = get_metric("histogram", name, dimensions, Histogram())
-    histogram.add(value)
+    with all_metrics_lock:
+        histogram = get_metric("histogram", name, dimensions, Histogram())
+        histogram.add(value)
 
 
 def view_timer(timer):
