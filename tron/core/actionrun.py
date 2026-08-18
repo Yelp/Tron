@@ -698,8 +698,7 @@ class ActionRun(Observable, Persistable):
         self,
         exit_status: int | None = None,
         retry_original_command: bool = True,
-        # TODO: delete this feature or refactor to not have a mutable default value
-        non_retryable_exit_codes: list[int] | None = [],
+        non_retryable_exit_codes: list[int] | None = None,
     ) -> bool | ActionCommand | None:
         if non_retryable_exit_codes is None:
             non_retryable_exit_codes = []
