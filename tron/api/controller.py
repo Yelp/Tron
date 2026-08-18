@@ -304,7 +304,8 @@ class EventsController:
         return dict(response="OK")
 
     def info(self):
-        if not EventBus.instance:
+        instance = EventBus.instance
+        if not instance:
             return dict(error="EventBus disabled")
 
-        return dict(response=EventBus.instance.event_log)
+        return dict(response=dict(instance.event_log))
