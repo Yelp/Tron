@@ -502,11 +502,11 @@ class JobRunCollection:
 
     def get_run_by_state(self, state):
         """Returns the most recent run which matches the state."""
-        return next_or_none(r for r in self.runs if r.state == state)
+        return next_or_none(r for r in list(self.runs) if r.state == state)
 
     def get_run_by_num(self, num):
         """Return a the run with run number which matches num."""
-        return next_or_none(r for r in self.runs if r.run_num == num)
+        return next_or_none(r for r in list(self.runs) if r.run_num == num)
 
     def get_run_by_index(self, index):
         """Return the job run at index. Jobs are indexed from oldest to newest."""
@@ -517,11 +517,11 @@ class JobRunCollection:
 
     def get_newest(self, include_manual=True):
         """Returns the most recently created JobRun."""
-        return next_or_none(r for r in self.runs if include_manual or not r.manual)
+        return next_or_none(r for r in list(self.runs) if include_manual or not r.manual)
 
     def get_pending(self):
         """Return the job runs that are queued or scheduled."""
-        return [r for r in self.runs if r.state in (ActionRun.SCHEDULED, ActionRun.QUEUED)]
+        return [r for r in list(self.runs) if r.state in (ActionRun.SCHEDULED, ActionRun.QUEUED)]
 
     @property
     def has_pending(self):
@@ -533,19 +533,19 @@ class JobRunCollection:
 
     def get_first_queued(self, node=None):
         return next_or_none(
-            r for r in reversed(self.runs) if (not node or r.node == node) and r.state == ActionRun.QUEUED
+            r for r in reversed(list(self.runs)) if (not node or r.node == node) and r.state == ActionRun.QUEUED
         )
 
     def get_scheduled(self):
         # Find the scheduled runs for the jobs and return it
         # in most cases, there should just be a single run - but it's possible that a delayed job could have N scheduled runs built up
-        return [r for r in self.runs if r.state == ActionRun.SCHEDULED]
+        return [r for r in list(self.runs) if r.state == ActionRun.SCHEDULED]
 
     def next_run_num(self):
         """Return the next run number to use."""
         if not self.runs:
             return 0
-        return max(r.run_num for r in self.runs) + 1
+        return max(r.run_num for r in list(self.runs)) + 1
 
     def remove_old_runs(self):
         """Remove old runs to reduce the number of completed runs
@@ -556,10 +556,10 @@ class JobRunCollection:
             run.cleanup()
 
     def get_action_runs(self, action_name):
-        return [job_run.get_action_run(action_name) for job_run in self.runs]
+        return [job_run.get_action_run(action_name) for job_run in list(self.runs)]
 
     def get_run_nums(self):
-        return [r.run_num for r in self.runs]
+        return [r.run_num for r in list(self.runs)]
 
     @property
     def state_data(self):
