@@ -39,6 +39,16 @@ class JobScheduler(Observer):
             master_action_runner=config_action_runner,
         )
 
+        # This recreates the max_runtime timer for restored runs as Tron does not persist this timer after restarting.
+        for job_run in job_runs:
+            if self.job.max_runtime and job_run.start_time and not job_run.end_time:
+                elapsed_runtime = timeutils.current_time() - job_run.start_time
+                remaining_runtime = self.job.max_runtime - elapsed_runtime
+                if remaining_runtime.total_seconds() <= 0:
+                    job_run.max_runtime_timer = reactor.callLater(0, job_run.stop)
+                else:
+                    job_run.max_runtime_timer = reactor.callLater(remaining_runtime.total_seconds(), job_run.stop)
+
         scheduled = self.job.runs.get_scheduled()
         # for those that were already scheduled, we reschedule them to run.
         for job_run in scheduled:
@@ -78,6 +88,7 @@ class JobScheduler(Observer):
         manual_runs = list(self.job.build_new_runs(run_time, manual=True))
         for r in manual_runs:
             r.start()
+            self.schedule_termination(r)
         return manual_runs
 
     def schedule_reconfigured(self):
@@ -170,7 +181,7 @@ class JobScheduler(Observer):
     def schedule_termination(self, job_run):
         if self.job.max_runtime:
             seconds = timeutils.delta_total_seconds(self.job.max_runtime)
-            reactor.callLater(seconds, job_run.stop)
+            job_run.max_runtime_timer = reactor.callLater(seconds, job_run.stop)
 
     def _queue_or_cancel_active(self, job_run):
         if self.job.queueing:
