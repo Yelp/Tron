@@ -51,7 +51,7 @@ class DynamoDBStateStore:
         #
         # It handles transient errors like RequestTimeout and ConnectionError, as well
         # as Service-side errors like Throttling, SlowDown, and LimitExceeded.
-        retry_config = Config(retries={"max_attempts": 5, "mode": "standard"})
+        retry_config = Config(retries={"max_attempts": 5, "mode": "standard"}, max_pool_connections=20)
 
         self.dynamodb = boto3.resource("dynamodb", region_name=dynamodb_region, config=retry_config)
         self.client = boto3.client("dynamodb", region_name=dynamodb_region, config=retry_config)
@@ -110,7 +110,7 @@ class DynamoDBStateStore:
 
         # TODO: TRON-2363 - We should refactor this to not consume attempts when we are still making progress
         while len(cand_keys_list) != 0 and attempts < MAX_UNPROCESSED_KEYS_RETRIES:
-            with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
+            with concurrent.futures.ThreadPoolExecutor(max_workers=10) as executor:
                 responses = [
                     executor.submit(
                         self.client.batch_get_item,
