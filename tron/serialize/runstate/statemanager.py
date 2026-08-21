@@ -114,7 +114,7 @@ class PersistentStateManager:
         # e.g. {'MASTER.k8s': {'run_nums': [0], 'enabled': True}}
 
         log.info(f"Restoring JobRun state for {len(jobs)} jobs")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=5) as executor:
             # Map each future to its job name so we can associate results later
             results = {
                 executor.submit(self._restore_runs_for_job, job_name, job_state): job_name
