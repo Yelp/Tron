@@ -4,6 +4,7 @@
  act as an adapter between the data format api clients expect, and the internal
  data of an object.
 """
+import datetime
 import functools
 import os.path
 import time
@@ -16,6 +17,7 @@ from tron import actioncommand
 from tron import scheduler
 from tron.core.actionrun import KubernetesActionRun
 from tron.serialize import filehandler
+from tron.utils import exitcode
 from tron.utils import timeutils
 from tron.utils.logreader import read_log_stream_for_action_run
 from tron.utils.timeutils import delta_total_seconds
@@ -112,10 +114,12 @@ class ActionRunAdapter(RunAdapter):
         "node",
         "command",
         "raw_command",
+        "exit_reason",
         "requirements",
         "meta",
         "stdout",
         "stderr",
+        "attempts",
         "duration",
         "job_name",
         "run_num",
@@ -146,6 +150,35 @@ class ActionRunAdapter(RunAdapter):
 
     def get_command(self):
         return self._obj.rendered_command
+
+    def get_exit_reason(self):
+        return exitcode.get_exit_reason(self._obj.exit_status)
+
+    def get_attempts(self):
+        attempts = []
+        for attempt_number, attempt in enumerate(self._obj.attempts, start=1):
+            start_time = attempt.start_time if isinstance(attempt.start_time, datetime.datetime) else None
+            end_time = attempt.end_time if isinstance(attempt.end_time, datetime.datetime) else None
+            is_running = start_time is not None and attempt.end_time is None and attempt.exit_status is None
+            duration = None
+            if start_time and (end_time or is_running):
+                duration_end = end_time or timeutils.current_time(tz=start_time.tzinfo)
+                duration = timeutils.duration(start_time, duration_end)
+            exit_reason = exitcode.get_exit_reason(attempt.exit_status)
+            if attempt.exit_status is None:
+                exit_reason = "Running" if is_running else "No exit code reported"
+            attempts.append(
+                {
+                    "number": attempt_number,
+                    "start_time": start_time,
+                    "end_time": end_time,
+                    "duration": str(duration or ""),
+                    "exit_status": attempt.exit_status,
+                    "exit_reason": exit_reason,
+                    "is_running": is_running,
+                }
+            )
+        return attempts
 
     @toggle_flag("job_run")
     def get_requirements(self):
