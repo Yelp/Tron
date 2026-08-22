@@ -1,3 +1,12 @@
+tron (3.10.5) jammy; urgency=medium
+
+  * 3.10.5 tagged with 'make release'
+    Commit: Merge pull request #1104 from
+    Yelp/jfong/parse_date_to_datetime  Support relaying a datetime to
+    `start` commands from tronctl
+
+ -- Jen Patague <jfong@yelp.com>  Tue, 18 Aug 2026 11:47:01 -0700
+
 tron (3.10.4) jammy; urgency=medium
 
   * 3.10.4 tagged with 'make release'

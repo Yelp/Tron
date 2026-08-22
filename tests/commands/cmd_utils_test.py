@@ -1,11 +1,42 @@
 import argparse
+import datetime
 from unittest import mock
+
+import pytest
 
 from testifycompat import assert_equal
 from testifycompat import assert_in
 from testifycompat import setup_teardown
 from testifycompat import TestCase
 from tron.commands import cmd_utils
+
+
+@pytest.mark.parametrize(
+    "date_string,expected",
+    [
+        ("2026-07-08", datetime.datetime(2026, 7, 8)),
+        ("2026-07-08 12:50", datetime.datetime(2026, 7, 8, 12, 50)),
+        ("2026-07-08 12:50:30", datetime.datetime(2026, 7, 8, 12, 50, 30)),
+        ("2026-07-08T12:50", datetime.datetime(2026, 7, 8, 12, 50)),
+        ("2026-07-08T12:50:30", datetime.datetime(2026, 7, 8, 12, 50, 30)),
+    ],
+)
+def test_parse_date_valid_with_datetime(date_string, expected):
+    assert cmd_utils.parse_date(date_string, allow_datetime=True) == expected
+
+
+def test_parse_date_valid_date_only():
+    assert cmd_utils.parse_date("2026-07-08") == datetime.datetime(2026, 7, 8)
+
+
+def test_parse_date_rejects_datetime_when_not_allowed():
+    with pytest.raises(ValueError, match="Try: YYYY-MM-DD."):
+        cmd_utils.parse_date("2026-07-08T12:50:30")
+
+
+def test_parse_date_invalid():
+    with pytest.raises(ValueError):
+        cmd_utils.parse_date("not-a-date")
 
 
 class TestGetConfig(TestCase):
