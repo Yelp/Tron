@@ -774,7 +774,7 @@ class ValidateJob(Validator):
         "enabled": True,
         "queueing": True,
         "allow_overlap": False,
-        "max_runtime": datetime.timedelta(days=7),
+        "max_runtime": None,
         "monitoring": {},
         "time_zone": None,
         "expected_runtime": datetime.timedelta(hours=24),
