@@ -111,7 +111,7 @@ class TestActionRunAdapter(TestCase):
         self.temp_dir = tempfile.mkdtemp()
         self.action_run = mock.MagicMock()
         self.job_run = mock.MagicMock()
-        self.adapter = ActionRunAdapter(self.action_run, self.job_run, 4)
+        self.adapter = ActionRunAdapter(self.action_run, self.job_run, 4, include_attempts=True)
 
     @teardown
     def teardown_adapter(self):
@@ -121,6 +121,7 @@ class TestActionRunAdapter(TestCase):
         assert_equal(self.adapter.max_lines, 4)
         assert_equal(self.adapter.job_run, self.job_run)
         assert_equal(self.adapter._obj, self.action_run)
+        assert self.adapter.include_attempts
 
     def test_get_repr(self):
         result = self.adapter.get_repr()

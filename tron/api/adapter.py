@@ -137,6 +137,7 @@ class ActionRunAdapter(RunAdapter):
         include_stdout=False,
         include_stderr=False,
         include_meta=False,
+        include_attempts=False,
     ):
         super().__init__(action_run)
         self.job_run = job_run
@@ -144,6 +145,7 @@ class ActionRunAdapter(RunAdapter):
         self.include_stdout = include_stdout
         self.include_stderr = include_stderr
         self.include_meta = include_meta
+        self.include_attempts = include_attempts
 
     def get_raw_command(self):
         return self._obj.command_config.command
@@ -154,6 +156,7 @@ class ActionRunAdapter(RunAdapter):
     def get_exit_reason(self):
         return exitcode.get_exit_reason(self._obj.exit_status)
 
+    @toggle_flag("include_attempts")
     def get_attempts(self):
         attempts = []
         for attempt_number, attempt in enumerate(self._obj.attempts, start=1):

@@ -169,6 +169,7 @@ class ActionRunResource(AuthenticatedResource):
             include_stdout=requestargs.get_bool(request, "include_stdout"),
             include_stderr=requestargs.get_bool(request, "include_stderr"),
             include_meta=requestargs.get_bool(request, "include_meta"),
+            include_attempts=True,
         )
         return respond(request=request, response=run_adapter.get_repr())
 
