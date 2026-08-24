@@ -63,6 +63,7 @@ class JobRun(Observable, Observer, Persistable):
         action_runs: ActionRunCollection | None = None,
         action_graph: ActionGraph | None = None,
         manual: bool | None = None,
+        max_runtime: datetime.timedelta | None = None,
     ):
         super().__init__()
         self.job_name = maybe_decode(
@@ -77,6 +78,7 @@ class JobRun(Observable, Observer, Persistable):
         self._action_runs = None
         self.action_graph = action_graph
         self.manual = manual
+        self.max_runtime = max_runtime
 
         if action_runs:
             self.action_runs = action_runs
@@ -101,6 +103,9 @@ class JobRun(Observable, Observer, Persistable):
                     "runs": [ActionRun.to_json(run) for run in state_data["runs"]],
                     "cleanup_run": ActionRun.to_json(state_data["cleanup_run"]) if state_data["cleanup_run"] else None,
                     "manual": state_data["manual"],
+                    "max_runtime": state_data["max_runtime"].total_seconds()
+                    if state_data["max_runtime"] is not None
+                    else None,
                 }
             )
         except KeyError:
@@ -116,6 +121,11 @@ class JobRun(Observable, Observer, Persistable):
         try:
             json_data = json.loads(state_data)
             raw_run_time = json_data["run_time"]
+            raw_max_runtime = json_data.get("max_runtime")
+            if raw_max_runtime is not None:
+                max_runtime = datetime.timedelta(seconds=raw_max_runtime)
+            else:
+                max_runtime = None
             if raw_run_time:
                 run_time = datetime.datetime.fromisoformat(raw_run_time)
                 if json_data["time_zone"]:
@@ -138,6 +148,7 @@ class JobRun(Observable, Observer, Persistable):
                 "cleanup_run": ActionRun.from_json(json_data["cleanup_run"]) if json_data["cleanup_run"] else None,
                 "run_time": run_time,
                 "time_zone": json_data["time_zone"],
+                "max_runtime": max_runtime,
             }
         except Exception:
             log.exception("Error deserializing JobRun from JSON")
@@ -165,6 +176,7 @@ class JobRun(Observable, Observer, Persistable):
             base_context=job.context,
             action_graph=job.action_graph,
             manual=manual,
+            max_runtime=job.max_runtime,
         )
 
         # We do this at creation to ensure each JobRun is counted once, regardless of when it actually executes.
@@ -200,6 +212,7 @@ class JobRun(Observable, Observer, Persistable):
             manual=state_data.get("manual", False),
             output_path=output_path,
             base_context=context,
+            max_runtime=state_data.get("max_runtime"),
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
             job_run,
@@ -216,6 +229,7 @@ class JobRun(Observable, Observer, Persistable):
             "job_name": self.job_name,
             "run_num": self.run_num,
             "run_time": self.run_time,
+            "max_runtime": self.max_runtime,
             "node_name": self.node.get_name() if self.node else None,
             "runs": self.action_runs.state_data,
             "cleanup_run": self.action_runs.cleanup_action_state_data,

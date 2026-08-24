@@ -178,10 +178,13 @@ class JobScheduler(Observer):
         if not self.job.scheduler.schedule_on_complete:
             self.schedule()
 
-    def schedule_termination(self, job_run):
-        if self.job.max_runtime:
-            seconds = timeutils.delta_total_seconds(self.job.max_runtime)
-            job_run.max_runtime_timer = reactor.callLater(seconds, job_run.stop)
+    def schedule_termination(self, job_run, deadline_reset=False):
+        max_runtime = job_run.max_runtime
+        if max_runtime is None:
+            max_runtime = self.job.max_runtime
+            job_run.max_runtime = max_runtime
+        if deadline_reset:
+            job_run.max_runtime = reactor.callLater(timeutils.current_time() + max_runtime, job_run.stop)
 
     def _queue_or_cancel_active(self, job_run):
         if self.job.queueing:
