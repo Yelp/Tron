@@ -40,18 +40,34 @@ class JobScheduler(Observer):
         )
 
         for job_run in job_runs:
-            has_cleanup_run = job_run.action_runs.cleanup_action_run
-            has_finished_cleanup = has_cleanup_run is None or has_cleanup_run.is_done
-            run_fully_finished = job_run.action_runs.is_done and has_finished_cleanup
+            cleanup_run = job_run.action_runs.cleanup_action_run
+            cleanup_finished = cleanup_run is None or cleanup_run.is_done
+            fully_finished = job_run.action_runs.is_done and cleanup_finished
 
             if job_run.is_scheduled or job_run.is_queued:
                 continue
-            if job_run.max_runtime_deadline is None:
-                continue
-            if run_fully_finished:
+
+            if fully_finished:
                 continue
 
-            self.schedule_termination(job_run)
+            enforcement = job_run.max_runtime_enforced
+
+            if enforcement is None:
+                enforcement = (
+                    job_run.max_runtime_deadline is not None
+                    or job_run.max_runtime is not None
+                    or self.job.max_runtime is not None
+                )
+                job_run.max_runtime_enforced = enforcement
+                job_run.notify(JobRun.NOTIFY_STATE_CHANGED)
+
+            if not enforcement:
+                continue
+
+            self.schedule_termination(
+                job_run,
+                deadline_reset=job_run.max_runtime_deadline is None,
+            )
 
         scheduled = self.job.runs.get_scheduled()
         # for those that were already scheduled, we reschedule them to run.
@@ -183,6 +199,9 @@ class JobScheduler(Observer):
             self.schedule()
 
     def schedule_termination(self, job_run, deadline_reset=False):
+        if job_run.max_runtime_enforced is False:
+            return
+
         now = timeutils.current_timestamp()
         deadline = job_run.max_runtime_deadline
 
@@ -192,16 +211,21 @@ class JobScheduler(Observer):
                 max_runtime = self.job.max_runtime
 
             if max_runtime is None:
+                job_run.max_runtime_enforced = False
+                job_run.notify(JobRun.NOTIFY_STATE_CHANGED)
                 return
 
             job_run.max_runtime = max_runtime
+            job_run.max_runtime_enforced = True
             deadline = now + timeutils.delta_total_seconds(max_runtime)
             job_run.max_runtime_deadline = deadline
             job_run.notify(JobRun.NOTIFY_STATE_CHANGED)
 
         job_run.cancel_max_runtime_timer()
-
-        job_run.max_runtime_timer = reactor.callLater(max(0, deadline - now), job_run.stop)
+        job_run.max_runtime_timer = reactor.callLater(
+            max(0, deadline - now),
+            job_run.stop,
+        )
 
     def _queue_or_cancel_active(self, job_run):
         if self.job.queueing:

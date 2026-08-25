@@ -65,6 +65,7 @@ class JobRun(Observable, Observer, Persistable):
         manual: bool | None = None,
         max_runtime: datetime.timedelta | None = None,
         max_runtime_deadline: float | None = None,
+        max_runtime_enforced: bool | None = None,
     ):
         super().__init__()
         self.job_name = maybe_decode(
@@ -80,8 +81,9 @@ class JobRun(Observable, Observer, Persistable):
         self.action_graph = action_graph
         self.manual = manual
         self.max_runtime = max_runtime
-        self.max_runtime_timer = None
         self.max_runtime_deadline: float | None = max_runtime_deadline
+        self.max_runtime_enforced = max_runtime_enforced
+        self.max_runtime_timer = None
 
         if action_runs:
             self.action_runs = action_runs
@@ -92,6 +94,7 @@ class JobRun(Observable, Observer, Persistable):
     def to_json(state_data: dict) -> str:
         """Serialize the JobRun instance to a JSON string."""
         try:
+            max_runtime = state_data.get("max_runtime")
             return json.dumps(
                 {
                     "job_name": state_data["job_name"],
@@ -106,10 +109,9 @@ class JobRun(Observable, Observer, Persistable):
                     "runs": [ActionRun.to_json(run) for run in state_data["runs"]],
                     "cleanup_run": ActionRun.to_json(state_data["cleanup_run"]) if state_data["cleanup_run"] else None,
                     "manual": state_data["manual"],
-                    "max_runtime": state_data["max_runtime"].total_seconds()
-                    if state_data["max_runtime"] is not None
-                    else None,
+                    "max_runtime": max_runtime.total_seconds() if max_runtime is not None else None,
                     "max_runtime_deadline": state_data.get("max_runtime_deadline"),
+                    "max_runtime_enforced": state_data.get("max_runtime_enforced"),
                 }
             )
         except KeyError:
@@ -154,6 +156,7 @@ class JobRun(Observable, Observer, Persistable):
                 "time_zone": json_data["time_zone"],
                 "max_runtime": max_runtime,
                 "max_runtime_deadline": json_data.get("max_runtime_deadline"),
+                "max_runtime_enforced": json_data.get("max_runtime_enforced"),
             }
         except Exception:
             log.exception("Error deserializing JobRun from JSON")
@@ -183,6 +186,7 @@ class JobRun(Observable, Observer, Persistable):
             manual=manual,
             max_runtime=job.max_runtime,
             max_runtime_deadline=None,
+            max_runtime_enforced=job.max_runtime is not None,
         )
 
         # We do this at creation to ensure each JobRun is counted once, regardless of when it actually executes.
@@ -220,6 +224,7 @@ class JobRun(Observable, Observer, Persistable):
             base_context=context,
             max_runtime=state_data.get("max_runtime"),
             max_runtime_deadline=state_data.get("max_runtime_deadline"),
+            max_runtime_enforced=state_data.get("max_runtime_enforced"),
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
             job_run,
@@ -238,6 +243,7 @@ class JobRun(Observable, Observer, Persistable):
             "run_time": self.run_time,
             "max_runtime": self.max_runtime,
             "max_runtime_deadline": self.max_runtime_deadline,
+            "max_runtime_enforced": self.max_runtime_enforced,
             "node_name": self.node.get_name() if self.node else None,
             "runs": self.action_runs.state_data,
             "cleanup_run": self.action_runs.cleanup_action_state_data,
@@ -392,17 +398,18 @@ class JobRun(Observable, Observer, Persistable):
             prom_metrics.tron_job_runs_completed_counter.labels(outcome="success").inc()
             log.info(f"{self} succeeded")
 
-        # Here we check if the JobRun has a max_runtime timer, if so, we cancel it via CallLater.cancel()
-        # Twisted docs mention that attempting to cancel an already cancelled timer will raise an AlreadyCancelledError, which is why we check if timer is active first.
         self.cancel_max_runtime_timer()
+        self.max_runtime_deadline = None
+        self.max_runtime_enforced = False
 
-        # Notify Job that this JobRun is complete
         self.notify(self.NOTIFY_DONE)
         self.log_state_update(state=self.state)
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
         self.cancel_max_runtime_timer()
+        self.max_runtime_deadline = None
+        self.max_runtime_enforced = False
         log.info(f"{self} removed")
         self.notify(self.NOTIFY_REMOVED)
         self.clear_observers()

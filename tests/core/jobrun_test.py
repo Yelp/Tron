@@ -33,13 +33,15 @@ def build_mock_job():
         ),
     }
     runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
-    return mock.create_autospec(
+    mock_job = mock.create_autospec(
         job.Job,
         action_graph=action_graph,
         output_path=mock.Mock(),
         context=mock.Mock(),
         action_runner=runner,
     )
+    mock_job.max_runtime = None
+    return mock_job
 
 
 class TestJobRun:
@@ -306,6 +308,9 @@ class TestJobRun:
             },
             "manual": False,
             "time_zone": None,
+            "max_runtime": None,
+            "max_runtime_deadline": None,
+            "max_runtime_enforced": None,
         }
         assert result == expected
 
@@ -428,10 +433,14 @@ class TestJobRun:
         self.job_run.finalize()
         mock_timer.cancel.assert_not_called()
 
-    def test_finalize_no_timer_attribute(self):
+    def test_finalize_clears_enforcement(self):
         self.job_run.action_runs.is_failed = False
-        assert not hasattr(self.job_run, "max_runtime_timer")
+        self.job_run.max_runtime_enforced = True
+        self.job_run.max_runtime_deadline = 12345.0
         self.job_run.finalize()
+        assert self.job_run.max_runtime_enforced is False
+        assert self.job_run.max_runtime_deadline is None
+        assert self.job_run.max_runtime_timer is None
         self.job_run.notify.assert_called_with(self.job_run.NOTIFY_DONE)
 
     def test_finalize_failure(self):
