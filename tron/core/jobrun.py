@@ -64,6 +64,7 @@ class JobRun(Observable, Observer, Persistable):
         action_graph: ActionGraph | None = None,
         manual: bool | None = None,
         max_runtime: datetime.timedelta | None = None,
+        max_runtime_deadline: float | None = None,
     ):
         super().__init__()
         self.job_name = maybe_decode(
@@ -79,6 +80,8 @@ class JobRun(Observable, Observer, Persistable):
         self.action_graph = action_graph
         self.manual = manual
         self.max_runtime = max_runtime
+        self.max_runtime_timer = None
+        self.max_runtime_deadline: float | None = max_runtime_deadline
 
         if action_runs:
             self.action_runs = action_runs
@@ -106,6 +109,7 @@ class JobRun(Observable, Observer, Persistable):
                     "max_runtime": state_data["max_runtime"].total_seconds()
                     if state_data["max_runtime"] is not None
                     else None,
+                    "max_runtime_deadline": state_data.get("max_runtime_deadline"),
                 }
             )
         except KeyError:
@@ -149,6 +153,7 @@ class JobRun(Observable, Observer, Persistable):
                 "run_time": run_time,
                 "time_zone": json_data["time_zone"],
                 "max_runtime": max_runtime,
+                "max_runtime_deadline": json_data.get("max_runtime_deadline"),
             }
         except Exception:
             log.exception("Error deserializing JobRun from JSON")
@@ -177,6 +182,7 @@ class JobRun(Observable, Observer, Persistable):
             action_graph=job.action_graph,
             manual=manual,
             max_runtime=job.max_runtime,
+            max_runtime_deadline=None,
         )
 
         # We do this at creation to ensure each JobRun is counted once, regardless of when it actually executes.
@@ -213,6 +219,7 @@ class JobRun(Observable, Observer, Persistable):
             output_path=output_path,
             base_context=context,
             max_runtime=state_data.get("max_runtime"),
+            max_runtime_deadline=state_data.get("max_runtime_deadline"),
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
             job_run,
@@ -230,6 +237,7 @@ class JobRun(Observable, Observer, Persistable):
             "run_num": self.run_num,
             "run_time": self.run_time,
             "max_runtime": self.max_runtime,
+            "max_runtime_deadline": self.max_runtime_deadline,
             "node_name": self.node.get_name() if self.node else None,
             "runs": self.action_runs.state_data,
             "cleanup_run": self.action_runs.cleanup_action_state_data,
@@ -364,6 +372,12 @@ class JobRun(Observable, Observer, Persistable):
 
     handler = handle_action_run_state_change
 
+    def cancel_max_runtime_timer(self) -> None:
+        """Cancel this run's max_runtime_timer"""
+        if self.max_runtime_timer is not None and self.max_runtime_timer.active():
+            self.max_runtime_timer.cancel()
+        self.max_runtime_timer = None
+
     def finalize(self) -> None:
         """The last step of a JobRun. Called when the cleanup action
         completes or if the job has no cleanup action, called once all action
@@ -380,8 +394,7 @@ class JobRun(Observable, Observer, Persistable):
 
         # Here we check if the JobRun has a max_runtime timer, if so, we cancel it via CallLater.cancel()
         # Twisted docs mention that attempting to cancel an already cancelled timer will raise an AlreadyCancelledError, which is why we check if timer is active first.
-        if hasattr(self, "max_runtime_timer") and self.max_runtime_timer.active():
-            self.max_runtime_timer.cancel()
+        self.cancel_max_runtime_timer()
 
         # Notify Job that this JobRun is complete
         self.notify(self.NOTIFY_DONE)
@@ -389,8 +402,7 @@ class JobRun(Observable, Observer, Persistable):
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
-        if hasattr(self, "max_runtime_timer") and self.max_runtime_timer.active():
-            self.max_runtime_timer.cancel()
+        self.cancel_max_runtime_timer()
         log.info(f"{self} removed")
         self.notify(self.NOTIFY_REMOVED)
         self.clear_observers()

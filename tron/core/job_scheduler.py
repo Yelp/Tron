@@ -39,15 +39,19 @@ class JobScheduler(Observer):
             master_action_runner=config_action_runner,
         )
 
-        # This recreates the max_runtime timer for restored runs as Tron does not persist this timer after restarting.
         for job_run in job_runs:
-            if self.job.max_runtime and job_run.start_time and not job_run.end_time:
-                elapsed_runtime = timeutils.current_time() - job_run.start_time
-                remaining_runtime = self.job.max_runtime - elapsed_runtime
-                if remaining_runtime.total_seconds() <= 0:
-                    job_run.max_runtime_timer = reactor.callLater(0, job_run.stop)
-                else:
-                    job_run.max_runtime_timer = reactor.callLater(remaining_runtime.total_seconds(), job_run.stop)
+            has_cleanup_run = job_run.action_runs.cleanup_action_run
+            has_finished_cleanup = has_cleanup_run is None or has_cleanup_run.is_done
+            run_fully_finished = job_run.action_runs.is_done and has_finished_cleanup
+
+            if job_run.is_scheduled or job_run.is_queued:
+                continue
+            if job_run.max_runtime_deadline is None:
+                continue
+            if run_fully_finished:
+                continue
+
+            self.schedule_termination(job_run)
 
         scheduled = self.job.runs.get_scheduled()
         # for those that were already scheduled, we reschedule them to run.
@@ -179,12 +183,25 @@ class JobScheduler(Observer):
             self.schedule()
 
     def schedule_termination(self, job_run, deadline_reset=False):
-        max_runtime = job_run.max_runtime
-        if max_runtime is None:
-            max_runtime = self.job.max_runtime
+        now = timeutils.current_timestamp()
+        deadline = job_run.max_runtime_deadline
+
+        if deadline is None or deadline_reset:
+            max_runtime = job_run.max_runtime
+            if max_runtime is None:
+                max_runtime = self.job.max_runtime
+
+            if max_runtime is None:
+                return
+
             job_run.max_runtime = max_runtime
-        if deadline_reset:
-            job_run.max_runtime = reactor.callLater(timeutils.current_time() + max_runtime, job_run.stop)
+            deadline = now + timeutils.delta_total_seconds(max_runtime)
+            job_run.max_runtime_deadline = deadline
+            job_run.notify(JobRun.NOTIFY_STATE_CHANGED)
+
+        job_run.cancel_max_runtime_timer()
+
+        job_run.max_runtime_timer = reactor.callLater(max(0, deadline - now), job_run.stop)
 
     def _queue_or_cancel_active(self, job_run):
         if self.job.queueing:
