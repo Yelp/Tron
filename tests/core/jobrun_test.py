@@ -1039,3 +1039,34 @@ class TestJobRunStateTransitions:
         assert job_run.state == actionrun.ActionRun.STARTING
         job_run.get_action_run("after_foo").cancel()
         assert job_run.state == actionrun.ActionRun.CANCELLED
+
+    def test_cancel_records_derived_end_time(self, job_run):
+        cancellation_time = datetime.datetime(2026, 8, 24, 12, 34, 56)
+        with mock.patch(
+            "tron.core.actionrun.timeutils.current_time",
+            autospec=True,
+            return_value=cancellation_time,
+        ):
+            assert job_run.cancel()
+
+        assert job_run.state == actionrun.ActionRun.CANCELLED
+        assert job_run.end_time == cancellation_time
+        assert all(run.end_time == cancellation_time for run in job_run.action_runs)
+
+    def test_cancel_uses_latest_completed_or_cancelled_action_end_time(self, job_run):
+        completed_time = datetime.datetime(2026, 8, 24, 12, 30)
+        cancellation_time = datetime.datetime(2026, 8, 24, 12, 34, 56)
+        completed_run = job_run.get_action_run("foo")
+        completed_run.machine.state = actionrun.ActionRun.SUCCEEDED
+        completed_run.end_time = completed_time
+
+        with mock.patch(
+            "tron.core.actionrun.timeutils.current_time",
+            autospec=True,
+            return_value=cancellation_time,
+        ):
+            job_run.cancel()
+
+        assert job_run.state == actionrun.ActionRun.CANCELLED
+        assert completed_run.end_time == completed_time
+        assert job_run.end_time == cancellation_time
