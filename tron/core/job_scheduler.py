@@ -50,20 +50,6 @@ class JobScheduler(Observer):
             if fully_finished:
                 continue
 
-            enforcement = job_run.max_runtime_enforced
-
-            if enforcement is None:
-                enforcement = (
-                    job_run.max_runtime_deadline is not None
-                    or job_run.max_runtime is not None
-                    or self.job.max_runtime is not None
-                )
-                job_run.max_runtime_enforced = enforcement
-                job_run.notify(JobRun.NOTIFY_STATE_CHANGED)
-
-            if not enforcement:
-                continue
-
             self.schedule_termination(job_run)
 
         scheduled = self.job.runs.get_scheduled()
@@ -196,9 +182,6 @@ class JobScheduler(Observer):
             self.schedule()
 
     def schedule_termination(self, job_run, deadline_reset=False):
-        if job_run.max_runtime_enforced is False and not deadline_reset:
-            return
-
         now = timeutils.current_timestamp()
         deadline = job_run.max_runtime_deadline
 
@@ -208,13 +191,10 @@ class JobScheduler(Observer):
                 max_runtime = self.job.max_runtime
 
             if max_runtime is None:
-                job_run.max_runtime_enforced = False
-                job_run.notify(JobRun.NOTIFY_STATE_CHANGED)
                 return
 
             max_runtime_seconds = timeutils.delta_total_seconds(max_runtime)
             job_run.max_runtime = max_runtime
-            job_run.max_runtime_enforced = True
 
             if deadline_reset:
                 deadline = now + max_runtime_seconds

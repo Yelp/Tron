@@ -121,7 +121,6 @@ def small_object():
         "manual": False,
         "max_runtime": None,
         "max_runtime_deadline": None,
-        "max_runtime_enforced": None,
     }
 
 
@@ -145,7 +144,6 @@ def large_object():
         "manual": False,
         "max_runtime": None,
         "max_runtime_deadline": None,
-        "max_runtime_enforced": None,
     }
 
 

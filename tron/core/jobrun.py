@@ -65,7 +65,6 @@ class JobRun(Observable, Observer, Persistable):
         manual: bool | None = None,
         max_runtime: datetime.timedelta | None = None,
         max_runtime_deadline: float | None = None,
-        max_runtime_enforced: bool | None = None,
     ):
         super().__init__()
         self.job_name = maybe_decode(
@@ -82,7 +81,6 @@ class JobRun(Observable, Observer, Persistable):
         self.manual = manual
         self.max_runtime = max_runtime
         self.max_runtime_deadline: float | None = max_runtime_deadline
-        self.max_runtime_enforced = max_runtime_enforced
         self.max_runtime_timer = None
 
         if action_runs:
@@ -111,7 +109,6 @@ class JobRun(Observable, Observer, Persistable):
                     "manual": state_data["manual"],
                     "max_runtime": max_runtime.total_seconds() if max_runtime is not None else None,
                     "max_runtime_deadline": state_data.get("max_runtime_deadline"),
-                    "max_runtime_enforced": state_data.get("max_runtime_enforced"),
                 }
             )
         except KeyError:
@@ -156,7 +153,6 @@ class JobRun(Observable, Observer, Persistable):
                 "time_zone": json_data["time_zone"],
                 "max_runtime": max_runtime,
                 "max_runtime_deadline": json_data.get("max_runtime_deadline"),
-                "max_runtime_enforced": json_data.get("max_runtime_enforced"),
             }
         except Exception:
             log.exception("Error deserializing JobRun from JSON")
@@ -186,7 +182,6 @@ class JobRun(Observable, Observer, Persistable):
             manual=manual,
             max_runtime=job.max_runtime,
             max_runtime_deadline=None,
-            max_runtime_enforced=job.max_runtime is not None,
         )
 
         # We do this at creation to ensure each JobRun is counted once, regardless of when it actually executes.
@@ -224,7 +219,6 @@ class JobRun(Observable, Observer, Persistable):
             base_context=context,
             max_runtime=state_data.get("max_runtime"),
             max_runtime_deadline=state_data.get("max_runtime_deadline"),
-            max_runtime_enforced=state_data.get("max_runtime_enforced"),
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
             job_run,
@@ -243,7 +237,6 @@ class JobRun(Observable, Observer, Persistable):
             "run_time": self.run_time,
             "max_runtime": self.max_runtime,
             "max_runtime_deadline": self.max_runtime_deadline,
-            "max_runtime_enforced": self.max_runtime_enforced,
             "node_name": self.node.get_name() if self.node else None,
             "runs": self.action_runs.state_data,
             "cleanup_run": self.action_runs.cleanup_action_state_data,
@@ -402,7 +395,6 @@ class JobRun(Observable, Observer, Persistable):
 
         self.cancel_max_runtime_timer()
         self.max_runtime_deadline = None
-        self.max_runtime_enforced = False
 
         self.notify(self.NOTIFY_DONE)
         self.log_state_update(state=self.state)
@@ -411,7 +403,6 @@ class JobRun(Observable, Observer, Persistable):
         """Cleanup any resources used by this JobRun."""
         self.cancel_max_runtime_timer()
         self.max_runtime_deadline = None
-        self.max_runtime_enforced = False
         log.info(f"{self} removed")
         self.notify(self.NOTIFY_REMOVED)
         self.clear_observers()

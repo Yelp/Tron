@@ -114,14 +114,20 @@ class ActionRunController:
     def handle_retry(self, original_command):
         cleanup_run = self.job_run.action_runs.cleanup_action_run
         previous_deadline = self.job_run.max_runtime_deadline
-        previous_enforcement = self.job_run.max_runtime_enforced
         previous_max_runtime = self.job_run.max_runtime
-        cleanup_finished = cleanup_run is None or cleanup_run.is_done
 
         if cleanup_run and cleanup_run.is_done:
             return "JobRun has run a cleanup action, use rerun instead"
 
-        is_reactivation = self.job_scheduler is not None and self.job_run.action_runs.is_done and cleanup_finished
+        is_reactivation = self.job_scheduler is not None and self.job_run.action_runs.is_done
+
+        def rollback_deadline():
+            if is_reactivation and self.job_run.action_runs.is_done:
+                self.job_run.cancel_max_runtime_timer()
+                self.job_run.max_runtime_deadline = previous_deadline
+                self.job_run.max_runtime = previous_max_runtime
+                self.job_run.notify(JobRun.NOTIFY_STATE_CHANGED)
+
         if is_reactivation:
             self.job_scheduler.schedule_termination(
                 self.job_run,
@@ -130,24 +136,13 @@ class ActionRunController:
         try:
             retry_scheduled = self.action_run.retry(original_command=original_command)
         except Exception:
-            if is_reactivation and self.job_run.action_runs.is_done:
-                self.job_run.cancel_max_runtime_timer()
-                self.job_run.max_runtime_deadline = previous_deadline
-                self.job_run.max_runtime_enforced = previous_enforcement
-                self.job_run.max_runtime = previous_max_runtime
-                self.job_run.notify(JobRun.NOTIFY_STATE_CHANGED)
+            rollback_deadline()
             raise
 
         if retry_scheduled:
             return "Retrying %s" % self.action_run
 
-        if is_reactivation and self.job_run.action_runs.is_done:
-            self.job_run.cancel_max_runtime_timer()
-            self.job_run.max_runtime_deadline = previous_deadline
-            self.job_run.max_runtime_enforced = previous_enforcement
-            self.job_run.max_runtime = previous_max_runtime
-            self.job_run.notify(JobRun.NOTIFY_STATE_CHANGED)
-
+        rollback_deadline()
         return "Failed to schedule retry for %s" % self.action_run
 
 

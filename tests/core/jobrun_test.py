@@ -310,7 +310,6 @@ class TestJobRun:
             "time_zone": None,
             "max_runtime": None,
             "max_runtime_deadline": None,
-            "max_runtime_enforced": None,
         }
         assert result == expected
 
@@ -433,12 +432,10 @@ class TestJobRun:
         self.job_run.finalize()
         mock_timer.cancel.assert_not_called()
 
-    def test_finalize_clears_enforcement(self):
+    def test_finalize_clears_deadline(self):
         self.job_run.action_runs.is_failed = False
-        self.job_run.max_runtime_enforced = True
         self.job_run.max_runtime_deadline = 12345.0
         self.job_run.finalize()
-        assert self.job_run.max_runtime_enforced is False
         assert self.job_run.max_runtime_deadline is None
         assert self.job_run.max_runtime_timer is None
         self.job_run.notify.assert_called_with(self.job_run.NOTIFY_DONE)

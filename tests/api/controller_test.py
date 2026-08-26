@@ -74,7 +74,6 @@ class TestActionRunController:
             self.job_run,
         )
         self.job_run.action_runs.cleanup_action_run = None
-        self.job_run.max_runtime_enforced = False
         self.job_run.max_runtime_deadline = None
         self.job_run.max_runtime = None
 
@@ -161,7 +160,6 @@ class TestActionRunController:
         job_scheduler.schedule_termination.assert_called_once()
         self.job_run.cancel_max_runtime_timer.assert_called_once()
         assert self.job_run.max_runtime_deadline is None
-        assert self.job_run.max_runtime_enforced is False
         self.job_run.notify.assert_called_with(jobrun.JobRun.NOTIFY_STATE_CHANGED)
 
     def test_handle_retry_failed_but_became_active_keeps_deadline(self):
