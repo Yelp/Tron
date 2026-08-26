@@ -116,11 +116,12 @@ class ActionRunController:
         previous_deadline = self.job_run.max_runtime_deadline
         previous_enforcement = self.job_run.max_runtime_enforced
         previous_max_runtime = self.job_run.max_runtime
+        cleanup_finished = cleanup_run is None or cleanup_run.is_done
 
         if cleanup_run and cleanup_run.is_done:
             return "JobRun has run a cleanup action, use rerun instead"
 
-        is_reactivation = self.job_scheduler is not None and self.job_run.action_runs.is_done and cleanup_run is None
+        is_reactivation = self.job_scheduler is not None and self.job_run.action_runs.is_done and cleanup_finished
         if is_reactivation:
             self.job_scheduler.schedule_termination(
                 self.job_run,
