@@ -17,10 +17,10 @@ def filter_action_runs_needing_recovery(action_runs):
             if action_run.state == ActionRun.UNKNOWN:
                 ssh_runs.append(action_run)
         elif isinstance(action_run, MesosActionRun):
-            if action_run.state == ActionRun.UNKNOWN and action_run.end_time is None:
+            if action_run.is_recoverable_unknown:
                 mesos_runs.append(action_run)
         elif isinstance(action_run, KubernetesActionRun):
-            if action_run.state == ActionRun.UNKNOWN and action_run.end_time is None:
+            if action_run.is_recoverable_unknown:
                 kubernetes_runs.append(action_run)
     return ssh_runs, mesos_runs, kubernetes_runs
 

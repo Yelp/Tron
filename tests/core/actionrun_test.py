@@ -162,10 +162,12 @@ class TestActionRunFactory:
 
     def test_build_run_for_action(self):
         expected_command = "doit"
+        max_runtime = datetime.timedelta(minutes=30)
         action = MagicMock(
             node_pool=None,
             is_cleanup=False,
             command_config=ActionCommandConfig(command=expected_command),
+            max_runtime=max_runtime,
         )
         action.name = "theaction"
         action_run = ActionRunFactory.build_run_for_action(
@@ -179,6 +181,7 @@ class TestActionRunFactory:
         assert action_run.action_name == action.name
         assert not action_run.is_cleanup
         assert action_run.command == expected_command
+        assert action_run.max_runtime == max_runtime
 
     def test_build_run_for_action_with_node(self):
         expected_command = "doit"
@@ -601,6 +604,117 @@ class TestActionRun:
         callLater.return_value = "delayed call"
         assert self.action_run._exit_unsuccessful(-1)
         assert self.action_run.in_delay == "delayed call"
+
+
+class TestActionRunMaxRuntime:
+    @pytest.fixture(autouse=True)
+    def setup_action_run(self, output_path):
+        self.action_run = ActionRun(
+            job_run_id="ns.id.0",
+            name="action_name",
+            node=mock.create_autospec(node.Node),
+            command_config=ActionCommandConfig(command="command"),
+            output_path=output_path,
+            max_runtime=datetime.timedelta(seconds=30),
+        )
+        self.action_run.node.get_name.return_value = "node"
+        self.action_run.submit_command = mock.Mock(return_value=True)
+        self.action_run.kill = mock.Mock()
+        self.action_run.ready()
+
+    @pytest.mark.parametrize(
+        ("max_runtime", "expected_deadline", "expected_delays"),
+        [
+            pytest.param(None, None, [], id="omitted"),
+            pytest.param(datetime.timedelta(0), 100.0, [0], id="zero"),
+            pytest.param(datetime.timedelta(seconds=30), 130.0, [30.0], id="positive"),
+        ],
+    )
+    @mock.patch("tron.core.actionrun.timeutils.current_timestamp", return_value=100.0)
+    @mock.patch("tron.core.actionrun.reactor", autospec=True)
+    def test_start_schedules_deadline(
+        self,
+        reactor,
+        _current_timestamp,
+        max_runtime,
+        expected_deadline,
+        expected_delays,
+    ):
+        self.action_run.max_runtime = max_runtime
+
+        self.action_run.start()
+
+        assert self.action_run.max_runtime_deadline == expected_deadline
+        assert reactor.callLater.call_args_list == [
+            mock.call(delay, self.action_run.max_runtime_reached) for delay in expected_delays
+        ]
+
+    @pytest.mark.parametrize("state", [ActionRun.RUNNING, ActionRun.UNKNOWN])
+    def test_expiration_preserves_retries(self, state):
+        self.action_run.machine.state = state
+        self.action_run.retries_remaining = 2
+        self.action_run.max_runtime_deadline = 100.0
+
+        self.action_run.max_runtime_reached()
+
+        self.action_run.kill.assert_called_once_with(final=False)
+        assert self.action_run.retries_remaining == 2
+        assert self.action_run.max_runtime_deadline == 100.0
+
+    @mock.patch("tron.core.actionrun.timeutils.current_timestamp", side_effect=[100.0, 200.0])
+    @mock.patch("tron.core.actionrun.reactor", autospec=True)
+    def test_automatic_retry_gets_fresh_deadline(self, reactor, _current_timestamp):
+        first_timer = mock.Mock()
+        first_timer.active.return_value = True
+        second_timer = mock.Mock()
+        reactor.callLater.side_effect = [first_timer, second_timer]
+        self.action_run.retries_remaining = 1
+
+        self.action_run.start()
+        self.action_run._exit_unsuccessful(1)
+
+        first_timer.cancel.assert_called_once_with()
+        assert reactor.callLater.call_args_list[-1] == mock.call(
+            30.0,
+            self.action_run.max_runtime_reached,
+        )
+        assert self.action_run.max_runtime_deadline == 230.0
+
+    @mock.patch("tron.core.actionrun.timeutils.current_timestamp", side_effect=[100.0, 200.0])
+    @mock.patch("tron.core.actionrun.reactor", autospec=True)
+    def test_manual_retry_gets_fresh_deadline(self, reactor, _current_timestamp):
+        first_timer = mock.Mock()
+        first_timer.active.return_value = True
+        second_timer = mock.Mock()
+        reactor.callLater.side_effect = [first_timer, second_timer]
+
+        self.action_run.start()
+        self.action_run.fail(1)
+        self.action_run.retry()
+
+        assert reactor.callLater.call_count == 2
+        assert self.action_run.max_runtime_deadline == 230.0
+
+    @pytest.mark.parametrize("finish", ["cancel", "cleanup"])
+    def test_finishing_cancels_and_clears_deadline(self, finish):
+        timer = mock.Mock()
+        timer.active.return_value = True
+        self.action_run.max_runtime_timer = timer
+        self.action_run.max_runtime_deadline = 130.0
+
+        getattr(self.action_run, finish)()
+
+        timer.cancel.assert_called_once_with()
+        assert self.action_run.max_runtime_timer is None
+        assert self.action_run.max_runtime_deadline is None
+
+    def test_json_round_trip(self):
+        self.action_run.max_runtime_deadline = 130.0
+
+        state_data = ActionRun.from_json(ActionRun.to_json(self.action_run.state_data))
+
+        assert state_data["max_runtime"] == datetime.timedelta(seconds=30)
+        assert state_data["max_runtime_deadline"] == 130.0
 
 
 class TestActionRunFactoryTriggerTimeout:
@@ -1139,6 +1253,49 @@ class TestActionRunStateRestore:
             lambda: None,
         )
         assert action_run.is_unknown
+
+    @pytest.mark.parametrize(
+        ("state", "end_time", "max_runtime", "deadline", "expected_delays"),
+        [
+            pytest.param("running", None, datetime.timedelta(seconds=30), 120.0, [20.0], id="running"),
+            pytest.param("unknown", None, datetime.timedelta(seconds=30), 120.0, [20.0], id="recoverable-unknown"),
+            pytest.param("starting", None, datetime.timedelta(seconds=30), 90.0, [0], id="expired"),
+            pytest.param("unknown", "end", datetime.timedelta(seconds=30), 120.0, [], id="terminal-unknown"),
+            pytest.param("running", None, None, None, [], id="old-state"),
+        ],
+    )
+    @mock.patch("tron.core.actionrun.timeutils.current_timestamp", return_value=100.0)
+    @mock.patch("tron.core.actionrun.reactor", autospec=True)
+    def test_from_state_restores_only_recoverable_deadlines(
+        self,
+        reactor,
+        _current_timestamp,
+        state_data,
+        state,
+        end_time,
+        max_runtime,
+        deadline,
+        expected_delays,
+    ):
+        state_data.update(
+            state=state,
+            end_time=end_time,
+            max_runtime=max_runtime,
+            max_runtime_deadline=deadline,
+        )
+        state_data["attempts"][-1]["end_time"] = end_time
+
+        action_run = ActionRun.from_state(
+            state_data,
+            self.parent_context,
+            self.output_path,
+            self.run_node,
+            self.action_graph,
+        )
+
+        assert reactor.callLater.call_args_list == [
+            mock.call(delay, action_run.max_runtime_reached) for delay in expected_delays
+        ]
 
     def test_from_state_starting(self, state_data):
         state_data["state"] = "starting"

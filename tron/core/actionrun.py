@@ -123,6 +123,7 @@ class ActionRunFactory:
             "action_runner": action_runner,
             "retries_remaining": action.retries,
             "retries_delay": action.retries_delay,
+            "max_runtime": action.max_runtime,
             "executor": action.executor,
             "trigger_downstreams": action.trigger_downstreams,
             "triggered_by": action.triggered_by,
@@ -386,6 +387,8 @@ class ActionRun(Observable, Persistable):
         on_upstream_rerun: schema.ActionOnRerun | None = None,
         trigger_timeout_timestamp: float | None = None,
         original_command: str | None = None,
+        max_runtime: datetime.timedelta | None = None,
+        max_runtime_deadline: float | None = None,
     ):
         super().__init__()
         self.job_run_id = maybe_decode(
@@ -415,6 +418,9 @@ class ActionRun(Observable, Persistable):
         self.context = command_context.build_context(self, parent_context)
         self.retries_remaining = retries_remaining
         self.retries_delay = retries_delay
+        self.max_runtime = max_runtime
+        self.max_runtime_deadline = max_runtime_deadline
+        self.max_runtime_timer: DelayedCall | None = None
         self.trigger_downstreams = trigger_downstreams
         self.triggered_by = triggered_by
         self.on_upstream_rerun = on_upstream_rerun
@@ -552,12 +558,18 @@ class ActionRun(Observable, Persistable):
             triggered_by=state_data.get("triggered_by"),
             on_upstream_rerun=state_data.get("on_upstream_rerun"),
             trigger_timeout_timestamp=state_data.get("trigger_timeout_timestamp"),
+            max_runtime=state_data.get("max_runtime"),
+            max_runtime_deadline=state_data.get("max_runtime_deadline"),
         )
 
-        # Transition running to fail unknown because exit status was missed
-        # Recovery will look for unknown runs
+        # Transition active runs to unknown because their exit status may have
+        # been missed. An unknown run with no end time may also have been
+        # persisted during an earlier recovery and still needs recovery now.
+        needs_recovery_timer = run.is_active or run.is_recoverable_unknown
         if run.is_active:
             run.transition_and_notify("fail_unknown")
+        if needs_recovery_timer:
+            run.restore_max_runtime_timer()
         return run
 
     def start(self, original_command: bool = True) -> bool | ActionCommand | None:
@@ -577,6 +589,7 @@ class ActionRun(Observable, Persistable):
 
         new_attempt = self.create_attempt(original_command=original_command)
         self.start_time = new_attempt.start_time
+        self.schedule_max_runtime_timer()
         self.transition_and_notify("start")
 
         if not self.command_config.command:
@@ -624,6 +637,47 @@ class ActionRun(Observable, Persistable):
     def recover(self) -> ActionCommand | None:
         raise NotImplementedError()
 
+    def schedule_max_runtime_timer(self) -> None:
+        """Start a fresh max-runtime window for the current attempt."""
+        self.cancel_max_runtime_timer()
+        if self.max_runtime is None:
+            return
+
+        now = timeutils.current_timestamp()
+        self.max_runtime_deadline = now + timeutils.delta_total_seconds(self.max_runtime)
+        self.max_runtime_timer = cast("EPollReactor", reactor).callLater(
+            max(0, self.max_runtime_deadline - now),
+            self.max_runtime_reached,
+        )
+
+    def restore_max_runtime_timer(self) -> None:
+        """Re-arm the persisted max-runtime deadline for an active attempt."""
+        if self.max_runtime is None or self.max_runtime_deadline is None:
+            return
+
+        now = timeutils.current_timestamp()
+        self.max_runtime_timer = cast("EPollReactor", reactor).callLater(
+            max(0, self.max_runtime_deadline - now),
+            self.max_runtime_reached,
+        )
+
+    def cancel_max_runtime_timer(self) -> None:
+        """Cancel the transient timer and clear its persisted deadline."""
+        if self.max_runtime_timer is not None and self.max_runtime_timer.active():
+            self.max_runtime_timer.cancel()
+        self.max_runtime_timer = None
+        self.max_runtime_deadline = None
+
+    def max_runtime_reached(self) -> None:
+        """Terminate the current attempt without consuming its configured retries."""
+        self.max_runtime_timer = None
+        if not self.is_active and not self.is_recoverable_unknown:
+            self.max_runtime_deadline = None
+            return
+
+        log.warning(f"{self} reached its max runtime; terminating the current attempt")
+        self.kill(final=False)
+
     def _done(self, target: str, exit_status: int | None = 0) -> bool | None:
         if self.machine.check(target):
             if self.triggered_by:
@@ -633,6 +687,7 @@ class ActionRun(Observable, Persistable):
             self.end_time = timeutils.current_time()
             if self.last_attempt is not None and self.last_attempt.end_time is None:
                 self.last_attempt.exit(exit_status, self.end_time)
+            self.cancel_max_runtime_timer()
 
             prom_metrics.tron_action_runs_completed_counter.labels(
                 executor=self.executor, outcome=target, exit_status=str(exit_status)
@@ -682,6 +737,9 @@ class ActionRun(Observable, Persistable):
                 self.retries_delay.total_seconds(),
                 self.start_after_delay,
             )
+            # Persist the completed attempt and cleared deadline while no attempt
+            # is running during the retry delay.
+            self.notify(self.state)
             log.info(f"{self} delaying for a retry in {self.retries_delay}s")
             return True
         else:
@@ -709,6 +767,7 @@ class ActionRun(Observable, Persistable):
                 f"{self} got exit code {exit_status} but already in terminal " f'state "{self.state}", not retrying',
             )
             return None
+        self.cancel_max_runtime_timer()
         if self.last_attempt is not None:
             self.last_attempt.exit(exit_status)
         if self.retries_remaining is not None:
@@ -803,6 +862,8 @@ class ActionRun(Observable, Persistable):
             "attempts": [a.state_data for a in self.attempts],
             "retries_remaining": self.retries_remaining,
             "retries_delay": self.retries_delay,
+            "max_runtime": self.max_runtime,
+            "max_runtime_deadline": self.max_runtime_deadline,
             "action_runner": action_runner,
             "executor": self.executor,
             "trigger_downstreams": self.trigger_downstreams,
@@ -838,6 +899,12 @@ class ActionRun(Observable, Persistable):
                 "retries_delay": (
                     datetime.timedelta(seconds=json_data["retries_delay"]) if json_data["retries_delay"] else None
                 ),
+                "max_runtime": (
+                    datetime.timedelta(seconds=json_data["max_runtime"])
+                    if json_data.get("max_runtime") is not None
+                    else None
+                ),
+                "max_runtime_deadline": json_data.get("max_runtime_deadline"),
                 "executor": json_data["executor"],
                 "trigger_downstreams": json_data["trigger_downstreams"],
                 "triggered_by": json_data["triggered_by"],
@@ -876,6 +943,10 @@ class ActionRun(Observable, Persistable):
                     "retries_delay": (
                         state_data["retries_delay"].total_seconds() if state_data["retries_delay"] is not None else None
                     ),
+                    "max_runtime": (
+                        state_data["max_runtime"].total_seconds() if state_data.get("max_runtime") is not None else None
+                    ),
+                    "max_runtime_deadline": state_data.get("max_runtime_deadline"),
                     "action_runner": action_runner_json,
                     "executor": state_data["executor"],
                     "trigger_downstreams": state_data["trigger_downstreams"],
@@ -923,7 +994,13 @@ class ActionRun(Observable, Persistable):
     def is_active(self):
         return self.is_starting or self.is_running
 
+    @property
+    def is_recoverable_unknown(self) -> bool:
+        """Whether an unknown run may still have an active underlying attempt."""
+        return self.state == self.UNKNOWN and self.end_time is None
+
     def cleanup(self):
+        self.cancel_max_runtime_timer()
         self.clear_observers()
         if self.triggered_by:
             EventBus.clear_subscriptions(self.__hash__())
@@ -1001,6 +1078,8 @@ class ActionRun(Observable, Persistable):
 
     def transition_and_notify(self, target: str) -> bool | None:
         if self.machine.transition(target):
+            if self.is_done and not self.is_recoverable_unknown:
+                self.cancel_max_runtime_timer()
             self.notify(self.state)
             return True
         return None

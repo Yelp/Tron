@@ -192,6 +192,7 @@ ConfigAction = config_object_factory(
         "field_selector_env",  # dict of str, ConfigFieldSelectorSource
         "extra_volumes",  # List of ConfigVolume
         "expected_runtime",  # datetime.Timedelta
+        "max_runtime",  # datetime.Timedelta
         "trigger_downstreams",  # None, bool or dict
         "triggered_by",  # list or None
         "on_upstream_rerun",  # ActionOnRerun or None
@@ -218,6 +219,7 @@ ConfigCleanupAction = config_object_factory(
         "retries",  # int
         "retries_delay",  # datetime.Timedelta
         "expected_runtime",  # datetime.Timedelta
+        "max_runtime",  # datetime.Timedelta
         "executor",  # str
         "cpus",  # float
         "mem",  # float

@@ -1,3 +1,5 @@
+import datetime
+
 import pytest
 
 from tron.config.schema import ConfigAction
@@ -60,6 +62,7 @@ class TestAction:
             ],
             trigger_downstreams=True,
             triggered_by=["foo.bar"],
+            max_runtime=datetime.timedelta(minutes=30),
         )
         new_action = Action.from_config(config)
         assert new_action.name == config.name
@@ -67,6 +70,7 @@ class TestAction:
         assert new_action.executor == config.executor
         assert new_action.trigger_downstreams is True
         assert new_action.triggered_by == ["foo.bar"]
+        assert new_action.max_runtime == datetime.timedelta(minutes=30)
 
         command_config = new_action.command_config
         assert command_config.command == config.command

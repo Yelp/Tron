@@ -1079,6 +1079,7 @@ class TestValidateJobs(TestCase):
                             name="action",
                             command="command",
                             expected_runtime="20m",
+                            max_runtime="0s",
                         ),
                         dict(
                             name="action_mesos",
@@ -1115,7 +1116,7 @@ class TestValidateJobs(TestCase):
                             trigger_downstreams=True,
                         ),
                     ],
-                    cleanup_action=dict(command="command"),
+                    cleanup_action=dict(command="command", max_runtime="5m"),
                 ),
             ],
             **BASE_CONFIG,
@@ -1128,6 +1129,7 @@ class TestValidateJobs(TestCase):
                 actions={
                     "action": make_action(
                         expected_runtime=datetime.timedelta(0, 1200),
+                        max_runtime=datetime.timedelta(0),
                     ),
                     "action_mesos": make_action(
                         name="action_mesos",
@@ -1170,6 +1172,9 @@ class TestValidateJobs(TestCase):
                         trigger_downstreams=True,
                     ),
                 },
+                cleanup_action=make_cleanup_action(
+                    max_runtime=datetime.timedelta(minutes=5),
+                ),
                 expected_runtime=datetime.timedelta(0, 1200),
             ),
         }

@@ -184,6 +184,7 @@ class Action:
     retries: int | None = None
     retries_delay: datetime.timedelta | None = None
     expected_runtime: datetime.timedelta | None = None
+    max_runtime: datetime.timedelta | None = None
     executor: str | None = None
     trigger_downstreams: bool | dict | None = None
     triggered_by: set | None = None
@@ -235,6 +236,7 @@ class Action:
             retries=config.retries,
             retries_delay=config.retries_delay,
             expected_runtime=config.expected_runtime,
+            max_runtime=config.max_runtime,
             executor=config.executor,
             trigger_downstreams=config.trigger_downstreams,
             triggered_by=config.triggered_by,
