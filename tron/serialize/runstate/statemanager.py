@@ -49,10 +49,19 @@ class PersistenceManagerFactory:
             table_name = persistence_config.table_name
             dynamodb_region = persistence_config.dynamodb_region
             max_transact_write_items = persistence_config.max_transact_write_items
-            store = DynamoDBStateStore(table_name, dynamodb_region, max_transact_write_items=max_transact_write_items)
+            batch_get_workers = persistence_config.batch_get_workers
+            max_pool_connections = persistence_config.max_pool_connections
+            store = DynamoDBStateStore(
+                table_name,
+                dynamodb_region,
+                batch_get_workers=batch_get_workers,
+                max_pool_connections=max_pool_connections,
+                max_transact_write_items=max_transact_write_items,
+            )
 
         buffer = StateSaveBuffer(buffer_size)
-        return PersistentStateManager(store, buffer)
+        restore_workers = persistence_config.restore_workers
+        return PersistentStateManager(store, buffer, restore_workers)
 
 
 class StateSaveBuffer:
@@ -100,10 +109,11 @@ class PersistentStateManager:
 
     """
 
-    def __init__(self, persistence_impl, buffer):
+    def __init__(self, persistence_impl: Any, buffer: StateSaveBuffer, restore_workers: int = 5):
         self.enabled = True
         self._buffer = buffer
         self._impl = persistence_impl
+        self._restore_workers = restore_workers
 
     # TODO: get rid of the Any here - hopefully with a TypedDict
     def restore(self, job_names: list[str]) -> dict[str, Any]:
@@ -114,7 +124,7 @@ class PersistentStateManager:
         # e.g. {'MASTER.k8s': {'run_nums': [0], 'enabled': True}}
 
         log.info(f"Restoring JobRun state for {len(jobs)} jobs")
-        with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+        with concurrent.futures.ThreadPoolExecutor(max_workers=self._restore_workers) as executor:
             # Map each future to its job name so we can associate results later
             results = {
                 executor.submit(self._restore_runs_for_job, job_name, job_state): job_name
