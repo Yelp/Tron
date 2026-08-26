@@ -1,3 +1,12 @@
+tron (3.10.6) jammy; urgency=medium
+
+  * 3.10.6 tagged with 'make release'
+    Commit: Merge pull request #1116 from Yelp/TRON-
+    2651_small_max_workers_improvements  Tweak max_workers and
+    max_pool_connections - restart improvements #3
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Wed, 26 Aug 2026 10:24:47 -0700
+
 tron (3.10.5) jammy; urgency=medium
 
   * 3.10.5 tagged with 'make release'
