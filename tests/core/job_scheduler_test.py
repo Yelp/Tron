@@ -73,6 +73,7 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
         self.manual_run.max_runtime_deadline = None
         self.manual_run.max_runtime = None
         self.manual_run.max_runtime_enforced = None
+        self.manual_run.start_time = None
         self.job.build_new_runs = mock.Mock(return_value=[self.manual_run])
 
     def test_manual_start(self):
@@ -249,6 +250,7 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
         manual_run.max_runtime_deadline = None
         manual_run.max_runtime = None
         manual_run.max_runtime_enforced = None
+        manual_run.start_time = None
         self.job.build_new_runs = mock.Mock(return_value=[manual_run])
         self.job_scheduler.manual_start()
         reactor.callLater.assert_called_with(
@@ -257,7 +259,7 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
         )
         assert manual_run.max_runtime_timer == reactor.callLater.return_value
 
-    def _make_restored_run(self, max_runtime_enforced=True, max_runtime_deadline=None):
+    def _make_restored_run(self, max_runtime_enforced=True, max_runtime_deadline=None, start_time=None):
         run = mock.Mock()
         run._action_runs = []
         run.is_scheduled = False
@@ -267,6 +269,7 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
         run.max_runtime = None
         run.max_runtime_deadline = max_runtime_deadline
         run.max_runtime_enforced = max_runtime_enforced
+        run.start_time = start_time
         return run
 
     @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
@@ -300,6 +303,40 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
 
         reactor.callLater.assert_any_call(mock.ANY, run.stop)
         assert run.max_runtime_timer == reactor.callLater.return_value
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_legacy_with_start_time_approximates_deadline(self, reactor):
+        """A legacy run with start_time approximates the original deadline."""
+        start = self.now - datetime.timedelta(days=2)
+        run = self._make_restored_run(
+            max_runtime_enforced=True,
+            max_runtime_deadline=None,
+            start_time=start,
+        )
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        expected_deadline = start.timestamp() + 7 * 24 * 3600
+        now = self.now.timestamp()
+        expected_remaining = expected_deadline - now
+        reactor.callLater.assert_any_call(expected_remaining, run.stop)
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_trigger_waiting_gets_fresh_window(self, reactor):
+        """A trigger-waiting run (no start_time) gets a fresh window from now."""
+        run = self._make_restored_run(
+            max_runtime_enforced=True,
+            max_runtime_deadline=None,
+            start_time=None,
+        )
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        reactor.callLater.assert_any_call(7 * 24 * 3600.0, run.stop)
 
     @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
     def test_restore_state_not_enforced(self, reactor):
@@ -348,6 +385,16 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
         self.job_scheduler.restore_state({}, mock.Mock())
 
         assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == run.stop)
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_deadline_reset_overrides_disabled_enforcement(self, reactor):
+        """deadline_reset=True creates a timer even if enforcement is False."""
+        run = self._make_restored_run(max_runtime_enforced=False)
+        self.job_scheduler.schedule_termination(run, deadline_reset=True)
+
+        assert run.max_runtime_enforced is True
+        reactor.callLater.assert_called_once()
+        assert run.max_runtime_timer == reactor.callLater.return_value
 
 
 class TestJobSchedulerOther(TestCase):

@@ -310,7 +310,9 @@ class JobRun(Observable, Observer, Persistable):
             return True
 
     def stop(self):
-        if self.action_runs.is_done:
+        cleanup_run = self.action_runs.cleanup_action_run
+        cleanup_finished = cleanup_run is None or cleanup_run.is_done
+        if self.action_runs.is_done and cleanup_finished:
             return
         self.action_runs.stop()
 

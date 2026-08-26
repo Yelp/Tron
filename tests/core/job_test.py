@@ -362,6 +362,7 @@ class TestJobScheduler:
         job_run.max_runtime_deadline = None
         job_run.max_runtime = None
         job_run.max_runtime_enforced = None
+        job_run.start_time = None
         self.job_scheduler.run_job(job_run)
         job_run.start.assert_called_once()
         self.job_scheduler.schedule.assert_called_once()
@@ -411,6 +412,7 @@ class TestJobScheduler:
         job_run.max_runtime_deadline = None
         job_run.max_runtime = None
         job_run.max_runtime_enforced = None
+        job_run.start_time = None
         self.job_scheduler.run_job(job_run)
         job_run.start.assert_called_with()
 
@@ -432,6 +434,7 @@ class TestJobScheduler:
         job_run.max_runtime_deadline = None
         job_run.max_runtime = None
         job_run.max_runtime_enforced = None
+        job_run.start_time = None
         self.job_scheduler.run_job(job_run)
         assert_length(job_run.start.mock_calls, 1)
         assert_length(self.job_scheduler.schedule.mock_calls, 0)
