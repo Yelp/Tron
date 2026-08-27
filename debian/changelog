@@ -1,3 +1,12 @@
+tron (3.11.0) jammy; urgency=medium
+
+  * 3.11.0 tagged with 'make release'
+    Commit: Merge pull request #1106 from Yelp/TRON-
+    2628_cpeacock_set_default_max_runtime  Persist JobRun max_runtime
+    deadlines across Tron restarts
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Thu, 27 Aug 2026 14:10:29 -0700
+
 tron (3.10.6) jammy; urgency=medium
 
   * 3.10.6 tagged with 'make release'
