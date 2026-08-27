@@ -359,6 +359,9 @@ class TestJobScheduler:
         self.job.runs.get_active = lambda n: []
         job_run = mock.Mock(autospec=True)
         job_run.is_cancelled = False
+        job_run.max_runtime_deadline = None
+        job_run.max_runtime = None
+        job_run.start_time = None
         self.job_scheduler.run_job(job_run)
         job_run.start.assert_called_once()
         self.job_scheduler.schedule.assert_called_once()
@@ -405,6 +408,9 @@ class TestJobScheduler:
         self.job.runs.get_active = lambda s: [mock.Mock()]
         self.job.allow_overlap = True
         job_run = MagicMock(is_cancelled=False)
+        job_run.max_runtime_deadline = None
+        job_run.max_runtime = None
+        job_run.start_time = None
         self.job_scheduler.run_job(job_run)
         job_run.start.assert_called_with()
 
@@ -423,6 +429,9 @@ class TestJobScheduler:
         self.job.scheduler.schedule_on_complete = True
         self.job.runs.get_active = lambda s: []
         job_run = MagicMock(is_cancelled=False)
+        job_run.max_runtime_deadline = None
+        job_run.max_runtime = None
+        job_run.start_time = None
         self.job_scheduler.run_job(job_run)
         assert_length(job_run.start.mock_calls, 1)
         assert_length(self.job_scheduler.schedule.mock_calls, 0)
