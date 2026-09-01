@@ -348,11 +348,15 @@ class TestEventsController:
             yield
 
     def test_info(self):
+        event_log = {"event": {"value": 1}}
         self.eventbus.instance = None
         assert self.controller.info() == dict(error="EventBus disabled")
 
         self.eventbus.instance = mock.Mock()
-        assert self.controller.info() == dict(response=self.eventbus.instance.event_log)
+        self.eventbus.instance.event_log = event_log
+        response = self.controller.info()
+        assert response == dict(response=self.eventbus.instance.event_log)
+        assert response["response"] is not event_log
 
     def test_publish(self):
         event = mock.Mock()
