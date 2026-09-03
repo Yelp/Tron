@@ -124,6 +124,15 @@ class TestActionRunAdapter(TestCase):
         result = self.adapter.get_repr()
         assert_equal(result["command"], self.action_run.rendered_command)
 
+    @mock.patch("tron.api.adapter.timeutils.duration", autospec=True)
+    def test_historical_cancelled_run_duration_is_unknown(self, mock_duration):
+        self.action_run.state = actionrun.ActionRun.CANCELLED
+        self.action_run.start_time = mock.Mock()
+        self.action_run.end_time = None
+
+        assert_equal(self.adapter.get_duration(), "")
+        mock_duration.assert_not_called()
+
 
 class TestActionRunGraphAdapter(TestCase):
     @setup
@@ -178,6 +187,43 @@ class TestJobRunAdapter(TestCase):
     def test_get_runs_without_action_runs(self):
         self.adapter.include_action_runs = False
         assert_equal(self.adapter.get_runs(), None)
+
+    @mock.patch("tron.api.adapter.timeutils.duration", autospec=True)
+    def test_historical_cancelled_run_duration_is_unknown(self, mock_duration):
+        self.job_run.state = actionrun.ActionRun.CANCELLED
+        self.job_run.start_time = mock.Mock()
+        self.job_run.end_time = None
+        self.job_run.action_runs.is_done = True
+        self.job_run.action_runs.cleanup_action_run = None
+
+        assert_equal(self.adapter.get_duration(), "")
+        mock_duration.assert_not_called()
+
+    @mock.patch("tron.api.adapter.timeutils.duration", autospec=True)
+    def test_partially_cancelled_active_run_has_elapsed_duration(self, mock_duration):
+        start_time = mock.Mock()
+        mock_duration.return_value = "elapsed"
+        self.job_run.state = actionrun.ActionRun.CANCELLED
+        self.job_run.start_time = start_time
+        self.job_run.end_time = None
+        self.job_run.action_runs.is_done = False
+        self.job_run.action_runs.cleanup_action_run = None
+
+        assert_equal(self.adapter.get_duration(), "elapsed")
+        mock_duration.assert_called_once_with(start_time, None)
+
+    @mock.patch("tron.api.adapter.timeutils.duration", autospec=True)
+    def test_cancelled_run_with_active_cleanup_has_elapsed_duration(self, mock_duration):
+        start_time = mock.Mock()
+        mock_duration.return_value = "elapsed"
+        self.job_run.state = actionrun.ActionRun.CANCELLED
+        self.job_run.start_time = start_time
+        self.job_run.end_time = None
+        self.job_run.action_runs.is_done = True
+        self.job_run.action_runs.cleanup_action_run = mock.Mock(is_done=False)
+
+        assert_equal(self.adapter.get_duration(), "elapsed")
+        mock_duration.assert_called_once_with(start_time, None)
 
 
 class TestNodeAdapter(TestCase):

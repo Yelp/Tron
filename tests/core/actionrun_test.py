@@ -476,6 +476,87 @@ class TestActionRun:
         assert self.action_run.cancel()
         assert self.action_run.is_cancelled
 
+    @pytest.mark.parametrize("state", [ActionRun.STARTING, ActionRun.RUNNING])
+    def test_cancel_active_run_records_one_timestamp_before_notify(self, state, mock_current_time):
+        cancellation_time = datetime.datetime(2026, 8, 24, 12, 34, 56)
+        mock_current_time.return_value = cancellation_time
+        attempt = ActionRunAttempt(
+            command_config=self.action_run.command_config,
+            start_time=datetime.datetime(2026, 8, 24, 12),
+        )
+        self.action_run.attempts.append(attempt)
+        self.action_run.machine.state = state
+
+        observed_state = []
+        observer = mock.Mock()
+        observer.handler.side_effect = lambda run, event, event_data: observed_state.append(
+            (event, run.end_time, run.last_attempt.end_time)
+        )
+        self.action_run.attach(True, observer)
+
+        assert self.action_run.cancel()
+
+        assert observed_state == [(ActionRun.CANCELLED, cancellation_time, cancellation_time)]
+        assert self.action_run.end_time == cancellation_time
+        assert attempt.end_time == cancellation_time
+        assert self.action_run.exit_status is None
+        assert attempt.exit_status is None
+        mock_current_time.assert_called_once_with()
+
+    @pytest.mark.parametrize("state", [ActionRun.SCHEDULED, ActionRun.QUEUED, ActionRun.WAITING])
+    def test_cancel_unstarted_run_without_attempt(self, state, mock_current_time):
+        cancellation_time = datetime.datetime(2026, 8, 24, 12, 34, 56)
+        mock_current_time.return_value = cancellation_time
+        self.action_run.machine.state = state
+
+        assert self.action_run.cancel()
+
+        assert self.action_run.end_time == cancellation_time
+        assert self.action_run.start_time is None
+        assert self.action_run.attempts == []
+        assert self.action_run.exit_status is None
+
+    def test_cancel_during_retry_delay_preserves_finished_attempt(self, mock_current_time):
+        attempt_end_time = datetime.datetime(2026, 8, 24, 12, 30)
+        cancellation_time = datetime.datetime(2026, 8, 24, 12, 34, 56)
+        mock_current_time.return_value = cancellation_time
+        attempt = ActionRunAttempt(
+            command_config=self.action_run.command_config,
+            start_time=datetime.datetime(2026, 8, 24, 12),
+            end_time=attempt_end_time,
+            exit_status=1,
+        )
+        self.action_run.attempts.append(attempt)
+        self.action_run.machine.state = ActionRun.STARTING
+        delayed_retry = mock.Mock()
+        self.action_run.in_delay = delayed_retry
+
+        assert self.action_run.cancel()
+
+        assert self.action_run.end_time == cancellation_time
+        assert attempt.end_time == attempt_end_time
+        assert attempt.exit_status == 1
+        delayed_retry.cancel.assert_called_once_with()
+        assert self.action_run.in_delay is None
+
+    def test_cancel_terminal_run_does_not_change_timestamps(self, mock_current_time):
+        original_end_time = datetime.datetime(2026, 8, 24, 12, 30)
+        attempt = ActionRunAttempt(
+            command_config=self.action_run.command_config,
+            end_time=original_end_time,
+            exit_status=1,
+        )
+        self.action_run.attempts.append(attempt)
+        self.action_run.machine.state = ActionRun.CANCELLED
+        self.action_run.end_time = original_end_time
+
+        assert not self.action_run.cancel()
+
+        assert self.action_run.end_time == original_end_time
+        assert attempt.end_time == original_end_time
+        assert attempt.exit_status == 1
+        mock_current_time.assert_not_called()
+
     def test__getattr__missing_attribute(self):
         with pytest.raises(AttributeError):
             self.action_run.__getattr__("is_not_a_real_state")
@@ -1412,7 +1493,19 @@ class TestActionRunCollection:
         self.run_map["action_name"].end_time = datetime.datetime(2013, 5, 12)
         self.run_map["second_name"].machine.state = ActionRun.SUCCEEDED
         self.run_map["second_name"].end_time = max_end_time
+        self.run_map["cleanup"].machine.state = ActionRun.SUCCEEDED
+        self.run_map["cleanup"].end_time = datetime.datetime(2013, 6, 1)
         assert self.collection.end_time == max_end_time
+
+    def test_end_time_cleanup_not_done(self):
+        self.run_map["action_name"].machine.state = ActionRun.CANCELLED
+        self.run_map["action_name"].end_time = datetime.datetime(2013, 5, 12)
+        self.run_map["second_name"].machine.state = ActionRun.CANCELLED
+        self.run_map["second_name"].end_time = datetime.datetime(2013, 5, 12)
+        self.run_map["cleanup"].machine.state = ActionRun.STARTING
+
+        assert self.collection.is_done
+        assert self.collection.end_time is None
 
     def test_end_time_not_done(self):
         self.run_map["action_name"].end_time = datetime.datetime(2013, 5, 12)
