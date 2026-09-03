@@ -2,9 +2,6 @@
 Parse a dictionary structure and return an immutable structure that
 contain a validated configuration.
 
-
-WARNING: it is *NOT* safe to delete classes that are being validated (or their attributes) if there are any references to them in DynamoDB until TRON-2200 is complete! (See DAR-2328)
-NOTE: this means that reverting a change that adds a new attribute is not safe :)
 """
 import datetime
 import getpass
@@ -874,6 +871,9 @@ class ValidateStatePersistence(Validator):
         "dynamodb_region": None,
         "table_name": None,
         "max_transact_write_items": 8,
+        "restore_workers": 5,
+        "batch_get_workers": 10,
+        "max_pool_connections": 30,
     }
 
     validators = {
@@ -883,14 +883,28 @@ class ValidateStatePersistence(Validator):
         "dynamodb_region": valid_string,
         "table_name": valid_string,
         "max_transact_write_items": valid_int,
+        "restore_workers": valid_int,
+        "batch_get_workers": valid_int,
+        "max_pool_connections": valid_int,
     }
 
     def post_validation(self, config, config_context):
         buffer_size = config.get("buffer_size")
+        max_pool_connections = config.get("max_pool_connections")
+        restore_workers = config.get("restore_workers")
+        batch_get_workers = config.get("batch_get_workers")
 
         if buffer_size and buffer_size < 1:
             path = config_context.path
             raise ConfigError("%s buffer_size must be >= 1." % path)
+
+        if max_pool_connections < 10:
+            path = config_context.path
+            raise ConfigError("%s max_pool_connections must be 10 or higher" % path)
+
+        if batch_get_workers < 3 or restore_workers < 3:
+            path = config_context.path
+            raise ConfigError("%s restore_workers and batch_get_workers must be 3 or higher" % path)
 
         store_type = config.get("store_type")
 
@@ -981,6 +995,7 @@ DEFAULT_STATE_PERSISTENCE = ConfigState(
     name="tron_state",
     store_type="shelve",
     buffer_size=1,
+    restore_workers=5,
 )
 DEFAULT_NODE = ValidateNode().do_shortcut(node="localhost")
 

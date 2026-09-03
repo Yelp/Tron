@@ -15,6 +15,7 @@ from urllib.parse import quote
 
 from tron import actioncommand
 from tron import scheduler
+from tron.core.actionrun import ActionRun
 from tron.core.actionrun import KubernetesActionRun
 from tron.serialize import filehandler
 from tron.utils import exitcode
@@ -88,7 +89,15 @@ class RunAdapter(ReprAdapter):
     def get_node(self):
         return NodeAdapter(self._obj.node).get_repr()
 
+    def _is_duration_unknown(self):
+        return self._obj.state == ActionRun.CANCELLED and self._obj.end_time is None
+
     def get_duration(self):
+        # Some cancelled records predate persisted cancellation timestamps.
+        # Report their duration as unavailable without modifying the record or
+        # substituting the current time for its missing end_time.
+        if self._is_duration_unknown():
+            return ""
         duration = timeutils.duration(self._obj.start_time, self._obj.end_time)
         return str(duration or "")
 
@@ -422,6 +431,13 @@ class JobRunAdapter(RunAdapter):
 
     def get_url(self):
         return f"/jobs/{self._obj.job_name}/{self._obj.run_num}"
+
+    def _is_duration_unknown(self):
+        # JobRun.state may be CANCELLED before every action, including cleanup,
+        # has finished. Keep calculating a live duration until they are done.
+        cleanup_run = self._obj.action_runs.cleanup_action_run
+        cleanup_is_done = cleanup_run is None or cleanup_run.is_done
+        return self._obj.action_runs.is_done and cleanup_is_done and super()._is_duration_unknown()
 
     @toggle_flag("include_action_runs")
     def get_runs(self):

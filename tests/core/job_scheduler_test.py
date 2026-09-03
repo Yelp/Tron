@@ -70,6 +70,9 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
         )
         self.job_scheduler = JobScheduler(self.job)
         self.manual_run = mock.Mock()
+        self.manual_run.max_runtime_deadline = None
+        self.manual_run.max_runtime = None
+        self.manual_run.start_time = None
         self.job.build_new_runs = mock.Mock(return_value=[self.manual_run])
 
     def test_manual_start(self):
@@ -86,7 +89,7 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
             autospec=True,
         ) as mock_current:
             manual_runs = self.job_scheduler.manual_start()
-            mock_current.assert_called_with(tz=self.job.time_zone)
+            mock_current.assert_any_call(tz=self.job.time_zone)
             self.job.build_new_runs.assert_called_with(
                 mock_current.return_value,
                 manual=True,
@@ -219,6 +222,155 @@ class TestJobSchedulerSchedule(TestCase):
                 run_queued=True,
             )
             mock_schedule.assert_called_once_with()
+
+
+class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
+    """Tests for max_runtime timer scheduling and restoration."""
+
+    now = datetime.datetime(2012, 3, 14, 15, 9, 20)
+
+    @setup
+    def setup_job(self):
+        self.scheduler = mock.Mock()
+        run_collection = mock.Mock(has_pending=False)
+        node_pool = mock.Mock()
+        self.job = job.Job(
+            "jobname",
+            self.scheduler,
+            run_collection=run_collection,
+            node_pool=node_pool,
+        )
+        self.job.max_runtime = datetime.timedelta(days=7)
+        self.job_scheduler = JobScheduler(self.job)
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_manual_start_schedules_termination(self, reactor):
+        manual_run = mock.Mock()
+        manual_run.max_runtime_deadline = None
+        manual_run.max_runtime = None
+        manual_run.start_time = None
+        self.job.build_new_runs = mock.Mock(return_value=[manual_run])
+        self.job_scheduler.manual_start()
+        reactor.callLater.assert_called_with(
+            7 * 24 * 3600,
+            manual_run.stop,
+        )
+        assert manual_run.max_runtime_timer == reactor.callLater.return_value
+
+    def _make_restored_run(self, max_runtime_deadline=None, max_runtime=None, start_time=None):
+        run = mock.Mock()
+        run._action_runs = []
+        run.is_scheduled = False
+        run.is_queued = False
+        run.action_runs.cleanup_action_run = None
+        run.action_runs.is_done = False
+        run.max_runtime = max_runtime
+        run.max_runtime_deadline = max_runtime_deadline
+        run.start_time = start_time
+        return run
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_with_existing_deadline(self, reactor):
+        """A run with an existing deadline restores the timer from it."""
+        now = self.now.timestamp()
+        deadline = now + 5 * 24 * 3600.0
+        run = self._make_restored_run(max_runtime_deadline=deadline)
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        reactor.callLater.assert_any_call(mock.ANY, run.stop)
+        assert run.max_runtime_timer == reactor.callLater.return_value
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_no_deadline_creates_fresh(self, reactor):
+        """A run with no deadline but job has max_runtime creates a fresh deadline."""
+        run = self._make_restored_run(max_runtime_deadline=None)
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        reactor.callLater.assert_any_call(mock.ANY, run.stop)
+        assert run.max_runtime_timer == reactor.callLater.return_value
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_with_start_time_approximates_deadline(self, reactor):
+        """A run with start_time but no deadline approximates the original deadline."""
+        start = self.now - datetime.timedelta(days=2)
+        run = self._make_restored_run(
+            max_runtime_deadline=None,
+            start_time=start,
+        )
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        expected_deadline = start.timestamp() + 7 * 24 * 3600
+        now = self.now.timestamp()
+        expected_remaining = expected_deadline - now
+        reactor.callLater.assert_any_call(expected_remaining, run.stop)
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_trigger_waiting_gets_fresh_window(self, reactor):
+        """A trigger-waiting run (no start_time, no deadline) gets a fresh window from now."""
+        run = self._make_restored_run(
+            max_runtime_deadline=None,
+            start_time=None,
+        )
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        reactor.callLater.assert_any_call(7 * 24 * 3600.0, run.stop)
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_no_max_runtime_no_timer(self, reactor):
+        """A run with no deadline and no max_runtime source gets no timer."""
+        run = self._make_restored_run()
+        self.job.max_runtime = None
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == run.stop)
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_skips_scheduled_runs(self, reactor):
+        """Scheduled/queued runs don't get a timer."""
+        run = self._make_restored_run()
+        run.is_scheduled = True
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == run.stop)
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_restore_state_skips_fully_finished(self, reactor):
+        """Fully finished runs don't get a timer."""
+        run = self._make_restored_run()
+        run.action_runs.is_done = True
+        self.job.get_job_runs_from_state = mock.Mock(return_value=[run])
+        self.job.runs.get_scheduled = mock.Mock(return_value=[])
+
+        self.job_scheduler.restore_state({}, mock.Mock())
+
+        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == run.stop)
+
+    @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
+    def test_deadline_reset_creates_timer_without_existing_deadline(self, reactor):
+        """deadline_reset=True creates a timer even when no deadline exists."""
+        run = self._make_restored_run()
+        self.job_scheduler.schedule_termination(run, deadline_reset=True)
+
+        reactor.callLater.assert_called_once()
+        assert run.max_runtime_timer == reactor.callLater.return_value
 
 
 class TestJobSchedulerOther(TestCase):

@@ -152,11 +152,11 @@ class ActionRunResource(AuthenticatedResource):
 
     isLeaf = True
 
-    def __init__(self, action_run, job_run):
+    def __init__(self, action_run, job_run, job_scheduler=None):
         resource.Resource.__init__(self)
         self.action_run = action_run
         self.job_run = job_run
-        self.controller = controller.ActionRunController(action_run, job_run)
+        self.controller = controller.ActionRunController(action_run, job_run, job_scheduler)
         self.config_watcher = get_config_watcher()
 
     @AsyncResource.bounded
@@ -200,7 +200,7 @@ class JobRunResource(AuthenticatedResource):
         )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
         if action_name in self.job_run.action_runs:
             action_run = self.job_run.action_runs[action_name]
-            return ActionRunResource(action_run, self.job_run)
+            return ActionRunResource(action_run, self.job_run, self.job_scheduler)
 
         return ErrorResource(
             f"Cannot find action '{action_name}' for " f"'{self.job_run}'",
