@@ -1,3 +1,11 @@
+tron (3.12.0) jammy; urgency=medium
+
+  * 3.12.0 tagged with 'make release'
+    Commit: Merge pull request #1101 from Yelp/u/bariteau/resolute
+    build for resolute
+
+ -- Kevin Kaspari <kkasp@yelp.com>  Fri, 04 Sep 2026 07:49:58 -0700
+
 tron (3.11.0) jammy; urgency=medium
 
   * 3.11.0 tagged with 'make release'
