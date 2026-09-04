@@ -121,7 +121,7 @@ class ConfigIndexEntry extends IndexEntry
 
 
 class CommandIndexEntry extends IndexEntry
-    constructor: (@name, @job_name, @action_name) ->
+    constructor: (name, @job_name, @action_name) ->
         super name
 
     type: "command"
