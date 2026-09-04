@@ -571,6 +571,11 @@ class TestActionRun:
         assert self.action_run._exit_unsuccessful(-1)
         assert self.action_run.is_starting
         assert self.action_run.retries_remaining == 1
+        assert self.action_run.start_time == 3
+        assert self.action_run.end_time is None
+        assert self.action_run.exit_status is None
+        assert self.action_run.attempts[0].end_time == 2
+        assert self.action_run.attempts[0].exit_status == -1
 
         assert self.action_run._exit_unsuccessful(-1)
         assert self.action_run.retries_remaining == 0

@@ -1,3 +1,4 @@
+import datetime
 import shutil
 import tempfile
 from unittest import mock
@@ -19,6 +20,7 @@ from tron.api.adapter import RunAdapter
 from tron.core import actiongraph
 from tron.core import actionrun
 from tron.core import job
+from tron.utils import exitcode
 
 
 class MockAdapter(ReprAdapter):
@@ -109,7 +111,7 @@ class TestActionRunAdapter(TestCase):
         self.temp_dir = tempfile.mkdtemp()
         self.action_run = mock.MagicMock()
         self.job_run = mock.MagicMock()
-        self.adapter = ActionRunAdapter(self.action_run, self.job_run, 4)
+        self.adapter = ActionRunAdapter(self.action_run, self.job_run, 4, include_attempts=True)
 
     @teardown
     def teardown_adapter(self):
@@ -119,10 +121,122 @@ class TestActionRunAdapter(TestCase):
         assert_equal(self.adapter.max_lines, 4)
         assert_equal(self.adapter.job_run, self.job_run)
         assert_equal(self.adapter._obj, self.action_run)
+        assert self.adapter.include_attempts
 
     def test_get_repr(self):
         result = self.adapter.get_repr()
         assert_equal(result["command"], self.action_run.rendered_command)
+
+    def test_get_exit_reason(self):
+        self.action_run.exit_status = exitcode.EXIT_KUBERNETES_SPOT_INTERRUPTION
+        assert_equal(
+            self.adapter.get_exit_reason(),
+            "Kubernetes task failed due to spot interruption",
+        )
+
+        self.action_run.exit_status = 0
+        assert_equal(self.adapter.get_exit_reason(), "Succeeded")
+
+        self.action_run.exit_status = 42
+        assert_equal(self.adapter.get_exit_reason(), "Command exited with code 42")
+
+        self.action_run.exit_status = None
+        assert_equal(self.adapter.get_exit_reason(), None)
+
+    @mock.patch("tron.utils.timeutils.current_time", autospec=True)
+    def test_get_attempts(self, mock_current_time):
+        first_start = datetime.datetime(2026, 8, 19, 6)
+        first_end = datetime.datetime(2026, 8, 19, 18)
+        second_start = datetime.datetime(2026, 8, 19, 18, 1)
+        mock_current_time.return_value = datetime.datetime(2026, 8, 20, 2, 1)
+        self.action_run.attempts = [
+            actionrun.ActionRunAttempt(
+                command_config=mock.Mock(),
+                start_time=first_start,
+                end_time=first_end,
+                exit_status=124,
+            ),
+            actionrun.ActionRunAttempt(
+                command_config=mock.Mock(),
+                start_time=second_start,
+            ),
+        ]
+
+        assert_equal(
+            self.adapter.get_attempts(),
+            [
+                {
+                    "number": 1,
+                    "start_time": first_start,
+                    "end_time": first_end,
+                    "duration": "12:00:00",
+                    "exit_status": 124,
+                    "exit_reason": "Command exited with code 124",
+                    "is_running": False,
+                },
+                {
+                    "number": 2,
+                    "start_time": second_start,
+                    "end_time": None,
+                    "duration": "8:00:00",
+                    "exit_status": None,
+                    "exit_reason": "Running",
+                    "is_running": True,
+                },
+            ],
+        )
+
+    def test_get_attempts_with_legacy_unknown_timestamps(self):
+        self.action_run.attempts = [
+            actionrun.ActionRunAttempt(
+                command_config=mock.Mock(),
+                start_time="unknown",
+                end_time="unknown",
+                exit_status=1,
+            ),
+        ]
+
+        assert_equal(
+            self.adapter.get_attempts(),
+            [
+                {
+                    "number": 1,
+                    "start_time": None,
+                    "end_time": None,
+                    "duration": "",
+                    "exit_status": 1,
+                    "exit_reason": "Command exited with code 1",
+                    "is_running": False,
+                },
+            ],
+        )
+
+    def test_get_attempts_without_exit_code(self):
+        start_time = datetime.datetime(2026, 8, 19, 6)
+        end_time = datetime.datetime(2026, 8, 19, 7)
+        self.action_run.attempts = [
+            actionrun.ActionRunAttempt(
+                command_config=mock.Mock(),
+                start_time=start_time,
+                end_time=end_time,
+            ),
+        ]
+
+        attempt = self.adapter.get_attempts()[0]
+        assert_equal(attempt["exit_reason"], "No exit code reported")
+        assert not attempt["is_running"]
+
+    def test_get_attempts_without_timestamps(self):
+        self.action_run.attempts = [
+            actionrun.ActionRunAttempt(command_config=mock.Mock()),
+        ]
+
+        attempt = self.adapter.get_attempts()[0]
+        assert_equal(attempt["start_time"], None)
+        assert_equal(attempt["end_time"], None)
+        assert_equal(attempt["duration"], "")
+        assert_equal(attempt["exit_reason"], "No exit code reported")
+        assert not attempt["is_running"]
 
     @mock.patch("tron.api.adapter.timeutils.duration", autospec=True)
     def test_historical_cancelled_run_duration_is_unknown(self, mock_duration):

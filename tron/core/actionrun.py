@@ -577,6 +577,8 @@ class ActionRun(Observable, Persistable):
 
         new_attempt = self.create_attempt(original_command=original_command)
         self.start_time = new_attempt.start_time
+        self.end_time = None
+        self.exit_status = None
         self.transition_and_notify("start")
 
         if not self.command_config.command:
