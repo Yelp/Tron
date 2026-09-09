@@ -173,6 +173,7 @@ class MasterControlProgram:
             master_config.time_zone,
             action_runner,
             job_graph,
+            max_runtime=master_config.max_runtime,
         )
 
     def update_state_watcher_config(self, state_config):

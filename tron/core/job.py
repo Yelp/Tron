@@ -153,6 +153,7 @@ class Job(Observable, Observer, Persistable):
         output_path,
         action_runner,
         action_graph,
+        max_runtime,
     ):
         """Factory method to create a new Job instance from configuration."""
         runs = jobrun.JobRunCollection.from_config(job_config)
@@ -173,7 +174,7 @@ class Job(Observable, Observer, Persistable):
             output_path=output_path,
             allow_overlap=job_config.allow_overlap,
             action_runner=action_runner,
-            max_runtime=job_config.max_runtime,
+            max_runtime=max_runtime,
             expected_runtime=job_config.expected_runtime,
             run_limit=job_config.run_limit,
         )

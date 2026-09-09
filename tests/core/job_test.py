@@ -79,6 +79,7 @@ class TestJob:
         scheduler = "scheduler_token"
         parent_context = "parent_context_token"
         output_path = ["base_path"]
+        max_runtime = datetime.timedelta(hours=2)
         mock_action_runner = mock.create_autospec(
             actioncommand.SubprocessActionRunnerFactory,
         )
@@ -89,9 +90,11 @@ class TestJob:
             output_path=output_path,
             action_runner=mock_action_runner,
             action_graph=mock.Mock(),
+            max_runtime=max_runtime,
         )
 
         assert_equal(new_job.scheduler, scheduler)
+        assert_equal(new_job.max_runtime, max_runtime)
         assert_equal(new_job.context.next, parent_context)
         mock_node_repo.get_instance().get_by_name.assert_called_with(
             job_config.node,
