@@ -1,3 +1,12 @@
+tron (3.13.0) jammy; urgency=medium
+
+  * 3.13.0 tagged with 'make release'
+    Commit: Merge pull request #1119 from Yelp/cpeacock-
+    enable_max_runtime_with_7_days_default  Enabling max_runtime in
+    MASTER.yaml
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Wed, 09 Sep 2026 13:51:44 -0700
+
 tron (3.12.0) jammy; urgency=medium
 
   * 3.12.0 tagged with 'make release'
