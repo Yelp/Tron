@@ -282,17 +282,19 @@ class JobScheduler(Observer):
 class JobSchedulerFactory:
     """Construct JobScheduler instances from configuration."""
 
-    def __init__(self, context, output_stream_dir, time_zone, action_runner, job_graph):
+    def __init__(self, context, output_stream_dir, time_zone, action_runner, job_graph, max_runtime=None):
         self.context = context
         self.output_stream_dir = output_stream_dir
         self.time_zone = time_zone
         self.action_runner = action_runner
         self.job_graph = job_graph
+        self.max_runtime = max_runtime
 
     def build(self, job_config):
         log.debug(f"Building new job scheduler {job_config.name}")
         output_path = filehandler.OutputPath(self.output_stream_dir)
         time_zone = job_config.time_zone or self.time_zone
+        max_runtime = job_config.max_runtime if job_config.max_runtime is not None else self.max_runtime
         scheduler = scheduler_from_config(job_config.schedule, time_zone)
         action_graph = self.job_graph.get_action_graph_for_job(job_config.name)
         job = Job.from_config(
@@ -302,5 +304,6 @@ class JobSchedulerFactory:
             output_path=output_path,
             action_runner=self.action_runner,
             action_graph=action_graph,
+            max_runtime=max_runtime,
         )
         return JobScheduler(job)

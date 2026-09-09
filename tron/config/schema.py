@@ -53,6 +53,7 @@ TronConfig = config_object_factory(
         "command_context",  # dict of str
         "ssh_options",  # ConfigSSHOptions
         "time_zone",  # pytz time zone
+        "max_runtime",  # datetime.Timedelta
         "nodes",  # dict of ConfigNode
         "node_pools",  # dict of ConfigNodePool
         "jobs",  # dict of ConfigJob

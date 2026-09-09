@@ -454,6 +454,7 @@ class TestJobSchedulerFactory(TestCase):
         self.context = mock.Mock()
         self.output_stream_dir = mock.Mock()
         self.time_zone = mock.Mock()
+        self.max_runtime = datetime.timedelta(days=7)
         self.action_runner = mock.create_autospec(
             actioncommand.SubprocessActionRunnerFactory,
         )
@@ -463,10 +464,11 @@ class TestJobSchedulerFactory(TestCase):
             self.time_zone,
             self.action_runner,
             mock.Mock(),
+            max_runtime=self.max_runtime,
         )
 
     def test_build(self):
-        config = mock.Mock()
+        config = mock.Mock(max_runtime=None)
         with mock.patch(
             "tron.core.job_scheduler.Job",
             autospec=True,
@@ -481,3 +483,17 @@ class TestJobSchedulerFactory(TestCase):
             assert_equal(kwargs["parent_context"], self.context)
             assert_equal(kwargs["output_path"].base, self.output_stream_dir)
             assert_equal(kwargs["action_runner"], self.action_runner)
+            assert_equal(kwargs["max_runtime"], self.max_runtime)
+
+    def test_build_prefers_job_max_runtime(self):
+        job_max_runtime = datetime.timedelta(hours=2)
+        config = mock.Mock(max_runtime=job_max_runtime)
+
+        with mock.patch(
+            "tron.core.job_scheduler.Job",
+            autospec=True,
+        ) as mock_job:
+            self.factory.build(config)
+
+        _, kwargs = mock_job.from_config.call_args
+        assert_equal(kwargs["max_runtime"], job_max_runtime)

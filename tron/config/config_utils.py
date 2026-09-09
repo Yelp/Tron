@@ -159,6 +159,8 @@ TIME_INTERVAL_RE = re.compile(r"^\s*(?P<value>\d+)\s*(?P<units>[a-zA-Z]+)\s*$")
 
 
 def valid_time_delta(value, config_context):
+    if value is None:
+        return None
     error_msg = "Value at %s is not a valid time delta: %s"
     matches = TIME_INTERVAL_RE.match(value)
     if not matches:
