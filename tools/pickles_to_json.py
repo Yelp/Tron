@@ -256,7 +256,7 @@ def convert_pickles_to_json_and_update_table(
     dry_run: bool = True,
     deprecated_keys_output: str | None = None,
     failed_keys_output: str | None = None,
-    job_names: list[str] = [],
+    job_names: list[str] | None = None,
 ) -> None:
     """
     Convert pickled items in the DynamoDB table to JSON and update the entries.
@@ -267,6 +267,7 @@ def convert_pickles_to_json_and_update_table(
     :param failed_keys_output: Output file to write keys that failed to convert to.
     :param job_names: List of job names to use for filtering keys.
     """
+    job_names = job_names or []
     total_keys = len(keys)
     converted_keys = 0
     skipped_keys = 0
