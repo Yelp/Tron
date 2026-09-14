@@ -467,7 +467,7 @@ class MetricsResource(resource.Resource):
     def __init__(self):
         resource.Resource.__init__(self)
 
-    @AsyncResource.exclusive
+    @AsyncResource.bounded
     def render_GET(self, request):
         return respond(request=request, response=view_all_metrics())
 
@@ -479,7 +479,7 @@ class EventsResource(AuthenticatedResource):
         super().__init__()
         self.controller = controller.EventsController()
 
-    @AsyncResource.exclusive
+    @AsyncResource.bounded
     def render_GET(self, request):
         response = self.controller.info()
         return respond(request=request, response=response)
