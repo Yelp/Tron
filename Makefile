@@ -22,7 +22,7 @@ else
 	ADD_MISSING_DEPS_MAYBE:=$(NOOP)
 endif
 
-.PHONY : all clean tests docs dev
+.PHONY : all clean tests docs dev tronweb2
 
 -usage:
 	@echo "make test - Run tests"
@@ -38,7 +38,7 @@ docker_%:
 	[ -d dist ] || mkdir -p dist
 	cd ./yelp_package/$* && docker build --build-arg PIP_INDEX_URL=${PIP_INDEX_URL} -t tron-builder-$* .
 
-deb_%: clean docker_% coffee_%
+deb_%: clean docker_% coffee_% tronweb2
 	@echo "Building deb for $*"
 	# backup these files so we can temp modify them
 	cp requirements.txt requirements.txt.old
@@ -58,6 +58,10 @@ coffee_%: docker_%
 		mkdir -p tronweb/js/cs &&                      \
 		coffee -o tronweb/js/cs/ -c tronweb/coffee/ \
 	'
+
+tronweb2:
+	@echo "Building tronweb2"
+	cd tronweb-src && npm i && npm run build
 
 test:
 	tox -e py310
@@ -118,4 +122,5 @@ man:
 
 clean:
 	rm -rf tronweb/js/cs
+	rm -rf tronweb2/*
 	find . -name '*.pyc' -delete
