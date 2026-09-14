@@ -98,10 +98,10 @@ metrics_to_viewers = {
 def view_all_metrics():
     with all_metrics_lock:
         all_metrics_copy = all_metrics.copy()
-    all_data = {metric_type: [] for metric_type in metrics_to_viewers}
-    for (metric_type, name, dims), metric in all_metrics_copy.items():
-        data = {"name": name, **metrics_to_viewers[metric_type](metric)}
-        if dims:
-            data.update({"dimensions": dict(dims)})
-        all_data[metric_type].append(data)
+        all_data = {metric_type: [] for metric_type in metrics_to_viewers}
+        for (metric_type, name, dims), metric in all_metrics_copy.items():
+            data = {"name": name, **metrics_to_viewers[metric_type](metric)}
+            if dims:
+                data.update({"dimensions": dict(dims)})
+            all_data[metric_type].append(data)
     return all_data
