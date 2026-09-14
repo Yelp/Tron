@@ -28,3 +28,11 @@ EXIT_REASONS = {
     EXIT_KUBERNETES_TASK_LOST: "Kubernetes task is lost and the final outcome unknown",
     EXIT_KUBERNETES_EPHEMERAL_STORAGE_EVICTION: "Kubernetes task failed due to exceeding disk-space usage limits",
 }
+
+
+def get_exit_reason(exit_status: int | None) -> str | None:
+    if exit_status is None:
+        return None
+    if exit_status == 0:
+        return "Succeeded"
+    return EXIT_REASONS.get(exit_status, f"Command exited with code {exit_status}")

@@ -62,7 +62,7 @@ class module.ActionRunHistoryListEntryView extends ClickableListEntry
             <%= run_num %></a></td>
         <td><%= formatState(state) %></td>
         <td><%= displayNode(node) %></td>
-        <td><%= modules.actionrun.formatExit(exit_status) %></td>
+        <td><%= modules.actionrun.formatExit(exit_status, exit_reason) %></td>
         <td><%= dateFromNow(start_time, "None") %></td>
         <td><%= dateFromNow(end_time, "") %></td>
         <td><%= duration %></td>
@@ -123,12 +123,12 @@ class module.ActionRunListEntryView extends ClickableListEntry
         @
 
 
-module.formatExit = (exit) ->
-    return '' if not exit? or exit == ''
+module.formatExit = (exit, reason) ->
+    return _.escape(reason or '') if not exit? or exit == ''
     template = _.template """
-        <span class="badge badge-<%= type %>"><%= exit %></span>
+        <span class="badge badge-<%= type %>"><%= exit %></span><% if (reason) { %> <span><%- reason %></span><% } %>
     """
-    template(exit: exit, type: if not exit then "success" else "important")
+    template(exit: exit, reason: reason, type: if not exit then "success" else "important")
 
 
 class module.ActionRunView extends Backbone.View
@@ -169,7 +169,7 @@ class module.ActionRunView extends Backbone.View
                     <% } %>
                     <tr><td>Exit codes</td>
                         <td>
-                            <%= modules.actionrun.formatExit(exit_status) %>
+                            <%= modules.actionrun.formatExit(exit_status, exit_reason) %>
                             <% if (exit_statuses) { %>
                                 <small>
                                     (exits of all attempts:
@@ -180,7 +180,9 @@ class module.ActionRunView extends Backbone.View
                                                     return -key;
                                                 }
                                             ),
-                                            modules.actionrun.formatExit
+                                            function(exit) {
+                                                return modules.actionrun.formatExit(exit);
+                                            }
                                         ).join(", ") %>)
                                 </small>
                             <% } %>
@@ -200,6 +202,55 @@ class module.ActionRunView extends Backbone.View
                 </table>
                 </div>
             </div>
+            <% if (attempts && attempts.length) { %>
+            <div class="span12 outline-block">
+                <h2>Attempts</h2>
+                <div>
+                <table class="table table-outline">
+                    <thead class="sub-header">
+                        <tr>
+                            <th>Attempt</th>
+                            <th>Start time</th>
+                            <th>End time</th>
+                            <th>Duration</th>
+                            <th>Result</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                    <% _.each(attempts, function(attempt) { %>
+                        <tr>
+                            <td><%= attempt.number %></td>
+                            <td>
+                                <% if (attempt.start_time) { %>
+                                    <%= dateFromNow(attempt.start_time) %>
+                                <% } else { %>
+                                    Unknown
+                                <% } %>
+                            </td>
+                            <td>
+                                <% if (attempt.end_time) { %>
+                                    <%= dateFromNow(attempt.end_time) %>
+                                <% } else if (attempt.is_running) { %>
+                                    <%= formatState("running") %>
+                                <% } else { %>
+                                    Unknown
+                                <% } %>
+                            </td>
+                            <td><%= attempt.duration || "Unknown" %></td>
+                            <td>
+                                <% if (attempt.is_running) { %>
+                                    <%= formatState("running") %>
+                                <% } else { %>
+                                    <%= modules.actionrun.formatExit(attempt.exit_status, attempt.exit_reason) %>
+                                <% } %>
+                            </td>
+                        </tr>
+                    <% }); %>
+                    </tbody>
+                </table>
+                </div>
+            </div>
+            <% } %>
             <div class="span12 outline-block">
                 <h2>meta</h2>
                 <pre class="meta" style="display: none;"><%- meta.join('\\n') %></pre>

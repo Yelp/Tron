@@ -12,6 +12,7 @@ from tron.core.jobrun import JobRun
 from tron.eventbus import EventBus
 
 if TYPE_CHECKING:
+    from tron.core.job_scheduler import JobScheduler
     from tron.mcp import MasterControlProgram
 
 log = logging.getLogger(__name__)
@@ -64,9 +65,10 @@ class ActionRunController:
         "recover",
     }
 
-    def __init__(self, action_run: ActionRun, job_run: JobRun) -> None:
+    def __init__(self, action_run: ActionRun, job_run: JobRun, job_scheduler: "JobScheduler | None" = None) -> None:
         self.action_run = action_run
         self.job_run = job_run
+        self.job_scheduler = job_scheduler
 
     def handle_command(self, command, **kwargs):
         if command not in self.mapped_commands:
@@ -111,13 +113,37 @@ class ActionRunController:
 
     def handle_retry(self, original_command):
         cleanup_run = self.job_run.action_runs.cleanup_action_run
+        previous_deadline = self.job_run.max_runtime_deadline
+        previous_max_runtime = self.job_run.max_runtime
+
         if cleanup_run and cleanup_run.is_done:
             return "JobRun has run a cleanup action, use rerun instead"
 
-        if self.action_run.retry(original_command=original_command):
+        is_reactivation = self.job_scheduler is not None and self.job_run.action_runs.is_done
+
+        def rollback_deadline():
+            if is_reactivation and self.job_run.action_runs.is_done:
+                self.job_run.cancel_max_runtime_timer()
+                self.job_run.max_runtime_deadline = previous_deadline
+                self.job_run.max_runtime = previous_max_runtime
+                self.job_run.notify(JobRun.NOTIFY_STATE_CHANGED)
+
+        if is_reactivation:
+            self.job_scheduler.schedule_termination(
+                self.job_run,
+                deadline_reset=True,
+            )
+        try:
+            retry_scheduled = self.action_run.retry(original_command=original_command)
+        except Exception:
+            rollback_deadline()
+            raise
+
+        if retry_scheduled:
             return "Retrying %s" % self.action_run
-        else:
-            return "Failed to schedule retry for %s" % self.action_run
+
+        rollback_deadline()
+        return "Failed to schedule retry for %s" % self.action_run
 
 
 class JobRunController:

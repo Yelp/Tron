@@ -577,6 +577,8 @@ class ActionRun(Observable, Persistable):
 
         new_attempt = self.create_attempt(original_command=original_command)
         self.start_time = new_attempt.start_time
+        self.end_time = None
+        self.exit_status = None
         self.transition_and_notify("start")
 
         if not self.command_config.command:
@@ -766,6 +768,26 @@ class ActionRun(Observable, Persistable):
                 self.emit_triggers()
 
         return transition_valid
+
+    def cancel(self) -> bool | None:
+        """Cancel this run and record when Tron marks it cancelled."""
+        if not self.machine.transition("cancel"):
+            return None
+
+        cancellation_time = timeutils.current_time()
+        self.exit_status = None
+        self.end_time = cancellation_time
+        if self.last_attempt is not None and self.last_attempt.end_time is None:
+            self.last_attempt.exit(None, cancellation_time)
+
+        # An automatic retry delay leaves the run in STARTING with a finished
+        # attempt. Once cancelled, its delayed callback must not restart it.
+        if self.in_delay is not None:
+            self.in_delay.cancel()
+            self.in_delay = None
+
+        self.notify(self.state)
+        return True
 
     def fail_unknown(self):
         """Failed with unknown reason."""
@@ -1733,6 +1755,9 @@ class ActionRunCollection:
     @property
     def end_time(self):
         if not self.is_done:
+            return None
+        cleanup_run = self.cleanup_action_run
+        if cleanup_run is not None and not cleanup_run.is_done:
             return None
         end_times = list(run.end_time for run in self.get_action_runs_with_cleanup() if run.end_time)
         return max(end_times) if any(end_times) else None

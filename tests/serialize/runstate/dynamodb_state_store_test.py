@@ -119,6 +119,8 @@ def small_object():
         "runs": [],
         "cleanup_run": None,
         "manual": False,
+        "max_runtime": None,
+        "max_runtime_deadline": None,
     }
 
 
@@ -140,6 +142,8 @@ def large_object():
         "runs": [],
         "cleanup_run": None,
         "manual": False,
+        "max_runtime": None,
+        "max_runtime_deadline": None,
     }
 
 

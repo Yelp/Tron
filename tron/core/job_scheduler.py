@@ -39,6 +39,19 @@ class JobScheduler(Observer):
             master_action_runner=config_action_runner,
         )
 
+        for job_run in job_runs:
+            cleanup_run = job_run.action_runs.cleanup_action_run
+            cleanup_finished = cleanup_run is None or cleanup_run.is_done
+            fully_finished = job_run.action_runs.is_done and cleanup_finished
+
+            if job_run.is_scheduled or job_run.is_queued:
+                continue
+
+            if fully_finished:
+                continue
+
+            self.schedule_termination(job_run)
+
         scheduled = self.job.runs.get_scheduled()
         # for those that were already scheduled, we reschedule them to run.
         for job_run in scheduled:
@@ -78,6 +91,7 @@ class JobScheduler(Observer):
         manual_runs = list(self.job.build_new_runs(run_time, manual=True))
         for r in manual_runs:
             r.start()
+            self.schedule_termination(r)
         return manual_runs
 
     def schedule_reconfigured(self):
@@ -167,10 +181,36 @@ class JobScheduler(Observer):
         if not self.job.scheduler.schedule_on_complete:
             self.schedule()
 
-    def schedule_termination(self, job_run):
-        if self.job.max_runtime:
-            seconds = timeutils.delta_total_seconds(self.job.max_runtime)
-            reactor.callLater(seconds, job_run.stop)
+    def schedule_termination(self, job_run, deadline_reset=False):
+        now = timeutils.current_timestamp()
+        deadline = job_run.max_runtime_deadline
+
+        if deadline is None or deadline_reset:
+            max_runtime = job_run.max_runtime
+            if max_runtime is None:
+                max_runtime = self.job.max_runtime
+
+            if max_runtime is None:
+                return
+
+            max_runtime_seconds = timeutils.delta_total_seconds(max_runtime)
+            job_run.max_runtime = max_runtime
+
+            if deadline_reset:
+                deadline = now + max_runtime_seconds
+            elif job_run.start_time is not None:
+                deadline = job_run.start_time.timestamp() + max_runtime_seconds
+            else:
+                deadline = now + max_runtime_seconds
+
+            job_run.max_runtime_deadline = deadline
+            job_run.notify(JobRun.NOTIFY_STATE_CHANGED)
+
+        job_run.cancel_max_runtime_timer()
+        job_run.max_runtime_timer = reactor.callLater(
+            max(0, deadline - now),
+            job_run.stop,
+        )
 
     def _queue_or_cancel_active(self, job_run):
         if self.job.queueing:
@@ -242,17 +282,19 @@ class JobScheduler(Observer):
 class JobSchedulerFactory:
     """Construct JobScheduler instances from configuration."""
 
-    def __init__(self, context, output_stream_dir, time_zone, action_runner, job_graph):
+    def __init__(self, context, output_stream_dir, time_zone, action_runner, job_graph, max_runtime=None):
         self.context = context
         self.output_stream_dir = output_stream_dir
         self.time_zone = time_zone
         self.action_runner = action_runner
         self.job_graph = job_graph
+        self.max_runtime = max_runtime
 
     def build(self, job_config):
         log.debug(f"Building new job scheduler {job_config.name}")
         output_path = filehandler.OutputPath(self.output_stream_dir)
         time_zone = job_config.time_zone or self.time_zone
+        max_runtime = job_config.max_runtime if job_config.max_runtime is not None else self.max_runtime
         scheduler = scheduler_from_config(job_config.schedule, time_zone)
         action_graph = self.job_graph.get_action_graph_for_job(job_config.name)
         job = Job.from_config(
@@ -262,5 +304,6 @@ class JobSchedulerFactory:
             output_path=output_path,
             action_runner=self.action_runner,
             action_graph=action_graph,
+            max_runtime=max_runtime,
         )
         return JobScheduler(job)

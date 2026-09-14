@@ -74,6 +74,8 @@ class TestActionRunController:
             self.job_run,
         )
         self.job_run.action_runs.cleanup_action_run = None
+        self.job_run.max_runtime_deadline = None
+        self.job_run.max_runtime = None
 
     def test_handle_command_start_failed(self):
         self.job_run.is_scheduled = True
@@ -120,6 +122,69 @@ class TestActionRunController:
     def test_handle_retry_new_command(self):
         self.controller.handle_command("retry", use_latest_command=True)
         self.action_run.retry.assert_called_once_with(original_command=False)
+
+    def test_handle_retry_reactivation_schedules_termination(self):
+        """Retry of a fully completed JobRun gets a fresh deadline."""
+        job_scheduler = mock.Mock()
+        self.controller.job_scheduler = job_scheduler
+        self.job_run.action_runs.is_done = True
+        self.action_run.retry.return_value = True
+
+        self.controller.handle_retry(original_command=True)
+
+        job_scheduler.schedule_termination.assert_called_once_with(
+            self.job_run,
+            deadline_reset=True,
+        )
+
+    def test_handle_retry_active_run_preserves_deadline(self):
+        """Retry within an active JobRun does not reset the deadline."""
+        job_scheduler = mock.Mock()
+        self.controller.job_scheduler = job_scheduler
+        self.job_run.action_runs.is_done = False
+        self.action_run.retry.return_value = True
+
+        self.controller.handle_retry(original_command=True)
+
+        job_scheduler.schedule_termination.assert_not_called()
+
+    def test_handle_retry_failed_reactivation_rolls_back(self):
+        """If retry fails and JobRun remains complete, rollback the fresh deadline."""
+        job_scheduler = mock.Mock()
+        self.controller.job_scheduler = job_scheduler
+        self.job_run.action_runs.is_done = True
+        self.action_run.retry.return_value = False
+
+        self.controller.handle_retry(original_command=True)
+
+        job_scheduler.schedule_termination.assert_called_once()
+        self.job_run.cancel_max_runtime_timer.assert_called_once()
+        assert self.job_run.max_runtime_deadline is None
+        self.job_run.notify.assert_called_with(jobrun.JobRun.NOTIFY_STATE_CHANGED)
+
+    def test_handle_retry_failed_but_became_active_keeps_deadline(self):
+        """If retry returns False but run became active, don't rollback."""
+        job_scheduler = mock.Mock()
+        self.controller.job_scheduler = job_scheduler
+        self.job_run.action_runs.is_done = True
+        self.action_run.retry.return_value = False
+        # Simulate the action becoming active during retry (is_done flips)
+        type(self.job_run.action_runs).is_done = mock.PropertyMock(side_effect=[True, False])
+
+        self.controller.handle_retry(original_command=True)
+
+        job_scheduler.schedule_termination.assert_called_once()
+        self.job_run.cancel_max_runtime_timer.assert_not_called()
+
+    def test_handle_retry_no_scheduler_skips_termination(self):
+        """Without a job_scheduler, retry works but doesn't schedule termination."""
+        self.controller.job_scheduler = None
+        self.job_run.action_runs.is_done = True
+        self.action_run.retry.return_value = True
+
+        result = self.controller.handle_retry(original_command=True)
+
+        assert "Retrying" in result
 
 
 class TestJobRunController:

@@ -1,5 +1,5 @@
 # Edit this release and run "make release"
-RELEASE=3.10.4
+RELEASE=3.13.0
 
 SHELL=/bin/bash
 
@@ -15,7 +15,7 @@ endif
 
 NOOP = true
 ifeq ($(PAASTA_ENV),YELP)
-	export PIP_INDEX_URL ?= http://169.254.255.254:20641/$*/simple/
+	export PIP_INDEX_URL ?= http://169.254.255.254:20641/simple/
 	ADD_MISSING_DEPS_MAYBE:=-diff --unchanged-line-format= --old-line-format= --new-line-format='%L' ./requirements.txt ./yelp_package/extra_requirements_yelp.txt >> ./requirements.txt
 else
 	export PIP_INDEX_URL ?= https://pypi.python.org/simple
