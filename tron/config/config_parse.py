@@ -13,7 +13,6 @@ from typing import Any
 from urllib.parse import urlparse
 
 import pytz
-from task_processing.plugins.mesos.constraints import OPERATORS
 
 from tron import command_context
 from tron.config import config_utils
@@ -43,7 +42,6 @@ from tron.config.schema import ConfigConstraint
 from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigJob
 from tron.config.schema import ConfigKubernetes
-from tron.config.schema import ConfigMesos
 from tron.config.schema import ConfigNodeAffinity
 from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigProjectedSAVolume
@@ -59,6 +57,18 @@ from tron.config.schema import NamedTronConfig
 from tron.config.schema import TronConfig
 
 log = logging.getLogger(__name__)
+
+# I imported the constraint operators from
+# task_processing.plugins.mesos.constraints
+# to skip the deprecated pymesos dependency.
+CONSTRAINT_OPERATORS = (
+    "EQUALS",
+    "==",
+    "NOTEQUALS",
+    "!=",
+    "LIKE",
+    "UNLIKE",
+)
 
 
 def build_format_string_validator(context_object):
@@ -162,41 +172,6 @@ def valid_node_name(value, config_context):
     return value
 
 
-def valid_master_address(value, config_context):
-    """Validates and normalizes Mesos master address.
-
-    Must be HTTP or not include a scheme, and only include
-    a host, without any path components.
-    """
-    valid_string(value, config_context)
-
-    # Parse with HTTP as default, only HTTP allowed.
-    scheme, netloc, path, params, query, fragment = urlparse(value, "http")
-    if scheme != "http":
-        msg = f"Only HTTP supported for Mesos master address, got {value}"
-        raise ConfigError(msg)
-
-    if params or query or fragment:
-        msg = f"Mesos master address may not contain path components, got {value}"
-        raise ConfigError(msg)
-
-    # Only one of netloc or path allowed, and no / except trailing ones.
-    # netloc is empty if there's no scheme, then we try the path.
-    path = path.rstrip("/")
-    if (netloc and path) or "/" in path:
-        msg = f"Mesos master address may not contain path components, got {value}"
-        raise ConfigError(msg)
-
-    if not netloc:
-        netloc = path
-
-    if not netloc:
-        msg = f"Mesos master address is missing host, got {value}"
-        raise ConfigError(msg)
-
-    return f"{scheme}://{netloc}"
-
-
 def valid_k8s_master_address(value: str, config_context: ConfigContext) -> str:
     """Validates and normalizes Kubernetes master address.
 
@@ -236,7 +211,7 @@ class ValidateConstraint(Validator):
     config_class = ConfigConstraint
     validators = {
         "attribute": valid_string,
-        "operator": config_utils.build_enum_validator(OPERATORS.keys()),
+        "operator": config_utils.build_enum_validator(CONSTRAINT_OPERATORS),
         "value": valid_string,
     }
 
@@ -547,19 +522,6 @@ action_context = command_context.build_filled_context(
 )
 
 
-def valid_mesos_action(action, config_context):
-    required_keys = {"cpus", "mem", "docker_image"}
-    if action.get("executor") == schema.ExecutorTypes.mesos.value:
-        missing_keys = required_keys - set(action.keys())
-        if missing_keys:
-            raise ConfigError(
-                "Mesos executor for action {id} is missing these required keys: {keys}".format(
-                    id=action["name"],
-                    keys=missing_keys,
-                ),
-            )
-
-
 def valid_kubernetes_action(action, config_context):
     required_keys = {"cpus", "mem", "docker_image"}
     if action.get("executor") == schema.ExecutorTypes.kubernetes.value:
@@ -663,7 +625,6 @@ class ValidateAction(Validator):
     }
 
     def post_validation(self, action, config_context):
-        valid_mesos_action(action, config_context)
         valid_kubernetes_action(action, config_context)
 
 
@@ -753,7 +714,6 @@ class ValidateCleanupAction(Validator):
     }
 
     def post_validation(self, action, config_context):
-        valid_mesos_action(action, config_context)
         valid_kubernetes_action(action, config_context)
 
 
@@ -926,36 +886,6 @@ class ValidateStatePersistence(Validator):
 valid_state_persistence = ValidateStatePersistence()
 
 
-class ValidateMesos(Validator):
-    config_class = ConfigMesos
-    option = True
-    defaults = {
-        "master_address": None,
-        "master_port": 5050,
-        "secret_file": None,
-        "role": "*",
-        "principal": "tron",
-        "enabled": False,
-        "default_volumes": (),
-        "dockercfg_location": None,
-        "offer_timeout": 300,
-    }
-
-    validators = {
-        "master_address": valid_master_address,
-        "master_port": valid_int,
-        "secret": valid_string,
-        "role": valid_string,
-        "enabled": valid_bool,
-        "default_volumes": build_list_of_type_validator(valid_volume, allow_empty=True),
-        "dockercfg_location": valid_string,
-        "offer_timeout": valid_int,
-    }
-
-
-valid_mesos_options = ValidateMesos()
-
-
 class ValidateKubernetes(Validator):
     config_class = ConfigKubernetes
     optional = True
@@ -1021,7 +951,6 @@ class ValidateConfig(Validator):
         },
         "node_pools": {},
         "jobs": (),
-        "mesos_options": ConfigMesos(**ValidateMesos.defaults),
         "k8s_options": ConfigKubernetes(**ValidateKubernetes.defaults),
         "eventbus_enabled": None,
         "read_json": False,
@@ -1038,7 +967,6 @@ class ValidateConfig(Validator):
         "state_persistence": valid_state_persistence,
         "nodes": nodes,
         "node_pools": node_pools,
-        "mesos_options": valid_mesos_options,
         "k8s_options": valid_kubernetes_options,
         "eventbus_enabled": valid_bool,
         "read_json": valid_bool,

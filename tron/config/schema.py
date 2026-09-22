@@ -57,7 +57,6 @@ TronConfig = config_object_factory(
         "nodes",  # dict of ConfigNode
         "node_pools",  # dict of ConfigNodePool
         "jobs",  # dict of ConfigJob
-        "mesos_options",  # ConfigMesos
         "k8s_options",  # ConfigKubernetes
         "eventbus_enabled",  # bool or None
         "read_json",  # bool, deprecated — accepted but ignored
@@ -112,21 +111,6 @@ ConfigState = config_object_factory(
         "restore_workers",
         "batch_get_workers",
         "max_pool_connections",
-    ],
-)
-
-ConfigMesos = config_object_factory(
-    name="ConfigMesos",
-    optional=[
-        "master_address",
-        "master_port",
-        "secret_file",
-        "principal",
-        "role",
-        "enabled",
-        "default_volumes",
-        "dockercfg_location",
-        "offer_timeout",
     ],
 )
 
@@ -349,7 +333,6 @@ StatePersistenceTypes = Enum(  # type: ignore
 
 class ExecutorTypes(Enum):
     ssh = "ssh"
-    mesos = "mesos"
     kubernetes = "kubernetes"
     spark = "spark"
 
