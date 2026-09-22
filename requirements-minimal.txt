@@ -5,7 +5,6 @@ bsddb3
 cryptography
 dataclasses
 ecdsa>=0.13.3
-http-parser  # not sure why check-requirements is not picking this up from task_processing[mesos_executor]
 humanize
 ipdb
 ipython

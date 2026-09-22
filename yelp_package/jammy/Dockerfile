@@ -24,8 +24,7 @@ RUN apt-get -q update && \
         libyaml-dev \
         libssl-dev \
         libffi-dev \
-        python3.10-dev \
-        python3.10-distutils \
+        python3.12-dev \
         python3-pip \
         rust-all \
         tox \
@@ -38,5 +37,5 @@ RUN apt-get -q update && \
 ARG PIP_INDEX_URL
 ENV PIP_INDEX_URL=${PIP_INDEX_URL:-https://pypi.python.org/simple}
 
-RUN pip3 install --trusted-host 169.254.255.254 --index-url ${PIP_INDEX_URL} virtualenv==20.17.1
+RUN pip3 install --trusted-host 169.254.255.254 --index-url ${PIP_INDEX_URL} virtualenv==20.26.6
 WORKDIR /work
