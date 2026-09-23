@@ -3,13 +3,12 @@ import shutil
 import tempfile
 from unittest import mock
 
-from tests.assertions import assert_raises
-from tests.testingutils import autospec_method
-
 from testifycompat import assert_equal
 from testifycompat import run
 from testifycompat import setup
 from testifycompat import TestCase
+from tests.assertions import assert_raises
+from tests.testingutils import autospec_method
 from tron.config import schema
 from tron.core.job import Job
 from tron.core.jobrun import JobRun

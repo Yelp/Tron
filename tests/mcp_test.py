@@ -4,13 +4,13 @@ import time
 from unittest import mock
 
 import pytest
-from tests.testingutils import autospec_method
 
 from testifycompat import assert_equal
 from testifycompat import run
 from testifycompat import setup
 from testifycompat import teardown
 from testifycompat import TestCase
+from tests.testingutils import autospec_method
 from tron import mcp
 from tron.config import config_parse
 from tron.config import manager

@@ -6,7 +6,6 @@ from unittest import mock
 
 import pytest
 import pytz
-from tests.assertions import assert_raises
 
 from testifycompat import assert_equal
 from testifycompat import assert_in
@@ -14,6 +13,7 @@ from testifycompat import run
 from testifycompat import setup
 from testifycompat import teardown
 from testifycompat import TestCase
+from tests.assertions import assert_raises
 from tron.config import config_parse
 from tron.config import config_utils
 from tron.config import ConfigError

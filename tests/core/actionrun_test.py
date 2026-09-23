@@ -5,9 +5,9 @@ from unittest import mock
 from unittest.mock import MagicMock
 
 import pytest
+
 from tests.assertions import assert_length
 from tests.testingutils import autospec_method
-
 from tron import actioncommand
 from tron import node
 from tron.actioncommand import SubprocessActionRunnerFactory
