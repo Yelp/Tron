@@ -4,16 +4,16 @@ clusterman-metrics==2.2.1  # used by tron for pre-scaling for Spark runs
 crypto-lib==4.0.0          # vault-tools dependency
 gitdb==4.0.12              # vault-tools dependency
 gitpython==3.1.44          # vault-tools dependency
-hvac==1.2.1                # vault-tools dependency
+hvac==2.3.0                # vault-tools dependency
 ipaddress==1.0.23          # vault-tools dependency
 logreader==1.2.0           # used by tron logreader
 ndg-httpsclient==0.5.1     # vault-tools dependency
 okta-auth==1.1.1           # used for API auth
-pygpgme==0.3               # vault-tools dependency
+pygpgme==0.6               # vault-tools dependency
 pyhcl==0.4.5               # vault-tools dependency
 pyjwt==2.9.0               # required by okta-auth
 saml-helper==2.5.3         # required by okta-auth
 service-identity==24.2.0   # vault-tools dependency
 smmap==5.0.2               # vault-tools dependency
-vault-tools==1.6.0         # used for API auth
-yelp-meteorite==2.1.1      # used by task-processing to emit metrics, clusterman-metrics dependency
+vault-tools==2.2.1         # used for API auth
+yelp-meteorite==2.3.2      # used by task-processing to emit metrics, clusterman-metrics dependency
