@@ -5,12 +5,11 @@ import functools
 import random
 from urllib.parse import urljoin
 
-import pytimeparse  # type:ignore
+import pytimeparse  # type: ignore
 
 from tron.commands import client
 from tron.commands import display
 from tron.commands.backfill import BackfillRun
-
 
 DEFAULT_POLLING_INTERVAL_S = 10
 
@@ -169,7 +168,6 @@ class RetryAction:
         poll_interval_s: int = DEFAULT_POLLING_INTERVAL_S,
         jitter: bool = True,
     ) -> bool:
-
         if deps_timeout_s != RetryAction.NO_TIMEOUT and jitter:
             init_delay_s = random.randint(1, min(deps_timeout_s, poll_interval_s)) - 1
             self._elapsed += datetime.timedelta(seconds=init_delay_s)
@@ -222,7 +220,7 @@ class RetryAction:
             self._retry_request_result = RetryAction.RETRY_FAIL
         else:
             self._log(f"Got result: {response.content.get('result')}")
-            self._log(f"Check the status of the retry run using: `tronview {self.full_action_name}`")
+            self._log(f"Check the status of the retry run using: 'tronview {self.full_action_name}'")
             self._retry_request_result = RetryAction.RETRY_SUCCESS
         return self._retry_request_result
 
@@ -251,7 +249,6 @@ def retry_actions(
 
 
 class DisplayRetries(display.TableDisplay):
-
     columns = ["Action Name", "Final Status"]
     fields = ["full_action_name", "status"]
     widths = [60, 60]

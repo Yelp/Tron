@@ -1775,7 +1775,6 @@ class TestKubernetesActionRun:
 
     @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
     def test_non_retryable_exit(self, mock_cluster_repo, mock_k8s_action_run):
-
         mock_cluster = mock.Mock()
         mock_cluster.non_retryable_exit_codes = [13]
         mock_cluster_repo.get_cluster.return_value = mock_cluster
@@ -1798,7 +1797,6 @@ class TestKubernetesActionRun:
 
     @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
     def test_retryable_exit(self, mock_cluster_repo, mock_k8s_action_run):
-
         mock_cluster = mock.Mock()
         mock_cluster.non_retryable_exit_codes = [-12]
 

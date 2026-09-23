@@ -263,7 +263,7 @@ class EventBus:
         new_subscriptions = defaultdict(list)
         removed = 0
         for prefix, subs in self.event_subscribers.items():
-            for (sub, cb) in subs:
+            for sub, cb in subs:
                 if sub == subscriber:
                     removed += 1
                     continue
@@ -279,6 +279,6 @@ class EventBus:
         for prefix, subscribers in self.event_subscribers.items():
             log.debug(f"check {prefix}: {event_id.startswith(prefix)}")
             if event_id.startswith(prefix):
-                for (sub, cb) in subscribers:
+                for sub, cb in subscribers:
                     log.debug(f"notifying {sub} about {event_id}")
                     reactor.callLater(0, cb, dict(id=event_id, **event))

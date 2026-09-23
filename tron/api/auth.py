@@ -8,7 +8,6 @@ import cachetools.func
 import requests
 from twisted.web.server import Request
 
-
 logger = logging.getLogger(__name__)
 AUTH_CACHE_SIZE = 50000
 AUTH_CACHE_TTL = 30 * 60

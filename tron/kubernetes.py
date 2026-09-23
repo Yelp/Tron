@@ -178,7 +178,7 @@ class KubernetesTask(ActionCommand):
                     # The else statement should handle the situation gracefully when either current/last state are missing
                     if event_missing_state and event_missing_previous_state:
                         self.log.error(
-                            f"Got an event with missing state - assuming {'success' if exit_code==0 else 'failure'}."
+                            f"Got an event with missing state - assuming {'success' if exit_code == 0 else 'failure'}."
                         )
                         self.log.error(f"Event with missing state: {raw_object}")
                     else:
@@ -204,7 +204,7 @@ class KubernetesTask(ActionCommand):
                                 exit_code = exitcode.EXIT_KUBERNETES_ABNORMAL
                                 self.log.warning("Container never started due to a Kubernetes/infra flake!")
                                 self.log.warning(
-                                    f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
+                                    f"If automatic retries are not enabled, run 'tronctl retry {self.id}' to retry."
                                 )
                         elif k8s_type in KUBERNETES_FAILURE_TYPES:
                             pod_status_reason = pod_status.get("reason")
@@ -248,7 +248,7 @@ class KubernetesTask(ActionCommand):
 
                             if exit_code in KUBERNETES_LOST_NODE_EXIT_CODES:
                                 self.log.warning(
-                                    f"If automatic retries are not enabled, run `tronctl retry {self.id}` to retry."
+                                    f"If automatic retries are not enabled, run 'tronctl retry {self.id}' to retry."
                                 )
                                 self.log.warning(
                                     "If this action is idempotent, then please consider enabling automatic retries for your action. If your action is not idempotent, then please configure this action to run on the stable pool rather than the default."

@@ -129,9 +129,15 @@ class TestActionRunResource(WWWTestCase):
     def setup_resource(self):
         self.job_run = mock.MagicMock()
         self.action_run = mock.MagicMock(output_path=["one"])
-        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True,), mock.patch(
-            "tron.config.static_config.build_configuration_watcher",
-            autospec=True,
+        with (
+            mock.patch(
+                "tron.config.static_config.load_yaml_file",
+                autospec=True,
+            ),
+            mock.patch(
+                "tron.config.static_config.build_configuration_watcher",
+                autospec=True,
+            ),
         ):
             self.resource = www.ActionRunResource(self.action_run, self.job_run)
 

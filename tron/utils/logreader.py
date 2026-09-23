@@ -153,16 +153,11 @@ def read_log_stream_for_action_run(
 
     paasta_logs = PaaSTALogs(component, paasta_cluster, action_run_id)
     stream_name = paasta_logs.stream_name
-    end_date: datetime.date | None
 
     # S3 reader accepts datetime objects and respects timezone information
     # if min_date and max_date timezone is missing, astimezone() will assume local timezone and convert it to UTC
-    start_datetime = min_date.astimezone(datetime.timezone.utc)
-    end_datetime = (
-        max_date.astimezone(datetime.timezone.utc)
-        if max_date
-        else datetime.datetime.now().astimezone(datetime.timezone.utc)
-    )
+    start_datetime = min_date.astimezone(datetime.UTC)
+    end_datetime = max_date.astimezone(datetime.UTC) if max_date else datetime.datetime.now().astimezone(datetime.UTC)
 
     log.debug("Using S3LogsReader to retrieve logs")
     s3_reader = S3LogsReader(superregion).get_log_reader(

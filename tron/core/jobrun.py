@@ -1,5 +1,5 @@
 """
- Classes to manage job runs.
+Classes to manage job runs.
 """
 import datetime
 import json

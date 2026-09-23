@@ -39,7 +39,6 @@ class MockReactorTestCase(TestCase):
 
 # TODO: remove
 class MockTimeTestCase(TestCase):
-
     now = None
 
     @setup

@@ -45,7 +45,6 @@ def build_mock_job():
 
 
 class TestJobRun:
-
     now = datetime.datetime(2012, 3, 14, 15, 9, 20, tzinfo=None)
     now_with_tz = datetime.datetime(2012, 3, 14, 15, 9, 20, tzinfo=pytz.utc)
 
@@ -547,7 +546,6 @@ class TestJobRunFromState(TestCase):
 
 
 class MockJobRun(MagicMock):
-
     manual = False
 
     node = "anode"
@@ -630,7 +628,7 @@ class TestJobRunCollection(TestCase):
             node_pool,
         )
         assert len(runs) == 4
-        assert all([type(job) == jobrun.JobRun for job in runs])
+        assert all([type(job) is jobrun.JobRun for job in runs])
 
     def test_build_new_run(self):
         autospec_method(self.run_collection.remove_old_runs)

@@ -8,7 +8,6 @@ all_metrics = {}  # type: ignore
 
 
 def get_metric(metric_type, name, dimensions, default):
-    global all_metrics
     dimensions = tuple(sorted(dimensions.items())) if dimensions else ()
     key = (metric_type, name, dimensions)
     return all_metrics.setdefault(key, default)

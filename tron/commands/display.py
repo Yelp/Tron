@@ -14,7 +14,6 @@ from tron.utils import maybe_encode
 
 
 class Color:
-
     enabled = None
     colors = {
         "gray": "\033[90m",
@@ -299,7 +298,6 @@ class DisplayJobRuns(TableDisplay):
 
 
 class DisplayJobs(TableDisplay):
-
     columns = ["Name", "State", "Scheduler", "Last Success"]
     fields = ["name", "status", "scheduler", "last_success"]
     widths = [50, 10, 20, 22]
@@ -330,7 +328,6 @@ class DisplayJobs(TableDisplay):
 
 
 class DisplayActionRuns(TableDisplay):
-
     columns = ["Action", "State", "Start Time", "End Time", "Duration"]
     fields = ["id", "state", "start_time", "end_time", "duration"]
     widths = [40, 12, 22, 22, 10]

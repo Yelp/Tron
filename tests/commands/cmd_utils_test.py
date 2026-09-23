@@ -42,9 +42,10 @@ def test_parse_date_invalid():
 class TestGetConfig(TestCase):
     @setup_teardown
     def patch_environment(self):
-        with mock.patch("tron.commands.cmd_utils.opener", autospec=True) as self.mock_opener, mock.patch(
-            "tron.commands.cmd_utils.yaml", autospec=True
-        ) as self.mock_yaml:
+        with (
+            mock.patch("tron.commands.cmd_utils.opener", autospec=True) as self.mock_opener,
+            mock.patch("tron.commands.cmd_utils.yaml", autospec=True) as self.mock_yaml,
+        ):
             yield
 
     def test_read_config_missing(self):

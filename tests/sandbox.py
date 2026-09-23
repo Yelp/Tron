@@ -93,7 +93,6 @@ class TronSandboxException(Exception):
 
 
 class SandboxTestCase(TestCase):
-
     _suites = ["sandbox"]
 
     sandbox = None

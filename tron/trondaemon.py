@@ -1,5 +1,5 @@
 """
- Daemonize trond.
+Daemonize trond.
 """
 import contextlib
 import logging.config

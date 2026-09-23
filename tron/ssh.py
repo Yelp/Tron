@@ -18,7 +18,6 @@ warnings.filterwarnings("ignore", category=CryptographyDeprecationWarning)
 from twisted.conch.client import default  # noqa: E402
 from twisted.conch.ssh import transport  # noqa: E402
 
-
 log = logging.getLogger("tron.ssh")
 
 
@@ -80,7 +79,6 @@ class NoPasswordAuthClient(default.SSHUserAuthClient):
 
 
 class ClientTransport(transport.SSHClientTransport):
-
     connection_defer = None
 
     def __init__(self, username, options, expected_pub_key):
@@ -111,7 +109,6 @@ class ClientTransport(transport.SSHClientTransport):
 
 
 class ClientConnection(connection.SSHConnection):
-
     service_start_defer = None
     service_stop_defer = None
 
@@ -173,7 +170,6 @@ class ClientConnection(connection.SSHConnection):
 
 
 class ExecChannel(channel.SSHChannel):
-
     name = b"session"
     exit_defer = None
     start_defer = None

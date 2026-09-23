@@ -61,10 +61,10 @@ bin/                # CLI: trond, tronctl, tronview, tronfig
 
 ## Testing
 
-Tox manages the virtualenv in `.tox/py310/`. Use `make test` for the full suite, or iterate with pytest directly:
+Tox manages the virtualenv in `.tox/py312/`. Use `make test` for the full suite, or iterate with pytest directly:
 
 ```bash
-.tox/py310/bin/pytest tests/path/to/test.py -x
+.tox/py312/bin/pytest tests/path/to/test.py -x
 ```
 
 ## Development Guardrails

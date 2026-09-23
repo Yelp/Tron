@@ -60,11 +60,14 @@ def mock_transact_write_items(self):
 
 @pytest.fixture(autouse=True)
 def store():
-    with mock.patch(
-        "moto.dynamodb.responses.DynamoHandler.transact_write_items",
-        new=mock_transact_write_items,
-        create=True,
-    ), mock_dynamodb():
+    with (
+        mock.patch(
+            "moto.dynamodb.responses.DynamoHandler.transact_write_items",
+            new=mock_transact_write_items,
+            create=True,
+        ),
+        mock_dynamodb(),
+    ):
         dynamodb = boto3.resource("dynamodb", region_name="us-west-2")
         table_name = "tmp"
         store = DynamoDBStateStore(table_name, "us-west-2", stopping=True)
@@ -168,8 +171,9 @@ class TestDynamoDBStateStore:
             store.build_key("job_state", "two"),
             store.build_key("job_run_state", "four"),
         ]
-        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True
+        with (
+            mock.patch("tron.config.static_config.load_yaml_file", autospec=True),
+            mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True),
         ):
             vals = store.restore(keys)
         for key, value in key_value_pairs:
@@ -200,8 +204,9 @@ class TestDynamoDBStateStore:
         assert store.save_errors == 0
         keys = [store.build_key("job_run_state", "two")]
 
-        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True
+        with (
+            mock.patch("tron.config.static_config.load_yaml_file", autospec=True),
+            mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True),
         ):
             vals = store.restore(keys)
         for key, value in key_value_pairs:
@@ -215,8 +220,9 @@ class TestDynamoDBStateStore:
         store._consume_save_queue()
 
         assert store.save_errors == 0
-        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True
+        with (
+            mock.patch("tron.config.static_config.load_yaml_file", autospec=True),
+            mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True),
         ):
             vals = store.restore(keys)
         for key in keys:
@@ -236,8 +242,9 @@ class TestDynamoDBStateStore:
             num_partitions, num_json_val_partitions = store._get_num_of_partitions(key)
             assert num_json_val_partitions > 1
 
-        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True
+        with (
+            mock.patch("tron.config.static_config.load_yaml_file", autospec=True),
+            mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True),
         ):
             vals = store.restore(keys)
         for key in keys:
@@ -306,8 +313,9 @@ class TestDynamoDBStateStore:
             store.build_key("job_state", "two"),
             store.build_key("job_run_state", "four"),
         ]
-        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True
+        with (
+            mock.patch("tron.config.static_config.load_yaml_file", autospec=True),
+            mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True),
         ):
             vals = store.restore(keys)
         assert vals == {"job_run_state four": small_object}
@@ -377,11 +385,15 @@ class TestDynamoDBStateStore:
 
         keys = [store.build_key("job_state", 0)]
 
-        with mock.patch.object(
-            store.client,
-            "batch_get_item",
-            return_value=unprocessed_value,
-        ) as mock_batch_get_item, mock.patch("time.sleep") as mock_sleep, pytest.raises(Exception) as exec_info:
+        with (
+            mock.patch.object(
+                store.client,
+                "batch_get_item",
+                return_value=unprocessed_value,
+            ) as mock_batch_get_item,
+            mock.patch("time.sleep") as mock_sleep,
+            pytest.raises(Exception) as exec_info,
+        ):
             store.restore(keys)
         assert "failed to retrieve items with keys" in str(exec_info.value)
         assert mock_batch_get_item.call_count == MAX_UNPROCESSED_KEYS_RETRIES
@@ -395,9 +407,11 @@ class TestDynamoDBStateStore:
         mock_future.result.side_effect = Exception("mocked exception")
         with mock.patch("concurrent.futures.Future", return_value=mock_future, autospec=True):
             with mock.patch("concurrent.futures.as_completed", return_value=[mock_future], autospec=True):
-                with pytest.raises(Exception) as exec_info, mock.patch(
-                    "tron.config.static_config.load_yaml_file", autospec=True
-                ), mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True):
+                with (
+                    pytest.raises(Exception) as exec_info,
+                    mock.patch("tron.config.static_config.load_yaml_file", autospec=True),
+                    mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True),
+                ):
                     store.restore(keys)
                 assert str(exec_info.value) == "mocked exception"
 
@@ -423,8 +437,9 @@ class TestDynamoDBStateStore:
         assert store.save_errors == 1
 
         # The original key should still be intact
-        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True
+        with (
+            mock.patch("tron.config.static_config.load_yaml_file", autospec=True),
+            mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True),
         ):
             vals = store.restore([key])
         assert vals[key] == small_object
@@ -446,8 +461,9 @@ class TestDynamoDBStateStore:
         assert len(store.save_queue) == 0
         assert store.save_errors == 0
 
-        with mock.patch("tron.config.static_config.load_yaml_file", autospec=True), mock.patch(
-            "tron.config.static_config.build_configuration_watcher", autospec=True
+        with (
+            mock.patch("tron.config.static_config.load_yaml_file", autospec=True),
+            mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True),
         ):
             vals = store.restore([key])
         assert vals[key] == small_object

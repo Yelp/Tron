@@ -1,4 +1,4 @@
-#!/usr/bin/env python3.10
+#!/usr/bin/env python3.12
 """
 Write pid and stdout/stderr to a standard location before execing a command.
 """

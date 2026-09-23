@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" Start the Tron server daemon."""
+"""Start the Tron server daemon."""
 import argparse
 import faulthandler
 import logging

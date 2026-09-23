@@ -6,7 +6,7 @@ import sys
 from io import BytesIO
 from typing import Any
 
-import bsddb3  # type: ignore
+import berkeleydb  # type: ignore
 
 from tron.utils import maybe_decode
 
@@ -16,7 +16,7 @@ log = logging.getLogger(__name__)
 # TODO: TRON-2293 This class does some Python 2 and Python 3 handling shenanigans. It should be cleaned up.
 class Py2Shelf(shelve.Shelf):
     def __init__(self, filename, flag="c", protocol=2, writeback=False):
-        db = bsddb3.hashopen(filename, flag)
+        db = berkeleydb.hashopen(filename, flag)
         args = [self, db, protocol, writeback]
         if sys.version_info[0] == 3:
             args.append("utf8")

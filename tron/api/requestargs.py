@@ -1,5 +1,4 @@
-"""Functions for returning validated values from a twisted.web.Request object.
-"""
+"""Functions for returning validated values from a twisted.web.Request object."""
 import datetime
 
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"

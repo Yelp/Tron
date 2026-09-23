@@ -149,7 +149,6 @@ def resource_from_collection(collection, name, child_resource):
 
 
 class ActionRunResource(AuthenticatedResource):
-
     isLeaf = True
 
     def __init__(self, action_run, job_run, job_scheduler=None):
@@ -288,7 +287,6 @@ class JobResource(AuthenticatedResource):
 
 
 class ActionRunHistoryResource(AuthenticatedResource):
-
     isLeaf = True
 
     def __init__(self, action_runs):
@@ -441,7 +439,6 @@ class ConfigResource(AuthenticatedResource):
 
 
 class StatusResource(resource.Resource):
-
     isLeaf = True
 
     def __init__(self, master_control):
@@ -461,7 +458,6 @@ class StatusResource(resource.Resource):
 
 
 class MetricsResource(resource.Resource):
-
     isLeaf = True
 
     def __init__(self):

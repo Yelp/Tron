@@ -1,9 +1,9 @@
 """
- Convert a 0.2.x Tron configuration file to the 0.3 format.
+Convert a 0.2.x Tron configuration file to the 0.3 format.
 
- Removes YAML anchors, references, and tags.
- Display warnings for NodePools under the nodes section.
- Display warnings for action requires sections that are not lists.
+Removes YAML anchors, references, and tags.
+Display warnings for NodePools under the nodes section.
+Display warnings for action requires sections that are not lists.
 
 """
 import optparse

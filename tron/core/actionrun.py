@@ -11,7 +11,6 @@ from dataclasses import fields
 from typing import Any
 from typing import cast
 from typing import Literal
-from typing import Optional
 from typing import TYPE_CHECKING
 
 from twisted.internet import reactor
@@ -407,7 +406,7 @@ class ActionRun(Observable, Persistable):
         self.trigger_timeout_call = None
 
         self.action_command = None
-        self.in_delay = None  # type: Optional[DelayedCall]
+        self.in_delay: DelayedCall | None = None
 
     @property
     def state(self) -> str:
@@ -1402,7 +1401,6 @@ class KubernetesActionRun(ActionRun, Observer):
         # TODO: remove this feature or refactor so that we don't have this useless parameter on the subclass
         non_retryable_exit_codes: list[int] | None = None,
     ) -> bool | ActionCommand | None:
-
         k8s_cluster = KubernetesClusterRepository.get_cluster()
         real_non_retryable_exit_codes = [] if not k8s_cluster else k8s_cluster.non_retryable_exit_codes
 

@@ -36,13 +36,20 @@ def mock_kubernetes_task():
 
 @pytest.fixture
 def mock_kubernetes_cluster():
-    with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
-        "tron.kubernetes.TaskProcessor",
-        autospec=True,
-    ), mock.patch(
-        "tron.kubernetes.Subscription",
-        autospec=True,
-    ) as mock_runner:
+    with (
+        mock.patch(
+            "tron.kubernetes.PyDeferredQueue",
+            autospec=True,
+        ),
+        mock.patch(
+            "tron.kubernetes.TaskProcessor",
+            autospec=True,
+        ),
+        mock.patch(
+            "tron.kubernetes.Subscription",
+            autospec=True,
+        ) as mock_runner,
+    ):
         mock_runner.return_value.configure_mock(
             stopping=False, TASK_CONFIG_INTERFACE=mock.Mock(spec=KubernetesTaskConfig)
         )
@@ -51,12 +58,19 @@ def mock_kubernetes_cluster():
 
 @pytest.fixture
 def mock_disabled_kubernetes_cluster():
-    with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
-        "tron.kubernetes.TaskProcessor",
-        autospec=True,
-    ), mock.patch(
-        "tron.kubernetes.Subscription",
-        autospec=True,
+    with (
+        mock.patch(
+            "tron.kubernetes.PyDeferredQueue",
+            autospec=True,
+        ),
+        mock.patch(
+            "tron.kubernetes.TaskProcessor",
+            autospec=True,
+        ),
+        mock.patch(
+            "tron.kubernetes.Subscription",
+            autospec=True,
+        ),
     ):
         yield KubernetesCluster("kube-cluster-a:1234", enabled=False)
 
@@ -759,12 +773,19 @@ def test_set_enabled_disable(mock_kubernetes_cluster):
 
 def test_configure_default_volumes():
     # default_volume validation is done at config time, we just need to validate we are setting it
-    with mock.patch("tron.kubernetes.PyDeferredQueue", autospec=True,), mock.patch(
-        "tron.kubernetes.TaskProcessor",
-        autospec=True,
-    ), mock.patch(
-        "tron.kubernetes.Subscription",
-        autospec=True,
+    with (
+        mock.patch(
+            "tron.kubernetes.PyDeferredQueue",
+            autospec=True,
+        ),
+        mock.patch(
+            "tron.kubernetes.TaskProcessor",
+            autospec=True,
+        ),
+        mock.patch(
+            "tron.kubernetes.Subscription",
+            autospec=True,
+        ),
     ):
         mock_kubernetes_cluster = KubernetesCluster("kube-cluster-a:1234", default_volumes=[])
     assert mock_kubernetes_cluster.default_volumes == []

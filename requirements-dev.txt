@@ -5,7 +5,7 @@ cfgv==2.0.1
 debugpy==1.8.1
 distlib==0.3.6
 filelock==3.4.1
-flake8==5.0.4
+flake8==7.3.0
 identify==2.5.5
 iniconfig==1.1.1
 mccabe==0.7.0
@@ -16,10 +16,10 @@ nodeenv==1.8.0
 packaging==19.2
 platformdirs==2.5.2
 pluggy==0.13.0
-pre-commit==2.20.0
+pre-commit==3.5.0
 py==1.10.0
-pycodestyle==2.9.0
-pyflakes==2.5.0
+pycodestyle==2.14.0
+pyflakes==3.4.0
 pyparsing==2.4.2
 pytest==7.0.1
 pytest-asyncio==0.14.0

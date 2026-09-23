@@ -1,6 +1,6 @@
 argcomplete
+berkeleydb
 boto3
-bsddb3
 cryptography
 dataclasses
 ecdsa>=0.13.3

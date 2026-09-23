@@ -1,12 +1,12 @@
 """
- Create a graphviz diagram from a Tron Job configuration.
+Create a graphviz diagram from a Tron Job configuration.
 
- Usage:
-    python tools/action_dag_diagram.py -c <config> -n <job_name>
+Usage:
+   python tools/action_dag_diagram.py -c <config> -n <job_name>
 
- This will create a file named <job_name>.dot
- You can create a diagram using:
-    dot -Tpng -o <job_name>.png <job_name>.dot
+This will create a file named <job_name>.dot
+You can create a diagram using:
+   dot -Tpng -o <job_name>.png <job_name>.dot
 """
 import optparse
 
@@ -41,7 +41,8 @@ def build_diagram(job_config):
 
     for action in job_config.actions.values():
         shape = "invhouse" if not action.requires else "rect"
-        nodes.append(f"node [shape = {shape}]; {action.name}")
+        nodes.append(f"node [shape = {shape}]")
+        nodes.append(action.name)
         for required_action in action.requires:
             edges.append(f"{required_action} -> {action.name}")
 

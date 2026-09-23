@@ -291,7 +291,6 @@ async def run_backfill_for_date_range(
 
 
 class DisplayBackfillRuns(display.TableDisplay):
-
     columns = ["Date", "Job Run Name", "Final State"]
     fields = ["run_time", "run_name", "run_state"]
     widths = [15, 60, 15]

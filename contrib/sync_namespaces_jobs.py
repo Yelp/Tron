@@ -1,5 +1,5 @@
 #!/usr/bin/env python
-""" This script is for load testing of Tron
+"""This script is for load testing of Tron
 
 Historically, Tronview and Tronweb were (are) slow. To better understand the performance
 bottleneck of Tron, we could use this script to  generate the fake namespaces and

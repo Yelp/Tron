@@ -13,7 +13,6 @@ import tron
 from tron.commands.authentication import get_auth_token
 from tron.config.schema import MASTER_NAMESPACE
 
-
 log = logging.getLogger(__name__)
 
 USER_AGENT = f"Tron Command/{tron.__version__} +http://github.com/Yelp/Tron"

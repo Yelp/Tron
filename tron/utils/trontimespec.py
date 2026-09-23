@@ -143,7 +143,6 @@ class TimeSpecification:
         hours=None,
         seconds=None,
     ):
-
         if weekdays and monthdays:
             raise ValueError("cannot supply both monthdays and weekdays")
 

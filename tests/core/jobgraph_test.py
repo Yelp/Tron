@@ -7,7 +7,6 @@ from tron.config.schema import ConfigJob
 from tron.core.jobgraph import AdjListEntry
 from tron.core.jobgraph import JobGraph
 
-
 MISSING_DEPENDENCY_ERR_MSG = """The following actions are dependencies of other actions but missing:
 Action other.job2.action3 is dependency of actions:
   - MASTER.job3.action5

@@ -44,7 +44,6 @@ from pathlib import Path
 import boto3
 from botocore.config import Config
 
-
 VALID_TYPES = ("job_state", "job_run_state")
 
 

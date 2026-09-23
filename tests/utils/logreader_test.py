@@ -32,19 +32,23 @@ def test_read_log_stream_for_action_run_not_available():
 
 
 def test_read_log_stream_for_action_run():
-    with mock.patch(
-        "staticconf.read",
-        autospec=True,
-        side_effect=static_conf_patch({"logging.max_lines_to_display": 1000}),
-    ), mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True,), mock.patch(
-        "tron.config.static_config.load_yaml_file",
-        autospec=True,
-    ), mock.patch(
-        "tron.utils.logreader.get_superregion", autospec=True, return_value="fake"
-    ), mock.patch(
-        "tron.utils.logreader.S3LogsReader", autospec=True
-    ) as mock_s3_reader:
-
+    with (
+        mock.patch(
+            "staticconf.read",
+            autospec=True,
+            side_effect=static_conf_patch({"logging.max_lines_to_display": 1000}),
+        ),
+        mock.patch(
+            "tron.config.static_config.build_configuration_watcher",
+            autospec=True,
+        ),
+        mock.patch(
+            "tron.config.static_config.load_yaml_file",
+            autospec=True,
+        ),
+        mock.patch("tron.utils.logreader.get_superregion", autospec=True, return_value="fake"),
+        mock.patch("tron.utils.logreader.S3LogsReader", autospec=True) as mock_s3_reader,
+    ):
         mock_s3_reader.return_value.get_log_reader.return_value = iter(
             [
                 """{
@@ -90,28 +94,32 @@ def test_read_log_stream_for_action_run():
     [
         (
             datetime.datetime(2024, 2, 29, 23, 59, 59, tzinfo=datetime.timezone(datetime.timedelta(hours=+3))),
-            datetime.datetime(2024, 2, 29, 20, 59, 59, tzinfo=datetime.timezone.utc),
+            datetime.datetime(2024, 2, 29, 20, 59, 59, tzinfo=datetime.UTC),
         ),
         (
             datetime.datetime(2024, 2, 29, 23, 59, 59, tzinfo=datetime.timezone(datetime.timedelta(hours=-3))),
-            datetime.datetime(2024, 3, 1, 2, 59, 59, tzinfo=datetime.timezone.utc),
+            datetime.datetime(2024, 3, 1, 2, 59, 59, tzinfo=datetime.UTC),
         ),
     ],
 )
 def test_read_log_stream_for_action_run_tz(local_datetime, expected_datetime):
-    with mock.patch(
-        "staticconf.read",
-        autospec=True,
-        side_effect=static_conf_patch({"logging.max_lines_to_display": 1000}),
-    ), mock.patch("tron.config.static_config.build_configuration_watcher", autospec=True,), mock.patch(
-        "tron.config.static_config.load_yaml_file",
-        autospec=True,
-    ), mock.patch(
-        "tron.utils.logreader.get_superregion", autospec=True, return_value="fake"
-    ), mock.patch(
-        "tron.utils.logreader.S3LogsReader", autospec=True
-    ) as mock_s3_log_reader:
-
+    with (
+        mock.patch(
+            "staticconf.read",
+            autospec=True,
+            side_effect=static_conf_patch({"logging.max_lines_to_display": 1000}),
+        ),
+        mock.patch(
+            "tron.config.static_config.build_configuration_watcher",
+            autospec=True,
+        ),
+        mock.patch(
+            "tron.config.static_config.load_yaml_file",
+            autospec=True,
+        ),
+        mock.patch("tron.utils.logreader.get_superregion", autospec=True, return_value="fake"),
+        mock.patch("tron.utils.logreader.S3LogsReader", autospec=True) as mock_s3_log_reader,
+    ):
         read_log_stream_for_action_run(
             "namespace.job.1234.action",
             component="stdout",
@@ -129,18 +137,25 @@ def test_read_log_stream_for_action_run_for_long_output():
     # outputted by the test, which is similar to the logging.max_lines_to_display
     # in tron.yaml in srv-configs
     max_lines = 1000
-    with mock.patch("tron.utils.logreader.get_superregion", autospec=True, return_value="fake",), mock.patch(
-        "tron.config.static_config.build_configuration_watcher",
-        autospec=True,
-    ), mock.patch(
-        "staticconf.read", autospec=True, side_effect=static_conf_patch({"logging.max_lines_to_display": 1000})
-    ), mock.patch(
-        "tron.config.static_config.load_yaml_file",
-        autospec=True,
-    ), mock.patch(
-        "tron.utils.logreader.S3LogsReader", autospec=True
-    ) as mock_s3_reader:
-
+    with (
+        mock.patch(
+            "tron.utils.logreader.get_superregion",
+            autospec=True,
+            return_value="fake",
+        ),
+        mock.patch(
+            "tron.config.static_config.build_configuration_watcher",
+            autospec=True,
+        ),
+        mock.patch(
+            "staticconf.read", autospec=True, side_effect=static_conf_patch({"logging.max_lines_to_display": 1000})
+        ),
+        mock.patch(
+            "tron.config.static_config.load_yaml_file",
+            autospec=True,
+        ),
+        mock.patch("tron.utils.logreader.S3LogsReader", autospec=True) as mock_s3_reader,
+    ):
         with open("./tests/utils/shortOutputTest.txt") as f:
             content_list = f.readlines()
 
@@ -174,8 +189,9 @@ def test_decompose_action_id_file_not_found():
 def test_decompose_action_id_yaml_error():
     action_run_id = "namespace.job.1234.action"
     paasta_cluster = "fake_cluster"
-    with mock.patch("builtins.open", mock.mock_open(read_data="invalid_yaml")), mock.patch(
-        "yaml.safe_load", side_effect=yaml.YAMLError
+    with (
+        mock.patch("builtins.open", mock.mock_open(read_data="invalid_yaml")),
+        mock.patch("yaml.safe_load", side_effect=yaml.YAMLError),
     ):
         namespace, job_name, run_num, action = decompose_action_id(action_run_id, paasta_cluster)
         assert namespace == "namespace"
@@ -187,8 +203,9 @@ def test_decompose_action_id_yaml_error():
 def test_decompose_action_id_generic_error():
     action_run_id = "namespace.job.1234.action"
     paasta_cluster = "fake_cluster"
-    with mock.patch("builtins.open", mock.mock_open(read_data="some_data")), mock.patch(
-        "yaml.safe_load", side_effect=Exception
+    with (
+        mock.patch("builtins.open", mock.mock_open(read_data="some_data")),
+        mock.patch("yaml.safe_load", side_effect=Exception),
     ):
         namespace, job_name, run_num, action = decompose_action_id(action_run_id, paasta_cluster)
         assert namespace == "namespace"
@@ -206,8 +223,9 @@ def test_decompose_action_id_service_not_found():
             action:
                 command: "sleep 10"
     """
-    with mock.patch("builtins.open", mock.mock_open(read_data=config_content)), mock.patch(
-        "yaml.safe_load", return_value=yaml.safe_load(config_content)
+    with (
+        mock.patch("builtins.open", mock.mock_open(read_data=config_content)),
+        mock.patch("yaml.safe_load", return_value=yaml.safe_load(config_content)),
     ):
         namespace, job_name, run_num, action = decompose_action_id(action_run_id, paasta_cluster)
         assert namespace == "namespace"

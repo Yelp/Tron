@@ -54,7 +54,6 @@ class TestJobSchedulerGetRunsToSchedule(TestCase):
 
 
 class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
-
     now = datetime.datetime.now()
 
     @setup

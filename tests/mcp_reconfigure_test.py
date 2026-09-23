@@ -19,7 +19,6 @@ from tron.serialize import filehandler
 
 
 class TestMCPReconfigure(TestCase):
-
     os.environ["SSH_AUTH_SOCK"] = "test-socket"
     pre_config = dict(
         ssh_options=dict(

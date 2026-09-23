@@ -52,7 +52,6 @@ class JobCollectionController:
 
 
 class ActionRunController:
-
     mapped_commands = {
         "start",
         "success",
@@ -146,7 +145,6 @@ class ActionRunController:
 
 
 class JobRunController:
-
     mapped_commands = {"start", "success", "cancel", "fail", "stop"}
 
     def __init__(self, job_run, job_scheduler):

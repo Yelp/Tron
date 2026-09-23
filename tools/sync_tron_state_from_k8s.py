@@ -49,7 +49,7 @@ def limit_size_with_hash(name: str, limit: int = 63, suffix: int = 4) -> str:
     if len(name) > limit:
         digest = hashlib.md5(name.encode()).digest()
         hash = base64.b32encode(digest).decode().replace("=", "").lower()
-        return f"{name[:(limit-suffix-1)]}-{hash[:suffix]}"
+        return f"{name[:(limit - suffix - 1)]}-{hash[:suffix]}"
     else:
         return name
 
@@ -216,7 +216,7 @@ def update_tron_from_pods(
                                     log.info(f"Dry-Run: Would run {cmd}")
                                     updated.append(action_run_id)
                         else:
-                            log.debug(f"action run {action_run_id} not found in list of finished pods, no action taken")
+                            log.debug(f"action run {action_run_id} not in list of finished pods, no action taken")
                     else:
                         log.debug(f'Action state {action["state"]} for {action_run_id} not modifiable, no action taken')
     log.info(f"Updated {len(updated)} actions: {','.join(updated)}")

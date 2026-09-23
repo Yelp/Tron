@@ -176,7 +176,6 @@ class TestAddColorForState(TestCase):
 
 
 class TestDisplayNode(TestCase):
-
     node_source = {
         "name": "name",
         "hostname": "hostname",

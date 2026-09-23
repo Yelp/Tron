@@ -255,10 +255,16 @@ def test_job_watch_notifies_about_runs(mock_job):
         run_time="some_time",
         node="node",
     )
-    with mock.patch.object(mock_job, "handler",) as mock_handler, mock.patch.object(
-        mock_job,
-        "notify",
-    ) as mock_notify:
+    with (
+        mock.patch.object(
+            mock_job,
+            "handler",
+        ) as mock_handler,
+        mock.patch.object(
+            mock_job,
+            "notify",
+        ) as mock_notify,
+    ):
         mock_job.watch(new_run)
 
         # Make sure that the job is still watching correctly

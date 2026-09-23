@@ -82,11 +82,18 @@ class TestPersistentStateManager(TestCase):
 
     def test_restore(self):
         job_names = ["one", "two"]
-        with mock.patch.object(self.manager, "_restore_dicts", autospec=True,) as mock_restore_dicts, mock.patch.object(
-            self.manager,
-            "_restore_runs_for_job",
-            autospec=True,
-        ) as mock_restore_runs:
+        with (
+            mock.patch.object(
+                self.manager,
+                "_restore_dicts",
+                autospec=True,
+            ) as mock_restore_dicts,
+            mock.patch.object(
+                self.manager,
+                "_restore_runs_for_job",
+                autospec=True,
+            ) as mock_restore_runs,
+        ):
             mock_restore_dicts.side_effect = [
                 # _restore_dicts for JOB_STATE
                 {
@@ -276,10 +283,16 @@ class TestStateChangeWatcher(TestCase):
     def test_handler_job_new_run(self):
         mock_job = mock.Mock(spec_set=Job)
         mock_job_run = mock.Mock(spec_set=JobRun)
-        with mock.patch.object(self.watcher, "save_job",) as mock_save_job, mock.patch.object(
-            self.watcher,
-            "watch",
-        ) as mock_watch:
+        with (
+            mock.patch.object(
+                self.watcher,
+                "save_job",
+            ) as mock_save_job,
+            mock.patch.object(
+                self.watcher,
+                "watch",
+            ) as mock_watch,
+        ):
             # Error: No job run in event data, do nothing
             self.watcher.handler(
                 observable=mock_job,

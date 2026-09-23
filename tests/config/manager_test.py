@@ -96,7 +96,6 @@ class TestManifestFile(TestCase):
 
 
 class TestConfigManager(TestCase):
-
     content = {"one": "stars", "two": "other"}
     raw_content = "{'one': 'stars', 'two': 'other'}\n"
 

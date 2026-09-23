@@ -354,7 +354,7 @@ def skip_and_publish(server: str, tron_id: TronObjectIdentifier, identifier: str
             # TODO: this loop should use event_publish(), but we'd need to refactor how the CLI works and stop passing
             # around the full set of args everywhere to do so
             print("\nTriggers to publish:")
-            print("\n".join(f"    * {trigger}" for trigger in triggers) + "\n")
+            print("\n".join(f"* {trigger}" for trigger in triggers) + "\n")
             for trigger in triggers:
                 print(f"Publishing trigger {trigger}...")
                 if not request(
