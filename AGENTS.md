@@ -90,7 +90,6 @@ Reverting config changes is risky: new params get written to MASTER.yaml on disk
 
 ### Do not modify
 
-- `tron/mesos.py` — Deprecated
 - `tron/ssh.py` - Deprecated
 - `tron/node.py` - Deprecated
 

@@ -1,4 +1,3 @@
-addict  # not sure why check-requirements is not picking this up from task_processing[mesos_executor]
 argcomplete
 boto3
 bsddb3
@@ -15,7 +14,6 @@ psutil
 py-bcrypt
 pyasn1
 pyformance
-pymesos  # not sure why check-requirements is not picking this up from task_processing[mesos_executor]
 pyopenssl # vault-tools dependency, but mypy is picking up some code (that we don't use) that imports pyopenssl in Twisted here we are. we could add Twisted[tls], but while hacky - this feels a little more explicit
 pysensu-yelp
 PyStaticConfiguration
@@ -23,7 +21,7 @@ pytimeparse
 pytz
 PyYAML>=5.1
 requests
-task_processing[mesos_executor,k8s]>=1.2.0
+task_processing[k8s]>=1.2.0
 Twisted>=19.7.0
 urllib3>=1.24.2
 Werkzeug>=0.15.3
