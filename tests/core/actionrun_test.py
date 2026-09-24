@@ -1,4 +1,5 @@
 import datetime
+import json
 import shutil
 import tempfile
 from unittest import mock
@@ -687,6 +688,15 @@ class TestActionRun:
         callLater.return_value = "delayed call"
         assert self.action_run._exit_unsuccessful(-1)
         assert self.action_run.in_delay == "delayed call"
+
+    def test_from_json_allows_missing_mesos_task_id_for_rollback(self):
+        attempt = self.action_run.create_attempt()
+        json_data = json.loads(ActionRunAttempt.to_json(attempt.state_data))
+        json_data.pop("mesos_task_id")
+
+        restored_state_data = ActionRunAttempt.from_json(json.dumps(json_data))
+
+        assert restored_state_data["mesos_task_id"] is None
 
 
 class TestActionRunFactoryTriggerTimeout:
