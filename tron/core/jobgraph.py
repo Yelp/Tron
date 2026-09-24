@@ -58,7 +58,7 @@ class JobGraph:
                     "Action {} is dependency of actions:\n{}".format(
                         action_name,
                         "\n".join(
-                            [f" - {child_action_name}" for child_action_name in child_action_names],
+                            [f"  - {child_action_name}" for child_action_name in child_action_names],
                         ),
                     ),
                 )
