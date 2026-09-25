@@ -167,9 +167,7 @@ ConfigAction = config_object_factory(
         "disk",  # float
         "cap_add",  # List of str
         "cap_drop",  # List of str
-        "constraints",  # List of ConfigConstraint
         "docker_image",  # str
-        "docker_parameters",  # List of ConfigParameter
         "env",  # dict
         "secret_env",  # dict of str, ConfigSecretSource
         "secret_volumes",  # List of ConfigSecretVolume
@@ -209,9 +207,7 @@ ConfigCleanupAction = config_object_factory(
         "disk",  # float
         "cap_add",  # List of str
         "cap_drop",  # List of str
-        "constraints",  # List of ConfigConstraint
         "docker_image",  # str
-        "docker_parameters",  # List of ConfigParameter
         "env",  # dict
         "secret_env",  # dict of str, ConfigSecretSource
         "secret_volumes",  # List of ConfigSecretVolume
@@ -233,15 +229,6 @@ ConfigCleanupAction = config_object_factory(
     ],
 )
 
-ConfigConstraint = config_object_factory(
-    name="ConfigConstraint",
-    required=[
-        "attribute",
-        "operator",
-        "value",
-    ],
-    optional=[],
-)
 
 ConfigVolume = config_object_factory(
     name="ConfigVolume",
@@ -313,15 +300,6 @@ ConfigNodeAffinity = config_object_factory(
 ConfigTopologySpreadConstraints = config_object_factory(
     name="ConfigTopologySpreadConstraints",
     required=["max_skew", "label_selector", "topology_key", "when_unsatisfiable"],
-    optional=[],
-)
-
-ConfigParameter = config_object_factory(
-    name="ConfigParameter",
-    required=[
-        "key",
-        "value",
-    ],
     optional=[],
 )
 

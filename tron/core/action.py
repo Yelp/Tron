@@ -9,10 +9,8 @@ from typing import Any
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigAction
-from tron.config.schema import ConfigConstraint
 from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigNodeAffinity
-from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigProjectedSAVolume
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSecretVolume
@@ -33,9 +31,7 @@ class ActionCommandConfig(Persistable):
     disk: float | None = None
     cap_add: list[str] = field(default_factory=list)
     cap_drop: list[str] = field(default_factory=list)
-    constraints: set = field(default_factory=set)
     docker_image: str | None = None
-    docker_parameters: set = field(default_factory=set)
     env: dict = field(default_factory=dict)
     secret_env: dict = field(default_factory=dict)
     secret_volumes: list[ConfigSecretVolume] = field(default_factory=list)
@@ -66,10 +62,6 @@ class ActionCommandConfig(Persistable):
         try:
             json_data = json.loads(state_data)
             deserialized_data = {
-                "constraints": [
-                    ConfigConstraint.from_dict(val) for val in json_data["constraints"]
-                ],  # convert back the list of dictionaries to a list of ConfigConstraint
-                "docker_parameters": [ConfigParameter.from_dict(val) for val in json_data["docker_parameters"]],
                 "extra_volumes": [ConfigVolume.from_dict(val) for val in json_data["extra_volumes"]],
                 "node_affinities": [ConfigNodeAffinity.from_dict(val) for val in json_data["node_affinities"]],
                 "topology_spread_constraints": [
@@ -132,13 +124,7 @@ class ActionCommandConfig(Persistable):
                     "disk": state_data["disk"],
                     "cap_add": state_data["cap_add"],
                     "cap_drop": state_data["cap_drop"],
-                    "constraints": [
-                        serialize_namedtuple(constraint) for constraint in state_data.get("constraints", [])
-                    ],  # convert each ConfigConstraint to dictionary, so it would be a list of dicts
                     "docker_image": state_data["docker_image"],
-                    "docker_parameters": [
-                        serialize_namedtuple(parameter) for parameter in state_data.get("docker_parameters", [])
-                    ],
                     "env": state_data.get("env", {}),
                     "secret_env": {
                         key: serialize_namedtuple(val) for key, val in state_data.get("secret_env", {}).items()
@@ -209,8 +195,6 @@ class Action:
             mem=config.mem,
             disk=(1024.0 if config.disk is None else config.disk),
             docker_image=config.docker_image,
-            constraints=set(config.constraints or []),
-            docker_parameters=set(config.docker_parameters or []),
             extra_volumes=set(config.extra_volumes or []),
             env=config.env or {},
             secret_env=config.secret_env or {},

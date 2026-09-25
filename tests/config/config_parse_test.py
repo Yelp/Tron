@@ -1029,18 +1029,7 @@ class TestValidateJobs(TestCase):
                             cpus=4,
                             mem=300,
                             disk=600,
-                            constraints=[
-                                dict(
-                                    attribute="pool",
-                                    operator="LIKE",
-                                    value="default",
-                                ),
-                            ],
                             docker_image="my_container:latest",
-                            docker_parameters=[
-                                dict(key="label", value="labelA"),
-                                dict(key="label", value="labelB"),
-                            ],
                             env=dict(USER="batch"),
                             extra_volumes=[
                                 dict(
@@ -1077,24 +1066,7 @@ class TestValidateJobs(TestCase):
                         cpus=4.0,
                         mem=300.0,
                         disk=600.0,
-                        constraints=(
-                            schema.ConfigConstraint(
-                                attribute="pool",
-                                operator="LIKE",
-                                value="default",
-                            ),
-                        ),
                         docker_image="my_container:latest",
-                        docker_parameters=(
-                            schema.ConfigParameter(
-                                key="label",
-                                value="labelA",
-                            ),
-                            schema.ConfigParameter(
-                                key="label",
-                                value="labelB",
-                            ),
-                        ),
                         env={"USER": "batch"},
                         extra_volumes=(
                             schema.ConfigVolume(

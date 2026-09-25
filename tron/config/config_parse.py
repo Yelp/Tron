@@ -38,12 +38,10 @@ from tron.config.schedule_parse import valid_schedule
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigCleanupAction
-from tron.config.schema import ConfigConstraint
 from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigJob
 from tron.config.schema import ConfigKubernetes
 from tron.config.schema import ConfigNodeAffinity
-from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigProjectedSAVolume
 from tron.config.schema import ConfigSecretSource
 from tron.config.schema import ConfigSecretVolume
@@ -57,18 +55,6 @@ from tron.config.schema import NamedTronConfig
 from tron.config.schema import TronConfig
 
 log = logging.getLogger(__name__)
-
-# I imported the constraint operators from
-# task_processing.plugins.mesos.constraints
-# to skip the deprecated pymesos dependency.
-CONSTRAINT_OPERATORS = (
-    "EQUALS",
-    "==",
-    "NOTEQUALS",
-    "!=",
-    "LIKE",
-    "UNLIKE",
-)
 
 
 def build_format_string_validator(context_object):
@@ -205,29 +191,6 @@ def valid_k8s_master_address(value: str, config_context: ConfigContext) -> str:
         raise ConfigError(msg)
 
     return f"{scheme}://{netloc}"
-
-
-class ValidateConstraint(Validator):
-    config_class = ConfigConstraint
-    validators = {
-        "attribute": valid_string,
-        "operator": config_utils.build_enum_validator(CONSTRAINT_OPERATORS),
-        "value": valid_string,
-    }
-
-
-valid_constraint = ValidateConstraint()
-
-
-class ValidateDockerParameter(Validator):
-    config_class = ConfigParameter
-    validators = {
-        "key": valid_string,
-        "value": valid_string,
-    }
-
-
-valid_docker_parameter = ValidateDockerParameter()
 
 
 class ValidateVolume(Validator):
@@ -558,9 +521,7 @@ class ValidateAction(Validator):
         "disk": None,
         "cap_add": None,
         "cap_drop": None,
-        "constraints": None,
         "docker_image": None,
-        "docker_parameters": None,
         "env": None,
         "secret_env": None,
         "secret_volumes": None,
@@ -597,12 +558,7 @@ class ValidateAction(Validator):
         "disk": valid_float,
         "cap_add": valid_list,
         "cap_drop": valid_list,
-        "constraints": build_list_of_type_validator(valid_constraint, allow_empty=True),
         "docker_image": valid_string,
-        "docker_parameters": build_list_of_type_validator(
-            valid_docker_parameter,
-            allow_empty=True,
-        ),
         "env": valid_dict,
         "secret_env": build_dict_value_validator(valid_secret_source),
         "secret_volumes": build_list_of_type_validator(valid_secret_volume, allow_empty=True),
@@ -652,9 +608,7 @@ class ValidateCleanupAction(Validator):
         "disk": None,
         "cap_add": None,
         "cap_drop": None,
-        "constraints": None,
         "docker_image": None,
-        "docker_parameters": None,
         "env": None,
         "secret_env": None,
         "secret_volumes": None,
@@ -686,12 +640,7 @@ class ValidateCleanupAction(Validator):
         "disk": valid_float,
         "cap_add": valid_list,
         "cap_drop": valid_list,
-        "constraints": build_list_of_type_validator(valid_constraint, allow_empty=True),
         "docker_image": valid_string,
-        "docker_parameters": build_list_of_type_validator(
-            valid_docker_parameter,
-            allow_empty=True,
-        ),
         "env": valid_dict,
         "secret_env": build_dict_value_validator(valid_secret_source),
         "secret_volumes": build_list_of_type_validator(valid_secret_volume, allow_empty=True),
