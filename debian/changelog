@@ -1,3 +1,12 @@
+tron (3.13.1) jammy; urgency=medium
+
+  * 3.13.1 tagged with 'make release'
+    Commit: Merge pull request #1122 from Yelp/jfong/TRON-2689-handle-
+    more-k8s-errors  TRON-2698: Fix erroneous hardcoded `1` exit codes,
+    validate empty docker_images
+
+ -- Jen Patague <jfong@yelp.com>  Fri, 25 Sep 2026 09:11:47 -0700
+
 tron (3.13.0) jammy; urgency=medium
 
   * 3.13.0 tagged with 'make release'
