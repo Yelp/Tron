@@ -67,9 +67,9 @@ class ActionCommandConfig(Persistable):
             json_data = json.loads(state_data)
             deserialized_data = {
                 "constraints": [
-                    ConfigConstraint.from_dict(val) for val in json_data["constraints"]
+                    ConfigConstraint.from_dict(val) for val in json_data.get("constraints", [])
                 ],  # convert back the list of dictionaries to a list of ConfigConstraint
-                "docker_parameters": [ConfigParameter.from_dict(val) for val in json_data["docker_parameters"]],
+                "docker_parameters": [ConfigParameter.from_dict(val) for val in json_data.get("docker_parameters", [])],
                 "extra_volumes": [ConfigVolume.from_dict(val) for val in json_data["extra_volumes"]],
                 "node_affinities": [ConfigNodeAffinity.from_dict(val) for val in json_data["node_affinities"]],
                 "topology_spread_constraints": [
