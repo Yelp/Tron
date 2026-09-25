@@ -590,7 +590,7 @@ class KubernetesCluster:
         # during the time this killswitch is active
         if not self.enabled:
             task.log.info("Not starting task, Kubernetes usage is disabled.")
-            task.exited(1)
+            task.exited(exitcode.EXIT_KUBERNETES_DISABLED)
             return
 
         # it's possible that we're the first task submission following k8s going from
@@ -607,7 +607,8 @@ class KubernetesCluster:
         # reimplementing the clusterman resource reporting that MesosCluster::submit() used to do
         if not self.runner.run(task.get_config()):
             log.warning(f"Unable to submit task {task.get_kubernetes_id()} to configured k8s cluster.")
-            task.exited(1)
+            task.exited(exitcode.EXIT_KUBERNETES_SUBMIT_FAILED)
+            return
         log.info(f"Submitted task {task.get_kubernetes_id()} to configured k8s cluster.")
 
         # update internal resource usage tracker (this isn't connected at all to clusterman)
