@@ -571,6 +571,8 @@ def valid_kubernetes_action(action, config_context):
                     keys=missing_keys,
                 ),
             )
+        if not action.get("docker_image"):
+            log.warning(f"Kubernetes executor for action {action['name']} has an empty docker_image")
 
 
 def valid_trigger_downstreams(trigger_downstreams, config_context):

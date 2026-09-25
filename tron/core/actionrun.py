@@ -1375,7 +1375,7 @@ class KubernetesActionRun(ActionRun, Observer):
             self.fail(exitcode.EXIT_INVALID_COMMAND)
             return None
 
-        if attempt.command_config.docker_image is None:
+        if not attempt.command_config.docker_image:
             self.fail(exitcode.EXIT_KUBERNETES_TASK_INVALID)
             return None
         try:
