@@ -57,7 +57,6 @@ TronConfig = config_object_factory(
         "nodes",  # dict of ConfigNode
         "node_pools",  # dict of ConfigNodePool
         "jobs",  # dict of ConfigJob
-        "mesos_options",  # ConfigMesos
         "k8s_options",  # ConfigKubernetes
         "eventbus_enabled",  # bool or None
         "read_json",  # bool, deprecated — accepted but ignored
@@ -115,21 +114,6 @@ ConfigState = config_object_factory(
     ],
 )
 
-ConfigMesos = config_object_factory(
-    name="ConfigMesos",
-    optional=[
-        "master_address",
-        "master_port",
-        "secret_file",
-        "principal",
-        "role",
-        "enabled",
-        "default_volumes",
-        "dockercfg_location",
-        "offer_timeout",
-    ],
-)
-
 ConfigKubernetes = config_object_factory(
     name="ConfigKubernetes",
     optional=[
@@ -183,9 +167,7 @@ ConfigAction = config_object_factory(
         "disk",  # float
         "cap_add",  # List of str
         "cap_drop",  # List of str
-        "constraints",  # List of ConfigConstraint
         "docker_image",  # str
-        "docker_parameters",  # List of ConfigParameter
         "env",  # dict
         "secret_env",  # dict of str, ConfigSecretSource
         "secret_volumes",  # List of ConfigSecretVolume
@@ -225,9 +207,7 @@ ConfigCleanupAction = config_object_factory(
         "disk",  # float
         "cap_add",  # List of str
         "cap_drop",  # List of str
-        "constraints",  # List of ConfigConstraint
         "docker_image",  # str
-        "docker_parameters",  # List of ConfigParameter
         "env",  # dict
         "secret_env",  # dict of str, ConfigSecretSource
         "secret_volumes",  # List of ConfigSecretVolume
@@ -249,15 +229,6 @@ ConfigCleanupAction = config_object_factory(
     ],
 )
 
-ConfigConstraint = config_object_factory(
-    name="ConfigConstraint",
-    required=[
-        "attribute",
-        "operator",
-        "value",
-    ],
-    optional=[],
-)
 
 ConfigVolume = config_object_factory(
     name="ConfigVolume",
@@ -332,15 +303,6 @@ ConfigTopologySpreadConstraints = config_object_factory(
     optional=[],
 )
 
-ConfigParameter = config_object_factory(
-    name="ConfigParameter",
-    required=[
-        "key",
-        "value",
-    ],
-    optional=[],
-)
-
 StatePersistenceTypes = Enum(  # type: ignore
     "StatePersistenceTypes",
     dict(shelve="shelve", yaml="yaml", dynamodb="dynamodb"),
@@ -349,7 +311,6 @@ StatePersistenceTypes = Enum(  # type: ignore
 
 class ExecutorTypes(Enum):
     ssh = "ssh"
-    mesos = "mesos"
     kubernetes = "kubernetes"
     spark = "spark"
 

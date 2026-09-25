@@ -17,7 +17,6 @@ from twisted.python import log as twisted_log
 import tron
 from tron.kubernetes import KubernetesClusterRepository
 from tron.manhole import make_manhole
-from tron.mesos import MesosClusterRepository
 from tron.utils import chdir
 from tron.utils import flock
 from tron.utils import signals
@@ -162,7 +161,6 @@ class TronDaemon:
             waited += 0.1
         if self.mcp:
             self.mcp.shutdown()
-        MesosClusterRepository.shutdown()
         KubernetesClusterRepository.shutdown()
         raise SystemExit(f"Terminating on signal {str(sig_num)}")
 
