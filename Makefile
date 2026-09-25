@@ -78,7 +78,7 @@ itest_%: debitest_%
 	@echo "itest $* OK"
 
 dev:
-	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py310/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0
+	SSH_AUTH_SOCK=$(SSH_AUTH_SOCK) .tox/py310/bin/trond --debug --working-dir=dev -l logging.conf --host=0.0.0.0 --port 8080
 
 example_cluster:
 	tox -e example-cluster
