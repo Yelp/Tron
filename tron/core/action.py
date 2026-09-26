@@ -67,9 +67,11 @@ class ActionCommandConfig(Persistable):
             json_data = json.loads(state_data)
             deserialized_data = {
                 "constraints": [
-                    ConfigConstraint.from_dict(val) for val in json_data.get("constraints", [])
+                    ConfigConstraint.from_dict(val) for val in json_data.get("constraints") or []
                 ],  # convert back the list of dictionaries to a list of ConfigConstraint
-                "docker_parameters": [ConfigParameter.from_dict(val) for val in json_data.get("docker_parameters", [])],
+                "docker_parameters": [
+                    ConfigParameter.from_dict(val) for val in json_data.get("docker_parameters") or []
+                ],
                 "extra_volumes": [ConfigVolume.from_dict(val) for val in json_data["extra_volumes"]],
                 "node_affinities": [ConfigNodeAffinity.from_dict(val) for val in json_data["node_affinities"]],
                 "topology_spread_constraints": [
@@ -133,11 +135,11 @@ class ActionCommandConfig(Persistable):
                     "cap_add": state_data["cap_add"],
                     "cap_drop": state_data["cap_drop"],
                     "constraints": [
-                        serialize_namedtuple(constraint) for constraint in state_data.get("constraints", [])
+                        serialize_namedtuple(constraint) for constraint in state_data.get("constraints") or []
                     ],  # convert each ConfigConstraint to dictionary, so it would be a list of dicts
                     "docker_image": state_data["docker_image"],
                     "docker_parameters": [
-                        serialize_namedtuple(parameter) for parameter in state_data.get("docker_parameters", [])
+                        serialize_namedtuple(parameter) for parameter in state_data.get("docker_parameters") or []
                     ],
                     "env": state_data.get("env", {}),
                     "secret_env": {
