@@ -1,3 +1,5 @@
+import json
+
 import pytest
 
 from tron.config.schema import ConfigAction
@@ -249,3 +251,16 @@ class TestAction:
         }
 
         assert result == expected
+
+    def test_action_command_config_to_json(self, action_command_config_json):
+        state_data = ActionCommandConfig.from_json(action_command_config_json)
+        result = json.loads(ActionCommandConfig.to_json(state_data))
+        assert result == json.loads(action_command_config_json)
+
+    @pytest.mark.parametrize("field", ["constraints", "docker_parameters"])
+    def test_action_command_config_to_json_missing_field(self, field, action_command_config_json):
+        state_data = ActionCommandConfig.from_json(action_command_config_json)
+        state_data[field] = None
+
+        result = json.loads(ActionCommandConfig.to_json(state_data))
+        assert result[field] == []

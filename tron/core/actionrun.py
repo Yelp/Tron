@@ -225,7 +225,7 @@ class ActionRunAttempt(Persistable):
                 "end_time": datetime.datetime.fromisoformat(json_data["end_time"]) if json_data["end_time"] else None,
                 "rendered_command": json_data["rendered_command"],
                 "exit_status": json_data["exit_status"],
-                "mesos_task_id": json_data["mesos_task_id"],
+                "mesos_task_id": json_data.get("mesos_task_id"),
                 "kubernetes_task_id": json_data["kubernetes_task_id"],
             }
         except Exception:
