@@ -9,6 +9,11 @@ command configuration for actions.
 
 These variables can be used in the command of an action, using Python's format syntax (``{}``).
 
+Date arithmetic accepts a variable name with an optional signed integer offset.
+Spaces around the offset are allowed.
+Expressions such as ``{shortdate-1oops}`` are not recognized as date variables
+and cause an unknown context variable error unless defined in the command context.
+
 Once rendered into the command, they will **not** change. This is especially important for datetime-based context variables. Once a run is constructed, the datetime-based variables are "frozen", and will not change, even if the job is retried, or rerun one week later.
 
 For example::
