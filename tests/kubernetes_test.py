@@ -784,7 +784,7 @@ def test_submit_disabled(mock_disabled_kubernetes_cluster, mock_kubernetes_task)
         mock_disabled_kubernetes_cluster.submit(mock_kubernetes_task)
 
     assert mock_kubernetes_task.get_kubernetes_id() not in mock_disabled_kubernetes_cluster.tasks
-    mock_exited.assert_called_once_with(1)
+    mock_exited.assert_called_once_with(exitcode.EXIT_KUBERNETES_DISABLED)
 
 
 def test_submit(mock_kubernetes_cluster, mock_kubernetes_task):
@@ -793,6 +793,14 @@ def test_submit(mock_kubernetes_cluster, mock_kubernetes_task):
     assert mock_kubernetes_task.get_kubernetes_id() in mock_kubernetes_cluster.tasks
     assert mock_kubernetes_cluster.tasks[mock_kubernetes_task.get_kubernetes_id()] == mock_kubernetes_task
     mock_kubernetes_cluster.runner.run.assert_called_once_with(mock_kubernetes_task.get_config())
+
+
+def test_submit_run_fails(mock_kubernetes_cluster, mock_kubernetes_task):
+    mock_kubernetes_cluster.runner.run.return_value = None
+    with mock.patch.object(mock_kubernetes_task, "exited", autospec=True) as mock_exited:
+        mock_kubernetes_cluster.submit(mock_kubernetes_task)
+
+    mock_exited.assert_called_once_with(exitcode.EXIT_KUBERNETES_SUBMIT_FAILED)
 
 
 def test_recover(mock_kubernetes_cluster, mock_kubernetes_task):

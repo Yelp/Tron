@@ -12,6 +12,7 @@ EXIT_KUBERNETES_SPOT_INTERRUPTION = -10
 EXIT_KUBERNETES_NODE_SCALEDOWN = -11
 EXIT_KUBERNETES_TASK_LOST = -12
 EXIT_KUBERNETES_EPHEMERAL_STORAGE_EVICTION = -13
+EXIT_KUBERNETES_SUBMIT_FAILED = -14
 
 EXIT_REASONS = {
     EXIT_INVALID_COMMAND: "Invalid command",
@@ -27,4 +28,13 @@ EXIT_REASONS = {
     EXIT_KUBERNETES_NODE_SCALEDOWN: "Kubernetes task failed due to the autoscaler scaling down a node",
     EXIT_KUBERNETES_TASK_LOST: "Kubernetes task is lost and the final outcome unknown",
     EXIT_KUBERNETES_EPHEMERAL_STORAGE_EVICTION: "Kubernetes task failed due to exceeding disk-space usage limits",
+    EXIT_KUBERNETES_SUBMIT_FAILED: "Kubernetes task could not be submitted to the cluster",
 }
+
+
+def get_exit_reason(exit_status: int | None) -> str | None:
+    if exit_status is None:
+        return None
+    if exit_status == 0:
+        return "Succeeded"
+    return EXIT_REASONS.get(exit_status, f"Command exited with code {exit_status}")

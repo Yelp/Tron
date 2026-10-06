@@ -33,13 +33,15 @@ def build_mock_job():
         ),
     }
     runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
-    return mock.create_autospec(
+    mock_job = mock.create_autospec(
         job.Job,
         action_graph=action_graph,
         output_path=mock.Mock(),
         context=mock.Mock(),
         action_runner=runner,
     )
+    mock_job.max_runtime = None
+    return mock_job
 
 
 class TestJobRun:
@@ -306,6 +308,8 @@ class TestJobRun:
             },
             "manual": False,
             "time_zone": None,
+            "max_runtime": None,
+            "max_runtime_deadline": None,
         }
         assert result == expected
 
@@ -412,6 +416,30 @@ class TestJobRun:
         self.job_run.finalize()
         self.job_run.notify.assert_called_with(self.job_run.NOTIFY_DONE)
 
+    def test_finalize_cancels_max_runtime_timer(self):
+        self.job_run.action_runs.is_failed = False
+        mock_timer = mock.Mock()
+        mock_timer.active.return_value = True
+        self.job_run.max_runtime_timer = mock_timer
+        self.job_run.finalize()
+        mock_timer.cancel.assert_called_once_with()
+
+    def test_finalize_skips_inactive_timer(self):
+        self.job_run.action_runs.is_failed = False
+        mock_timer = mock.Mock()
+        mock_timer.active.return_value = False
+        self.job_run.max_runtime_timer = mock_timer
+        self.job_run.finalize()
+        mock_timer.cancel.assert_not_called()
+
+    def test_finalize_clears_deadline(self):
+        self.job_run.action_runs.is_failed = False
+        self.job_run.max_runtime_deadline = 12345.0
+        self.job_run.finalize()
+        assert self.job_run.max_runtime_deadline is None
+        assert self.job_run.max_runtime_timer is None
+        self.job_run.notify.assert_called_with(self.job_run.NOTIFY_DONE)
+
     def test_finalize_failure(self):
         self.job_run.finalize()
         self.job_run.notify.assert_called_with(self.job_run.NOTIFY_DONE)
@@ -427,6 +455,24 @@ class TestJobRun:
         assert not self.job_run.node
         assert not self.job_run.action_graph
         assert not self.job_run.action_runs
+
+    def test_cleanup_cancels_max_runtime_timer(self):
+        autospec_method(self.job_run.clear_observers)
+        self.job_run.output_path = mock.create_autospec(filehandler.OutputPath)
+        mock_timer = mock.Mock()
+        mock_timer.active.return_value = True
+        self.job_run.max_runtime_timer = mock_timer
+        self.job_run.cleanup()
+        mock_timer.cancel.assert_called_once_with()
+
+    def test_cleanup_skips_inactive_timer(self):
+        autospec_method(self.job_run.clear_observers)
+        self.job_run.output_path = mock.create_autospec(filehandler.OutputPath)
+        mock_timer = mock.Mock()
+        mock_timer.active.return_value = False
+        self.job_run.max_runtime_timer = mock_timer
+        self.job_run.cleanup()
+        mock_timer.cancel.assert_not_called()
 
     def test__getattr__(self):
         assert self.job_run.cancel
@@ -1039,3 +1085,34 @@ class TestJobRunStateTransitions:
         assert job_run.state == actionrun.ActionRun.STARTING
         job_run.get_action_run("after_foo").cancel()
         assert job_run.state == actionrun.ActionRun.CANCELLED
+
+    def test_cancel_records_derived_end_time(self, job_run):
+        cancellation_time = datetime.datetime(2026, 8, 24, 12, 34, 56)
+        with mock.patch(
+            "tron.core.actionrun.timeutils.current_time",
+            autospec=True,
+            return_value=cancellation_time,
+        ):
+            assert job_run.cancel()
+
+        assert job_run.state == actionrun.ActionRun.CANCELLED
+        assert job_run.end_time == cancellation_time
+        assert all(run.end_time == cancellation_time for run in job_run.action_runs)
+
+    def test_cancel_uses_latest_completed_or_cancelled_action_end_time(self, job_run):
+        completed_time = datetime.datetime(2026, 8, 24, 12, 30)
+        cancellation_time = datetime.datetime(2026, 8, 24, 12, 34, 56)
+        completed_run = job_run.get_action_run("foo")
+        completed_run.machine.state = actionrun.ActionRun.SUCCEEDED
+        completed_run.end_time = completed_time
+
+        with mock.patch(
+            "tron.core.actionrun.timeutils.current_time",
+            autospec=True,
+            return_value=cancellation_time,
+        ):
+            job_run.cancel()
+
+        assert job_run.state == actionrun.ActionRun.CANCELLED
+        assert completed_run.end_time == completed_time
+        assert job_run.end_time == cancellation_time
