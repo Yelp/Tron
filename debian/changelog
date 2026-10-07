@@ -1,3 +1,13 @@
+tron (3.13.2) jammy; urgency=medium
+
+  * 3.13.2 tagged with 'make release'
+    Commit: Merge pull request #1114 from Yelp/TRON-
+    2683_Tron_api_returns_500_errors_on_jobruncollection_mutations_durin
+    g_reads  Tron api returns 500 errors on jobruncollection mutations
+    during reads
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Wed, 07 Oct 2026 11:47:02 -0700
+
 tron (3.13.1) jammy; urgency=medium
 
   * 3.13.1 tagged with 'make release'
