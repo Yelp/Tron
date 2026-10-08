@@ -2145,6 +2145,7 @@ class TestKubernetesActionRun:
 
             create_task_kwargs = mock_cluster_repo.get_cluster.return_value.create_task.call_args[1]
             assert create_task_kwargs["pod_labels"]["tron.yelp.com/attempt_number"] == "0"
+            assert create_task_kwargs["env"]["TRON_ATTEMPT_NUMBER"] == "0"
 
     @mock.patch("tron.core.actionrun.filehandler", autospec=True)
     @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
@@ -2165,6 +2166,7 @@ class TestKubernetesActionRun:
 
             create_task_kwargs = mock_cluster_repo.get_cluster.return_value.create_task.call_args[1]
             assert create_task_kwargs["pod_labels"]["tron.yelp.com/attempt_number"] == "2"
+            assert create_task_kwargs["env"]["TRON_ATTEMPT_NUMBER"] == "2"
 
     @mock.patch("tron.core.actionrun.filehandler", autospec=True)
     @mock.patch("tron.core.actionrun.KubernetesClusterRepository", autospec=True)
@@ -2187,3 +2189,4 @@ class TestKubernetesActionRun:
 
             create_task_kwargs = mock_cluster_repo.get_cluster.return_value.create_task.call_args[1]
             assert create_task_kwargs["pod_labels"]["tron.yelp.com/attempt_number"] == "2"
+            assert create_task_kwargs["env"]["TRON_ATTEMPT_NUMBER"] == "2"

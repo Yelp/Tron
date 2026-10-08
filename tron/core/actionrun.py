@@ -1378,6 +1378,7 @@ class KubernetesActionRun(ActionRun, Observer):
         if not attempt.command_config.docker_image:
             self.fail(exitcode.EXIT_KUBERNETES_TASK_INVALID)
             return None
+        attempt_number = len(self.attempts) - 1
         try:
             task = k8s_cluster.create_task(
                 action_run_id=self.id,
@@ -1386,7 +1387,11 @@ class KubernetesActionRun(ActionRun, Observer):
                 mem=attempt.command_config.mem,
                 disk=attempt.command_config.disk,
                 docker_image=attempt.command_config.docker_image,
-                env=build_environment(original_env=attempt.command_config.env, run_id=self.id),
+                env=build_environment(
+                    original_env=attempt.command_config.env,
+                    run_id=self.id,
+                    attempt_number=attempt_number,
+                ),
                 secret_env=attempt.command_config.secret_env,
                 secret_volumes=attempt.command_config.secret_volumes,
                 projected_sa_volumes=attempt.command_config.projected_sa_volumes,
@@ -1401,7 +1406,7 @@ class KubernetesActionRun(ActionRun, Observer):
                 pod_labels=build_labels(
                     run_id=self.id,
                     original_labels=attempt.command_config.labels,
-                    attempt_number=len(self.attempts) - 1,
+                    attempt_number=attempt_number,
                 ),
                 pod_annotations=attempt.command_config.annotations,
                 service_account_name=attempt.command_config.service_account_name,
@@ -1466,6 +1471,7 @@ class KubernetesActionRun(ActionRun, Observer):
             return None
 
         log.info(f"{self} recovering Kubernetes run")
+        attempt_number = len(self.attempts) - 1
         # try/except block here is necessary cause if this fails, jobs will get resetted to 0 and we dont want that to happen
         try:
             task = k8s_cluster.create_task(
@@ -1475,7 +1481,11 @@ class KubernetesActionRun(ActionRun, Observer):
                 mem=last_attempt.command_config.mem,
                 disk=last_attempt.command_config.disk,
                 docker_image=last_attempt.command_config.docker_image,
-                env=build_environment(original_env=last_attempt.command_config.env, run_id=self.id),
+                env=build_environment(
+                    original_env=last_attempt.command_config.env,
+                    run_id=self.id,
+                    attempt_number=attempt_number,
+                ),
                 secret_env=last_attempt.command_config.secret_env,
                 # the field_selector_env = {'PAASTA_POD_IP': ['status.podIP']} is in a diff format than
                 # the field_selector_env in submit_command function.
@@ -1493,7 +1503,7 @@ class KubernetesActionRun(ActionRun, Observer):
                 pod_labels=build_labels(
                     run_id=self.id,
                     original_labels=last_attempt.command_config.labels,
-                    attempt_number=len(self.attempts) - 1,
+                    attempt_number=attempt_number,
                 ),
                 pod_annotations=last_attempt.command_config.annotations,
                 service_account_name=last_attempt.command_config.service_account_name,
