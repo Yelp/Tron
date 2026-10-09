@@ -296,12 +296,12 @@ class KubernetesCluster:
         default_volumes: list[ConfigVolume] | None = None,
         pod_launch_timeout: int | None = None,
         watcher_kubeconfig_paths: list[str] | None = None,
-        non_retryable_exit_codes: list[int] | None = [],
+        non_retryable_exit_codes: list[int] | None = None,
     ):
         # general k8s config
         self.kubeconfig_path = kubeconfig_path
         self.enabled = enabled
-        self.non_retryable_exit_codes = non_retryable_exit_codes
+        self.non_retryable_exit_codes = non_retryable_exit_codes or []
         self.default_volumes: list[ConfigVolume] | None = default_volumes or []
         self.pod_launch_timeout = pod_launch_timeout or DEFAULT_POD_LAUNCH_TIMEOUT_S
         self.watcher_kubeconfig_paths = watcher_kubeconfig_paths or []
