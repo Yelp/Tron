@@ -1566,6 +1566,13 @@ class TestValidateVolume(TestCase):
         )
 
 
+@pytest.mark.parametrize("expression", ["shortdate-1oops", "year+", "last_success#ymd+1-2"])
+def test_action_context_rejects_malformed_date_expressions(expression):
+    validator = build_format_string_validator(config_parse.action_context)
+    with pytest.raises(ConfigError, match="Unknown context variable"):
+        validator("echo {" + expression + "}", NullConfigContext)
+
+
 class TestValidPermissionMode:
     @pytest.mark.parametrize(
         ("permission", "normalized"),

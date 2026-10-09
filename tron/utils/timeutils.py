@@ -94,7 +94,7 @@ class DateArithmetic:
         """
         dt = dt or current_time()
         date_str = date_str.replace(" ", "")
-        match = cls.DATE_TYPE_PATTERN.match(date_str)
+        match = cls.DATE_TYPE_PATTERN.fullmatch(date_str)
         if not match:
             return
         attr, value = match.groups()
