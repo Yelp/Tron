@@ -73,7 +73,7 @@ def validate_output_dir(path):
             raise OSError("Could not create output dir %s" % path)
 
 
-def build_environment(run_id, original_env=None):
+def build_environment(run_id, original_env=None, attempt_number=None):
     if original_env is None:
         original_env = dict(os.environ)
     try:
@@ -88,6 +88,8 @@ def build_environment(run_id, original_env=None):
     new_env["TRON_JOB_NAME"] = job
     new_env["TRON_RUN_NUM"] = run_num
     new_env["TRON_ACTION"] = action
+    if attempt_number is not None:
+        new_env["TRON_ATTEMPT_NUMBER"] = str(attempt_number)
 
     logging.debug(new_env)
     return new_env

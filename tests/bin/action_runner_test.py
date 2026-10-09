@@ -147,6 +147,38 @@ class TestBuildEnvironment:
             TRON_ACTION="bar.baz",
         )
 
+    def test_build_environment_with_attempt_number(self):
+        original_env = {"PATH": "/usr/bin/nowhere"}
+
+        env = action_runner.build_environment(
+            "MASTER.foo.10.bar",
+            original_env=original_env,
+            attempt_number=0,
+        )
+
+        assert env == {
+            "TRON_JOB_NAMESPACE": "MASTER",
+            "TRON_JOB_NAME": "foo",
+            "TRON_RUN_NUM": "10",
+            "TRON_ACTION": "bar",
+            "TRON_ATTEMPT_NUMBER": "0",
+            "PATH": "/usr/bin/nowhere",
+        }
+        assert "TRON_ATTEMPT_NUMBER" not in original_env
+
+    def test_build_environment_does_not_allow_original_tron_values(self):
+        env = action_runner.build_environment(
+            "MASTER.foo.10.bar",
+            original_env={
+                "TRON_RUN_NUM": "user-supplied",
+                "TRON_ATTEMPT_NUMBER": "user-supplied",
+            },
+            attempt_number=1,
+        )
+
+        assert env["TRON_RUN_NUM"] == "10"
+        assert env["TRON_ATTEMPT_NUMBER"] == "1"
+
 
 class TestBuildLabels:
     def test_build_labels(self):
