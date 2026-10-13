@@ -328,22 +328,16 @@ class ValidateSecretVolume(Validator):
         # The 'or []' handles the case where valid_input.get('items') returns None.
         items = valid_input.get("items") or []
 
-        # Our secrets will really only ever have one key, so weirdly we only care about a single
-        # item of this array AND it must have the same name as the secret (which is the single key).
-        if len(items) > 1:
-            raise ConfigError(
-                "There is more than one item in the items array. This is unsupported as we don't support multi-key secrets."
-            )
-
+        # PaaSTA secrets are single-key Secrets whose key matches the secret name, but
+        # datastore credentials (see paasta's `datastore_credentials` soaconfig key) are
+        # projected from a single multi-key Secret with one item per credential. We
+        # therefore allow any number of items and don't require item keys to match the
+        # secret name; Kubernetes will fail the Pod if a key is missing from the Secret.
         processed_items = []
         modified = False
         default_mode = valid_input.get("default_mode", self.defaults["default_mode"])
-        secret_name = valid_input.get("secret_name")
 
         for item in items:
-            if item.key != secret_name:
-                raise ConfigError(f"Item key '{item.key}' does not match the volume's secret name '{secret_name}'")
-
             final_item = item
             if item.mode is None:
                 # Apply volume's default_mode to items without an explicit mode.

@@ -1650,6 +1650,33 @@ class TestValidSecretVolumeItem:
         actual_item_mode = validated_volume_obj.items[0].mode
         assert actual_item_mode == expected
 
+    def test_multi_key_volume_with_items_not_matching_secret_name(self):
+        # paasta's datastore_credentials projects several keys out of one Secret, so
+        # item keys neither match the secret name nor are limited to a single item
+        input_config = {
+            "secret_volume_name": "paasta-datastore-credentials-my-service-job-action",
+            "secret_name": "paasta-datastore-credentials-my-service-job-action",
+            "container_path": "/datastore",
+            "default_mode": "0444",
+            "items": [
+                {"key": "secrets-datastore-mysql-cred1", "path": "mysql/cred1/credentials"},
+                {"key": "secrets-datastore-mysql-cred2", "path": "mysql/cred2/credentials", "mode": "0400"},
+            ],
+        }
+        context = config_utils.NullConfigContext
+        validated_volume_obj = config_parse.valid_secret_volume(input_config, context)
+
+        assert len(validated_volume_obj.items) == 2
+        assert [item.key for item in validated_volume_obj.items] == [
+            "secrets-datastore-mysql-cred1",
+            "secrets-datastore-mysql-cred2",
+        ]
+        assert [item.path for item in validated_volume_obj.items] == [
+            "mysql/cred1/credentials",
+            "mysql/cred2/credentials",
+        ]
+        assert [item.mode for item in validated_volume_obj.items] == ["0444", "0400"]
+
     def test_volume_when_items_key_is_omitted(self):
         input_config = {
             "secret_volume_name": "vol_no_items",
@@ -1706,27 +1733,9 @@ class TestValidSecretVolume:
                 secret_name="secret1",
                 container_path=123,
             ),
-            dict(
-                secret_volume_name="abc",
-                secret_name="secret1",
-                container_path="/b/c",
-                items=[dict(key="secret1", path="abcd", mode="7777"), dict(key="secret1", path="abcde", mode="7777")],
-            ),
         ],
     )
     def test_invalid(self, config):
-        with pytest.raises(ConfigError):
-            config_parse.valid_secret_volume(config, NullConfigContext)
-
-    def test_wrong_item_key(self):
-        config = dict(
-            secret_volume_name="abc",
-            secret_name="secret1",
-            container_path="/b/c",
-            items=[
-                dict(key="secret2", path="abc"),
-            ],
-        )
         with pytest.raises(ConfigError):
             config_parse.valid_secret_volume(config, NullConfigContext)
 
@@ -1740,6 +1749,22 @@ class TestValidSecretVolume:
                 default_mode="0644",
                 items=[
                     dict(key="secret1", path="abc"),
+                ],
+            ),
+            # multi-key Secrets (e.g. paasta datastore_credentials) project several items
+            # whose keys don't match the Secret's name
+            dict(
+                secret_volume_name="abc",
+                secret_name="secret1",
+                container_path="/b/c",
+                items=[dict(key="secret2", path="abcd", mode="0444"), dict(key="secret3", path="abcde", mode="0444")],
+            ),
+            dict(
+                secret_volume_name="abc",
+                secret_name="secret1",
+                container_path="/b/c",
+                items=[
+                    dict(key="secret2", path="abc"),
                 ],
             ),
             dict(
