@@ -52,3 +52,6 @@ debian/tron.postrm.debhelper
 debian/tron.preinst.debhelper
 debian/tron.prerm.debhelper
 debian/tron.substvars
+
+# tronweb2
+tronweb2/
