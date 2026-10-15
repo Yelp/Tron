@@ -1937,7 +1937,7 @@ class TestValidatorKeysMatchConfigFields:
         config_class = validator_class.config_class
         fields = set(config_class.required_keys) | set(config_class.optional_keys)
         unmatched = set(validator_class.validators) - fields
-        assert unmatched == 0
+        assert not unmatched
 
 
 if __name__ == "__main__":
