@@ -1921,5 +1921,24 @@ class TestValidateStatePersistenceDefaults(TestCase):
         assert validated_config.buffer_size == 5
 
 
+def _all_validator_classes(cls=config_utils.Validator):
+    for subclass in cls.__subclasses__():
+        yield subclass
+        yield from _all_validator_classes(subclass)
+
+
+class TestValidatorKeysMatchConfigFields:
+    @pytest.mark.parametrize(
+        "validator_class",
+        [cls for cls in _all_validator_classes() if cls.config_class is not None],
+        ids=lambda cls: cls.__name__,
+    )
+    def test_validator_keys_are_config_fields(self, validator_class):
+        config_class = validator_class.config_class
+        fields = set(config_class.required_keys) | set(config_class.optional_keys)
+        unmatched = set(validator_class.validators) - fields
+        assert unmatched == 0
+
+
 if __name__ == "__main__":
     run()
