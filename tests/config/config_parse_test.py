@@ -1921,6 +1921,7 @@ class TestValidateStatePersistenceDefaults(TestCase):
         assert validated_config.buffer_size == 5
 
 
+# Recursively yield all subclasses of the given Validator class.
 def _all_validator_classes(cls=config_utils.Validator):
     for subclass in cls.__subclasses__():
         yield subclass
@@ -1930,6 +1931,8 @@ def _all_validator_classes(cls=config_utils.Validator):
 class TestValidatorKeysMatchConfigFields:
     @pytest.mark.parametrize(
         "validator_class",
+        # Skips validators with no config_class, since there are no fields to compare against.
+        # ids= names each case after its validator so failures show which one has a bad key.
         [cls for cls in _all_validator_classes() if cls.config_class is not None],
         ids=lambda cls: cls.__name__,
     )
