@@ -653,12 +653,12 @@ class ValidateAction(Validator):
         "triggered_by": build_list_of_type_validator(valid_string, allow_empty=True),
         "on_upstream_rerun": config_utils.build_real_enum_validator(schema.ActionOnRerun),
         "trigger_timeout": config_utils.valid_time_delta,
-        "node_selectors:": valid_dict,
+        "node_selectors": valid_dict,
         "node_affinities": build_list_of_type_validator(valid_node_affinity, allow_empty=True),
         "topology_spread_constraints": build_list_of_type_validator(
             valid_topology_spread_constraints, allow_empty=True
         ),
-        "labels:": valid_dict,
+        "labels": valid_dict,
         "annotations": valid_dict,
         "service_account_name": valid_string,
         "ports": build_list_of_type_validator(valid_int, allow_empty=True),
@@ -743,7 +743,7 @@ class ValidateCleanupAction(Validator):
         "triggered_by": build_list_of_type_validator(valid_string, allow_empty=True),
         "on_upstream_rerun": config_utils.build_real_enum_validator(schema.ActionOnRerun),
         "trigger_timeout": config_utils.valid_time_delta,
-        "node_selectors:": valid_dict,
+        "node_selectors": valid_dict,
         "node_affinities": build_list_of_type_validator(valid_node_affinity, allow_empty=True),
         "topology_spread_constraints": build_list_of_type_validator(
             valid_topology_spread_constraints, allow_empty=True
@@ -946,7 +946,7 @@ class ValidateMesos(Validator):
     validators = {
         "master_address": valid_master_address,
         "master_port": valid_int,
-        "secret": valid_string,
+        "secret_file": valid_string,
         "role": valid_string,
         "enabled": valid_bool,
         "default_volumes": build_list_of_type_validator(valid_volume, allow_empty=True),
