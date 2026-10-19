@@ -1,3 +1,12 @@
+tron (3.13.4) jammy; urgency=medium
+
+  * 3.13.4 tagged with 'make release'
+    Commit: Merge pull request #1126 from Yelp/dpopes/multi-key-secret-
+    volumes  Allow multi-key secret volumes with items that differ from
+    the Secret name
+
+ -- Daniel Popescu <dpopes@yelp.com>  Mon, 19 Oct 2026 12:44:02 -0700
+
 tron (3.13.3) jammy; urgency=medium
 
   * 3.13.3 tagged with 'make release'
