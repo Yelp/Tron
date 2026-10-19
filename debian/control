@@ -6,7 +6,7 @@ Build-Depends: debhelper (>= 7), python3.10-dev, libdb5.3-dev, libyaml-dev, libs
 Standards-Version: 3.8.3
 
 Package: tron
-Architecture: all
+Architecture: any
 Homepage: http://github.com/yelp/Tron
 Depends: bsdutils, python3.10, libdb5.3, libyaml-0-2, ${shlibs:Depends}, ${misc:Depends}
 Description: Tron is a job scheduling, running and monitoring package.
