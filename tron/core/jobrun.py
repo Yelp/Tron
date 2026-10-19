@@ -309,6 +309,16 @@ class JobRun(Observable, Observer, Persistable):
             return
         self.action_runs.stop()
 
+    def max_runtime_exceeded(self) -> None:
+        """Called by the max_runtime timer. Marks active action runs so their
+        eventual failure is reported as a max_runtime kill, then stops them.
+        """
+        log.warning(f"{self} exceeded max_runtime of {self.max_runtime}, stopping")
+        for action_run in self.action_runs.action_runs_with_cleanup:
+            if action_run.is_active:
+                action_run.killed_for_max_runtime = True
+        self.stop()
+
     def _start_action_runs(self):
         """Start all startable action runs, and return any that were
         successfully started.

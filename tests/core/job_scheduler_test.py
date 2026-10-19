@@ -253,7 +253,7 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
         self.job_scheduler.manual_start()
         reactor.callLater.assert_called_with(
             7 * 24 * 3600,
-            manual_run.stop,
+            manual_run.max_runtime_exceeded,
         )
         assert manual_run.max_runtime_timer == reactor.callLater.return_value
 
@@ -280,7 +280,7 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
 
         self.job_scheduler.restore_state({}, mock.Mock())
 
-        reactor.callLater.assert_any_call(mock.ANY, run.stop)
+        reactor.callLater.assert_any_call(mock.ANY, run.max_runtime_exceeded)
         assert run.max_runtime_timer == reactor.callLater.return_value
 
     @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
@@ -292,7 +292,7 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
 
         self.job_scheduler.restore_state({}, mock.Mock())
 
-        reactor.callLater.assert_any_call(mock.ANY, run.stop)
+        reactor.callLater.assert_any_call(mock.ANY, run.max_runtime_exceeded)
         assert run.max_runtime_timer == reactor.callLater.return_value
 
     @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
@@ -311,7 +311,7 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
         expected_deadline = start.timestamp() + 7 * 24 * 3600
         now = self.now.timestamp()
         expected_remaining = expected_deadline - now
-        reactor.callLater.assert_any_call(expected_remaining, run.stop)
+        reactor.callLater.assert_any_call(expected_remaining, run.max_runtime_exceeded)
 
     @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
     def test_restore_state_trigger_waiting_gets_fresh_window(self, reactor):
@@ -325,7 +325,7 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
 
         self.job_scheduler.restore_state({}, mock.Mock())
 
-        reactor.callLater.assert_any_call(7 * 24 * 3600.0, run.stop)
+        reactor.callLater.assert_any_call(7 * 24 * 3600.0, run.max_runtime_exceeded)
 
     @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
     def test_restore_state_no_max_runtime_no_timer(self, reactor):
@@ -337,7 +337,7 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
 
         self.job_scheduler.restore_state({}, mock.Mock())
 
-        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == run.stop)
+        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == run.max_runtime_exceeded)
 
     @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
     def test_restore_state_skips_scheduled_runs(self, reactor):
@@ -349,7 +349,7 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
 
         self.job_scheduler.restore_state({}, mock.Mock())
 
-        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == run.stop)
+        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == run.max_runtime_exceeded)
 
     @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
     def test_restore_state_skips_fully_finished(self, reactor):
@@ -361,7 +361,7 @@ class TestJobSchedulerMaxRuntimeTimer(testingutils.MockTimeTestCase):
 
         self.job_scheduler.restore_state({}, mock.Mock())
 
-        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == run.stop)
+        assert not any(call for call in reactor.callLater.call_args_list if call[0][1] == run.max_runtime_exceeded)
 
     @mock.patch("tron.core.job_scheduler.reactor", autospec=True)
     def test_deadline_reset_creates_timer_without_existing_deadline(self, reactor):

@@ -32,6 +32,7 @@ from tron.core.actionrun import MesosActionRun
 from tron.core.actionrun import min_filter
 from tron.core.actionrun import SSHActionRun
 from tron.serialize import filehandler
+from tron.utils import exitcode
 
 
 @pytest.fixture
@@ -1951,6 +1952,44 @@ class TestKubernetesActionRun:
         assert mock_k8s_action_run.retries_remaining == 0
         assert not mock_k8s_action_run.is_unknown
         assert mock_k8s_action_run.start.call_count == 1
+
+    @pytest.mark.parametrize("exit_status", [exitcode.EXIT_KUBERNETES_NODE_SCALEDOWN, 143, None])
+    def test_handler_exiting_after_max_runtime_kill(self, mock_k8s_action_run, exit_status):
+        mock_k8s_action_run.action_command = mock.create_autospec(
+            actioncommand.ActionCommand,
+            exit_status=exit_status,
+        )
+        mock_k8s_action_run.create_attempt()
+        mock_k8s_action_run.killed_for_max_runtime = True
+        mock_k8s_action_run.retries_remaining = -1
+        mock_k8s_action_run.machine.transition("start")
+        mock_k8s_action_run.machine.transition("started")
+        assert mock_k8s_action_run.handler(
+            mock_k8s_action_run.action_command,
+            ActionCommand.EXITING,
+        )
+        assert mock_k8s_action_run.is_failed
+        assert mock_k8s_action_run.exit_status == exitcode.EXIT_MAX_RUNTIME_EXCEEDED
+        assert mock_k8s_action_run.last_attempt.exit_status == exitcode.EXIT_MAX_RUNTIME_EXCEEDED
+
+    @pytest.mark.parametrize(
+        "killed_for_max_runtime,expected_exit_status",
+        [(True, exitcode.EXIT_MAX_RUNTIME_EXCEEDED), (False, exitcode.EXIT_STOP_KILL)],
+    )
+    def test_kill_during_retry_delay(self, mock_k8s_action_run, killed_for_max_runtime, expected_exit_status):
+        mock_k8s_action_run.create_attempt()
+        mock_k8s_action_run.machine.transition("start")
+        mock_k8s_action_run.in_delay = mock.Mock()
+        mock_k8s_action_run.killed_for_max_runtime = killed_for_max_runtime
+
+        assert mock_k8s_action_run.kill() is None
+        assert mock_k8s_action_run.is_failed
+        assert mock_k8s_action_run.exit_status == expected_exit_status
+
+    def test_create_attempt_resets_killed_for_max_runtime(self, mock_k8s_action_run):
+        mock_k8s_action_run.killed_for_max_runtime = True
+        mock_k8s_action_run.create_attempt()
+        assert not mock_k8s_action_run.killed_for_max_runtime
 
     def test_handler_exiting_failstart_failed(self, mock_k8s_action_run):
         mock_k8s_action_run.action_command = mock.create_autospec(

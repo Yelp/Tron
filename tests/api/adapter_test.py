@@ -134,6 +134,9 @@ class TestActionRunAdapter(TestCase):
             "Kubernetes task failed due to spot interruption",
         )
 
+        self.action_run.exit_status = exitcode.EXIT_MAX_RUNTIME_EXCEEDED
+        assert_equal(self.adapter.get_exit_reason(), "Killed for exceeding max_runtime")
+
         self.action_run.exit_status = 0
         assert_equal(self.adapter.get_exit_reason(), "Succeeded")
 

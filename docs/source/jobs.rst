@@ -144,7 +144,7 @@ Optional Fields
 **max_runtime** (default **None**)
     A time interval (ex: "2 hours") that limits the duration of each job run.
     If the job run is still running after this duration, all of its actions
-    are sent SIGTERM.
+    are sent SIGTERM and will not be retried.
 
 **time_zone** (default **None**)
     Time zone used for calculating when a job should run. Defaults to
