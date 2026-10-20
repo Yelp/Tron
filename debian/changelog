@@ -1,3 +1,14 @@
+tron (3.13.5) jammy; urgency=medium
+
+  * 3.13.5 tagged with 'make release'
+    Commit: Build tron as an arch-specific package (#1131)  The dh-
+    virtualenv ships compiled extensions and manylinux-vendored
+    libraries, so the deb is not architecture-independent. With
+    Architecture: all, the amd64 build would be served to every
+    architecture - which is quite obviously not going to work :p
+
+ -- Luis Perez <luisp@yelp.com>  Tue, 20 Oct 2026 10:45:16 -0700
+
 tron (3.13.4) jammy; urgency=medium
 
   * 3.13.4 tagged with 'make release'
