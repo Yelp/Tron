@@ -1,3 +1,11 @@
+tron (3.13.6) jammy; urgency=medium
+
+  * 3.13.6 tagged with 'make release'
+    Commit: Merge pull request #1121 from Yelp/make-mesos-task-id-
+    optional  Make mesos_task_id optional prior to Mesos code deletion
+
+ -- Charles Peacock Arguelles <cpeacock@yelp.com>  Tue, 20 Oct 2026 14:35:37 -0700
+
 tron (3.13.5) jammy; urgency=medium
 
   * 3.13.5 tagged with 'make release'
