@@ -99,6 +99,36 @@ class TestValidCronScheduler(TestCase):
         assert_raises(ConfigError, self.validate, "10 14 15-21 * 5")
 
 
+class TestParseGrocExpression(TestCase):
+    def validate(self, line):
+        config = schedule_parse.ConfigGenericSchedule("groc daily", line, None)
+        context = config_utils.NullConfigContext
+        return schedule_parse.parse_groc_expression(config, context)
+
+    def test_valid_expression(self):
+        config = self.validate("5th mon,fri of feb at 23:59")
+        assert_equal(config.ordinals, {5})
+        assert_equal(config.weekdays, {1, 5})
+        assert_equal(config.months, {2})
+        assert_equal(config.timestr, "23:59")
+
+    def test_missing_ordinal_rejected(self):
+        assert_raises(ConfigError, self.validate, "monday at 09:00")
+        assert_raises(ConfigError, self.validate, "09:00")
+
+    def test_ordinal_out_of_range_rejected(self):
+        assert_raises(ConfigError, self.validate, "0th mon at 09:00")
+        assert_raises(ConfigError, self.validate, "6th mon at 09:00")
+
+    def test_monthday_out_of_range_rejected(self):
+        assert_raises(ConfigError, self.validate, "0th day at 09:00")
+        assert_raises(ConfigError, self.validate, "32nd day of month at 09:00")
+
+    def test_invalid_time_rejected(self):
+        assert_raises(ConfigError, self.validate, "every day at 24:00")
+        assert_raises(ConfigError, self.validate, "every day at 12:60")
+
+
 class TestValidDailyScheduler(TestCase):
     def validate(self, config):
         context = config_utils.NullConfigContext
