@@ -1,3 +1,11 @@
+tron (3.13.7) jammy; urgency=medium
+
+  * 3.13.7 tagged with 'make release'
+    Commit: Merge pull request #1130 from Yelp/TRON-2700-max-runtime-
+    error-message  Add error message when run_time is exceeded.
+
+ -- Adela Alejandra Solorio Alcázar <asolorio@yelp.com>  Thu, 22 Oct 2026 13:30:26 -0700
+
 tron (3.13.6) jammy; urgency=medium
 
   * 3.13.6 tagged with 'make release'
