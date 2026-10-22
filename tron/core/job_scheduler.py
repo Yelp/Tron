@@ -209,7 +209,7 @@ class JobScheduler(Observer):
         job_run.cancel_max_runtime_timer()
         job_run.max_runtime_timer = reactor.callLater(
             max(0, deadline - now),
-            job_run.stop,
+            job_run.max_runtime_exceeded,
         )
 
     def _queue_or_cancel_active(self, job_run):

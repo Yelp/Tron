@@ -77,6 +77,21 @@ class TestJobRun:
         assert_equal(self.job_run.run_time, self.run_time)
         assert str(self.job_run.output_path).endswith(str(self.job_run.run_num))
 
+    def test_max_runtime_exceeded(self):
+        active_run = mock.create_autospec(actionrun.ActionRun, is_active=True, killed_for_max_runtime=False)
+        done_run = mock.create_autospec(actionrun.ActionRun, is_active=False, killed_for_max_runtime=False)
+        self.job_run.action_runs.action_runs_with_cleanup = [active_run, done_run]
+        self.job_run.max_runtime = datetime.timedelta(hours=1)
+        with mock.patch.object(self.job_run, "stop", autospec=True) as mock_stop, mock.patch(
+            "tron.core.jobrun.log", autospec=True
+        ) as mock_log:
+            self.job_run.max_runtime_exceeded()
+
+        assert active_run.killed_for_max_runtime
+        assert not done_run.killed_for_max_runtime
+        mock_stop.assert_called_once_with()
+        mock_log.warning.assert_called_once_with(f"{self.job_run} exceeded max_runtime of 1:00:00, stopping")
+
     def test_for_job(self):
         run_num = 6
         mock_node = mock.create_autospec(node.Node)

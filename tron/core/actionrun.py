@@ -423,6 +423,9 @@ class ActionRun(Observable, Persistable):
 
         self.action_command = None
         self.in_delay = None  # type: Optional[DelayedCall]
+        # Not persisted: set when the JobRun's max_runtime timer kills this run
+        # so the resulting exit is reported as EXIT_MAX_RUNTIME_EXCEEDED
+        self.killed_for_max_runtime = False
 
     @property
     def state(self) -> str:
@@ -611,6 +614,7 @@ class ActionRun(Observable, Persistable):
             start_time=current_time,
             rendered_command=rendered_command,
         )
+        self.killed_for_max_runtime = False
         self.attempts.append(new_attempt)
         return new_attempt
 
@@ -711,6 +715,12 @@ class ActionRun(Observable, Persistable):
                 f"{self} got exit code {exit_status} but already in terminal " f'state "{self.state}", not retrying',
             )
             return None
+        if self.killed_for_max_runtime:
+            log.info(
+                f"{self} was killed for exceeding max_runtime, recording exit code {exit_status} "
+                f"as {exitcode.EXIT_MAX_RUNTIME_EXCEEDED}"
+            )
+            exit_status = exitcode.EXIT_MAX_RUNTIME_EXCEEDED
         if self.last_attempt is not None:
             self.last_attempt.exit(exit_status)
         if self.retries_remaining is not None:
@@ -798,7 +808,10 @@ class ActionRun(Observable, Persistable):
         if self.in_delay is not None:
             self.in_delay.cancel()
             self.in_delay = None
-            self.fail(exitcode.EXIT_STOP_KILL)
+            if self.killed_for_max_runtime:
+                self.fail(exitcode.EXIT_MAX_RUNTIME_EXCEEDED)
+            else:
+                self.fail(exitcode.EXIT_STOP_KILL)
             return True
 
     @property
