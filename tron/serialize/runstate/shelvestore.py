@@ -8,8 +8,6 @@ from typing import Any
 
 import bsddb3  # type: ignore
 
-from tron.utils import maybe_decode
-
 log = logging.getLogger(__name__)
 
 
@@ -54,12 +52,8 @@ class ShelveKey:
     __slots__ = ["type", "iden"]
 
     def __init__(self, type, iden):
-        self.type = maybe_decode(
-            type
-        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
-        self.iden = maybe_decode(
-            iden
-        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
+        self.type = type
+        self.iden = iden
 
     @property
     def key(self):

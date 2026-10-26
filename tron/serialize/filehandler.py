@@ -11,7 +11,6 @@ from subprocess import PIPE
 from subprocess import Popen
 from threading import RLock
 
-from tron.utils import maybe_encode
 
 log = logging.getLogger(__name__)
 
@@ -68,9 +67,7 @@ class FileHandleWrapper:
                         return
 
                 self.last_accessed = time.time()
-                self._fh.write(
-                    maybe_encode(content)
-                )  # TODO: TRON-2293 maybe_encode is a relic of Python2->Python3 migration. Remove it.
+                self._fh.write(content.encode() if isinstance(content, str) else content)
                 self.manager.update(self)
 
     def __enter__(self):

@@ -8,8 +8,6 @@ from tron.config import config_parse
 from tron.config import ConfigError
 from tron.config import schema
 from tron.core.jobgraph import JobGraph
-from tron.utils import maybe_decode
-from tron.utils import maybe_encode
 
 log = logging.getLogger(__name__)
 
@@ -33,9 +31,7 @@ def read(path):
 
 def write_raw(path, content):
     with open(path, "w") as fh:
-        fh.write(
-            maybe_decode(content)
-        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
+        fh.write(content)
 
 
 def read_raw(path: str) -> str:
@@ -43,10 +39,8 @@ def read_raw(path: str) -> str:
         return fh.read()
 
 
-def hash_digest(content: str | bytes) -> str:
-    return hashlib.sha1(
-        maybe_encode(content)
-    ).hexdigest()  # TODO: TRON-2293 maybe_encode is a relic of Python2->Python3 migration. Remove it.
+def hash_digest(content: str) -> str:
+    return hashlib.sha1(content.encode()).hexdigest()
 
 
 class ManifestFile:
