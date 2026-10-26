@@ -94,7 +94,6 @@ class JobGraph:
         return ActionGraph(job_action_map, required_actions, required_triggers)
 
     def _save_action(self, action_name, job_name, config):
-        action_name = action_name
         full_name = f"{job_name}.{action_name}"
         self.action_map[full_name] = Action.from_config(config)
         self._actions_for_job[job_name].append(full_name)

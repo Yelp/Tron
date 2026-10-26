@@ -439,6 +439,6 @@ def view_with_less(content, color=True):
         cmd.append("-r")
 
     less_proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    less_proc.stdin.write(content)
+    less_proc.stdin.write(content.encode())
     less_proc.stdin.close()
     less_proc.wait()
