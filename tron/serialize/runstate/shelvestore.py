@@ -1,9 +1,6 @@
 import logging
 import operator
-import pickle
 import shelve
-import sys
-from io import BytesIO
 from typing import Any
 
 import bsddb3  # type: ignore
@@ -11,41 +8,11 @@ import bsddb3  # type: ignore
 log = logging.getLogger(__name__)
 
 
-# TODO: TRON-2293 This class does some Python 2 and Python 3 handling shenanigans. It should be cleaned up.
-class Py2Shelf(shelve.Shelf):
-    def __init__(self, filename, flag="c", protocol=2, writeback=False):
-        db = bsddb3.hashopen(filename, flag)
-        args = [self, db, protocol, writeback]
-        if sys.version_info[0] == 3:
-            args.append("utf8")
-        shelve.Shelf.__init__(*args)
+class BsdDbShelf(shelve.Shelf):
+    """A shelve.Shelf backed by a bsddb3 hash database."""
 
-    def __getitem__(self, key):
-        try:
-            value = self.cache[key]
-        except KeyError:
-            f = BytesIO(self.dict[key.encode("utf8")])
-            if sys.version_info[0] == 3:
-                value = pickle.load(f, encoding="bytes")
-            else:
-                value = pickle.load(f)
-            if self.writeback:
-                self.cache[key] = value
-        return value
-
-    def __setitem__(self, key, value):
-        if self.writeback:
-            self.cache[key] = value
-        f = BytesIO()
-        pickle.dump(obj=value, file=f, protocol=self._protocol)
-        self.dict[key.encode("utf8")] = f.getvalue()
-
-    def delete(self, key):
-        if key in self.cache:
-            del self.cache[key]
-        encoded_key = key.encode("utf8")
-        if encoded_key in self.dict:
-            del self.dict[encoded_key]
+    def __init__(self, filename, flag="c", writeback=False):
+        super().__init__(bsddb3.hashopen(filename, flag), writeback=writeback, keyencoding="utf8")
 
 
 class ShelveKey:
@@ -74,7 +41,7 @@ class ShelveStateStore:
 
     def __init__(self, filename):
         self.filename = filename
-        self.shelve = Py2Shelf(self.filename)
+        self.shelve = BsdDbShelf(self.filename)
 
     def build_key(self, type: str, iden: str) -> ShelveKey:
         return ShelveKey(type, iden)
@@ -83,7 +50,7 @@ class ShelveStateStore:
         for key, state_data in key_value_pairs:
             shelve_key = str(key.key)
             if state_data is None:
-                self.shelve.delete(shelve_key)
+                self.shelve.pop(shelve_key, None)
             else:
                 self.shelve[shelve_key] = state_data
         self.shelve.sync()
