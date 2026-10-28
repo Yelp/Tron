@@ -19,7 +19,6 @@ from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunCollection
 from tron.core.actionrun import ActionRunFactory
 from tron.serialize import filehandler
-from tron.utils import maybe_decode
 from tron.utils import next_or_none
 from tron.utils import proxy
 from tron.utils import timeutils
@@ -67,9 +66,7 @@ class JobRun(Observable, Observer, Persistable):
         max_runtime_deadline: float | None = None,
     ):
         super().__init__()
-        self.job_name = maybe_decode(
-            job_name
-        )  # TODO: TRON-2293 - maybe_decode is a relic of Python2->Python3 migration. Remove it.
+        self.job_name = job_name
         self.run_num = run_num
         self.run_time = run_time
         self.node = node

@@ -93,7 +93,7 @@ class PersistentStateManager:
     The implementation of persisting and restoring the state from disk is
     handled by a class which supports the StateStore interface:
 
-    class IStateStore(object):
+    class IStateStore:
 
         def build_key(self, type, identifier):
             return <a key>

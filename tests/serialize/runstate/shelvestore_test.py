@@ -7,7 +7,7 @@ from testifycompat import run
 from testifycompat import setup
 from testifycompat import teardown
 from testifycompat import TestCase
-from tron.serialize.runstate.shelvestore import Py2Shelf
+from tron.serialize.runstate.shelvestore import BsdDbShelf
 from tron.serialize.runstate.shelvestore import ShelveKey
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 
@@ -44,7 +44,7 @@ class TestShelveStateStore(TestCase):
         self.store.save(key_value_pairs)
         self.store.cleanup()
 
-        stored_data = Py2Shelf(self.filename)
+        stored_data = BsdDbShelf(self.filename)
         for key, value in key_value_pairs:
             assert_equal(stored_data[str(key.key)], value)
         stored_data.close()
@@ -72,7 +72,7 @@ class TestShelveStateStore(TestCase):
         self.store.save(key_value_pairs)
         self.store.cleanup()
 
-        stored_data = Py2Shelf(self.filename)
+        stored_data = BsdDbShelf(self.filename)
         assert stored_data == {
             str(ShelveKey("three", "four").key): {"this": "data2"},
         }
@@ -82,12 +82,12 @@ class TestShelveStateStore(TestCase):
         self.store.cleanup()
         keys = [ShelveKey("thing", i) for i in range(5)]
         value = {"this": "data"}
-        store = Py2Shelf(self.filename)
+        store = BsdDbShelf(self.filename)
         for key in keys:
             store[str(key.key)] = value
         store.close()
 
-        self.store.shelve = Py2Shelf(self.filename)
+        self.store.shelve = BsdDbShelf(self.filename)
         retrieved_data = self.store.restore(keys)
         for key in keys:
             assert_equal(retrieved_data[key], value)

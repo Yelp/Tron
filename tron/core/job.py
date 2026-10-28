@@ -14,7 +14,6 @@ from tron.core.jobrun import JobRunCollection
 from tron.node import NodePool
 from tron.scheduler import GeneralScheduler
 from tron.serialize import filehandler
-from tron.utils import maybe_decode
 from tron.utils.observer import Observable
 from tron.utils.observer import Observer
 from tron.utils.persistable import Persistable
@@ -94,9 +93,7 @@ class Job(Observable, Observer, Persistable):
         run_limit: int | None = None,
     ):
         super().__init__()
-        self.name = maybe_decode(
-            name
-        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
+        self.name = name
         self.monitoring = monitoring
         self.action_graph = action_graph
         self.scheduler = scheduler

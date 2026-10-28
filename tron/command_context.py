@@ -210,8 +210,5 @@ class Filler:
     def __mod__(self, _):
         return self
 
-    def __nonzero__(self):
-        return False
-
     def __bool__(self):
         return False
