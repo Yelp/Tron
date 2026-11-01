@@ -1,5 +1,6 @@
 #!/usr/bin/env python3.10
 import argparse
+import datetime
 import logging
 import os
 import sys
@@ -65,13 +66,32 @@ def parse_cli():
 
 
 def read_config(args):
-    return manager.ConfigManager(args.config_path).load().get_master().state_persistence
+    return manager.ConfigManager(args.config_path).load()
+
+
+def get_dst_allowance(last_run_time, now, tz):
+    """
+    Extra seconds to add to the staleness threshold when a DST fall-back
+    transition occurred between last_run_time and now.
+
+    Tron schedules jobs in wall-clock time and skips the repeated hour on
+    fall-back, so the datastore can legitimately lag the schedule interval by
+    up to an hour. Spring-forward compresses wall-clock time instead and leaves
+    no gap, so it needs no allowance — and extending the threshold there would
+    mask a real stall for up to an hour that morning. Returns 0 when no
+    fall-back occurred. None uses the host local zone at each timestamp.
+    """
+    offset_before = last_run_time.astimezone(tz).utcoffset()
+    offset_after = now.astimezone(tz).utcoffset()
+    return max(0, (offset_before - offset_after).total_seconds())
 
 
 def main():
     # Fetch configs. You can find the arguments in puppet.
     args = parse_cli()
-    persistence_config = read_config(args)
+    config = read_config(args)
+    master_config = config.get_master()
+    persistence_config = master_config.state_persistence
     store_type = schema.StatePersistenceTypes(persistence_config.store_type)
     job_name = args.job_name
 
@@ -93,9 +113,16 @@ def main():
             )
             sys.exit(1)
 
-        # Alert if timestamp is not updated after staleness_threshold
+        # Alert if timestamp is not updated after staleness_threshold, extended
+        # across DST fall-back (tron skips the repeated hour of slots then).
+        time_zone = config.get_jobs()[job_name].time_zone or master_config.time_zone
+        threshold = args.staleness_threshold + get_dst_allowance(
+            last_run_time,
+            datetime.datetime.now(pytz.utc),
+            time_zone,
+        )
         stateless_for_secs = time.time() - last_run_time.astimezone(pytz.utc).timestamp()
-        if stateless_for_secs > args.staleness_threshold:
+        if stateless_for_secs > threshold:
             logging.error(f"CRIT: {job_name} has not been updated in DynamoDB for {stateless_for_secs} seconds")
             sys.exit(2)
         else:
