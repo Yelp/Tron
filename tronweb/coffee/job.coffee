@@ -63,12 +63,32 @@ class window.JobRun extends Backbone.Model
         resp
 
 
+# Owning team, from the job's monitoring config
+window.jobTeam = (job) ->
+    job.get('monitoring')?.team or ''
+
+window.uniqueTeams = (jobs) ->
+    _.uniq(_.compact(jobTeam(job) for job in jobs)).sort()
+
+window.matchTeam = buildMatcher(jobTeam, (team, query) -> team == query)
+
+# Most recent run that has started. Runs are newest first and include the
+# upcoming scheduled run, so skip anything that hasn't started yet.
+module.lastStartedRun = (runs) ->
+    _.find(runs or [], (run) -> run.state not in ['scheduled', 'queued', 'waiting'])
+
+window.lastRunState = (job) ->
+    module.lastStartedRun(job.get('runs'))?.state or ''
+
+
 class window.JobListFilterModel extends FilterModel
 
     filterTypes:
         name:       buildMatcher(fieldGetter('name'), matchAny)
         status:     buildMatcher(fieldGetter('status'), _.str.startsWith)
         node_pool:  buildMatcher(nestedName('node_pool'), _.str.startsWith)
+        team:       matchTeam
+        last_run:   buildMatcher(lastRunState, _.str.startsWith)
 
 
 class window.JobListView extends Backbone.View
@@ -98,6 +118,8 @@ class window.JobListView extends Backbone.View
                     <th>Status</th>
                     <th>Schedule</th>
                     <th>Node Pool</th>
+                    <th>Team</th>
+                    <th>Last Run</th>
                     <th>Last Success</th>
                     <th>Next Run</th>
                 </tr>
@@ -121,6 +143,7 @@ class window.JobListView extends Backbone.View
         @$('tbody').html(entry(model) for model in models)
 
     renderFilter: =>
+        @filterView.teams = uniqueTeams(@model.models)
         @$('#filter-bar').html(@filterView.render().el)
 
 
@@ -138,12 +161,17 @@ class JobListEntryView extends ClickableListEntry
         <td><%= formatState(status) %></td>
         <td><%= formatScheduler(scheduler) %></td>
         <td><%= displayNodePool(node_pool) %></td>
+        <td><%- team %></td>
+        <td><%= last_run ? formatState(last_run) : '' %></td>
         <td><%= dateFromNow(last_success, 'never') %></td>
         <td><%= dateFromNow(next_run, 'none') %></td>
         """
 
     render: ->
-        @$el.html @template(@model.attributes)
+        context = _.extend {}, @model.attributes,
+            team: jobTeam(@model)
+            last_run: lastRunState(@model)
+        @$el.html @template(context)
         makeTooltips(@$el)
         @
 
