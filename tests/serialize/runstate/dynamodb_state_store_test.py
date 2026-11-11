@@ -5,7 +5,7 @@ from unittest import mock
 import boto3
 import pytest
 from boto3.dynamodb.types import Binary
-from moto import mock_dynamodb
+from moto import mock_aws
 from moto.dynamodb.responses import dynamo_json_dump
 
 from tron.serialize.runstate.dynamodb_state_store import DynamoDBStateStore
@@ -64,7 +64,7 @@ def store():
         "moto.dynamodb.responses.DynamoHandler.transact_write_items",
         new=mock_transact_write_items,
         create=True,
-    ), mock_dynamodb():
+    ), mock_aws():
         dynamodb = boto3.resource("dynamodb", region_name="us-west-2")
         table_name = "tmp"
         store = DynamoDBStateStore(table_name, "us-west-2", stopping=True)

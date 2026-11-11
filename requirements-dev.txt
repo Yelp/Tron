@@ -1,6 +1,6 @@
 asynctest==0.12.0
 boto3-stubs==1.35.63
-botocore-stubs==1.38.19
+botocore-stubs==1.35.99
 cfgv==2.0.1
 debugpy==1.8.1
 distlib==0.3.6
@@ -9,7 +9,7 @@ flake8==5.0.4
 identify==2.5.5
 iniconfig==1.1.1
 mccabe==0.7.0
-moto==4.1.0
+moto==5.2.5
 mypy==1.9.0
 mypy-extensions==1.0.0
 nodeenv==1.8.0
@@ -24,7 +24,7 @@ pyparsing==2.4.2
 pytest==7.0.1
 pytest-asyncio==0.14.0
 requirements-tools==2.1.0
-responses==0.13.0
+responses==0.23.1
 toml==0.10.2
 tomli==2.0.1
 types-awscrt==0.27.2
