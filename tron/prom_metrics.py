@@ -137,6 +137,22 @@ tron_dynamodb_save_errors_counter = Counter(
     "Total DynamoDB save errors",
 )
 
+tron_eventbus_s3_queue_depth_gauge = Gauge(
+    "tron_eventbus_s3_queue_depth",
+    "Number of emitted triggers waiting to be mirrored to S3",
+)
+
+tron_eventbus_s3_write_errors_counter = Counter(
+    "tron_eventbus_s3_write_errors_total",
+    "Total failed attempts to mirror an emitted trigger to S3",
+)
+
+tron_eventbus_s3_write_seconds_histogram = Histogram(
+    "tron_eventbus_s3_write_seconds",
+    "Distribution of time taken by a single attempt to mirror a trigger to S3",
+    buckets=[0.01, 0.025, 0.05, 0.1, 0.25, 0.5, 1.0, 2.5, 5.0, 10.0, float("inf")],
+)
+
 
 @contextmanager
 def timer(

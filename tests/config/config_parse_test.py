@@ -511,6 +511,18 @@ class ConfigTestCase(TestCase):
     def test_empty_node_test(self):
         valid_config(dict(nodes=None))
 
+    def test_eventbus_s3_defaults_to_none(self):
+        assert valid_config(self.config).eventbus_s3 is None
+
+    def test_eventbus_s3_parsed_from_master_config(self):
+        eventbus_s3 = {
+            "bucket": "tron-events-prod",
+            "region": "us-west-2",
+            "cluster_name": "tron-pnw-prod",
+        }
+        test_config = valid_config(dict(self.config, eventbus_s3=eventbus_s3))
+        assert test_config.eventbus_s3 == schema.ConfigEventBusS3(**eventbus_s3)
+
 
 class TestNamedConfig(TestCase):
     config = ConfigTestCase.JOBS_CONFIG
@@ -1865,6 +1877,61 @@ class TestValidKubeconfigPaths:
         k8s_options["non_retryable_exit_codes"] = [-12, 1]
 
         assert config_parse.valid_kubernetes_options.validate(k8s_options, self.context)
+
+
+class TestValidEventBusS3:
+    @setup
+    def setup_context(self):
+        self.context = config_utils.NullConfigContext
+
+    def test_absent_is_none(self):
+        assert config_parse.valid_eventbus_s3.validate(None, self.context) is None
+
+    def test_valid(self):
+        config = config_parse.valid_eventbus_s3.validate(
+            {
+                "bucket": "tron-events-prod",
+                "region": "us-west-2",
+                "cluster_name": "tron-pnw-prod",
+            },
+            self.context,
+        )
+        assert config == schema.ConfigEventBusS3(
+            bucket="tron-events-prod",
+            region="us-west-2",
+            cluster_name="tron-pnw-prod",
+        )
+
+    def test_missing_required_key(self):
+        with pytest.raises(ConfigError):
+            config_parse.valid_eventbus_s3.validate(
+                {"bucket": "tron-events-prod", "region": "us-west-2"},
+                self.context,
+            )
+
+    def test_unknown_key(self):
+        with pytest.raises(ConfigError):
+            config_parse.valid_eventbus_s3.validate(
+                {
+                    "bucket": "tron-events-prod",
+                    "region": "us-west-2",
+                    "cluster_name": "tron-pnw-prod",
+                    "mode": "shadow",
+                },
+                self.context,
+            )
+
+    @pytest.mark.parametrize("bucket", [["a-list"], "", None])
+    def test_invalid_bucket(self, bucket):
+        with pytest.raises(ConfigError):
+            config_parse.valid_eventbus_s3.validate(
+                {
+                    "bucket": bucket,
+                    "region": "us-west-2",
+                    "cluster_name": "tron-pnw-prod",
+                },
+                self.context,
+            )
 
 
 class TestValidateStatePersistenceDefaults(TestCase):

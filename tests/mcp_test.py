@@ -14,6 +14,7 @@ from tests.testingutils import autospec_method
 from tron import mcp
 from tron.config import config_parse
 from tron.config import manager
+from tron.config import schema
 from tron.core.job_collection import JobCollection
 from tron.serialize.runstate import statemanager
 
@@ -81,6 +82,8 @@ class TestMasterControlProgram:
     def test_apply_config(self, mock_repo, mock_cluster_repo, mock_k8s_cluster_repo, reconfigure, namespace):
         config_container = mock.create_autospec(config_parse.ConfigContainer)
         master_config = config_container.get_master.return_value
+        master_config.eventbus_enabled = None
+        master_config.eventbus_s3 = None
         autospec_method(self.mcp.jobs.update_from_config)
         autospec_method(self.mcp.build_job_scheduler_factory)
         self.mcp.apply_config(config_container, reconfigure, namespace)
@@ -113,6 +116,34 @@ class TestMasterControlProgram:
             self.mcp.jobs.update_from_config.return_value,
             mock.ANY,
         )
+
+    def test_configure_eventbus_creates_bus_and_s3_writer(self):
+        s3_config = schema.ConfigEventBusS3(bucket="bucket", region="us-west-2", cluster_name="cluster")
+
+        with mock.patch("tron.mcp.EventBus", autospec=True) as mock_event_bus:
+            mock_event_bus.instance = None
+            self.mcp.configure_eventbus(True, s3_config)
+
+        mock_event_bus.create.assert_called_once_with(f"{self.working_dir}/_events")
+        mock_event_bus.start.assert_called_once_with()
+        mock_event_bus.create.return_value.configure_s3_writer.assert_called_once_with(s3_config)
+
+    def test_configure_eventbus_updates_s3_writer_on_existing_bus(self):
+        s3_config = schema.ConfigEventBusS3(bucket="bucket", region="us-west-2", cluster_name="cluster")
+        existing_bus = mock.Mock()
+
+        with mock.patch("tron.mcp.EventBus", autospec=True) as mock_event_bus:
+            mock_event_bus.instance = existing_bus
+            self.mcp.configure_eventbus(True, s3_config)
+
+        mock_event_bus.create.assert_not_called()
+        existing_bus.configure_s3_writer.assert_called_once_with(s3_config)
+
+    def test_configure_eventbus_disabled(self):
+        with mock.patch("tron.mcp.EventBus", autospec=True) as mock_event_bus:
+            self.mcp.configure_eventbus(False, None)
+
+        mock_event_bus.shutdown.assert_called_once_with()
 
     def test_update_state_watcher_config_changed(self):
         self.mcp.state_watcher.update_from_config.return_value = True

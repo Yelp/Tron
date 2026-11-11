@@ -8,6 +8,9 @@ from collections import deque
 
 from twisted.internet import reactor
 
+from tron.config.schema import ConfigEventBusS3
+from tron.eventbus_s3 import S3EventWriter
+
 log = logging.getLogger(__name__)
 
 
@@ -90,6 +93,7 @@ class EventBus:
         self.publish_queue = deque()
         self.subscribe_queue = deque()
         self.clear_subscription_queue = deque()
+        self.s3_writer: S3EventWriter | None = None
         self.log_dir = log_dir
         self.log_current = os.path.join(self.log_dir, "current")
         self.log_updates = 0
@@ -107,7 +111,38 @@ class EventBus:
         if self.enabled:
             self.enabled = False
             self.sync_save_log("shutdown")
+            # Drain the S3 mirror so a clean restart doesn't strand the last
+            # few writes. Anything still queued after the timeout is dropped.
+            if self.s3_writer is not None:
+                self.s3_writer.stop()
+                self.s3_writer = None
             log.info("shutdown completed")
+
+    def configure_s3_writer(self, s3_config: ConfigEventBusS3 | None) -> None:
+        """Attach, replace, or remove the S3 mirror to match config.
+
+        Called on every config apply (including reconfigures), so this is a
+        no-op unless the eventbus_s3 block actually changed.
+        """
+        config_key = None
+        if s3_config is not None:
+            config_key = (s3_config.bucket, s3_config.region, s3_config.cluster_name)
+
+        if self.s3_writer is not None and self.s3_writer.config_key == config_key:
+            return
+
+        if self.s3_writer is not None:
+            self.s3_writer.stop()
+            self.s3_writer = None
+
+        if config_key is not None:
+            bucket, region, cluster_name = config_key
+            self.s3_writer = S3EventWriter(
+                bucket=bucket,
+                region=region,
+                cluster_name=cluster_name,
+            ).start()
+            log.info(f"mirroring emitted triggers to s3://{bucket}/v1/{cluster_name}/")
 
     def _publish(self, event):
         if isinstance(event, str):
@@ -121,6 +156,10 @@ class EventBus:
             return False
 
     def _discard(self, event: str) -> bool:
+        # NOTE: the S3 mirror is write-only and assumes triggers are never
+        # discarded. Discarding here leaves the mirrored object in place, so
+        # consumers keep seeing a trigger that Tron no longer has. Adding a
+        # delete from the writer would fix that; it is deliberately not done.
         if not self._has_event(event):
             return False
         del self.event_log[event]
@@ -227,6 +266,15 @@ class EventBus:
         event = pickle.loads(pickle.dumps(event))
         event_id = event["id"]
         del event["id"]
+
+        # Mirror every emission, before the duplicate check: the in-memory log
+        # holds historical triggers that were never written to S3, so a
+        # re-emission of one of those has to reach S3 even though the local
+        # copy is a duplicate. The writer's conditional put makes real
+        # duplicates a no-op.
+        if self.s3_writer is not None:
+            self.s3_writer.enqueue(event_id, event)
+
         if event_id in self.event_log:
             if self.event_log[event_id] != event:
                 log.info(f"replacing event: {event_id}")

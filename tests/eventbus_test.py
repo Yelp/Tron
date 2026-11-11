@@ -7,6 +7,7 @@ from testifycompat import assert_equal
 from testifycompat import setup
 from testifycompat import teardown
 from testifycompat import TestCase
+from tron.config.schema import ConfigEventBusS3
 from tron.eventbus import EventBus
 
 
@@ -195,6 +196,87 @@ class EventBusTestCase(TestCase):
         self.eventbus.sync_publish(evt)
         assert self.eventbus.log_updates == 0
         assert reactor.callLater.call_count == 0
+
+    @mock.patch("tron.eventbus.reactor", autospec=True)
+    def test_sync_publish_mirrors_to_s3(self, reactor):
+        reactor.callLater = mock.Mock()
+        self.eventbus.s3_writer = mock.Mock()
+        self.eventbus.event_log = {}
+        self.eventbus.sync_publish({"id": "foo", "bar": "baz"})
+        self.eventbus.s3_writer.enqueue.assert_called_once_with("foo", {"bar": "baz"})
+
+    @mock.patch("tron.eventbus.reactor", autospec=True)
+    def test_sync_publish_mirrors_duplicate_to_s3(self, reactor):
+        """A re-emission of an event Tron already knows about still has to
+        reach S3: it may predate the mirror."""
+        reactor.callLater = mock.Mock()
+        self.eventbus.s3_writer = mock.Mock()
+        self.eventbus.event_log = {"foo": {"bar": "baz"}}
+        self.eventbus.sync_publish({"id": "foo", "bar": "baz"})
+        self.eventbus.s3_writer.enqueue.assert_called_once_with("foo", {"bar": "baz"})
+        assert reactor.callLater.call_count == 0
+
+    @mock.patch("tron.eventbus.reactor", autospec=True)
+    def test_sync_publish_without_s3_writer(self, reactor):
+        reactor.callLater = mock.Mock()
+        self.eventbus.event_log = {}
+        self.eventbus.sync_publish({"id": "foo", "bar": "baz"})
+        assert self.eventbus.log_updates == 1
+
+    @mock.patch("tron.eventbus.S3EventWriter", autospec=True)
+    def test_configure_s3_writer_add(self, mock_writer_class):
+        config = ConfigEventBusS3(bucket="bucket", region="us-west-2", cluster_name="cluster")
+        self.eventbus.configure_s3_writer(config)
+        mock_writer_class.assert_called_once_with(
+            bucket="bucket",
+            region="us-west-2",
+            cluster_name="cluster",
+        )
+        mock_writer_class.return_value.start.assert_called_once_with()
+        assert self.eventbus.s3_writer == mock_writer_class.return_value.start.return_value
+
+    def test_configure_s3_writer_unchanged(self):
+        writer = mock.Mock()
+        writer.config_key = ("bucket", "us-west-2", "cluster")
+        self.eventbus.s3_writer = writer
+
+        self.eventbus.configure_s3_writer(ConfigEventBusS3(bucket="bucket", region="us-west-2", cluster_name="cluster"))
+
+        assert writer.stop.call_count == 0
+        assert self.eventbus.s3_writer is writer
+
+    def test_configure_s3_writer_replaces(self):
+        old_writer = mock.Mock()
+        old_writer.config_key = ("old-bucket", "us-west-2", "cluster")
+        self.eventbus.s3_writer = old_writer
+
+        with mock.patch("tron.eventbus.S3EventWriter", autospec=True) as mock_writer_class:
+            self.eventbus.configure_s3_writer(
+                ConfigEventBusS3(bucket="new-bucket", region="us-west-2", cluster_name="cluster")
+            )
+
+        old_writer.stop.assert_called_once_with()
+        assert self.eventbus.s3_writer == mock_writer_class.return_value.start.return_value
+
+    def test_configure_s3_writer_removed(self):
+        writer = mock.Mock()
+        writer.config_key = ("bucket", "us-west-2", "cluster")
+        self.eventbus.s3_writer = writer
+
+        self.eventbus.configure_s3_writer(None)
+
+        writer.stop.assert_called_once_with()
+        assert self.eventbus.s3_writer is None
+
+    def test_shutdown_stops_s3_writer(self):
+        writer = mock.Mock()
+        self.eventbus.s3_writer = writer
+        self.eventbus.sync_save_log = mock.Mock()
+
+        self.eventbus.shutdown()
+
+        writer.stop.assert_called_once_with()
+        assert self.eventbus.s3_writer is None
 
     def test_sync_subscribe(self):
         self.eventbus.event_subscribers = defaultdict(list)

@@ -6,6 +6,7 @@ from tron import command_context
 from tron import node
 from tron import prom_metrics
 from tron.config import manager
+from tron.config.schema import ConfigEventBusS3
 from tron.config.schema import MASTER_NAMESPACE
 from tron.core.job import Job
 from tron.core.job_collection import JobCollection
@@ -129,7 +130,7 @@ class MasterControlProgram:
             ),
             (MesosClusterRepository.configure, "mesos_options"),
             (KubernetesClusterRepository.configure, "k8s_options"),
-            (self.configure_eventbus, "eventbus_enabled"),
+            (self.configure_eventbus, "eventbus_enabled", "eventbus_s3"),
         ]
         master_config = config_container.get_master()
         apply_master_configuration(master_config_directives, master_config)
@@ -187,13 +188,17 @@ class MasterControlProgram:
     def set_context_base(self, command_context):
         self.context.base = command_context
 
-    def configure_eventbus(self, enabled):
-        if enabled:
-            if not EventBus.instance:
-                EventBus.create(f"{self.working_dir}/_events")
-                EventBus.start()
-        else:
+    def configure_eventbus(self, enabled: bool | None, eventbus_s3: ConfigEventBusS3 | None = None) -> None:
+        if not enabled:
             EventBus.shutdown()
+            return
+
+        event_bus = EventBus.instance
+        if event_bus is None:
+            event_bus = EventBus.create(f"{self.working_dir}/_events")
+            EventBus.start()
+
+        event_bus.configure_s3_writer(eventbus_s3)
 
     def get_job_collection(self):
         return self.jobs

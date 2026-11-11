@@ -60,6 +60,7 @@ TronConfig = config_object_factory(
         "mesos_options",  # ConfigMesos
         "k8s_options",  # ConfigKubernetes
         "eventbus_enabled",  # bool or None
+        "eventbus_s3",  # ConfigEventBusS3 or None
         "read_json",  # bool, deprecated — accepted but ignored
     ],
 )
@@ -138,6 +139,17 @@ ConfigKubernetes = config_object_factory(
         "non_retryable_exit_codes",
         "default_volumes",
         "watcher_kubeconfig_paths",
+    ],
+)
+
+# Presence of this block enables mirroring emitted triggers to S3; there is no
+# separate enabled flag.
+ConfigEventBusS3 = config_object_factory(
+    name="ConfigEventBusS3",
+    required=[
+        "bucket",  # str
+        "region",  # str
+        "cluster_name",  # str
     ],
 )
 

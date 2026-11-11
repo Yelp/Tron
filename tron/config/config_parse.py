@@ -40,6 +40,7 @@ from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigCleanupAction
 from tron.config.schema import ConfigConstraint
+from tron.config.schema import ConfigEventBusS3
 from tron.config.schema import ConfigFieldSelectorSource
 from tron.config.schema import ConfigJob
 from tron.config.schema import ConfigKubernetes
@@ -159,6 +160,13 @@ def valid_node_name(value, config_context):
     if not config_context.partial and value not in config_context.nodes:
         msg = "Unknown node name %s at %s"
         raise ConfigError(msg % (value, config_context.path))
+    return value
+
+
+def valid_nonempty_string(value, config_context):
+    valid_string(value, config_context)
+    if not value.strip():
+        raise ConfigError(f"Value at {config_context.path} must not be empty")
     return value
 
 
@@ -974,6 +982,26 @@ class ValidateKubernetes(Validator):
 valid_kubernetes_options = ValidateKubernetes()
 
 
+class ValidateEventBusS3(Validator):
+    """Optional write-only mirror of emitted triggers into S3.
+
+    The block is off unless present in the MASTER namespace; removing it is
+    the whole rollback.
+    """
+
+    config_class = ConfigEventBusS3
+    optional = True
+
+    validators = {
+        "bucket": valid_nonempty_string,
+        "region": valid_nonempty_string,
+        "cluster_name": valid_nonempty_string,
+    }
+
+
+valid_eventbus_s3 = ValidateEventBusS3()
+
+
 def validate_jobs(config, config_context):
     """Validate jobs"""
     valid_jobs = build_dict_name_validator(valid_job, allow_empty=True)
@@ -1020,6 +1048,7 @@ class ValidateConfig(Validator):
         "mesos_options": ConfigMesos(**ValidateMesos.defaults),
         "k8s_options": ConfigKubernetes(**ValidateKubernetes.defaults),
         "eventbus_enabled": None,
+        "eventbus_s3": None,
         "read_json": False,
     }
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
@@ -1037,6 +1066,7 @@ class ValidateConfig(Validator):
         "mesos_options": valid_mesos_options,
         "k8s_options": valid_kubernetes_options,
         "eventbus_enabled": valid_bool,
+        "eventbus_s3": valid_eventbus_s3,
         "read_json": valid_bool,
     }
     optional = False
