@@ -34,6 +34,7 @@ matchType = (item, query) ->
 class window.DashboardFilterModel extends FilterModel
     filterTypes:
         name:       buildMatcher(fieldGetter('name'), matchAny)
+        team:       matchTeam
         type:       buildMatcher(_.identity, matchType)
 
 
@@ -91,6 +92,7 @@ class window.DashboardView extends Backbone.View
 
     render: ->
         @$el.html @template()
+        @filterView.teams = uniqueTeams(@model.models())
         @$('#filter-bar').html(@filterView.render().el)
         @renderBoxes()
         @renderRefresh()

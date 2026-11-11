@@ -105,6 +105,8 @@ class window.FilterView extends Backbone.View
         node_pool:  "icon-connected"
         state:      "icon-switchon"
         status:     "icon-switchon"
+        team:       "icon-groups-friends"
+        last_run:   "icon-time"
 
     filterTemplate: _.template """
         <div class="input-prepend">
@@ -129,6 +131,37 @@ class window.FilterView extends Backbone.View
           </div>
         </form>
         """
+
+    # Team names for the team dropdown, set by the owning view before render
+    teams: []
+
+    teamTemplate: _.template """
+        <div class="input-prepend">
+          <i class="<%= icon %> icon-grey"></i>
+          <div class="filter-select">
+            <select id="filter-<%= filterName %>"
+                 class="input-medium"
+                 data-filter-name="<%= filterName %>Filter">
+              <option value="">All teams</option>
+              <% _.each(teams, function(team) { %>
+                <option <%= isSelected(defaultValue, team) %>
+                    value="<%- team %>"><%- team %></option>
+              <% }) %>
+            </select>
+          </div>
+          <a href="#" class="clear-filter" title="Clear"
+             <% if (!defaultValue) { %>style="display: none"<% } %>>&times;</a>
+        </div>
+    """
+
+    # Called by getFilterTemplate, which looks up create<filterName> for any
+    # filter that needs a custom template (like DashboardFilterView.createtype)
+    createteam: (context) =>
+        teams = @teams
+        # Keep a team from the URL selectable even if no loaded job has it
+        if context.defaultValue and context.defaultValue not in teams
+            teams = teams.concat([context.defaultValue])
+        @teamTemplate(_.extend({teams: teams}, context))
 
     getFilterTemplate: (filterName) =>
         createName = "create#{filterName}"
@@ -156,6 +189,7 @@ class window.FilterView extends Backbone.View
         "submit":        "submit"
         "change input":  "filterDone"
         "change select": "selectFilterChange"
+        "click .clear-filter": "clearFilter"
 
     getFilterFromEvent: (event) =>
         filterEle = $(event.target)
@@ -174,6 +208,12 @@ class window.FilterView extends Backbone.View
     selectFilterChange: (event) =>
         @filterChange(event)
         @filterDone(event)
+        select = $(event.target)
+        select.closest('.input-prepend').find('.clear-filter').toggle(!!select.val())
+
+    clearFilter: (event) =>
+        event.preventDefault()
+        $(event.currentTarget).closest('.input-prepend').find('select').val('').trigger('change')
 
     submit: (event) ->
         event.preventDefault()
