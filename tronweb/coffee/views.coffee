@@ -154,6 +154,8 @@ class window.FilterView extends Backbone.View
         </div>
     """
 
+    # Called by getFilterTemplate, which looks up create<filterName> for any
+    # filter that needs a custom template (like DashboardFilterView.createtype)
     createteam: (context) =>
         teams = @teams
         # Keep a team from the URL selectable even if no loaded job has it
