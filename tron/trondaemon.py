@@ -57,8 +57,8 @@ def setup_logging(options):
 
 
 @contextlib.contextmanager
-def no_daemon_context(workdir, lockfile=None, signal_map={}):
-    with chdir(workdir), flock(lockfile), signals(signal_map):
+def no_daemon_context(workdir, lockfile=None, signal_map=None):
+    with chdir(workdir), flock(lockfile), signals(signal_map or {}):
         yield
 
 

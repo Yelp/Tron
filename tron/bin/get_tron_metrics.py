@@ -44,7 +44,7 @@ def check_bin_exists(bin):
     )
 
 
-def send_data_metric(name, metric_type, value, dimensions={}, dry_run=False):
+def send_data_metric(name, metric_type, value, dimensions=None, dry_run=False):
     """
     Sends a single data point to meteorite via bash command
 
@@ -55,6 +55,7 @@ def send_data_metric(name, metric_type, value, dimensions={}, dry_run=False):
     :param dimensions: (dict) Metric dimensions as key-value pairs
     :param dry_run: (bool) Whether or not to send metrics to meteorite
     """
+    dimensions = dimensions or {}
     if dry_run:
         metric_args = dict(
             name=name,
