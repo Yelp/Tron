@@ -25,7 +25,6 @@ from tron.config.static_config import get_config_watcher
 from tron.config.static_config import NAMESPACE
 from tron.metrics import meter
 from tron.metrics import view_all_metrics
-from tron.utils import maybe_decode
 
 log = logging.getLogger(__name__)
 
@@ -195,9 +194,7 @@ class JobRunResource(AuthenticatedResource):
         if not action_name:
             return self
 
-        action_name = maybe_decode(
-            action_name
-        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
+        action_name = action_name.decode()
         if action_name in self.job_run.action_runs:
             action_run = self.job_run.action_runs[action_name]
             return ActionRunResource(action_run, self.job_run, self.job_scheduler)
@@ -245,9 +242,7 @@ class JobResource(AuthenticatedResource):
         if not run_id:
             return self
 
-        run_id = maybe_decode(
-            run_id
-        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
+        run_id = run_id.decode()
         run = self.get_run_from_identifier(run_id)
         if run:
             return JobRunResource(run, self.job_scheduler)
@@ -313,7 +308,7 @@ class JobCollectionResource(AuthenticatedResource):
         if not name:
             return self
 
-        name = maybe_decode(name)  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
+        name = name.decode()
         return resource_from_collection(self.job_collection, name, JobResource)
 
     def get_data(

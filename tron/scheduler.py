@@ -3,7 +3,7 @@ Tron schedulers
 
  A scheduler has a simple interface.
 
- class Scheduler(object):
+ class Scheduler:
 
     schedule_on_complete = <bool>
 

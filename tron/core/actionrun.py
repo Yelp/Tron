@@ -40,7 +40,6 @@ from tron.mesos import MesosClusterRepository
 from tron.mesos import MesosTask
 from tron.serialize import filehandler
 from tron.utils import exitcode
-from tron.utils import maybe_decode
 from tron.utils import proxy
 from tron.utils import timeutils
 from tron.utils.observer import Observable
@@ -70,9 +69,7 @@ class ActionRunFactory:
     def build_action_run_collection(cls, job_run, action_runner):
         """Create an ActionRunCollection from an ActionGraph and JobRun."""
         action_run_map = {
-            maybe_decode(
-                name
-            ): cls.build_run_for_action(  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
+            name: cls.build_run_for_action(
                 job_run,
                 action_inst,
                 action_runner,
@@ -98,8 +95,7 @@ class ActionRunFactory:
                 ),
             )
 
-        # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
-        action_run_map = {maybe_decode(action_run.action_name): action_run for action_run in action_runs}
+        action_run_map = {action_run.action_name: action_run for action_run in action_runs}
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
     @classmethod
@@ -388,12 +384,8 @@ class ActionRun(Observable, Persistable):
         original_command: str | None = None,
     ):
         super().__init__()
-        self.job_run_id = maybe_decode(
-            job_run_id
-        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
-        self.action_name = maybe_decode(
-            name
-        )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
+        self.job_run_id = job_run_id
+        self.action_name = name
         self.node = node
         self.start_time = start_time
         self.end_time = end_time
@@ -470,9 +462,7 @@ class ActionRun(Observable, Persistable):
         if "attempts" in state_data:
             attempts = [ActionRunAttempt.from_state(a) for a in state_data["attempts"]]
         else:
-            rendered_command = maybe_decode(
-                state_data.get("rendered_command")
-            )  # TODO: TRON-2293 maybe_decode is a relic of Python2->Python3 migration. Remove it.
+            rendered_command = state_data.get("rendered_command")
             exit_statuses = state_data.get("exit_statuses", [])
             # If the action has started, add an attempt for the final try
             if state_data.get("start_time"):

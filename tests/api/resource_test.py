@@ -292,7 +292,7 @@ class TestJobResource(WWWTestCase):
         action_runs = [mock.Mock(), mock.Mock()]
         self.job.action_graph.names.return_value = [action_name]
         self.job.runs.get_action_runs.return_value = action_runs
-        resource = self.resource.getChild(action_name, None)
+        resource = self.resource.getChild(action_name.encode(), None)
         assert resource.__class__ == www.ActionRunHistoryResource
         assert resource.action_runs == action_runs
 

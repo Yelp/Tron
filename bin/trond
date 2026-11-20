@@ -140,7 +140,7 @@ def parse_cli():
 
 def create_default_config(config_path):
     """Create a default empty configuration for first time installs"""
-    default = pkg_resources.resource_string(tron.__name__, DEFAULT_CONF)
+    default = pkg_resources.resource_string(tron.__name__, DEFAULT_CONF).decode()
     manager.create_new_config(config_path, default)
 
 

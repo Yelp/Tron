@@ -10,7 +10,6 @@ from operator import itemgetter
 from tron.core import actionrun
 from tron.core import job
 from tron.utils import exitcode
-from tron.utils import maybe_encode
 
 
 class Color:
@@ -440,8 +439,6 @@ def view_with_less(content, color=True):
         cmd.append("-r")
 
     less_proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    less_proc.stdin.write(
-        maybe_encode(content)
-    )  # TODO: TRON-2293 maybe_encode is a relic of Python2->Python3 migration. Remove it.
+    less_proc.stdin.write(content.encode())
     less_proc.stdin.close()
     less_proc.wait()

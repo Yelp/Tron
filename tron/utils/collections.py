@@ -8,7 +8,7 @@ class MappingCollection(dict):
     """Dictionary like object for managing collections of items. Item is
     expected to support the following interface, and should be hashable.
 
-    class Item(object):
+    class Item:
 
         def get_name(self): ...
 
