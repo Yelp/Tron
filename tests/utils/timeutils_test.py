@@ -1,5 +1,6 @@
 import datetime
 
+import pytest
 import pytz
 
 from testifycompat import assert_equal
@@ -368,3 +369,11 @@ class DateArithmeticYMDHTest(TestCase):
 class TestDateArithmeticWithTimezone(DateArithmeticTestCase):
 
     now = pytz.timezone("US/Pacific").localize(datetime.datetime(2012, 3, 20))
+
+
+@pytest.mark.parametrize(
+    "expression",
+    ["shortdate-1oops", "year+", "month--1", "ymd+1-2", "unixtime+1.5", "daynumber+1\n"],
+)
+def test_date_arithmetic_rejects_incomplete_matches(expression):
+    assert DateArithmetic.parse(expression, datetime.datetime(2026, 9, 30)) is None
