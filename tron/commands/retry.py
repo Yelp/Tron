@@ -195,12 +195,12 @@ class RetryAction:
 
         Returns whether or not deps successfully finished.
         """
-        while deps_timeout_s == RetryAction.WAIT_FOREVER or self._elapsed.seconds < deps_timeout_s:
+        while deps_timeout_s == RetryAction.WAIT_FOREVER or self._elapsed.total_seconds() < deps_timeout_s:
             if await self.can_retry():
                 return True
             wait_for = poll_interval_s
             if deps_timeout_s != RetryAction.WAIT_FOREVER:
-                wait_for = min(wait_for, int(deps_timeout_s - self._elapsed.seconds))
+                wait_for = min(wait_for, int(deps_timeout_s - self._elapsed.total_seconds()))
             await asyncio.sleep(wait_for)
             self._elapsed += datetime.timedelta(seconds=wait_for)
 

@@ -1,3 +1,4 @@
+import datetime
 import random
 from unittest import mock
 
@@ -130,6 +131,15 @@ def test_wait_for_deps_timeout(fake_retry_action, event_loop):
     assert not event_loop.run_until_complete(fake_retry_action.wait_for_deps(deps_timeout_s=3, poll_interval_s=1))
     assert fake_retry_action._elapsed.seconds == 3
     assert fake_retry_action.tron_client.action_runs.call_count == 5  # 1 in init, 4 in this test
+
+
+def test_wait_for_deps_timeout_longer_than_a_day(fake_retry_action, event_loop):
+    checks = [False] * 26  # 1 check per hour for 25 hours, plus the final check
+    with mock.patch.object(fake_retry_action, "can_retry", autospec=True, side_effect=checks):
+        assert not event_loop.run_until_complete(
+            fake_retry_action.wait_for_deps(deps_timeout_s=25 * 3600, poll_interval_s=3600)
+        )
+    assert fake_retry_action._elapsed == datetime.timedelta(hours=25)
 
 
 def test_wait_for_deps_all_deps_done(fake_retry_action, event_loop):
