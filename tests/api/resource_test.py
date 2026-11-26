@@ -223,8 +223,24 @@ class TestJobCollectionResource(WWWTestCase):
     def test_render_GET(self):
         self.resource.get_data = MagicMock()
         result = self.resource.render_GET(REQUEST)
-        assert_call(self.resource.get_data, 0, False, False, True, True)
+        assert_call(self.resource.get_data, 0, False, False, True, True, None, None)
         assert "jobs" in result
+
+    def test_render_SEARCH(self):
+        request = build_request(query="test")
+        job1 = MagicMock()
+        job1.get_name.return_value = "testjob1"
+        job2 = MagicMock()
+        job2.get_name.return_value = "othertestjob"
+        job3 = MagicMock()
+        job3.get_name.return_value = "otherjob"
+        self.resource.job_collection.get_jobs.return_value = [job1, job2, job3]
+        result = self.resource.render_SEARCH(request)
+        assert "jobs" in result
+        assert len(result["jobs"]) == 2
+        job_names = [job["name"] for job in result["jobs"]]
+        assert "testjob1" in job_names
+        assert "othertestjob" in job_names
 
     def test_getChild(self):
         child = self.resource.getChild(b"testname", mock.Mock())
