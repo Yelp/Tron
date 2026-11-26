@@ -57,7 +57,7 @@ python-dateutil==2.8.1
 pytimeparse==1.1.8
 pytz==2019.3
 PyYAML==6.0.1
-requests==2.27.1
+requests==2.32.4
 requests-oauthlib==1.2.0
 rsa==4.9
 s3transfer==0.10.1
