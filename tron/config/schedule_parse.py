@@ -252,9 +252,14 @@ def parse_groc_expression(config, config_context):
         msg = "Schedule at %s is not a valid expression: %s"
         raise ScheduleParseError(msg % (config_context.path, expression))
 
+    if m.group("month_days") is None:
+        msg = "Schedule at %s must start with 'every' or an ordinal: %s"
+        raise ScheduleParseError(msg % (config_context.path, expression))
+
     timestr = m.group("time")
     if timestr is None:
         timestr = "00:00"
+    config_utils.valid_time(timestr, config_context)
 
     if m.group("days") in (None, "day"):
         weekdays = None
@@ -267,9 +272,15 @@ def parse_groc_expression(config, config_context):
     if m.group("month_days") != "every":
         values = {_parse_number(n) for n in m.group("month_days").split(",")}
         if weekdays is None:
+            valid_range, kind = range(1, 32), "day of month"
             monthdays = values
         else:
+            valid_range, kind = range(1, 6), "ordinal"
             ordinals = values
+        for value in sorted(values):
+            if value not in valid_range:
+                msg = "Schedule at %s has an invalid %s %d: %s"
+                raise ScheduleParseError(msg % (config_context.path, kind, value, expression))
 
     if m.group("months") in (None, "month"):
         months = None
